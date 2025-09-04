@@ -20,32 +20,13 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Blue stylized "A" icon */}
+      {/* Logo Image */}
       <div className={`${iconSizes[size]} relative`}>
-        <svg
-          viewBox="0 0 32 32"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full"
-        >
-          {/* Left side of the A */}
-          <path
-            d="M8 24L16 8L24 24"
-            stroke="#3B82F6"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-          {/* Horizontal line in the A */}
-          <path
-            d="M12 18H20"
-            stroke="#3B82F6"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <img
+          src="/logo.jpg"
+          alt="ALLVERSE GPT"
+          className="w-full h-full object-cover rounded-lg"
+        />
       </div>
       
       {/* Text */}
