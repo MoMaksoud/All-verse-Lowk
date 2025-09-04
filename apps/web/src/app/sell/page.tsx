@@ -1,4 +1,4 @@
-'use client';
+sh'use client';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,10 +9,10 @@ import { validateForm, createListingSchema } from '@marketplace/lib';
 import { Navigation } from '@/components/Navigation';
 
 const steps = [
-  { id: 1, title: 'Basic Info', description: 'Title and description', icon: Brain },
-  { id: 2, title: 'Details', description: 'Category, condition, and price', icon: Zap },
-  { id: 3, title: 'Photos', description: 'Upload images', icon: Upload },
-  { id: 4, title: 'Review', description: 'Review and publish', icon: Brain },
+  { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
+  { id: 2, title: 'AI Analysis', description: 'AI fills details automatically', icon: Brain },
+  { id: 3, title: 'Review & Edit', description: 'Review and adjust if needed', icon: Zap },
+  { id: 4, title: 'Publish', description: 'Final review and publish', icon: Brain },
 ];
 
 export default function SellPage() {
@@ -72,16 +72,17 @@ export default function SellPage() {
 
     switch (step) {
       case 1:
-        if (!formData.title?.trim()) stepErrors.title = 'Title is required';
-        if (!formData.description?.trim()) stepErrors.description = 'Description is required';
+        if (!formData.images?.length) stepErrors.images = 'At least one image is required';
         break;
       case 2:
+        // AI will fill this automatically, so we'll skip validation for now
+        break;
+      case 3:
+        if (!formData.title?.trim()) stepErrors.title = 'Title is required';
+        if (!formData.description?.trim()) stepErrors.description = 'Description is required';
         if (!formData.category) stepErrors.category = 'Category is required';
         if (!formData.price || formData.price <= 0) stepErrors.price = 'Valid price is required';
         if (!formData.location?.trim()) stepErrors.location = 'Location is required';
-        break;
-      case 3:
-        if (!formData.images?.length) stepErrors.images = 'At least one image is required';
         break;
     }
 
@@ -127,6 +128,113 @@ export default function SellPage() {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
+                Upload Your Item Photo
+              </label>
+              <div className="border-2 border-dashed border-dark-600 rounded-xl p-8 text-center hover:border-accent-500 transition-colors">
+                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="mt-4">
+                  <label className="cursor-pointer">
+                    <span className="btn btn-primary">Choose Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <p className="text-sm text-gray-400 mt-2">
+                  Upload a clear photo of your item for AI analysis
+                </p>
+              </div>
+              {errors.images && <p className="text-red-400 text-sm mt-1">{errors.images}</p>}
+            </div>
+
+            {formData.images && formData.images.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-white mb-3">Uploaded Photo</h4>
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <img
+                      src={URL.createObjectURL(formData.images[0])}
+                      alt="Item preview"
+                      className="w-64 h-64 object-cover rounded-xl"
+                    />
+                    <button
+                      onClick={() => removeImage(0)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="animate-pulse">
+                <Brain className="mx-auto h-16 w-16 text-accent-500 mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">AI Analysis in Progress</h3>
+                <p className="text-gray-400 mb-6">Our AI is analyzing your photo and generating details...</p>
+              </div>
+              
+              <div className="space-y-4 max-w-md mx-auto">
+                <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                  <span className="text-gray-400">Title</span>
+                  <span className="text-white">Analyzing...</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                  <span className="text-gray-400">Category</span>
+                  <span className="text-white">Analyzing...</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                  <span className="text-gray-400">Price</span>
+                  <span className="text-white">Analyzing...</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                  <span className="text-gray-400">Description</span>
+                  <span className="text-white">Analyzing...</span>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <button
+                  onClick={() => {
+                    // Simulate AI completion - in real app, this would be API call
+                    setFormData(prev => ({
+                      ...prev,
+                      title: 'Sample Item Title',
+                      description: 'This is a sample description generated by AI based on your photo.',
+                      category: 'Electronics',
+                      price: 99.99,
+                      location: 'Tampa, FL'
+                    }));
+                    setCurrentStep(3);
+                  }}
+                  className="btn btn-primary"
+                >
+                  Complete AI Analysis
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-2">Review & Edit AI Suggestions</h3>
+              <p className="text-gray-400 text-sm">Review the AI-generated details and make any adjustments</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
                 Title
               </label>
               <input
@@ -147,17 +255,12 @@ export default function SellPage() {
                 value={formData.description || ''}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 placeholder="Describe your item in detail..."
-                rows={6}
+                rows={4}
                 className={`input resize-none ${errors.description ? 'border-red-500' : ''}`}
               />
               {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
             </div>
-          </div>
-        );
 
-      case 2:
-        return (
-          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
                 Category
@@ -229,66 +332,23 @@ export default function SellPage() {
           </div>
         );
 
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Photos (up to 10)
-              </label>
-              <div className="border-2 border-dashed border-dark-600 rounded-xl p-8 text-center hover:border-accent-500 transition-colors">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <div className="mt-4">
-                  <label className="cursor-pointer">
-                    <span className="btn btn-primary">Choose Files</span>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                <p className="text-sm text-gray-400 mt-2">
-                  PNG, JPG, GIF up to 10MB each
-                </p>
-              </div>
-              {errors.images && <p className="text-red-400 text-sm mt-1">{errors.images}</p>}
-            </div>
-
-            {formData.images && formData.images.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-white mb-3">Uploaded Images</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {formData.images.map((file, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-xl"
-                      />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
       case 4:
         return (
           <div className="space-y-6">
             <div className="card p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Review Your Listing</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">Final Review & Publish</h3>
               
               <div className="space-y-4">
+                {formData.images && formData.images.length > 0 && (
+                  <div className="flex justify-center mb-4">
+                    <img
+                      src={URL.createObjectURL(formData.images[0])}
+                      alt="Item preview"
+                      className="w-32 h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+                
                 <div>
                   <h4 className="font-medium text-white">{formData.title}</h4>
                   <p className="text-gray-400 text-sm">{formData.description}</p>
@@ -312,12 +372,6 @@ export default function SellPage() {
                     <span className="ml-2 text-white">{formData.location}</span>
                   </div>
                 </div>
-                
-                {formData.images && formData.images.length > 0 && (
-                  <div>
-                    <span className="text-gray-400 text-sm">Images: {formData.images.length}</span>
-                  </div>
-                )}
               </div>
             </div>
             
@@ -342,7 +396,7 @@ export default function SellPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Sell Your Item</h1>
-          <p className="text-lg text-gray-400">Create a listing with AI assistance</p>
+          <p className="text-lg text-gray-400">Upload a photo and let AI do the work for you</p>
         </div>
 
         {/* Progress Steps */}
@@ -398,7 +452,7 @@ export default function SellPage() {
                 onClick={nextStep}
                 className="btn btn-primary flex items-center gap-2"
               >
-                Next
+                {currentStep === 1 ? 'Analyze with AI' : currentStep === 2 ? 'Review & Edit' : 'Continue'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
@@ -407,7 +461,7 @@ export default function SellPage() {
                 disabled={loading}
                 className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating...' : 'Create Listing'}
+                {loading ? 'Publishing...' : 'Publish Listing'}
               </button>
             )}
           </div>
