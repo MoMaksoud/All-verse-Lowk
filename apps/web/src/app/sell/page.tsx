@@ -2,16 +2,17 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap } from 'lucide-react';
 import { mockApi } from '@marketplace/lib';
 import { CreateListingForm, Category } from '@marketplace/types';
 import { validateForm, createListingSchema } from '@marketplace/lib';
+import { Navigation } from '@/components/Navigation';
 
 const steps = [
-  { id: 1, title: 'Basic Info', description: 'Title and description' },
-  { id: 2, title: 'Details', description: 'Category, condition, and price' },
-  { id: 3, title: 'Photos', description: 'Upload images' },
-  { id: 4, title: 'Review', description: 'Review and publish' },
+  { id: 1, title: 'Basic Info', description: 'Title and description', icon: Brain },
+  { id: 2, title: 'Details', description: 'Category, condition, and price', icon: Zap },
+  { id: 3, title: 'Photos', description: 'Upload images', icon: Upload },
+  { id: 4, title: 'Review', description: 'Review and publish', icon: Brain },
 ];
 
 export default function SellPage() {
@@ -125,7 +126,7 @@ export default function SellPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Title
               </label>
               <input
@@ -133,15 +134,13 @@ export default function SellPage() {
                 value={formData.title || ''}
                 onChange={(e) => handleInputChange('title', e.target.value)}
                 placeholder="What are you selling?"
-                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 ${
-                  errors.title ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`input ${errors.title ? 'border-red-500' : ''}`}
               />
-              {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+              {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Description
               </label>
               <textarea
@@ -149,11 +148,9 @@ export default function SellPage() {
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 placeholder="Describe your item in detail..."
                 rows={6}
-                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 ${
-                  errors.description ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`input resize-none ${errors.description ? 'border-red-500' : ''}`}
               />
-              {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+              {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
             </div>
           </div>
         );
@@ -162,15 +159,13 @@ export default function SellPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Category
               </label>
               <select
                 value={formData.category || ''}
                 onChange={(e) => handleInputChange('category', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 ${
-                  errors.category ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`input ${errors.category ? 'border-red-500' : ''}`}
               >
                 <option value="">Select a category</option>
                 {categories.map((category) => (
@@ -179,17 +174,17 @@ export default function SellPage() {
                   </option>
                 ))}
               </select>
-              {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
+              {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Condition
               </label>
               <select
                 value={formData.condition || 'good'}
                 onChange={(e) => handleInputChange('condition', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                className="input"
               >
                 <option value="new">New</option>
                 <option value="like-new">Like New</option>
@@ -200,11 +195,11 @@ export default function SellPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Price
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">$</span>
                 <input
                   type="number"
                   value={formData.price || ''}
@@ -212,16 +207,14 @@ export default function SellPage() {
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  className={`w-full pl-8 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 ${
-                    errors.price ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`input pl-8 ${errors.price ? 'border-red-500' : ''}`}
                 />
               </div>
-              {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
+              {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Location
               </label>
               <input
@@ -229,11 +222,9 @@ export default function SellPage() {
                 value={formData.location || ''}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 placeholder="City, State"
-                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 ${
-                  errors.location ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`input ${errors.location ? 'border-red-500' : ''}`}
               />
-              {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location}</p>}
+              {errors.location && <p className="text-red-400 text-sm mt-1">{errors.location}</p>}
             </div>
           </div>
         );
@@ -242,10 +233,10 @@ export default function SellPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Photos (up to 10)
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div className="border-2 border-dashed border-dark-600 rounded-xl p-8 text-center hover:border-accent-500 transition-colors">
                 <Upload className="mx-auto h-12 w-12 text-gray-400" />
                 <div className="mt-4">
                   <label className="cursor-pointer">
@@ -259,23 +250,23 @@ export default function SellPage() {
                     />
                   </label>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-gray-400 mt-2">
                   PNG, JPG, GIF up to 10MB each
                 </p>
               </div>
-              {errors.images && <p className="text-red-500 text-sm mt-1">{errors.images}</p>}
+              {errors.images && <p className="text-red-400 text-sm mt-1">{errors.images}</p>}
             </div>
 
             {formData.images && formData.images.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Uploaded Images</h4>
+                <h4 className="text-sm font-medium text-white mb-3">Uploaded Images</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {formData.images.map((file, index) => (
                     <div key={index} className="relative">
                       <img
                         src={URL.createObjectURL(file)}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
+                        className="w-full h-24 object-cover rounded-xl"
                       />
                       <button
                         onClick={() => removeImage(index)}
@@ -294,45 +285,45 @@ export default function SellPage() {
       case 4:
         return (
           <div className="space-y-6">
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Review Your Listing</h3>
+            <div className="card p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Review Your Listing</h3>
               
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-gray-900">{formData.title}</h4>
-                  <p className="text-gray-600 text-sm">{formData.description}</p>
+                  <h4 className="font-medium text-white">{formData.title}</h4>
+                  <p className="text-gray-400 text-sm">{formData.description}</p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-500">Category:</span>
-                    <span className="ml-2 text-gray-900">{formData.category}</span>
+                    <span className="text-gray-400">Category:</span>
+                    <span className="ml-2 text-white">{formData.category}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Condition:</span>
-                    <span className="ml-2 text-gray-900 capitalize">{formData.condition}</span>
+                    <span className="text-gray-400">Condition:</span>
+                    <span className="ml-2 text-white capitalize">{formData.condition}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Price:</span>
-                    <span className="ml-2 text-gray-900">${formData.price}</span>
+                    <span className="text-gray-400">Price:</span>
+                    <span className="ml-2 text-white">${formData.price}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Location:</span>
-                    <span className="ml-2 text-gray-900">{formData.location}</span>
+                    <span className="text-gray-400">Location:</span>
+                    <span className="ml-2 text-white">{formData.location}</span>
                   </div>
                 </div>
                 
                 {formData.images && formData.images.length > 0 && (
                   <div>
-                    <span className="text-gray-500 text-sm">Images: {formData.images.length}</span>
+                    <span className="text-gray-400 text-sm">Images: {formData.images.length}</span>
                   </div>
                 )}
               </div>
             </div>
             
             {errors.submit && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                <p className="text-red-600 text-sm">{errors.submit}</p>
+              <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4">
+                <p className="text-red-400 text-sm">{errors.submit}</p>
               </div>
             )}
           </div>
@@ -344,50 +335,55 @@ export default function SellPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-950">
+      <Navigation />
+      
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Sell Your Item</h1>
-          <p className="text-lg text-gray-600">Create a listing to sell your item</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Sell Your Item</h1>
+          <p className="text-lg text-gray-400">Create a listing with AI assistance</p>
         </div>
 
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                  currentStep >= step.id
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {step.id}
-                </div>
-                <div className="ml-3">
-                  <div className={`text-sm font-medium ${
-                    currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.id} className="flex items-center">
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    currentStep >= step.id
+                      ? 'bg-accent-500 text-white glow'
+                      : 'bg-dark-700 text-gray-400'
                   }`}>
-                    {step.title}
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <div className="text-xs text-gray-500">{step.description}</div>
+                  <div className="ml-3">
+                    <div className={`text-sm font-medium ${
+                      currentStep >= step.id ? 'text-white' : 'text-gray-400'
+                    }`}>
+                      {step.title}
+                    </div>
+                    <div className="text-xs text-gray-500">{step.description}</div>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className={`w-16 h-0.5 mx-4 transition-all duration-200 ${
+                      currentStep > step.id ? 'bg-accent-500' : 'bg-dark-700'
+                    }`} />
+                  )}
                 </div>
-                {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 mx-4 ${
-                    currentStep > step.id ? 'bg-primary-600' : 'bg-gray-200'
-                  }`} />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
         {/* Form Content */}
-        <div className="bg-white rounded-lg border border-gray-200 p-8">
+        <div className="card p-8">
           {renderStepContent()}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-dark-600">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}

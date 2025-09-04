@@ -6,19 +6,21 @@ import { Category } from '@marketplace/types';
 
 interface CategoryCardProps {
   category: Category;
-  className?: string;
 }
 
-export function CategoryCard({ category, className = '' }: CategoryCardProps) {
+export function CategoryCard({ category }: CategoryCardProps) {
   return (
-    <Link href={`/listings?category=${category.slug}`}>
-      <div className={`group bg-white rounded-lg border border-gray-200 p-6 text-center hover:border-primary-300 hover:shadow-md transition-all duration-200 ${className}`}>
-        <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-200">
-          {category.icon}
+    <Link href={`/listings?category=${category.id}`} className="group">
+      <div className="card hover:scale-105 transition-all duration-200 cursor-pointer text-center p-6">
+        <div className="w-16 h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-4 group-hover:glow">
+          <span className="text-2xl">{category.icon}</span>
         </div>
-        <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+        <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-accent-400 transition-colors">
           {category.name}
         </h3>
+        <p className="text-gray-400 text-sm">
+          {category.itemCount} items
+        </p>
       </div>
     </Link>
   );

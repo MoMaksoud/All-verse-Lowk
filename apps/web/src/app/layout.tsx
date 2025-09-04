@@ -5,10 +5,10 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Marketplace - Buy and Sell Everything',
-  description: 'A modern marketplace for buying and selling items locally and globally.',
-  keywords: ['marketplace', 'buy', 'sell', 'local', 'online'],
-  authors: [{ name: 'Marketplace Team' }],
+  title: 'All-Verse GPT - AI Marketplace',
+  description: 'A modern AI-powered marketplace for buying and selling with intelligent assistance.',
+  keywords: ['AI', 'marketplace', 'GPT', 'buy', 'sell', 'intelligent'],
+  authors: [{ name: 'All-Verse Team' }],
   viewport: 'width=device-width, initial-scale=1',
 };
 
@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full`}>
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-dark-950">
           {children}
         </div>
       </body>

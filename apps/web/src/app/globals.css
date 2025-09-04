@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   html {
@@ -10,46 +10,73 @@
   }
   
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-dark-950 text-white;
+    background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
+    min-height: 100vh;
   }
   
   * {
-    @apply border-gray-200;
+    @apply border-dark-700;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-950 disabled:opacity-50 disabled:pointer-events-none;
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply bg-accent-500 text-white hover:bg-accent-600 focus:ring-accent-500 shadow-lg hover:shadow-accent-500/25;
   }
   
   .btn-secondary {
-    @apply bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500;
+    @apply bg-dark-700 text-white hover:bg-dark-600 focus:ring-dark-500 border border-dark-600;
   }
   
   .btn-outline {
-    @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-gray-500;
+    @apply border border-dark-600 bg-dark-800 text-white hover:bg-dark-700 focus:ring-dark-500;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent text-gray-300 hover:bg-dark-800 hover:text-white focus:ring-dark-500;
   }
   
   .input {
-    @apply block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500;
+    @apply block w-full rounded-xl border border-dark-600 bg-dark-800 px-4 py-3 text-sm text-white placeholder-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 disabled:bg-dark-900 disabled:text-gray-500 transition-all duration-200;
   }
   
   .card {
-    @apply rounded-lg border border-gray-200 bg-white shadow-sm;
+    @apply rounded-2xl border border-dark-700 bg-dark-800/50 backdrop-blur-sm shadow-xl;
   }
   
   .card-elevated {
-    @apply rounded-lg border-0 bg-white shadow-lg;
+    @apply rounded-2xl border-0 bg-dark-800/80 backdrop-blur-md shadow-2xl;
+  }
+  
+  .glass {
+    @apply bg-dark-800/30 backdrop-blur-md border border-dark-700/50;
+  }
+  
+  .glow {
+    @apply shadow-lg shadow-accent-500/20;
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent-400 to-primary-400 bg-clip-text text-transparent;
   }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

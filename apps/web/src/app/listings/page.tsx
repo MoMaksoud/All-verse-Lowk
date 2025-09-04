@@ -7,6 +7,7 @@ import { mockApi } from '@marketplace/lib';
 import { Listing, ListingFilters, Category } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
+import { Navigation } from '@/components/Navigation';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
@@ -70,21 +71,23 @@ function ListingsContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-950">
+      <Navigation />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-white mb-2">
             Browse Listings
           </h1>
-          <p className="text-lg text-gray-600">
-            Discover amazing items from our community
+          <p className="text-lg text-gray-400">
+            Discover amazing items with AI-powered recommendations
           </p>
         </div>
 
@@ -102,29 +105,29 @@ function ListingsContent() {
           <div className="flex-1">
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-6">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-400">
                 {listings.length} listings found
               </div>
               
               <div className="flex items-center space-x-4">
                 {/* View Mode Toggle */}
-                <div className="flex items-center border border-gray-300 rounded-lg">
+                <div className="flex items-center border border-dark-600 rounded-xl bg-dark-800">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 ${
+                    className={`p-2 rounded-l-xl transition-all duration-200 ${
                       viewMode === 'grid'
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-accent-500 text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-dark-700'
                     }`}
                   >
                     <Grid className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 ${
+                    className={`p-2 rounded-r-xl transition-all duration-200 ${
                       viewMode === 'list'
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-accent-500 text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-dark-700'
                     }`}
                   >
                     <List className="w-4 h-4" />
@@ -147,7 +150,6 @@ function ListingsContent() {
                     <ListingCard
                       key={listing.id}
                       listing={listing}
-                      className={viewMode === 'list' ? 'flex' : ''}
                     />
                   ))}
                 </div>
@@ -159,7 +161,7 @@ function ListingsContent() {
                       <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn-ghost p-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <ChevronLeft className="w-5 h-5" />
                       </button>
@@ -168,10 +170,10 @@ function ListingsContent() {
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          className={`px-3 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
                             currentPage === page
-                              ? 'bg-primary-600 text-white'
-                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                              ? 'bg-accent-500 text-white'
+                              : 'text-gray-400 hover:text-white hover:bg-dark-700'
                           }`}
                         >
                           {page}
@@ -181,7 +183,7 @@ function ListingsContent() {
                       <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn-ghost p-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <ChevronRight className="w-5 h-5" />
                       </button>
@@ -192,10 +194,10 @@ function ListingsContent() {
             ) : (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">🔍</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-lg font-medium text-white mb-2">
                   No listings found
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-gray-400">
                   Try adjusting your filters or search terms
                 </p>
               </div>
@@ -211,7 +213,7 @@ export default function ListingsPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-500"></div>
       </div>
     }>
       <ListingsContent />
