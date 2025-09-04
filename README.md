@@ -1,6 +1,28 @@
 # Marketplace Monorepo
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-8+-orange.svg)](https://pnpm.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14+-black.svg)](https://nextjs.org/)
+
 A production-quality cross-platform marketplace application built with a modern monorepo architecture. Features a shared UI component library, TypeScript throughout, and mock API services for realistic development experience.
+
+## 📋 Table of Contents
+
+- [🏗️ Architecture](#️-architecture)
+- [✨ Features](#-features)
+- [🚀 Quick Start](#-quick-start)
+- [📁 Project Structure](#-project-structure)
+- [🛠️ Development](#️-development)
+- [🎨 Design System](#-design-system)
+- [🔧 Configuration](#-configuration)
+- [🧪 Testing](#-testing)
+- [📦 Deployment](#-deployment)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [🆘 Support](#-support)
+- [🚧 Roadmap](#-roadmap)
 
 ## 🏗️ Architecture
 
@@ -18,7 +40,7 @@ marketplace-monorepo/
 
 ## ✨ Features
 
-### Web Application (Next.js)
+### 🌐 Web Application (Next.js)
 - **Home Page**: Featured categories, recent listings, hero section
 - **Listings Browse**: Grid/list view with advanced filters and pagination
 - **Listing Detail**: Photo gallery, seller info, price suggestions
@@ -26,7 +48,7 @@ marketplace-monorepo/
 - **Responsive Design**: Mobile-first with Tailwind CSS
 - **Dark Mode**: System preference support
 
-### Shared Components (React Native Web)
+### 🧩 Shared Components (React Native Web)
 - **Button**: Multiple variants and sizes
 - **Input**: Form inputs with validation states
 - **Card**: Content containers with elevation options
@@ -36,7 +58,7 @@ marketplace-monorepo/
 - **Spinner**: Loading indicators
 - **EmptyState**: No content states
 
-### Mock API Services
+### 🔌 Mock API Services
 - **Realistic Data**: Comprehensive mock data with relationships
 - **Network Simulation**: Configurable delays for realistic UX
 - **CRUD Operations**: Full listing lifecycle management
@@ -46,14 +68,15 @@ marketplace-monorepo/
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
-- pnpm 8+
+
+- [Node.js](https://nodejs.org/) 18+ 
+- [pnpm](https://pnpm.io/) 8+
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/yourusername/marketplace-monorepo.git
    cd marketplace-monorepo
    ```
 
@@ -91,7 +114,7 @@ marketplace-monorepo/
 - **React Native Web**: Shared component compatibility
 - **TypeScript**: Full type safety throughout
 
-Key pages:
+**Key pages:**
 - `/` - Home with featured content
 - `/listings` - Browse with filters
 - `/listings/[id]` - Detail view
@@ -319,6 +342,10 @@ pnpm --filter=@marketplace/ui publish
 
 ## 🤝 Contributing
 
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Quick Start for Contributors
+
 1. **Fork the repository**
 2. **Create feature branch**
    ```bash
@@ -346,8 +373,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- **Issues**: Create GitHub issues for bugs and feature requests
-- **Discussions**: Use GitHub discussions for questions
+- **Issues**: Create [GitHub issues](https://github.com/yourusername/marketplace-monorepo/issues) for bugs and feature requests
+- **Discussions**: Use [GitHub discussions](https://github.com/yourusername/marketplace-monorepo/discussions) for questions
 - **Documentation**: Check inline code comments and TypeScript types
 
 ## 🚧 Roadmap
@@ -376,6 +403,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Built with ❤️ using modern web technologies
-#   A l l - v e r s e - L o w k  
- 
+<div align="center">
+
+**Built with ❤️ using modern web technologies**
+
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+
+</div>
