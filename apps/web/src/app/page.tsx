@@ -9,6 +9,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { CategoryCard } from '@/components/CategoryCard';
 import { SearchBar } from '@/components/SearchBar';
 import { Navigation } from '@/components/Navigation';
+import { Logo } from '@/components/Logo';
 
 export default function HomePage() {
   const [featuredListings, setFeaturedListings] = useState<Listing[]>([]);
@@ -54,11 +55,11 @@ export default function HomePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="mb-8">
-              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-3xl flex items-center justify-center glow mb-6">
-                <Brain className="w-12 h-12 text-white" />
+              <div className="flex justify-center mb-6">
+                <Logo size="lg" />
               </div>
               <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient">
-                Hi, Welcome to All-Verse GPT
+                Hi, Welcome to ALLVERSE GPT
               </h1>
               <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-3xl mx-auto">
                 Your intelligent marketplace assistant. Buy, sell, and discover with AI-powered insights.
@@ -210,6 +211,9 @@ export default function HomePage() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="card-elevated p-12">
+            <div className="flex justify-center mb-6">
+              <Logo size="md" />
+            </div>
             <h2 className="text-3xl font-bold text-white mb-4">
               Ready to Start Selling?
             </h2>
