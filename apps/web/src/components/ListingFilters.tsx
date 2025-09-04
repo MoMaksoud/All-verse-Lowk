@@ -148,7 +148,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
       {/* Apply Filters Button */}
       <button
         onClick={handleApplyFilters}
-        className="w-full bg-primary-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        className="w-full bg-accent-500 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-accent-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
       >
         Apply Filters
       </button>

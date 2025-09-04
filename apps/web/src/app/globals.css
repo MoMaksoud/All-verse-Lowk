@@ -62,7 +62,7 @@
   }
   
   .text-gradient {
-    @apply bg-gradient-to-r from-accent-400 to-primary-400 bg-clip-text text-transparent;
+    @apply text-accent-500;
   }
 }
 
