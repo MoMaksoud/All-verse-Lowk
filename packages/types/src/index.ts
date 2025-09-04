@@ -113,7 +113,8 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
-  icon: string;
+  icon: string; // emoji icon
+  iconImage?: string; // URL to image icon
   parentId?: string;
   children?: Category[];
 }
