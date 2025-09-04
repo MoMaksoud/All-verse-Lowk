@@ -100,12 +100,46 @@ const mockProfiles: Profile[] = [
 ];
 
 const mockCategories: Category[] = [
-  { id: 'cat1', name: 'Electronics', slug: 'electronics', icon: '📱', children: [] },
-  { id: 'cat2', name: 'Fashion', slug: 'fashion', icon: '👕', children: [] },
-  { id: 'cat3', name: 'Sports', slug: 'sports', icon: '⚽', children: [] },
-  { id: 'cat4', name: 'Home & Garden', slug: 'home-garden', icon: '🏠', children: [] },
-  { id: 'cat5', name: 'Books', slug: 'books', icon: '📚', children: [] },
-  { id: 'cat6', name: 'Automotive', slug: 'automotive', icon: '🚗', children: [] },
+  { 
+    id: 'cat1', 
+    name: 'Electronics', 
+    slug: 'electronics', 
+    icon: '📱',
+    iconImage: '/icons/electronics.svg',
+    children: [] 
+  },
+  { 
+    id: 'cat2', 
+    name: 'Fashion', 
+    slug: 'fashion', 
+    icon: '👕',
+    iconImage: '/icons/fashion.svg',
+    children: [] 
+  },
+  { 
+    id: 'cat3', 
+    name: 'Sports', 
+    slug: 'sports', 
+    icon: '⚽',
+    iconImage: '/icons/sports.svg',
+    children: [] 
+  },
+  { 
+    id: 'cat4', 
+    name: 'Home', 
+    slug: 'home-garden', 
+    icon: '🏠',
+    iconImage: '/icons/home.svg',
+    children: [] 
+  },
+  { 
+    id: 'cat6', 
+    name: 'Automotive', 
+    slug: 'automotive', 
+    icon: '🚗',
+    iconImage: '/icons/automotive.svg',
+    children: [] 
+  },
 ];
 
 const mockListings: Listing[] = [
