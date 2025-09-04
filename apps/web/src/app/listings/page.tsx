@@ -8,6 +8,7 @@ import { Listing, ListingFilters, Category } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
 import { Navigation } from '@/components/Navigation';
+import { Logo } from '@/components/Logo';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
@@ -82,7 +83,10 @@ function ListingsContent() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 text-center">
+          <div className="flex justify-center mb-4">
+            <Logo size="md" />
+          </div>
           <h1 className="text-3xl font-bold text-white mb-2">
             Browse Listings
           </h1>

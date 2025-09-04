@@ -7,6 +7,7 @@ import { mockApi } from '@marketplace/lib';
 import { CreateListingForm, Category } from '@marketplace/types';
 import { validateForm, createListingSchema } from '@marketplace/lib';
 import { Navigation } from '@/components/Navigation';
+import { Logo } from '@/components/Logo';
 
 const steps = [
   { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
@@ -394,7 +395,10 @@ export default function SellPage() {
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 text-center">
+          <div className="flex justify-center mb-4">
+            <Logo size="md" />
+          </div>
           <h1 className="text-3xl font-bold text-white mb-2">Sell Your Item</h1>
           <p className="text-lg text-gray-400">Upload a photo and let AI do the work for you</p>
         </div>

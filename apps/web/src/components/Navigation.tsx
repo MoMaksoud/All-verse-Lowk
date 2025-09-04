@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, Search, Bell, User, Plus, MessageCircle, ShoppingBag } from 'lucide-react';
 import { Avatar } from '@marketplace/ui';
+import { Logo } from './Logo';
 
 const navigation = [
   { name: 'Home', href: '/', icon: MessageCircle },
@@ -23,10 +24,7 @@ export function Navigation() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <div className="w-10 h-10 bg-gradient-to-br from-accent-500 to-primary-500 rounded-xl flex items-center justify-center glow">
-                <span className="text-white font-bold text-lg">A</span>
-              </div>
-              <span className="ml-3 text-xl font-bold text-gradient">All-Verse GPT</span>
+              <Logo size="md" />
             </Link>
           </div>
 
