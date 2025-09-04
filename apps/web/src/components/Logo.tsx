@@ -31,8 +31,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
       
       {/* Text */}
       <div className={`flex flex-col ${sizeClasses[size]}`}>
-        <span className="font-bold text-white leading-tight">ALLVERSE</span>
-        <span className="font-bold text-white leading-tight">GPT</span>
+        <span className="font-bold text-white leading-tight">ALLVERSE GPT</span>
       </div>
     </div>
   );
