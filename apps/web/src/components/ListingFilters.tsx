@@ -31,13 +31,13 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
   const hasActiveFilters = Object.values(filters).some(value => value !== undefined && value !== '');
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-dark-surface rounded-lg border border-dark-border p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+        <h3 className="text-lg font-semibold text-white">Filters</h3>
         {hasActiveFilters && (
           <button
             onClick={handleClearFilters}
-            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
           >
             <X className="w-4 h-4" />
             Clear all
@@ -47,7 +47,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
 
       {/* Search */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Search
         </label>
         <div className="relative">
@@ -57,24 +57,26 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
             value={localFilters.keyword || ''}
             onChange={(e) => handleFilterChange('keyword', e.target.value)}
             placeholder="Search listings..."
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full pl-10 pr-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            style={{ colorScheme: 'dark' }}
           />
         </div>
       </div>
 
       {/* Category */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Category
         </label>
         <select
           value={localFilters.category || ''}
           onChange={(e) => handleFilterChange('category', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          className="w-full px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          style={{ colorScheme: 'dark' }}
         >
-          <option value="">All Categories</option>
+          <option value="" className="bg-dark-surface text-white">All Categories</option>
           {categories.map((category) => (
-            <option key={category.id} value={category.name}>
+            <option key={category.id} value={category.name} className="bg-dark-surface text-white">
               {category.name}
             </option>
           ))}
@@ -83,7 +85,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
 
       {/* Price Range */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Price Range
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -92,50 +94,54 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
             value={localFilters.minPrice || ''}
             onChange={(e) => handleFilterChange('minPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
             placeholder="Min"
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            className="px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            style={{ colorScheme: 'dark' }}
           />
           <input
             type="number"
             value={localFilters.maxPrice || ''}
             onChange={(e) => handleFilterChange('maxPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
             placeholder="Max"
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            className="px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            style={{ colorScheme: 'dark' }}
           />
         </div>
       </div>
 
       {/* Condition */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Condition
         </label>
         <select
           value={localFilters.condition || ''}
           onChange={(e) => handleFilterChange('condition', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          className="w-full px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          style={{ colorScheme: 'dark' }}
         >
-          <option value="">Any Condition</option>
-          <option value="new">New</option>
-          <option value="like-new">Like New</option>
-          <option value="good">Good</option>
-          <option value="fair">Fair</option>
-          <option value="poor">Poor</option>
+          <option value="" className="bg-dark-surface text-white">Any Condition</option>
+          <option value="new" className="bg-dark-surface text-white">New</option>
+          <option value="like-new" className="bg-dark-surface text-white">Like New</option>
+          <option value="good" className="bg-dark-surface text-white">Good</option>
+          <option value="fair" className="bg-dark-surface text-white">Fair</option>
+          <option value="poor" className="bg-dark-surface text-white">Poor</option>
         </select>
       </div>
 
       {/* Sort By */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Sort By
         </label>
         <select
           value={localFilters.sortBy || ''}
           onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          className="w-full px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          style={{ colorScheme: 'dark' }}
         >
-          <option value="">Relevance</option>
-          <option value="price">Price</option>
-          <option value="date">Date</option>
+          <option value="" className="bg-dark-surface text-white">Relevance</option>
+          <option value="price" className="bg-dark-surface text-white">Price</option>
+          <option value="date" className="bg-dark-surface text-white">Date</option>
         </select>
       </div>
 
