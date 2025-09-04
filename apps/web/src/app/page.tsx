@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain } from 'lucide-react';
 import { mockApi } from '@marketplace/lib';
-import { Listing, Category } from '@marketplace/types';
+import { ListingWithSeller, Category } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { CategoryCard } from '@/components/CategoryCard';
 import { SearchBar } from '@/components/SearchBar';
@@ -12,7 +12,7 @@ import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 
 export default function HomePage() {
-  const [featuredListings, setFeaturedListings] = useState<Listing[]>([]);
+  const [featuredListings, setFeaturedListings] = useState<ListingWithSeller[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,7 +24,7 @@ export default function HomePage() {
           mockApi.getCategories(),
         ]);
 
-        setFeaturedListings(listingsResponse.data);
+        setFeaturedListings(listingsResponse.data.items);
         setCategories(categoriesResponse.data);
       } catch (error) {
         console.error('Error fetching data:', error);

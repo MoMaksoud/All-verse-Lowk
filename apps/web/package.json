@@ -8,29 +8,45 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf .next"
+    "clean": "rm -rf .next",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
-    "@marketplace/types": "workspace:*",
-    "@marketplace/lib": "workspace:*",
-    "@marketplace/ui": "workspace:*",
+    "@marketplace/lib": "file:../../packages/lib",
+    "@marketplace/types": "file:../../packages/types",
+    "@marketplace/ui": "file:../../packages/ui",
+    "autoprefixer": "^10.4.0",
+    "clsx": "^2.0.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "lucide-react": "^0.294.0",
     "next": "^14.0.0",
+    "postcss": "^8.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-native-web": "^0.19.0",
-    "zustand": "^4.4.0",
     "tailwindcss": "^3.3.0",
-    "autoprefixer": "^10.4.0",
-    "postcss": "^8.4.0",
-    "clsx": "^2.0.0",
-    "lucide-react": "^0.294.0"
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4",
+    "zustand": "^4.4.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/cors": "^2.8.17",
+    "@types/jest": "^29.5.8",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "typescript": "^5.3.0",
+    "@types/supertest": "^2.0.16",
+    "@types/uuid": "^9.0.7",
     "eslint": "^8.55.0",
-    "eslint-config-next": "^14.0.0"
+    "eslint-config-next": "^14.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.1.2",
+    "supertest": "^6.3.3",
+    "typescript": "^5.3.0"
   }
 }

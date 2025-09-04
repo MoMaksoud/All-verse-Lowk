@@ -8,14 +8,36 @@ import { Avatar } from '@marketplace/ui';
 import { Logo } from './Logo';
 
 const navigation = [
-  { name: 'Home', href: '/', icon: MessageCircle },
+  { name: 'Home', href: '/', icon: ShoppingBag },
   { name: 'Marketplace', href: '/listings', icon: ShoppingBag },
+  { name: 'Messages', href: '/messages', icon: MessageCircle },
   { name: 'Sell', href: '/sell', icon: Plus },
 ];
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, message: 'New message from John Doe', time: '2 minutes ago', read: false },
+    { id: 2, message: 'Your listing "iPhone 14 Pro" got a new offer', time: '1 hour ago', read: false },
+    { id: 3, message: 'Welcome to AllVerse! Start exploring our marketplace.', time: '1 day ago', read: true },
+  ]);
   const pathname = usePathname();
+
+  const handleNotificationClick = (notificationId: number) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId ? { ...notif, read: true } : notif
+      )
+    );
+    setShowNotifications(false);
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+  };
+
+  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50">
@@ -54,10 +76,18 @@ export function Navigation() {
             <button className="btn-ghost p-2 rounded-xl">
               <Search className="w-5 h-5" />
             </button>
-            <button className="btn-ghost p-2 rounded-xl relative">
+            
+            {/* Notification Bell */}
+            <button 
+              onClick={() => setShowNotifications(true)}
+              className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+            >
               <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
+              )}
             </button>
+            
             <Link
               href="/sell"
               className="btn btn-primary flex items-center gap-2"
@@ -70,7 +100,6 @@ export function Navigation() {
                 src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
                 alt="Profile"
                 size="sm"
-                className="rounded-xl border-2 border-dark-600"
               />
             </Link>
           </div>
@@ -119,7 +148,6 @@ export function Navigation() {
                     src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
                     alt="Profile"
                     size="sm"
-                    className="rounded-xl border-2 border-dark-600"
                   />
                   <div className="ml-3">
                     <div className="text-base font-medium text-white">
@@ -151,6 +179,53 @@ export function Navigation() {
           </div>
         )}
       </div>
+
+      {/* Notifications Panel */}
+      {showNotifications && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowNotifications(false)}>
+          <div className="absolute top-16 right-4 w-80 bg-dark-800 rounded-lg shadow-xl border border-dark-600 p-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Notifications</h3>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {notifications.length > 0 ? (
+                notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification.id)}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      notification.read 
+                        ? 'bg-dark-700 text-gray-400' 
+                        : 'bg-accent-500/20 text-white border border-accent-500/30'
+                    }`}
+                  >
+                    <p className="text-sm">{notification.message}</p>
+                    <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400 text-center py-4">No notifications</p>
+              )}
+            </div>
+            
+            {unreadNotificationsCount > 0 && (
+              <button
+                onClick={markAllNotificationsAsRead}
+                className="w-full mt-4 btn btn-outline text-sm"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

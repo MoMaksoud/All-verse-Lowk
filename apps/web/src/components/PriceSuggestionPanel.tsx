@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import { X, DollarSign } from 'lucide-react';
 import { mockApi } from '@marketplace/lib';
-import { Listing, PriceSuggestion } from '@marketplace/types';
+import { ListingWithSeller } from '@marketplace/types';
 import { formatCurrency } from '@marketplace/lib';
 
 interface PriceSuggestionPanelProps {
-  listing: Listing;
+  listing: ListingWithSeller;
   onClose: () => void;
-  onSuggestionSubmitted: (suggestion: PriceSuggestion) => void;
+  onSuggestionSubmitted: (suggestion: any) => void; // Assuming PriceSuggestion type is not directly imported here
 }
 
 export function PriceSuggestionPanel({
@@ -28,10 +28,8 @@ export function PriceSuggestionPanel({
 
     setLoading(true);
     try {
-      const response = await mockApi.createPriceSuggestion(
-        listing.id,
-        parseFloat(suggestedPrice),
-        reason
+      const response = await mockApi.getPriceSuggestion(
+        { title: listing.title, description: listing.description }
       );
       
       onSuggestionSubmitted(response.data);

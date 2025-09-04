@@ -21,14 +21,14 @@ export default function SellPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [formData, setFormData] = useState<Partial<CreateListingForm>>({
+  const [formData, setFormData] = useState<CreateListingForm>({
     title: '',
     description: '',
     price: 0,
     category: '',
-    condition: 'good',
+    condition: '',
     location: '',
-    images: [],
+    images: []
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -44,27 +44,25 @@ export default function SellPage() {
     fetchCategories();
   }, []);
 
-  const handleInputChange = (field: keyof CreateListingForm, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+  const handleInputChange = (field: keyof CreateListingForm, value: string | number) => {
+    setFormData((prev: CreateListingForm) => ({ ...prev, [field]: value }));
+    if (errors[field as string]) {
+      setErrors((prev: Record<string, string>) => ({ ...prev, [field]: '' }));
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        images: [...(prev.images || []), ...files].slice(0, 10)
-      }));
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setFormData(prev => ({
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setFormData((prev: CreateListingForm) => ({
       ...prev,
-      images: prev.images?.filter((_, i) => i !== index) || []
+      images: [...prev.images, ...files]
+    }));
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setFormData((prev: CreateListingForm) => ({
+      ...prev,
+      images: prev.images?.filter((_: File, i: number) => i !== index) || []
     }));
   };
 
@@ -101,22 +99,58 @@ export default function SellPage() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = async () => {
-    if (!validateStep(currentStep)) return;
-
-    setLoading(true);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    // Validation
+    const newErrors: Record<string, string> = {};
+    if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (formData.price <= 0) newErrors.price = 'Price must be greater than 0';
+    if (!formData.category) newErrors.category = 'Category is required';
+    if (!formData.condition) newErrors.condition = 'Condition is required';
+    if (!formData.location.trim()) newErrors.location = 'Location is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
     try {
-      const validation = validateForm(createListingSchema, formData);
-      if (!validation.success) {
-        setErrors(validation.errors.reduce((acc, error) => ({ ...acc, [error]: error }), {}));
-        return;
-      }
-
-      const response = await mockApi.createListing(formData as CreateListingForm);
-      router.push(`/listings/${response.data.id}`);
+      setLoading(true);
+      
+             // Convert form data to API format
+       const listingData = {
+         title: formData.title,
+         description: formData.description,
+         price: formData.price,
+         category: formData.category,
+         currency: 'USD' as const,
+         photos: [] // We'll handle image upload separately
+       } as any;
+      
+      const createdListing = await mockApi.createListing(listingData);
+      console.log('Listing created:', createdListing);
+      
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        price: 0,
+        category: '',
+        condition: '',
+        location: '',
+        images: []
+      });
+      setErrors({});
+      
+      // Show success message
+      alert('Listing created successfully!');
+      router.push(`/listings/${createdListing.data.id}`);
+      
     } catch (error) {
       console.error('Error creating listing:', error);
-      setErrors({ submit: 'Failed to create listing. Please try again.' });
+      alert('Failed to create listing. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -162,7 +196,7 @@ export default function SellPage() {
                       className="w-64 h-64 object-cover rounded-xl"
                     />
                     <button
-                      onClick={() => removeImage(0)}
+                      onClick={() => handleRemoveImage(0)}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                     >
                       <X className="w-3 h-3" />
@@ -286,7 +320,7 @@ export default function SellPage() {
                 Condition
               </label>
               <select
-                value={formData.condition || 'good'}
+                value={formData.condition || ''}
                 onChange={(e) => handleInputChange('condition', e.target.value)}
                 className="input"
               >

@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Filter, Grid, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { mockApi } from '@marketplace/lib';
-import { Listing, ListingFilters, Category } from '@marketplace/types';
+import { ListingWithSeller, Category, ListingFilters } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
 import { Navigation } from '@/components/Navigation';
@@ -12,7 +12,7 @@ import { Logo } from '@/components/Logo';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [listings, setListings] = useState<ListingWithSeller[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListingFilters>({});
@@ -29,8 +29,8 @@ function ListingsContent() {
           mockApi.getCategories(),
         ]);
 
-        setListings(listingsResponse.data);
-        setTotalPages(listingsResponse.pagination.totalPages);
+        setListings(listingsResponse.data.items);
+        setTotalPages(Math.ceil(listingsResponse.data.total / 12));
         setCategories(categoriesResponse.data);
       } catch (error) {
         console.error('Error fetching listings:', error);
