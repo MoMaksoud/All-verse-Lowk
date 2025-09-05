@@ -136,7 +136,7 @@ export function ListingCard({ listing }: ListingCardProps) {
             {/* Price Badge */}
             <div className="absolute bottom-3 left-3">
               <div className="bg-accent-500 text-white px-3 py-1 rounded-xl text-sm font-semibold">
-                ${listing.price}
+                ${listing.price.toLocaleString()}
               </div>
             </div>
           </div>
@@ -196,7 +196,7 @@ export function ListingCard({ listing }: ListingCardProps) {
 
               <div className="mb-4">
                 <p className="text-gray-300 text-sm mb-2">About: {listing.title}</p>
-                <p className="text-gray-400 text-xs">Price: ${listing.price}</p>
+                <p className="text-gray-400 text-xs">Price: ${listing.price.toLocaleString()}</p>
               </div>
 
               <div className="mb-4">

@@ -363,7 +363,7 @@ function ListingsContent() {
                                   {listing.description}
                                 </p>
                                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                                  <span className="text-accent-400 font-semibold">${listing.price}</span>
+                                  <span className="text-accent-400 font-semibold">${listing.price.toLocaleString()}</span>
                                   <span>•</span>
                                   <span className="capitalize">{listing.category}</span>
                                 </div>

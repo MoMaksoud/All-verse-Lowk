@@ -53,7 +53,7 @@
     "id": "sample-5",
     "title": "MacBook Pro 14-inch",
     "description": "2021 MacBook Pro 14-inch with M1 Pro chip, 16GB RAM, 512GB SSD. Excellent condition.",
-    "price": 1299.99,
+    "price": 1,299.99,
     "category": "electronics",
     "photos": ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop"],
     "createdAt": "2025-09-05T16:10:00.000Z",
@@ -85,7 +85,7 @@
     "description": "Wilson Pro Staff tennis racket, perfect for intermediate players.",
     "price": 120.00,
     "category": "sports",
-    "photos": ["https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400&h=300&fit=crop"],
+    "photos": ["/images/tennis-racket-new.jpg"],
     "createdAt": "2025-01-14T13:45:00.000Z",
     "updatedAt": "2025-01-14T13:45:00.000Z"
   },
@@ -115,7 +115,7 @@
     "description": "High-quality yoga mat, non-slip surface, perfect for home workouts.",
     "price": 45.00,
     "category": "sports",
-    "photos": ["https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop"],
+    "photos": ["/images/yoga-mat-2048px-1653.jpg"],
     "createdAt": "2025-01-15T10:00:00.000Z",
     "updatedAt": "2025-01-15T10:00:00.000Z"
   }
