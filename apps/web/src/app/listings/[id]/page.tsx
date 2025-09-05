@@ -39,7 +39,6 @@ export default function ListingDetailPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedSize, setSelectedSize] = useState<string>('');
 
   const fetchData = useCallback(async () => {
     if (!params.id) return;
@@ -344,40 +343,10 @@ export default function ListingDetailPage() {
                 <p className="text-sm text-gray-400">Current asking price</p>
               </div>
 
-              {/* Size Selection */}
-              <div className="mb-5">
-                <h4 className="font-medium text-white mb-3 text-sm">Size</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
-                        selectedSize === size
-                          ? 'border-accent-500 bg-accent-500 text-white'
-                          : 'border-dark-600 bg-dark-700 text-gray-300 hover:border-dark-500 hover:bg-dark-600'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-                {selectedSize && (
-                  <p className="text-xs text-gray-400 mt-2">Selected: {selectedSize}</p>
-                )}
-                <button className="text-xs text-accent-500 hover:text-accent-400 mt-2 underline">
-                  Size Guide
-                </button>
-              </div>
 
               <div className="space-y-2">
-                <button 
-                  className={`btn w-full py-3 text-base font-medium ${
-                    selectedSize ? 'btn-primary' : 'btn-secondary opacity-50 cursor-not-allowed'
-                  }`}
-                  disabled={!selectedSize}
-                >
-                  {selectedSize ? 'Buy Now' : 'Select Size'}
+                <button className="btn btn-primary w-full py-3 text-base font-medium">
+                  Buy Now
                 </button>
                 <button
                   onClick={handleSuggestPrice}
