@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain } from 'lucide-react';
+import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain, Bot, Sparkles, ArrowRight } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { CategoryCard } from '@/components/CategoryCard';
@@ -10,6 +10,7 @@ import { SearchBar } from '@/components/SearchBar';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { AIWidget } from '@/components/AIWidget';
 
 export default function HomePage() {
   const [featuredListings, setFeaturedListings] = useState<SimpleListing[]>([]);
@@ -55,11 +56,17 @@ export default function HomePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="mb-8">
+              <div className="inline-flex items-center gap-2 bg-accent-500/10 border border-accent-500/20 rounded-full px-4 py-2 mb-6">
+                <Bot className="w-5 h-5 text-accent-400" />
+                <span className="text-accent-400 font-medium">Powered by Advanced AI</span>
+                <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
+              </div>
+              
               <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient">
                 Hi, Welcome to ALLVERSE GPT
               </h1>
               <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-3xl mx-auto">
-                Your intelligent marketplace assistant. Buy, sell, and discover with AI-powered insights.
+                Your intelligent marketplace assistant. Ask our AI anything and get instant, smart responses that guide you to exactly what you need.
               </p>
             </div>
             <SearchBar className="max-w-2xl mx-auto" />
@@ -119,6 +126,24 @@ export default function HomePage() {
                 <p className="text-gray-400 text-sm">Find exactly what you need</p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AI Command Center Widget */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              AI Command Center
+            </h2>
+            <p className="text-lg text-gray-400">
+              Access powerful AI tools and analytics
+            </p>
+          </div>
+          
+          <div className="max-w-md mx-auto">
+            <AIWidget />
           </div>
         </div>
       </section>

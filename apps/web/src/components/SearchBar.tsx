@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, TrendingUp, Clock } from 'lucide-react';
+import { Search, X, TrendingUp, Clock, Bot, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SearchBarProps {
@@ -37,15 +37,36 @@ export function SearchBar({ className = '' }: SearchBarProps) {
     };
   }, []);
 
-  const handleSearch = (searchQuery: string) => {
+  const handleSearch = async (searchQuery: string) => {
     if (searchQuery.trim()) {
       setIsSearching(true);
-      // Simulate search delay
-      setTimeout(() => {
+      
+      try {
+        // Try AI-powered search first
+        const response = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: searchQuery }),
+        });
+
+        const data = await response.json();
+        
+        if (data.listing) {
+          // If AI found a specific listing, go to it
+          router.push(`/listings/${data.listing.id}`);
+        } else {
+          // Otherwise, do regular search
+          router.push(`/listings?q=${encodeURIComponent(searchQuery)}`);
+        }
+      } catch (error) {
+        // Fallback to regular search
         router.push(`/listings?q=${encodeURIComponent(searchQuery)}`);
+      } finally {
         setIsSearching(false);
         setShowSuggestions(false);
-      }, 500);
+      }
     }
   };
 
@@ -68,7 +89,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
     <div ref={searchRef} className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Bot className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-accent-400" />
           <input
             type="text"
             value={query}
@@ -77,9 +98,12 @@ export function SearchBar({ className = '' }: SearchBarProps) {
               setShowSuggestions(e.target.value.length > 0);
             }}
             onFocus={() => setShowSuggestions(query.length > 0)}
-            placeholder="Search for anything..."
+            placeholder="Ask our AI anything..."
             className="w-full pl-12 pr-12 py-4 bg-dark-800/90 border border-dark-600 rounded-2xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all duration-200"
           />
+          <div className="absolute right-16 top-1/2 transform -translate-y-1/2">
+            <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
+          </div>
           {query && (
             <button
               type="button"
@@ -94,12 +118,15 @@ export function SearchBar({ className = '' }: SearchBarProps) {
         <button
           type="submit"
           disabled={isSearching}
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 btn btn-primary px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isSearching ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
           ) : (
-            'Search'
+            <>
+              <Bot className="w-4 h-4" />
+              Ask AI
+            </>
           )}
         </button>
       </form>
