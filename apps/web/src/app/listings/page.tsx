@@ -1,92 +1,99 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Filter, Grid, List, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ListingWithSeller, Category, ListingFilters } from '@marketplace/types';
+import { SimpleListing } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
-import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
-  const [listings, setListings] = useState<ListingWithSeller[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<ListingFilters>({});
+  const [filters, setFilters] = useState({
+    keyword: '',
+    category: '',
+    minPrice: undefined as number | undefined,
+    maxPrice: undefined as number | undefined,
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Build query parameters
-        const params = new URLSearchParams();
-        if (filters.keyword) params.set('q', filters.keyword);
-        if (filters.category) params.set('category', filters.category);
-        if (filters.minPrice !== undefined) params.set('min', filters.minPrice.toString());
-        if (filters.maxPrice !== undefined) params.set('max', filters.maxPrice.toString());
-        params.set('page', currentPage.toString());
-        params.set('limit', '12');
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (filters.keyword) params.set('q', filters.keyword);
+      if (filters.category) params.set('category', filters.category);
+      if (filters.minPrice !== undefined) params.set('min', filters.minPrice.toString());
+      if (filters.maxPrice !== undefined) params.set('max', filters.maxPrice.toString());
+      params.set('page', currentPage.toString());
+      params.set('limit', '12');
 
-        const [listingsResponse, categoriesResponse] = await Promise.all([
-          fetch(`/api/listings?${params.toString()}`).then(res => res.json()),
-          fetch('/api/categories').then(res => res.json()),
-        ]);
+      const response = await fetch(`/api/listings?${params.toString()}`);
+      const data = await response.json();
 
-        if (listingsResponse.success) {
-          setListings(listingsResponse.data.items);
-          setTotalPages(Math.ceil(listingsResponse.data.total / 12));
-        }
-        
-        if (categoriesResponse.success) {
-          setCategories(categoriesResponse.data);
-        }
-      } catch (error) {
-        console.error('Error fetching listings:', error);
-      } finally {
-        setLoading(false);
+      if (response.ok) {
+        setListings(data.data || []);
+        setTotalPages(Math.ceil((data.total || 0) / 12));
+      } else {
+        setListings([]);
+        setTotalPages(1);
       }
-    };
-
-    fetchData();
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+      setListings([]);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
   }, [filters, currentPage]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     // Parse URL params for filters
     const category = searchParams.get('category');
-    const keyword = searchParams.get('q'); // Changed from 'keyword' to 'q'
+    const keyword = searchParams.get('q');
     const minPrice = searchParams.get('min');
     const maxPrice = searchParams.get('max');
 
-    const newFilters: ListingFilters = {};
-    if (category) newFilters.category = category;
-    if (keyword) newFilters.keyword = keyword;
-    if (minPrice) newFilters.minPrice = parseFloat(minPrice);
-    if (maxPrice) newFilters.maxPrice = parseFloat(maxPrice);
+    const newFilters = {
+      keyword: keyword || '',
+      category: category || '',
+      minPrice: minPrice ? parseFloat(minPrice) : undefined,
+      maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+    };
 
     setFilters(newFilters);
     setCurrentPage(1);
   }, [searchParams]);
 
-  const handleFilterChange = (newFilters: ListingFilters) => {
+  const handleFilterChange = useCallback((newFilters: typeof filters) => {
     setFilters(newFilters);
     setCurrentPage(1);
-  };
+  }, []);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
+
+  const memoizedListings = useMemo(() => listings, [listings]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-500"></div>
+      <div className="min-h-screen bg-dark-950">
+        <Navigation />
+        <LoadingSpinner size="lg" text="Loading listings..." />
       </div>
     );
   }
@@ -112,11 +119,72 @@ function ListingsContent() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
           <div className="lg:w-80">
-            <ListingFiltersComponent
-              filters={filters}
-              categories={categories}
-              onFiltersChange={handleFilterChange}
-            />
+            <div className="bg-dark-800 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Filters</h3>
+              
+              {/* Search */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Search
+                </label>
+                <input
+                  type="text"
+                  value={filters.keyword}
+                  onChange={(e) => handleFilterChange({ ...filters, keyword: e.target.value })}
+                  placeholder="Search listings..."
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                />
+              </div>
+
+              {/* Category */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Category
+                </label>
+                <select
+                  value={filters.category}
+                  onChange={(e) => handleFilterChange({ ...filters, category: e.target.value })}
+                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
+                >
+                  <option value="">All Categories</option>
+                  <option value="electronics">Electronics</option>
+                  <option value="fashion">Fashion</option>
+                  <option value="home">Home</option>
+                  <option value="sports">Sports</option>
+                  <option value="automotive">Automotive</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {/* Price Range */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Price Range
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    value={filters.minPrice || ''}
+                    onChange={(e) => handleFilterChange({ 
+                      ...filters, 
+                      minPrice: e.target.value ? parseFloat(e.target.value) : undefined 
+                    })}
+                    placeholder="Min"
+                    className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  />
+                  <input
+                    type="number"
+                    value={filters.maxPrice || ''}
+                    onChange={(e) => handleFilterChange({ 
+                      ...filters, 
+                      maxPrice: e.target.value ? parseFloat(e.target.value) : undefined 
+                    })}
+                    placeholder="Max"
+                    className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Main Content */}
@@ -155,7 +223,7 @@ function ListingsContent() {
             </div>
 
             {/* Listings Grid */}
-            {listings.length > 0 ? (
+            {memoizedListings.length > 0 ? (
               <>
                 <div
                   className={`grid gap-6 ${
@@ -164,7 +232,7 @@ function ListingsContent() {
                       : 'grid-cols-1'
                   }`}
                 >
-                  {listings.map((listing) => (
+                  {memoizedListings.map((listing) => (
                     <ListingCard
                       key={listing.id}
                       listing={listing}

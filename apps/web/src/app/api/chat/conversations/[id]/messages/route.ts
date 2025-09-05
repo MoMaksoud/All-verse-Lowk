@@ -3,6 +3,7 @@ import { withApi } from '@/lib/withApi';
 import { dbChat } from '@/lib/mockDb';
 import { success, error } from '@/lib/response';
 import { readJson } from '@/lib/response';
+import { internal, badRequest } from '@/lib/errors';
 
 export const GET = withApi(async (req: NextRequest, { params }: { params: { id: string } }) => {
   try {
@@ -23,18 +24,18 @@ export const GET = withApi(async (req: NextRequest, { params }: { params: { id: 
       },
     });
   } catch (err) {
-    return error('INTERNAL', 'Failed to fetch messages');
+    return error(internal('Failed to fetch messages'));
   }
 });
 
 export const POST = withApi(async (req: NextRequest, { params }: { params: { id: string } }) => {
   try {
-    const body = await readJson(req);
+    const body = await readJson<{ text: string; type?: string; offer?: any }>(req);
     const { text, type = 'text', offer } = body;
     const conversationId = params.id;
 
     if (!text) {
-      return error('BAD_REQUEST', 'Message text is required');
+      return error(badRequest('Message text is required'));
     }
 
     const userId = req.headers.get('x-user-id') || 'currentUser';
@@ -42,6 +43,6 @@ export const POST = withApi(async (req: NextRequest, { params }: { params: { id:
     
     return success({ message });
   } catch (err) {
-    return error('INTERNAL', 'Failed to send message');
+    return error(internal('Failed to send message'));
   }
 });

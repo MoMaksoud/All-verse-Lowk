@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap } from 'lucide-react';
-import { CreateListingForm, Category } from '@marketplace/types';
+import { SimpleListingCreate } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 
@@ -18,34 +18,20 @@ export default function SellPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [formData, setFormData] = useState<CreateListingForm>({
+  const [formData, setFormData] = useState<SimpleListingCreate & { images: File[] }>({
     title: '',
     description: '',
     price: 0,
     category: '',
-    condition: '',
-    location: '',
+    photos: [],
     images: []
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  React.useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch('/api/categories').then(res => res.json());
-        if (response.success) {
-          setCategories(response.data);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
-    fetchCategories();
-  }, []);
+  // Remove categories fetch since we'll use hardcoded categories
 
-  const handleInputChange = (field: keyof CreateListingForm, value: string | number) => {
-    setFormData((prev: CreateListingForm) => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof typeof formData, value: string | number) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field as string]) {
       setErrors((prev: Record<string, string>) => ({ ...prev, [field]: '' }));
     }
@@ -53,14 +39,14 @@ export default function SellPage() {
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    setFormData((prev: CreateListingForm) => ({
+    setFormData((prev) => ({
       ...prev,
       images: [...prev.images, ...files]
     }));
   };
 
   const handleRemoveImage = (index: number) => {
-    setFormData((prev: CreateListingForm) => ({
+    setFormData((prev) => ({
       ...prev,
       images: prev.images?.filter((_: File, i: number) => i !== index) || []
     }));
@@ -81,7 +67,7 @@ export default function SellPage() {
         if (!formData.description?.trim()) stepErrors.description = 'Description is required';
         if (!formData.category) stepErrors.category = 'Category is required';
         if (!formData.price || formData.price <= 0) stepErrors.price = 'Valid price is required';
-        if (!formData.location?.trim()) stepErrors.location = 'Location is required';
+        // Location not required for MVP
         break;
     }
 
@@ -108,8 +94,7 @@ export default function SellPage() {
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (formData.price <= 0) newErrors.price = 'Price must be greater than 0';
     if (!formData.category) newErrors.category = 'Category is required';
-    if (!formData.condition) newErrors.condition = 'Condition is required';
-    if (!formData.location.trim()) newErrors.location = 'Location is required';
+    // Condition and location not required for MVP
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -119,25 +104,18 @@ export default function SellPage() {
     try {
       setLoading(true);
       
-      // Upload images first
+      // Convert images to data URLs for MVP
       let photoUrls: string[] = [];
       if (formData.images && formData.images.length > 0) {
-        const formDataUpload = new FormData();
-        formData.images.forEach((file) => {
-          formDataUpload.append('files', file);
-        });
-        
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: formDataUpload,
-        });
-        
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload images');
-        }
-        
-        const uploadResult = await uploadResponse.json();
-        photoUrls = uploadResult.data.urls;
+        photoUrls = await Promise.all(
+          formData.images.map((file) => {
+            return new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(file);
+            });
+          })
+        );
       }
       
       // Create listing
@@ -146,8 +124,6 @@ export default function SellPage() {
         description: formData.description,
         price: formData.price,
         category: formData.category,
-        condition: formData.condition,
-        currency: 'USD' as const,
         photos: photoUrls
       };
       
@@ -172,15 +148,14 @@ export default function SellPage() {
         description: '',
         price: 0,
         category: '',
-        condition: '',
-        location: '',
+        photos: [],
         images: []
       });
       setErrors({});
       
       // Show success message
       alert('Listing created successfully!');
-      router.push(`/listings/${result.data.id}`);
+      router.push(`/listings/${result.id}`);
       
     } catch (error) {
       console.error('Error creating listing:', error);
@@ -279,9 +254,8 @@ export default function SellPage() {
                       ...prev,
                       title: 'Sample Item Title',
                       description: 'This is a sample description generated by AI based on your photo.',
-                      category: 'Electronics',
-                      price: 99.99,
-                      location: 'Tampa, FL'
+                      category: 'electronics',
+                      price: 99.99
                     }));
                     setCurrentStep(3);
                   }}
@@ -340,31 +314,17 @@ export default function SellPage() {
                 className={`input ${errors.category ? 'border-red-500' : ''}`}
               >
                 <option value="">Select a category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
+                <option value="electronics">Electronics</option>
+                <option value="fashion">Fashion</option>
+                <option value="home">Home</option>
+                <option value="sports">Sports</option>
+                <option value="automotive">Automotive</option>
+                <option value="other">Other</option>
               </select>
               {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Condition
-              </label>
-              <select
-                value={formData.condition || ''}
-                onChange={(e) => handleInputChange('condition', e.target.value)}
-                className="input"
-              >
-                <option value="new">New</option>
-                <option value="like-new">Like New</option>
-                <option value="good">Good</option>
-                <option value="fair">Fair</option>
-                <option value="poor">Poor</option>
-              </select>
-            </div>
+            {/* Condition field removed for MVP */}
 
             <div>
               <label className="block text-sm font-medium text-white mb-2">
@@ -398,8 +358,8 @@ export default function SellPage() {
                           })
                         });
                         const result = await response.json();
-                        if (result.success) {
-                          handleInputChange('price', result.data.price);
+                        if (result.price) {
+                          handleInputChange('price', result.price);
                         }
                       } catch (error) {
                         console.error('Error getting price suggestion:', error);
@@ -414,19 +374,7 @@ export default function SellPage() {
               {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Location
-              </label>
-              <input
-                type="text"
-                value={formData.location || ''}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                placeholder="City, State"
-                className={`input ${errors.location ? 'border-red-500' : ''}`}
-              />
-              {errors.location && <p className="text-red-400 text-sm mt-1">{errors.location}</p>}
-            </div>
+            {/* Location field removed for MVP */}
           </div>
         );
 
@@ -458,16 +406,8 @@ export default function SellPage() {
                     <span className="ml-2 text-white">{formData.category}</span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Condition:</span>
-                    <span className="ml-2 text-white capitalize">{formData.condition}</span>
-                  </div>
-                  <div>
                     <span className="text-gray-400">Price:</span>
                     <span className="ml-2 text-white">${formData.price}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Location:</span>
-                    <span className="ml-2 text-white">{formData.location}</span>
                   </div>
                 </div>
               </div>

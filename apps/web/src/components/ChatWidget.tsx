@@ -65,7 +65,7 @@ export function ChatWidget({ listing, isOpen, onClose, onOpen }: ChatWidgetProps
         {
           id: '2',
           text: 'Hello! Thanks for your interest. How can I help you?',
-          senderId: listing.userId,
+          senderId: listing.sellerId,
           timestamp: new Date(Date.now() + 1000).toISOString(),
           type: 'text',
           status: 'read',
@@ -117,7 +117,7 @@ export function ChatWidget({ listing, isOpen, onClose, onOpen }: ChatWidgetProps
         const response: Message = {
           id: (Date.now() + 1).toString(),
           text: 'Thanks for your message! I\'ll get back to you soon.',
-          senderId: listing.userId,
+          senderId: listing.sellerId,
           timestamp: new Date().toISOString(),
           type: 'text',
           status: 'sent',
@@ -176,7 +176,7 @@ export function ChatWidget({ listing, isOpen, onClose, onOpen }: ChatWidgetProps
       const response: Message = {
         id: (Date.now() + 1).toString(),
         text: 'Let me check on that for you...',
-        senderId: listing.userId,
+        senderId: listing.sellerId,
         timestamp: new Date().toISOString(),
         type: 'text',
         status: 'sent',
@@ -237,7 +237,7 @@ export function ChatWidget({ listing, isOpen, onClose, onOpen }: ChatWidgetProps
         const response: Message = {
           id: (Date.now() + 1).toString(),
           text: 'Thanks for your offer! I\'ll consider it and get back to you.',
-          senderId: listing.userId,
+          senderId: listing.sellerId,
           timestamp: new Date().toISOString(),
           type: 'text',
           status: 'sent',

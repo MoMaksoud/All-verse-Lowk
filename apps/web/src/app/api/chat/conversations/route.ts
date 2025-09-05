@@ -3,6 +3,7 @@ import { withApi } from '@/lib/withApi';
 import { dbChat } from '@/lib/mockDb';
 import { success, error } from '@/lib/response';
 import { readJson } from '@/lib/response';
+import { internal, badRequest } from '@/lib/errors';
 
 export const GET = withApi(async (req: NextRequest) => {
   try {
@@ -23,17 +24,17 @@ export const GET = withApi(async (req: NextRequest) => {
       },
     });
   } catch (err) {
-    return error('INTERNAL', 'Failed to fetch conversations');
+    return error(internal('Failed to fetch conversations'));
   }
 });
 
 export const POST = withApi(async (req: NextRequest) => {
   try {
-    const body = await readJson(req);
+    const body = await readJson<{ listingId: string; message: string }>(req);
     const { listingId, message } = body;
 
     if (!listingId || !message) {
-      return error('BAD_REQUEST', 'Missing required fields: listingId, message');
+      return error(badRequest('Missing required fields: listingId, message'));
     }
 
     const userId = req.headers.get('x-user-id') || 'currentUser';
@@ -41,6 +42,6 @@ export const POST = withApi(async (req: NextRequest) => {
     
     return success({ conversation });
   } catch (err) {
-    return error('INTERNAL', 'Failed to create conversation');
+    return error(internal('Failed to create conversation'));
   }
 });

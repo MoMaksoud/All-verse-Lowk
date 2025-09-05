@@ -200,3 +200,25 @@ export type ListingWithSeller = Listing & {
   views?: number;
   rating?: number;
 };
+
+// Simple MVP types for immediate functionality
+export type SimpleListing = {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  photos: string[]; // data URLs or remote URLs
+  createdAt: string; // ISO
+  updatedAt: string; // ISO
+};
+
+export type SimpleListingCreate = {
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  photos: string[]; // allow data URLs (dev) or https URLs
+};
+
+export type SimpleListingUpdate = Partial<SimpleListingCreate>;

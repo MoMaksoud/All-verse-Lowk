@@ -1,0 +1,12 @@
+[
+  {
+    "id": "7e401b98-29b6-43ef-b229-83b0f0608da9",
+    "createdAt": "2025-09-05T21:15:18.060Z",
+    "updatedAt": "2025-09-05T21:15:18.060Z",
+    "price": 99.99,
+    "title": "Test Item",
+    "description": "A test item for the marketplace",
+    "photos": [],
+    "category": "electronics"
+  }
+]

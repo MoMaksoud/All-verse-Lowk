@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, Search, Bell, User, Plus, MessageCircle, ShoppingBag } from 'lucide-react';
 import { Avatar } from '@marketplace/ui';
 import { Logo } from './Logo';
@@ -23,6 +23,7 @@ export function Navigation() {
     { id: 3, message: 'Welcome to AllVerse! Start exploring our marketplace.', time: '1 day ago', read: true },
   ]);
   const pathname = usePathname();
+  const router = useRouter();
 
   const handleNotificationClick = (notificationId: number) => {
     setNotifications(prev => 
@@ -73,13 +74,21 @@ export function Navigation() {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <button className="btn-ghost p-2 rounded-xl">
+            <button 
+              onClick={() => router.push('/listings')}
+              className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+              title="Search marketplace"
+            >
               <Search className="w-5 h-5" />
             </button>
             
             {/* Notification Bell */}
             <button 
-              onClick={() => setShowNotifications(true)}
+              onClick={() => {
+                setShowNotifications(true);
+                // Mark all notifications as read when bell is clicked
+                markAllNotificationsAsRead();
+              }}
               className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
             >
               <Bell className="w-5 h-5" />

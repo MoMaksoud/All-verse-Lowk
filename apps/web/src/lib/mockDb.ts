@@ -231,7 +231,7 @@ export const dbChat = {
 
     // Enrich with listing and user data
     const enrichedItems = items.map(conv => {
-      const listing = dbListings.find(l => l.id === conv.listingId);
+      const listing = listingsData.find(l => l.id === conv.listingId);
       const otherUserId = conv.buyerId === userId ? conv.sellerId : conv.buyerId;
       const otherUser = dbUsers.find(u => u.id === otherUserId);
       const lastMessage = dbChatMessages.find(m => m.id === conv.lastMessageId);
@@ -287,7 +287,7 @@ export const dbChat = {
 
   // Create a new conversation
   async createConversation(userId: string, listingId: string, initialMessage: string) {
-    const listing = dbListings.find(l => l.id === listingId);
+    const listing = listingsData.find(l => l.id === listingId);
     if (!listing) {
       throw new Error('Listing not found');
     }
@@ -299,7 +299,7 @@ export const dbChat = {
       id: conversationId,
       listingId,
       buyerId: userId,
-      sellerId: listing.userId,
+      sellerId: listing.sellerId,
       lastMessageId: messageId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

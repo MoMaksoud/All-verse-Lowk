@@ -13,14 +13,11 @@ export const GET = withApi(async (req: NextRequest) => {
   if (!roomId) throw badRequest("roomId is required");
   const cursor = url.searchParams.get("cursor"); // message id
   const limit = Number(url.searchParams.get("limit") ?? 20);
-  const all = dbChat.messages(roomId);
-  let start = 0;
-  if (cursor) {
-    const idx = all.findIndex(m => m.id === cursor);
-    start = idx >= 0 ? idx + 1 : 0;
-  }
-  const items = all.slice(start, start + limit);
-  const nextCursor = items.length && all[start + limit] ? all[start + limit].id : null;
+  
+  const result = await dbChat.getMessages(roomId, 1, limit);
+  const items = result.items;
+  const nextCursor = result.hasMore ? items[items.length - 1]?.id : null;
+  
   return success({ items, nextCursor });
 });
 
@@ -29,6 +26,6 @@ export const POST = withApi(async (req: NextRequest) => {
   const roomId: string | undefined = body.roomId;
   const uid = req.headers.get("x-user-id") ?? "u2";
   if (!roomId) throw badRequest("roomId is required");
-  const msg = dbChat.addMessage(roomId, uid, { text: body.text, image: body.image });
+  const msg = await dbChat.sendMessage(roomId, uid, body.text, 'text', body.image);
   return success(msg, { status: 201 });
 });

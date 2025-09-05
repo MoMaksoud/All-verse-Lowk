@@ -1,19 +1,35 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Heart, Share2, MapPin, Eye, Star, MessageCircle, DollarSign, X, Edit, Trash2 } from 'lucide-react';
-import { ListingWithSeller } from '@marketplace/types';
-import { formatCurrency, formatRelativeTime } from '@marketplace/lib';
-import { Avatar } from '@marketplace/ui';
-import { PriceSuggestionPanel } from '@/components/PriceSuggestionPanel';
-import { ChatWidget } from '@/components/ChatWidget';
+import { SimpleListing } from '@marketplace/types';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+};
+
+const formatRelativeTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  return date.toLocaleDateString();
+};
 
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [listing, setListing] = useState<ListingWithSeller | null>(null);
+  const [listing, setListing] = useState<SimpleListing | null>(null);
   const [priceSuggestions, setPriceSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -26,64 +42,67 @@ export default function ListingDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const listingResponse = await fetch(`/api/listings/${params.id}`).then(res => res.json());
+  const fetchData = useCallback(async () => {
+    if (!params.id) return;
+    
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/listings/${params.id}`);
+      const data = await response.json();
 
-        if (listingResponse.success) {
-          setListing(listingResponse.data);
-        } else {
-          console.error('Error fetching listing:', listingResponse.error);
-        }
-      } catch (error) {
-        console.error('Error fetching listing:', error);
-      } finally {
-        setLoading(false);
+      if (response.ok) {
+        setListing(data);
+      } else {
+        console.error('Error fetching listing:', data.error);
+        setListing(null);
       }
-    };
-
-    if (params.id) {
-      fetchData();
+    } catch (error) {
+      console.error('Error fetching listing:', error);
+      setListing(null);
+    } finally {
+      setLoading(false);
     }
   }, [params.id]);
 
-  const handleFavoriteClick = () => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleFavoriteClick = useCallback(() => {
     setIsFavorited(!isFavorited);
     showToast(isFavorited ? 'Removed from favorites' : 'Added to favorites', 'success');
-  };
+  }, [isFavorited]);
 
-  const handleShareClick = () => {
+  const handleShareClick = useCallback(() => {
     setShowShareModal(true);
-  };
+  }, []);
 
-  const handleMessageClick = () => {
+  const handleMessageClick = useCallback(() => {
     setShowMessageModal(true);
-  };
+  }, []);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (message.trim()) {
       showToast('Message sent!', 'success');
       setMessage('');
       setShowMessageModal(false);
     }
-  };
+  }, [message]);
 
-  const handleBuyNow = () => {
+  const handleBuyNow = useCallback(() => {
     showToast('Redirecting to checkout...', 'success');
     // In a real app, this would redirect to a checkout page
     setTimeout(() => {
       showToast('Checkout feature coming soon!', 'success');
     }, 1000);
-  };
+  }, []);
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
     showToast('Link copied to clipboard!', 'success');
-  };
+  }, []);
 
-  const handleDeleteListing = async () => {
+  const handleDeleteListing = useCallback(async () => {
     if (!listing) return;
     
     try {
@@ -101,9 +120,9 @@ export default function ListingDetailPage() {
       console.error('Error deleting listing:', error);
       showToast('Failed to delete listing', 'error');
     }
-  };
+  }, [listing, router]);
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
     // Create toast element
     const toast = document.createElement('div');
     toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
@@ -115,14 +134,16 @@ export default function ListingDetailPage() {
     
     // Remove toast after 3 seconds
     setTimeout(() => {
-      toast.remove();
+      if (toast.parentNode) {
+        toast.remove();
+      }
     }, 3000);
-  };
+  }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen bg-gray-50">
+        <LoadingSpinner size="lg" text="Loading listing details..." />
       </div>
     );
   }
@@ -146,13 +167,26 @@ export default function ListingDetailPage() {
           <div className="lg:col-span-2">
             {/* Photo Gallery */}
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-8">
-              <div className="relative aspect-square">
-                <Image
-                  src={listing.photos[selectedImage] || 'https://via.placeholder.com/300x300/1e293b/64748b?text=No+Image'}
-                  alt={listing.title}
-                  fill
-                  className="object-cover"
-                />
+              <div className="relative aspect-square bg-gray-100">
+                {listing.photos && listing.photos.length > 0 && listing.photos[selectedImage] ? (
+                  <Image
+                    src={listing.photos[selectedImage]}
+                    alt={listing.title}
+                    fill
+                    className="object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'https://via.placeholder.com/300x300/1e293b/64748b?text=No+Image';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <div className="text-center text-gray-400">
+                      <div className="text-4xl mb-2">📦</div>
+                      <div className="text-sm">No Image Available</div>
+                    </div>
+                  </div>
+                )}
                 <div className="absolute top-4 right-4 flex space-x-2">
                   <button 
                     onClick={handleFavoriteClick}
@@ -172,7 +206,7 @@ export default function ListingDetailPage() {
               </div>
               
               {/* Thumbnail Navigation */}
-              {listing.photos.length > 1 && (
+              {listing.photos && listing.photos.length > 1 && (
                 <div className="p-4 border-t border-gray-200">
                   <div className="flex gap-2 mt-4">
                     {listing.photos.map((image: string, index: number) => (
@@ -187,6 +221,10 @@ export default function ListingDetailPage() {
                           src={image}
                           alt={`${listing.title} - Image ${index + 1}`}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://via.placeholder.com/64x64/1e293b/64748b?text=?';
+                          }}
                         />
                       </button>
                     ))}
@@ -203,13 +241,13 @@ export default function ListingDetailPage() {
                     {listing.title}
                   </h1>
                   <div className="text-3xl font-bold text-primary-600 mb-4">
-                    {formatCurrency(listing.price, listing.currency)}
+                    {formatCurrency(listing.price)}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-gray-500 mb-1">Condition</div>
                   <div className="text-sm font-medium text-gray-900 capitalize">
-                    <span>{listing.condition}</span>
+                    <span>{listing.category}</span>
                   </div>
                   <div className="flex gap-2 mt-4">
                     <button
@@ -288,7 +326,7 @@ export default function ListingDetailPage() {
             {/* Buy Now Panel */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 sticky top-8">
               <div className="text-3xl font-bold text-primary-600 mb-4">
-                {formatCurrency(listing.price, listing.currency)}
+                {formatCurrency(listing.price)}
               </div>
               
               <button
@@ -345,16 +383,30 @@ export default function ListingDetailPage() {
         </div>
       </div>
 
-      {/* Price Suggestion Modal */}
+      {/* Price Suggestion Modal - Simplified */}
       {showPricePanel && (
-        <PriceSuggestionPanel
-          listing={listing}
-          onClose={() => setShowPricePanel(false)}
-          onSuggestionSubmitted={(suggestion) => {
-            setPriceSuggestions([suggestion, ...priceSuggestions]);
-            setShowPricePanel(false);
-          }}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Price Suggestion</h3>
+                <button
+                  onClick={() => setShowPricePanel(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-gray-600 mb-4">Price suggestion feature coming soon!</p>
+              <button
+                onClick={() => setShowPricePanel(false)}
+                className="w-full btn btn-primary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Message Modal */}
@@ -376,7 +428,7 @@ export default function ListingDetailPage() {
 
               <div className="mb-4">
                 <p className="text-gray-600 text-sm mb-2">About: {listing.title}</p>
-                <p className="text-gray-500 text-xs">Price: {formatCurrency(listing.price, listing.currency)}</p>
+                <p className="text-gray-500 text-xs">Price: {formatCurrency(listing.price)}</p>
               </div>
 
               <div className="mb-4">
@@ -431,7 +483,7 @@ export default function ListingDetailPage() {
 
               <div className="mb-4">
                 <p className="text-gray-600 text-sm mb-2">{listing.title}</p>
-                <p className="text-gray-500 text-xs">{formatCurrency(listing.price, listing.currency)}</p>
+                <p className="text-gray-500 text-xs">{formatCurrency(listing.price)}</p>
               </div>
 
               <div className="mb-4">
@@ -526,13 +578,31 @@ export default function ListingDetailPage() {
         </div>
       )}
 
-      {/* Chat Widget */}
-      <ChatWidget
-        listing={listing}
-        isOpen={showChatWidget}
-        onClose={() => setShowChatWidget(false)}
-        onOpen={() => setShowChatWidget(true)}
-      />
+      {/* Chat Widget - Simplified */}
+      {showChatWidget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Chat with Seller</h3>
+                <button
+                  onClick={() => setShowChatWidget(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-gray-600 mb-4">Chat feature coming soon!</p>
+              <button
+                onClick={() => setShowChatWidget(false)}
+                className="w-full btn btn-primary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

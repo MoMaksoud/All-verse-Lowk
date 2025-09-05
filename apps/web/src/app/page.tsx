@@ -1,45 +1,47 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain } from 'lucide-react';
-import { mockApi } from '@marketplace/lib';
-import { ListingWithSeller, Category } from '@marketplace/types';
+import { SimpleListing } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { CategoryCard } from '@/components/CategoryCard';
 import { SearchBar } from '@/components/SearchBar';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function HomePage() {
-  const [featuredListings, setFeaturedListings] = useState<ListingWithSeller[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [featuredListings, setFeaturedListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [listingsResponse, categoriesResponse] = await Promise.all([
-          mockApi.getListings({}, 1, 8),
-          mockApi.getCategories(),
-        ]);
+  const fetchData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/listings?limit=8');
+      const data = await response.json();
 
-        setFeaturedListings(listingsResponse.data.items);
-        setCategories(categoriesResponse.data);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
+      if (response.ok) {
+        setFeaturedListings(data.data || []);
+      } else {
+        setFeaturedListings([]);
       }
-    };
-
-    fetchData();
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setFeaturedListings([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-500"></div>
+      <div className="min-h-screen bg-dark-950">
+        <Navigation />
+        <LoadingSpinner size="lg" text="Loading featured listings..." />
       </div>
     );
   }
@@ -133,10 +135,11 @@ export default function HomePage() {
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {categories.map((category) => (
-              <CategoryCard key={category.id} category={category} />
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <CategoryCard category={{ id: 'electronics', name: 'Electronics', slug: 'electronics', icon: 'electronics.svg', iconImage: '/icons/electronics.svg' }} />
+            <CategoryCard category={{ id: 'fashion', name: 'Fashion', slug: 'fashion', icon: 'fashion.svg', iconImage: '/icons/fashion.svg' }} />
+            <CategoryCard category={{ id: 'home', name: 'Home', slug: 'home', icon: 'home.svg', iconImage: '/icons/home.svg' }} />
+            <CategoryCard category={{ id: 'sports', name: 'Sports', slug: 'sports', icon: 'sports.svg', iconImage: '/icons/sports.svg' }} />
           </div>
         </div>
       </section>

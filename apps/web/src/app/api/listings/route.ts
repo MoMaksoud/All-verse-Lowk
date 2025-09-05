@@ -1,50 +1,48 @@
-import { NextRequest } from "next/server";
-import { withApi } from "@/lib/withApi";
-import { dbListings } from "@/lib/mockDb";
-import { parsePagination } from "@/lib/pagination";
-import { filterListings } from "@/lib/search";
-import { success } from "@/lib/response";
-import { CreateListingInput, SearchQuery } from "@marketplace/types";
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { SimpleListingCreate } from "@marketplace/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const GET = withApi(async (req: NextRequest) => {
-  const url = new URL(req.url);
-  const searchParams = Object.fromEntries(url.searchParams.entries());
-  const query = SearchQuery.parse(searchParams);
-  
-  const filters = {
-    keyword: query.q,
-    category: query.category,
-    minPrice: query.min,
-    maxPrice: query.max,
-  };
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const q = url.searchParams.get('q') || undefined;
+    const category = url.searchParams.get('category') || undefined;
+    const min = url.searchParams.get('min') ? Number(url.searchParams.get('min')) : undefined;
+    const max = url.searchParams.get('max') ? Number(url.searchParams.get('max')) : undefined;
+    const page = Number(url.searchParams.get('page')) || 1;
+    const limit = Number(url.searchParams.get('limit')) || 20;
 
-  const result = await dbListings.search(filters, query.page, query.limit);
-  
-  // Apply sorting
-  if (query.sort === 'priceAsc') {
-    result.items.sort((a, b) => a.price - b.price);
-  } else if (query.sort === 'priceDesc') {
-    result.items.sort((a, b) => b.price - a.price);
+    const result = await db.list(q, category, min, max, page, limit);
+    
+    return NextResponse.json({
+      data: result.data,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      hasMore: result.page * result.limit < result.total
+    });
+  } catch (error) {
+    console.error('Error fetching listings:', error);
+    return NextResponse.json({ error: 'Failed to fetch listings' }, { status: 500 });
   }
-  // 'recent' is default sorting by creation date
+}
 
-  const body = { 
-    items: result.items, 
-    total: result.total, 
-    page: query.page, 
-    limit: query.limit, 
-    hasMore: result.hasMore 
-  };
-  return success(body);
-});
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json() as SimpleListingCreate;
+    
+    // Basic validation
+    if (!body.title || !body.description || typeof body.price !== 'number' || !body.category) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
 
-export const POST = withApi(async (req: NextRequest) => {
-  const raw = (await req.json()) as unknown;
-  const parsed = CreateListingInput.parse(raw);
-  const sellerId = parsed.sellerId ?? req.headers.get("x-user-id") ?? "user1";
-  const created = dbListings.create({ ...parsed, status: "active" }, sellerId);
-  return success(created, { status: 201 });
-});
+    const listing = await db.create(body);
+    return NextResponse.json(listing, { status: 201 });
+  } catch (error) {
+    console.error('Error creating listing:', error);
+    return NextResponse.json({ error: 'Failed to create listing' }, { status: 500 });
+  }
+}

@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Heart, MessageCircle, Star, Clock, X } from 'lucide-react';
-import { ListingWithSeller } from '@marketplace/types';
+import { SimpleListing } from '@marketplace/types';
 
 interface ListingCardProps {
-  listing: ListingWithSeller;
+  listing: SimpleListing;
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
@@ -14,26 +14,28 @@ export function ListingCard({ listing }: ListingCardProps) {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState('');
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Stop event bubbling
     setIsFavorited(!isFavorited);
     showToast(isFavorited ? 'Removed from favorites' : 'Added to favorites', 'success');
-  };
+  }, [isFavorited]);
 
-  const handleMessageClick = (e: React.MouseEvent) => {
+  const handleMessageClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Stop event bubbling
     setShowMessageModal(true);
-  };
+  }, []);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (message.trim()) {
       showToast('Message sent!', 'success');
       setMessage('');
       setShowMessageModal(false);
     }
-  };
+  }, [message]);
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
     // Create toast element
     const toast = document.createElement('div');
     toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
@@ -45,21 +47,49 @@ export function ListingCard({ listing }: ListingCardProps) {
     
     // Remove toast after 3 seconds
     setTimeout(() => {
-      toast.remove();
+      if (toast.parentNode) {
+        toast.remove();
+      }
     }, 3000);
-  };
+  }, []);
 
   return (
     <>
       <Link href={`/listings/${listing.id}`} className="group">
         <div className="card hover:scale-105 transition-all duration-200 cursor-pointer overflow-hidden">
           {/* Image */}
-          <div className="relative aspect-square overflow-hidden rounded-t-2xl">
-            <img
-              src={listing.photos[0] || 'https://via.placeholder.com/300x300/1e293b/64748b?text=No+Image'}
-              alt={listing.title}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-            />
+          <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-dark-700">
+            {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
+              <img
+                src={listing.photos[0]}
+                alt={listing.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                loading="lazy"
+                onError={(e) => {
+                  // Fallback to placeholder if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = `
+                      <div class="w-full h-full bg-dark-700 flex items-center justify-center">
+                        <div class="text-center text-gray-400">
+                          <div class="text-4xl mb-2">📦</div>
+                          <div class="text-sm">No Image</div>
+                        </div>
+                      </div>
+                    `;
+                  }
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-dark-700 flex items-center justify-center">
+                <div className="text-center text-gray-400">
+                  <div className="text-4xl mb-2">📦</div>
+                  <div className="text-sm">No Image</div>
+                </div>
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-dark-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
             
             {/* Favorite Button */}
@@ -105,7 +135,7 @@ export function ListingCard({ listing }: ListingCardProps) {
                 <span className="text-gray-500">•</span>
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-400">{listing.createdAt}</span>
+                  <span className="text-sm text-gray-400">{new Date(listing.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
               
