@@ -25,7 +25,7 @@
     "description": "Barely worn Nike Air Max 270 in size 10. Perfect for running or casual wear.",
     "price": 120.00,
     "category": "fashion",
-    "photos": ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop"],
+    "photos": ["./images/nike-air-max-270.avif"],
     "createdAt": "2025-09-05T19:30:00.000Z",
     "updatedAt": "2025-09-05T19:30:00.000Z"
   },
@@ -55,7 +55,7 @@
     "description": "2021 MacBook Pro 14-inch with M1 Pro chip, 16GB RAM, 512GB SSD. Excellent condition.",
     "price": 1299.99,
     "category": "electronics",
-    "photos": ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop"],
+    "photos": ["/public/logo.jpg"],
     "createdAt": "2025-09-05T16:10:00.000Z",
     "updatedAt": "2025-09-05T16:10:00.000Z"
   },

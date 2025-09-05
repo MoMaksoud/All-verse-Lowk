@@ -59,8 +59,7 @@ const listingsData: Listing[] = [
     category: 'electronics' as ListingCategory,
     condition: 'Like New',
     photos: [
-      'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop&crop=face',
+      '/images/iphone-14.jpg',
     ],
     status: 'active',
     createdAt: '2024-01-10T10:00:00Z',
@@ -75,9 +74,9 @@ const listingsData: Listing[] = [
     currency: 'USD',
     category: 'electronics' as ListingCategory,
     condition: 'Like New',
-    photos: [
-      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop',
-    ],
+          photos: [
+        '/images/macbook-m2.jpg',
+      ],
     status: 'active',
     createdAt: '2024-01-11T14:30:00Z',
     updatedAt: '2024-01-11T14:30:00Z',
@@ -92,7 +91,7 @@ const listingsData: Listing[] = [
     category: 'fashion' as ListingCategory,
     condition: 'Good',
     photos: [
-      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop',
+      '/images/air-max-270.avif',
     ],
     status: 'active',
     createdAt: '2024-01-12T09:15:00Z',
@@ -108,7 +107,7 @@ const listingsData: Listing[] = [
     category: 'sports' as ListingCategory,
     condition: 'Good',
     photos: [
-      'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop',
+      '/images/basketball.avif',
     ],
     status: 'active',
     createdAt: '2024-01-13T16:20:00Z',
@@ -124,7 +123,7 @@ const listingsData: Listing[] = [
     category: 'sports' as ListingCategory,
     condition: 'Like New',
     photos: [
-      'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=400&fit=crop',
+      '/images/tennis-racket.avif',
     ],
     status: 'active',
     createdAt: '2024-01-14T11:45:00Z',
@@ -140,7 +139,7 @@ const listingsData: Listing[] = [
     category: 'sports' as ListingCategory,
     condition: 'Good',
     photos: [
-      'https://images.unsplash.com/photo-1506629905607-0a2b4b4b4b4b?w=400&h=400&fit=crop',
+      '/images/yoga-mat.avif',
     ],
     status: 'active',
     createdAt: '2024-01-15T08:30:00Z',
