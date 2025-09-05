@@ -19,6 +19,10 @@ export const ApiErrorShape = z.object({
 });
 export type ApiErrorShape = z.infer<typeof ApiErrorShape>;
 
+export const makeError = (code: string, message: string) => ({
+  error: { code, message }
+});
+
 /** Basic lookups */
 export const ListingCategory = z.enum([
   "electronics",
@@ -49,6 +53,9 @@ export const ProfileSchema = z.object({
 export type Profile = z.infer<typeof ProfileSchema>;
 
 /** LISTING */
+export const ListingCondition = z.enum(['New', 'Like New', 'Good', 'Fair', 'For Parts']);
+export type ListingCondition = z.infer<typeof ListingCondition>;
+
 export const ListingSchema = z.object({
   id: z.string(),
   title: z.string().min(1).max(120),
@@ -56,6 +63,7 @@ export const ListingSchema = z.object({
   price: z.number().nonnegative(),
   currency: z.literal("USD"),
   category: ListingCategory,
+  condition: ListingCondition,
   photos: z.array(z.string().url()).default([]),
   sellerId: z.string(),
   status: z.enum(["active", "sold", "archived"]).default("active"),
@@ -70,6 +78,7 @@ export const CreateListingInput = ListingSchema.pick({
   price: true,
   currency: true,
   category: true,
+  condition: true,
   photos: true,
 }).extend({ sellerId: z.string().optional() });
 export type CreateListingInput = z.infer<typeof CreateListingInput>;
@@ -81,6 +90,17 @@ export const UpdateListingInput = ListingSchema.partial().omit({
   updatedAt: true,
 });
 export type UpdateListingInput = z.infer<typeof UpdateListingInput>;
+
+export const SearchQuery = z.object({
+  q: z.string().optional(),
+  category: z.string().optional(),
+  min: z.coerce.number().optional(),
+  max: z.coerce.number().optional(),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(50).default(24),
+  sort: z.enum(['recent','priceAsc','priceDesc']).default('recent').optional(),
+});
+export type SearchQuery = z.infer<typeof SearchQuery>;
 
 /** CHAT */
 export const ChatRoomSchema = z.object({

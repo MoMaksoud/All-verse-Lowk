@@ -3,7 +3,6 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Filter, Grid, List, ChevronLeft, ChevronRight } from 'lucide-react';
-import { mockApi } from '@marketplace/lib';
 import { ListingWithSeller, Category, ListingFilters } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
@@ -24,14 +23,29 @@ function ListingsContent() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        
+        // Build query parameters
+        const params = new URLSearchParams();
+        if (filters.keyword) params.set('q', filters.keyword);
+        if (filters.category) params.set('category', filters.category);
+        if (filters.minPrice !== undefined) params.set('min', filters.minPrice.toString());
+        if (filters.maxPrice !== undefined) params.set('max', filters.maxPrice.toString());
+        params.set('page', currentPage.toString());
+        params.set('limit', '12');
+
         const [listingsResponse, categoriesResponse] = await Promise.all([
-          mockApi.getListings(filters, currentPage, 12),
-          mockApi.getCategories(),
+          fetch(`/api/listings?${params.toString()}`).then(res => res.json()),
+          fetch('/api/categories').then(res => res.json()),
         ]);
 
-        setListings(listingsResponse.data.items);
-        setTotalPages(Math.ceil(listingsResponse.data.total / 12));
-        setCategories(categoriesResponse.data);
+        if (listingsResponse.success) {
+          setListings(listingsResponse.data.items);
+          setTotalPages(Math.ceil(listingsResponse.data.total / 12));
+        }
+        
+        if (categoriesResponse.success) {
+          setCategories(categoriesResponse.data);
+        }
       } catch (error) {
         console.error('Error fetching listings:', error);
       } finally {
@@ -45,9 +59,9 @@ function ListingsContent() {
   useEffect(() => {
     // Parse URL params for filters
     const category = searchParams.get('category');
-    const keyword = searchParams.get('keyword');
-    const minPrice = searchParams.get('minPrice');
-    const maxPrice = searchParams.get('maxPrice');
+    const keyword = searchParams.get('q'); // Changed from 'keyword' to 'q'
+    const minPrice = searchParams.get('min');
+    const maxPrice = searchParams.get('max');
 
     const newFilters: ListingFilters = {};
     if (category) newFilters.category = category;

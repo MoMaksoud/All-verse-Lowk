@@ -127,6 +127,7 @@ const mockListings: Listing[] = [
     price: 899,
     currency: 'USD',
     category: 'electronics',
+    condition: 'Like New',
     photos: [
       'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop',
       'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop',
@@ -144,6 +145,7 @@ const mockListings: Listing[] = [
     price: 245,
     currency: 'USD',
     category: 'fashion',
+    condition: 'Good',
     photos: [
       'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop',
     ],
@@ -160,6 +162,7 @@ const mockListings: Listing[] = [
     price: 180,
     currency: 'USD',
     category: 'other',
+    condition: 'Good',
     photos: [
       'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop',
     ],
@@ -176,6 +179,7 @@ const mockListings: Listing[] = [
     price: 1499,
     currency: 'USD',
     category: 'electronics',
+    condition: 'Like New',
     photos: [
       'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop',
     ],
@@ -192,6 +196,7 @@ const mockListings: Listing[] = [
     price: 450,
     currency: 'USD',
     category: 'home',
+    condition: 'Good',
     photos: [
       'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=400&h=300&fit=crop',
     ],
@@ -318,6 +323,7 @@ export const mockApi = {
       price: listingData.price,
       currency: 'USD',
       category: listingData.category as any,
+      condition: listingData.condition as any,
       photos: [],
       sellerId: 'user1', // Mock current user
       status: 'active',

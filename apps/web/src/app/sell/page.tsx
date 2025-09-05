@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap } from 'lucide-react';
-import { mockApi } from '@marketplace/lib';
 import { CreateListingForm, Category } from '@marketplace/types';
-import { validateForm, createListingSchema } from '@marketplace/lib';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 
@@ -35,8 +33,10 @@ export default function SellPage() {
   React.useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await mockApi.getCategories();
-        setCategories(response.data);
+        const response = await fetch('/api/categories').then(res => res.json());
+        if (response.success) {
+          setCategories(response.data);
+        }
       } catch (error) {
         console.error('Error fetching categories:', error);
       }
@@ -119,18 +119,52 @@ export default function SellPage() {
     try {
       setLoading(true);
       
-             // Convert form data to API format
-       const listingData = {
-         title: formData.title,
-         description: formData.description,
-         price: formData.price,
-         category: formData.category,
-         currency: 'USD' as const,
-         photos: [] // We'll handle image upload separately
-       } as any;
+      // Upload images first
+      let photoUrls: string[] = [];
+      if (formData.images && formData.images.length > 0) {
+        const formDataUpload = new FormData();
+        formData.images.forEach((file) => {
+          formDataUpload.append('files', file);
+        });
+        
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formDataUpload,
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload images');
+        }
+        
+        const uploadResult = await uploadResponse.json();
+        photoUrls = uploadResult.data.urls;
+      }
       
-      const createdListing = await mockApi.createListing(listingData);
-      console.log('Listing created:', createdListing);
+      // Create listing
+      const listingData = {
+        title: formData.title,
+        description: formData.description,
+        price: formData.price,
+        category: formData.category,
+        condition: formData.condition,
+        currency: 'USD' as const,
+        photos: photoUrls
+      };
+      
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(listingData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create listing');
+      }
+      
+      const result = await response.json();
+      console.log('Listing created:', result);
       
       // Reset form
       setFormData({
@@ -146,7 +180,7 @@ export default function SellPage() {
       
       // Show success message
       alert('Listing created successfully!');
-      router.push(`/listings/${createdListing.data.id}`);
+      router.push(`/listings/${result.data.id}`);
       
     } catch (error) {
       console.error('Error creating listing:', error);
@@ -336,17 +370,46 @@ export default function SellPage() {
               <label className="block text-sm font-medium text-white mb-2">
                 Price
               </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  type="number"
-                  value={formData.price || ''}
-                  onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  className={`input pl-8 ${errors.price ? 'border-red-500' : ''}`}
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">$</span>
+                  <input
+                    type="number"
+                    value={formData.price || ''}
+                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className={`input pl-8 ${errors.price ? 'border-red-500' : ''}`}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (formData.title && formData.description) {
+                      try {
+                        const response = await fetch('/api/prices/suggest', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            title: formData.title,
+                            description: formData.description,
+                            photos: formData.images?.map(img => URL.createObjectURL(img)) || []
+                          })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                          handleInputChange('price', result.data.price);
+                        }
+                      } catch (error) {
+                        console.error('Error getting price suggestion:', error);
+                      }
+                    }
+                  }}
+                  className="btn btn-outline whitespace-nowrap"
+                >
+                  Suggest Price
+                </button>
               </div>
               {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
             </div>

@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Heart, Share2, MapPin, Eye, Star, MessageCircle, DollarSign, X } from 'lucide-react';
-import { mockApi } from '@marketplace/lib';
+import { Heart, Share2, MapPin, Eye, Star, MessageCircle, DollarSign, X, Edit, Trash2 } from 'lucide-react';
 import { ListingWithSeller } from '@marketplace/types';
 import { formatCurrency, formatRelativeTime } from '@marketplace/lib';
 import { Avatar } from '@marketplace/ui';
@@ -13,8 +12,9 @@ import { ChatWidget } from '@/components/ChatWidget';
 
 export default function ListingDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const [listing, setListing] = useState<ListingWithSeller | null>(null);
-  const [priceSuggestions, setPriceSuggestions] = useState<any[]>([]); // Changed to any[] as PriceSuggestion type is removed
+  const [priceSuggestions, setPriceSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showPricePanel, setShowPricePanel] = useState(false);
@@ -23,18 +23,20 @@ export default function ListingDetailPage() {
   const [message, setMessage] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
   const [showChatWidget, setShowChatWidget] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [listingResponse, suggestionsResponse] = await Promise.all([
-          mockApi.getListing(params.id as string),
-          mockApi.getPriceSuggestion({ title: 'Test', description: 'Test description' }),
-        ]);
+        const listingResponse = await fetch(`/api/listings/${params.id}`).then(res => res.json());
 
-        setListing(listingResponse.data);
-        setPriceSuggestions([suggestionsResponse.data]);
+        if (listingResponse.success) {
+          setListing(listingResponse.data);
+        } else {
+          console.error('Error fetching listing:', listingResponse.error);
+        }
       } catch (error) {
         console.error('Error fetching listing:', error);
       } finally {
@@ -79,6 +81,26 @@ export default function ListingDetailPage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     showToast('Link copied to clipboard!', 'success');
+  };
+
+  const handleDeleteListing = async () => {
+    if (!listing) return;
+    
+    try {
+      const response = await fetch(`/api/listings/${listing.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        showToast('Listing deleted successfully!', 'success');
+        router.push('/listings');
+      } else {
+        throw new Error('Failed to delete listing');
+      }
+    } catch (error) {
+      console.error('Error deleting listing:', error);
+      showToast('Failed to delete listing', 'error');
+    }
   };
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -187,7 +209,23 @@ export default function ListingDetailPage() {
                 <div className="text-right">
                   <div className="text-sm text-gray-500 mb-1">Condition</div>
                   <div className="text-sm font-medium text-gray-900 capitalize">
-                    {/* <span>{listing.condition}</span> */}
+                    <span>{listing.condition}</span>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => setShowEditModal(true)}
+                      className="btn btn-outline flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="btn btn-outline text-red-400 border-red-400 hover:bg-red-400 hover:text-white flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
                   </div>
                 </div>
               </div>
@@ -436,6 +474,51 @@ export default function ListingDetailPage() {
                   className="flex-1 btn btn-outline"
                 >
                   Share on Facebook
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Delete Listing
+                </h3>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-gray-600">
+                  Are you sure you want to delete "{listing?.title}"? This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 btn btn-outline"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    handleDeleteListing();
+                  }}
+                  className="flex-1 btn bg-red-500 text-white hover:bg-red-600"
+                >
+                  Delete
                 </button>
               </div>
             </div>

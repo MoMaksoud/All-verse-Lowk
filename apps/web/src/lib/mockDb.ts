@@ -47,47 +47,56 @@ export const dbProfiles: Profile[] = [
   },
 ];
 
-// Mock Listings
-export const dbListings: Listing[] = [
+// Mock Listings Data
+const listingsData: Listing[] = [
   {
     id: 'listing1',
-    userId: 'user1',
+    sellerId: 'user1',
     title: 'iPhone 14 Pro - Excellent Condition',
     description: 'Selling my iPhone 14 Pro in excellent condition. No scratches, comes with original box and charger.',
     price: 899.99,
     currency: 'USD',
     category: 'electronics' as ListingCategory,
+    condition: 'Like New',
     photos: [
       'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop',
       'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop&crop=face',
     ],
+    status: 'active',
     createdAt: '2024-01-10T10:00:00Z',
+    updatedAt: '2024-01-10T10:00:00Z',
   },
   {
     id: 'listing2',
-    userId: 'user2',
+    sellerId: 'user2',
     title: 'MacBook Air M2 - Like New',
     description: 'MacBook Air M2 with 8GB RAM and 256GB SSD. Used for only 3 months, perfect condition.',
     price: 1299.99,
     currency: 'USD',
     category: 'electronics' as ListingCategory,
+    condition: 'Like New',
     photos: [
       'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop',
     ],
+    status: 'active',
     createdAt: '2024-01-11T14:30:00Z',
+    updatedAt: '2024-01-11T14:30:00Z',
   },
   {
     id: 'listing3',
-    userId: 'user3',
+    sellerId: 'user3',
     title: 'Nike Air Max 270 - Size 10',
     description: 'Nike Air Max 270 in black and white. Size 10, worn only a few times.',
     price: 89.99,
     currency: 'USD',
     category: 'fashion' as ListingCategory,
+    condition: 'Good',
     photos: [
       'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop',
     ],
+    status: 'active',
     createdAt: '2024-01-12T09:15:00Z',
+    updatedAt: '2024-01-12T09:15:00Z',
   },
 ];
 
@@ -407,7 +416,7 @@ export const dbChat = {
 };
 
 // User Operations
-export const dbUsers = {
+export const dbUsersOperations = {
   async findById(id: string): Promise<User | null> {
     return dbUsers.find(user => user.id === id) || null;
   },
@@ -444,7 +453,7 @@ export const dbUsers = {
 };
 
 // Profile Operations
-export const dbProfiles = {
+export const dbProfilesOperations = {
   async findByUserId(userId: string): Promise<Profile | null> {
     return dbProfiles.find(profile => profile.userId === userId) || null;
   },
@@ -471,42 +480,56 @@ export const dbProfiles = {
 
 // Listing Operations
 export const dbListings = {
+  list(): Listing[] {
+    return listingsData;
+  },
+
+  get(id: string): Listing | null {
+    return listingsData.find(listing => listing.id === id) || null;
+  },
+
   async findById(id: string): Promise<Listing | null> {
-    return dbListings.find(listing => listing.id === id) || null;
+    return listingsData.find(listing => listing.id === id) || null;
   },
 
   async findByUserId(userId: string): Promise<Listing[]> {
-    return dbListings.filter(listing => listing.userId === userId);
+    return listingsData.filter(listing => listing.sellerId === userId);
   },
 
-  async create(listingData: Omit<Listing, 'id' | 'createdAt'>): Promise<Listing> {
+  create(listingData: Omit<Listing, 'id' | 'createdAt' | 'updatedAt'>, sellerId: string): Listing {
     const newListing: Listing = {
       id: `listing${Date.now()}`,
       ...listingData,
+      sellerId,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
-    dbListings.push(newListing);
+    listingsData.push(newListing);
     return newListing;
   },
 
-  async update(id: string, updates: Partial<Listing>): Promise<Listing | null> {
-    const listingIndex = dbListings.findIndex(listing => listing.id === id);
+  update(id: string, updates: Partial<Listing>): Listing | null {
+    const listingIndex = listingsData.findIndex(listing => listing.id === id);
     if (listingIndex === -1) return null;
     
-    dbListings[listingIndex] = { ...dbListings[listingIndex], ...updates };
-    return dbListings[listingIndex];
+    listingsData[listingIndex] = { 
+      ...listingsData[listingIndex], 
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    return listingsData[listingIndex];
   },
 
-  async delete(id: string): Promise<boolean> {
-    const listingIndex = dbListings.findIndex(listing => listing.id === id);
+  remove(id: string): boolean {
+    const listingIndex = listingsData.findIndex(listing => listing.id === id);
     if (listingIndex === -1) return false;
     
-    dbListings.splice(listingIndex, 1);
+    listingsData.splice(listingIndex, 1);
     return true;
   },
 
   async search(filters: any = {}, page: number = 1, limit: number = 20): Promise<{ items: Listing[], total: number, hasMore: boolean }> {
-    let filteredListings = [...dbListings];
+    let filteredListings = [...listingsData];
 
     // Apply filters
     if (filters.category) {

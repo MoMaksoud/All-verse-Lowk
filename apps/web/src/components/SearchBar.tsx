@@ -42,7 +42,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
       setIsSearching(true);
       // Simulate search delay
       setTimeout(() => {
-        router.push(`/listings?keyword=${encodeURIComponent(searchQuery)}`);
+        router.push(`/listings?q=${encodeURIComponent(searchQuery)}`);
         setIsSearching(false);
         setShowSuggestions(false);
       }, 500);
@@ -78,7 +78,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             }}
             onFocus={() => setShowSuggestions(query.length > 0)}
             placeholder="Search for anything..."
-            className="w-full pl-12 pr-12 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all duration-200"
+            className="w-full pl-12 pr-12 py-4 bg-dark-800/90 border border-dark-600 rounded-2xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all duration-200"
           />
           {query && (
             <button
