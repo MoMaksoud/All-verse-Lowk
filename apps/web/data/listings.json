@@ -81,13 +81,13 @@
   },
   {
     "id": "sample-8",
-    "title": "Tennis Racket",
-    "description": "Professional tennis racket, used by intermediate players. Great for improving your game.",
-    "price": 85.00,
+    "title": "Tennis Racket - Wilson Pro Staff",
+    "description": "Wilson Pro Staff tennis racket, perfect for intermediate players.",
+    "price": 120.00,
     "category": "sports",
-    "photos": ["https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=300&fit=crop"],
-    "createdAt": "2025-09-05T13:45:00.000Z",
-    "updatedAt": "2025-09-05T13:45:00.000Z"
+    "photos": ["https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400&h=300&fit=crop"],
+    "createdAt": "2025-01-14T13:45:00.000Z",
+    "updatedAt": "2025-01-14T13:45:00.000Z"
   },
   {
     "id": "sample-9",
@@ -108,5 +108,15 @@
     "photos": ["https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=400&h=300&fit=crop"],
     "createdAt": "2025-09-05T11:30:00.000Z",
     "updatedAt": "2025-09-05T11:30:00.000Z"
+  },
+  {
+    "id": "sample-11",
+    "title": "Yoga Mat - Premium Quality",
+    "description": "High-quality yoga mat, non-slip surface, perfect for home workouts.",
+    "price": 45.00,
+    "category": "sports",
+    "photos": ["https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop"],
+    "createdAt": "2025-01-15T10:00:00.000Z",
+    "updatedAt": "2025-01-15T10:00:00.000Z"
   }
 ]
