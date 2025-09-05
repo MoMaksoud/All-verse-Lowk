@@ -170,7 +170,8 @@ function ListingsContent() {
                       minPrice: e.target.value ? parseFloat(e.target.value) : undefined 
                     })}
                     placeholder="Min"
-                    className="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
+                    className="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 appearance-none"
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
                   <input
                     type="number"
@@ -180,7 +181,8 @@ function ListingsContent() {
                       maxPrice: e.target.value ? parseFloat(e.target.value) : undefined 
                     })}
                     placeholder="Max"
-                    className="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
+                    className="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 appearance-none"
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
                 </div>
               </div>
