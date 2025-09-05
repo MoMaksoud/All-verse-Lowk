@@ -29,6 +29,7 @@ export const ListingCategory = z.enum([
   "fashion",
   "home",
   "books",
+  "sports",
   "other",
 ]);
 export type ListingCategory = z.infer<typeof ListingCategory>;

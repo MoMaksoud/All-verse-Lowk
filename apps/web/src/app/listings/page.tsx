@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, Suspense, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Filter, Grid, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { Filter, Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { Navigation } from '@/components/Navigation';
@@ -13,7 +14,13 @@ function ListingsContent() {
   const searchParams = useSearchParams();
   const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
+  const [localFilters, setLocalFilters] = useState({
+    keyword: '',
+    category: '',
+    minPrice: undefined as number | undefined,
+    maxPrice: undefined as number | undefined,
+  });
+  const [appliedFilters, setAppliedFilters] = useState({
     keyword: '',
     category: '',
     minPrice: undefined as number | undefined,
@@ -22,6 +29,7 @@ function ListingsContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'rating'>('newest');
 
   const fetchData = useCallback(async () => {
     try {
@@ -29,15 +37,37 @@ function ListingsContent() {
       
       // Build query parameters
       const params = new URLSearchParams();
-      if (filters.keyword) params.set('q', filters.keyword);
-      if (filters.category) params.set('category', filters.category);
-      if (filters.minPrice !== undefined) params.set('min', filters.minPrice.toString());
-      if (filters.maxPrice !== undefined) params.set('max', filters.maxPrice.toString());
+      if (appliedFilters.keyword) params.set('q', appliedFilters.keyword);
+      if (appliedFilters.category) params.set('category', appliedFilters.category);
+      if (appliedFilters.minPrice !== undefined) params.set('min', appliedFilters.minPrice.toString());
+      if (appliedFilters.maxPrice !== undefined) params.set('max', appliedFilters.maxPrice.toString());
       params.set('page', currentPage.toString());
       params.set('limit', '12');
+      
+      console.log('Applied filters:', appliedFilters);
+      console.log('API URL:', `/api/listings?${params.toString()}`);
+      
+      // Add sort parameter
+      switch (sortBy) {
+        case 'price-low':
+          params.set('sort', 'priceAsc');
+          break;
+        case 'price-high':
+          params.set('sort', 'priceDesc');
+          break;
+        case 'rating':
+          params.set('sort', 'rating');
+          break;
+        case 'newest':
+        default:
+          params.set('sort', 'recent');
+          break;
+      }
 
       const response = await fetch(`/api/listings?${params.toString()}`);
       const data = await response.json();
+
+      console.log('API Response:', data);
 
       if (response.ok) {
         setListings(data.data || []);
@@ -53,7 +83,7 @@ function ListingsContent() {
     } finally {
       setLoading(false);
     }
-  }, [filters, currentPage]);
+  }, [appliedFilters, currentPage, sortBy]);
 
   useEffect(() => {
     fetchData();
@@ -73,14 +103,37 @@ function ListingsContent() {
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
     };
 
-    setFilters(newFilters);
+    setLocalFilters(newFilters);
+    setAppliedFilters(newFilters);
     setCurrentPage(1);
   }, [searchParams]);
 
-  const handleFilterChange = useCallback((newFilters: typeof filters) => {
-    setFilters(newFilters);
+  const handleLocalFilterChange = useCallback((newFilters: typeof localFilters) => {
+    setLocalFilters(newFilters);
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    setAppliedFilters(localFilters);
+    setCurrentPage(1);
+  }, [localFilters]);
+
+  const handleClearFilters = useCallback(() => {
+    const clearedFilters = {
+      keyword: '',
+      category: '',
+      minPrice: undefined,
+      maxPrice: undefined,
+    };
+    setLocalFilters(clearedFilters);
+    setAppliedFilters(clearedFilters);
     setCurrentPage(1);
   }, []);
+
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleApplyFilters();
+    }
+  }, [handleApplyFilters]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -129,8 +182,9 @@ function ListingsContent() {
                 </label>
                 <input
                   type="text"
-                  value={filters.keyword}
-                  onChange={(e) => handleFilterChange({ ...filters, keyword: e.target.value })}
+                  value={localFilters.keyword}
+                  onChange={(e) => handleLocalFilterChange({ ...localFilters, keyword: e.target.value })}
+                  onKeyPress={handleKeyPress}
                   placeholder="Search listings..."
                   className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
                 />
@@ -142,8 +196,8 @@ function ListingsContent() {
                   Category
                 </label>
                 <select
-                  value={filters.category}
-                  onChange={(e) => handleFilterChange({ ...filters, category: e.target.value })}
+                  value={localFilters.category}
+                  onChange={(e) => handleLocalFilterChange({ ...localFilters, category: e.target.value })}
                   className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
                 >
                   <option value="">All Categories</option>
@@ -161,35 +215,45 @@ function ListingsContent() {
                 <label className="block text-sm font-medium text-gray-300 mb-3">
                   Price Range
                 </label>
-                <div className="flex space-x-3">
+                <div className="grid grid-cols-2 gap-2">
                   <input
                     type="number"
-                    value={filters.minPrice || ''}
-                    onChange={(e) => handleFilterChange({ 
-                      ...filters, 
+                    value={localFilters.minPrice || ''}
+                    onChange={(e) => handleLocalFilterChange({ 
+                      ...localFilters, 
                       minPrice: e.target.value ? parseFloat(e.target.value) : undefined 
                     })}
+                    onKeyPress={handleKeyPress}
                     placeholder="Min"
-                    className="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 appearance-none"
+                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 appearance-none text-sm"
                     style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
                   <input
                     type="number"
-                    value={filters.maxPrice || ''}
-                    onChange={(e) => handleFilterChange({ 
-                      ...filters, 
+                    value={localFilters.maxPrice || ''}
+                    onChange={(e) => handleLocalFilterChange({ 
+                      ...localFilters, 
                       maxPrice: e.target.value ? parseFloat(e.target.value) : undefined 
                     })}
+                    onKeyPress={handleKeyPress}
                     placeholder="Max"
-                    className="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 appearance-none"
+                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 appearance-none text-sm"
                     style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
                 </div>
               </div>
 
+              {/* Apply Filters Button */}
+              <button
+                onClick={handleApplyFilters}
+                className="w-full px-4 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-lg font-medium transition-all duration-200 mb-3"
+              >
+                Apply Filters
+              </button>
+
               {/* Clear Filters Button */}
               <button
-                onClick={() => handleFilterChange({ keyword: '', category: '', minPrice: undefined, maxPrice: undefined })}
+                onClick={handleClearFilters}
                 className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-gray-300 hover:bg-dark-600 hover:text-white transition-all duration-200"
               >
                 Clear Filters
@@ -206,6 +270,21 @@ function ListingsContent() {
               </div>
               
               <div className="flex items-center space-x-4">
+                {/* Sort Dropdown */}
+                <div className="flex items-center">
+                  <label className="text-sm text-gray-400 mr-2">Sort by:</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
+                  >
+                    <option value="newest">Newest</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="rating">Rating</option>
+                  </select>
+                </div>
+
                 {/* View Mode Toggle */}
                 <div className="flex items-center border border-dark-600 rounded-xl bg-dark-800">
                   <button
@@ -235,20 +314,91 @@ function ListingsContent() {
             {/* Listings Grid */}
             {memoizedListings.length > 0 ? (
               <>
-                <div
-                  className={`grid gap-6 ${
-                    viewMode === 'grid'
-                      ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-                      : 'grid-cols-1'
-                  }`}
-                >
-                  {memoizedListings.map((listing) => (
-                    <ListingCard
-                      key={listing.id}
-                      listing={listing}
-                    />
-                  ))}
-                </div>
+                {viewMode === 'grid' ? (
+                  <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    {memoizedListings.map((listing) => (
+                      <ListingCard
+                        key={listing.id}
+                        listing={listing}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {memoizedListings.map((listing) => (
+                      <div key={listing.id} className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:bg-dark-700 transition-all duration-200">
+                        <Link href={`/listings/${listing.id}`} className="group">
+                          <div className="flex">
+                            {/* Image - Compact */}
+                            <div className="relative w-32 h-24 flex-shrink-0 bg-dark-700">
+                              {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
+                                <img
+                                  src={listing.photos[0]}
+                                  alt={listing.title}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const parent = target.parentElement;
+                                    if (parent) {
+                                      parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Image</div>';
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                  No Image
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="flex-1 p-4 flex items-center justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-lg font-semibold text-white truncate group-hover:text-accent-400 transition-colors">
+                                  {listing.title}
+                                </h3>
+                                <p className="text-gray-400 text-sm mt-1 line-clamp-2">
+                                  {listing.description}
+                                </p>
+                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                                  <span className="text-accent-400 font-semibold">${listing.price}</span>
+                                  <span>•</span>
+                                  <span className="capitalize">{listing.category}</span>
+                                </div>
+                              </div>
+                              
+                              {/* Actions */}
+                              <div className="flex items-center gap-2 ml-4">
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    // Add favorite functionality here
+                                  }}
+                                  className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+                                >
+                                  <Heart className="w-4 h-4 text-gray-400" />
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    // Add message functionality here
+                                  }}
+                                  className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+                                >
+                                  <MessageCircle className="w-4 h-4 text-gray-400" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { dbListings } from "@/lib/mockDb";
 import { SimpleListingCreate } from "@marketplace/types";
 
 export const runtime = "nodejs";
@@ -14,15 +14,44 @@ export async function GET(req: NextRequest) {
     const max = url.searchParams.get('max') ? Number(url.searchParams.get('max')) : undefined;
     const page = Number(url.searchParams.get('page')) || 1;
     const limit = Number(url.searchParams.get('limit')) || 20;
+    const sort = url.searchParams.get('sort') || 'recent';
 
-    const result = await db.list(q, category, min, max, page, limit);
+    const filters = {
+      keyword: q,
+      category: category,
+      minPrice: min,
+      maxPrice: max,
+    };
+
+    console.log('API Route - Received filters:', filters);
+    const result = await dbListings.search(filters, page, limit);
+    console.log('API Route - Search result:', result);
+    
+    // Apply sorting
+    let sortedData = [...result.items];
+    switch (sort) {
+      case 'priceAsc':
+        sortedData.sort((a, b) => a.price - b.price);
+        break;
+      case 'priceDesc':
+        sortedData.sort((a, b) => b.price - a.price);
+        break;
+      case 'rating':
+        // For now, sort by newest since we don't have ratings in SimpleListing
+        sortedData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case 'recent':
+      default:
+        sortedData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+    }
     
     return NextResponse.json({
-      data: result.data,
+      data: sortedData,
       total: result.total,
-      page: result.page,
-      limit: result.limit,
-      hasMore: result.page * result.limit < result.total
+      page: page,
+      limit: limit,
+      hasMore: result.hasMore
     });
   } catch (error) {
     console.error('Error fetching listings:', error);
@@ -39,7 +68,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const listing = await db.create(body);
+    const listing = dbListings.create(body, 'user1'); // Default seller ID
     return NextResponse.json(listing, { status: 201 });
   } catch (error) {
     console.error('Error creating listing:', error);

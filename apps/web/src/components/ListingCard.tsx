@@ -149,7 +149,7 @@ export function ListingCard({ listing }: ListingCardProps) {
               </h3>
             </div>
             
-            <p className="text-gray-400 text-sm line-clamp-2 mb-3">
+            <p className="text-gray-400 text-sm line-clamp-2 mb-3 min-h-[2.5rem]">
               {listing.description}
             </p>
             

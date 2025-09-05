@@ -10,9 +10,7 @@ import { Logo } from './Logo';
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
   { name: 'Marketplace', href: '/listings', icon: ShoppingBag },
-  { name: 'Favorites', href: '/favorites', icon: Heart },
   { name: 'Messages', href: '/messages', icon: MessageCircle },
-  { name: 'Sell', href: '/sell', icon: Plus },
 ];
 
 export function Navigation() {
@@ -44,7 +42,7 @@ export function Navigation() {
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex items-center justify-between h-16 relative">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
@@ -52,8 +50,8 @@ export function Navigation() {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          {/* Desktop Navigation - Absolutely Centered */}
+          <div className="hidden md:flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
@@ -74,13 +72,22 @@ export function Navigation() {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-4">
             <button 
               onClick={() => router.push('/listings')}
               className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
               title="Search marketplace"
             >
               <Search className="w-5 h-5" />
+            </button>
+            
+            {/* Favorites Heart */}
+            <button 
+              onClick={() => router.push('/favorites')}
+              className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+              title="Favorites"
+            >
+              <Heart className="w-5 h-5" />
             </button>
             
             {/* Notification Bell */}
@@ -111,6 +118,38 @@ export function Navigation() {
                 alt="Profile"
                 size="sm"
               />
+            </Link>
+          </div>
+
+          {/* Tablet Actions - Show fewer items */}
+          <div className="hidden md:flex lg:hidden items-center space-x-2">
+            <button 
+              onClick={() => router.push('/favorites')}
+              className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+              title="Favorites"
+            >
+              <Heart className="w-5 h-5" />
+            </button>
+            
+            <button 
+              onClick={() => {
+                setShowNotifications(true);
+                markAllNotificationsAsRead();
+              }}
+              className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
+              )}
+            </button>
+            
+            <Link
+              href="/sell"
+              className="btn btn-primary flex items-center gap-1 px-3 py-2 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Sell</span>
             </Link>
           </div>
 
@@ -152,6 +191,49 @@ export function Navigation() {
                   </Link>
                 );
               })}
+              {/* Action Buttons */}
+              <div className="pt-4 border-t border-dark-600">
+                <div className="space-y-1">
+                  <button 
+                    onClick={() => {
+                      router.push('/listings');
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                  >
+                    <Search className="w-5 h-5" />
+                    Search Marketplace
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      router.push('/favorites');
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                  >
+                    <Heart className="w-5 h-5" />
+                    Favorites
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      setShowNotifications(true);
+                      markAllNotificationsAsRead();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left relative"
+                  >
+                    <Bell className="w-5 h-5" />
+                    Notifications
+                    {unreadNotificationsCount > 0 && (
+                      <span className="absolute right-3 w-2 h-2 bg-accent-500 rounded-full"></span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Profile Section */}
               <div className="pt-4 border-t border-dark-600">
                 <div className="flex items-center px-3 py-3">
                   <Avatar
