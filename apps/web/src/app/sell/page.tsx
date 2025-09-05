@@ -407,7 +407,7 @@ export default function SellPage() {
                   </div>
                   <div>
                     <span className="text-gray-400">Price:</span>
-                    <span className="ml-2 text-white">${formData.price}</span>
+                    <span className="ml-2 text-white">${formData.price.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
