@@ -1,12 +1,112 @@
 [
   {
     "id": "7e401b98-29b6-43ef-b229-83b0f0608da9",
-    "createdAt": "2025-09-05T21:15:18.060Z",
-    "updatedAt": "2025-09-05T21:15:18.060Z",
-    "price": 99.99,
     "title": "Test Item",
     "description": "A test item for the marketplace",
+    "price": 99.99,
+    "category": "electronics",
     "photos": [],
-    "category": "electronics"
+    "createdAt": "2025-09-05T21:15:18.060Z",
+    "updatedAt": "2025-09-05T21:15:18.060Z"
+  },
+  {
+    "id": "sample-1",
+    "title": "iPhone 13 Pro",
+    "description": "Excellent condition iPhone 13 Pro with 256GB storage. Includes original charger and case.",
+    "price": 799.99,
+    "category": "electronics",
+    "photos": [],
+    "createdAt": "2025-09-05T20:00:00.000Z",
+    "updatedAt": "2025-09-05T20:00:00.000Z"
+  },
+  {
+    "id": "sample-2",
+    "title": "Nike Air Max 270",
+    "description": "Barely worn Nike Air Max 270 in size 10. Perfect for running or casual wear.",
+    "price": 120.00,
+    "category": "fashion",
+    "photos": [],
+    "createdAt": "2025-09-05T19:30:00.000Z",
+    "updatedAt": "2025-09-05T19:30:00.000Z"
+  },
+  {
+    "id": "sample-3",
+    "title": "Coffee Table",
+    "description": "Modern wooden coffee table with glass top. Perfect for living room.",
+    "price": 250.00,
+    "category": "home",
+    "photos": [],
+    "createdAt": "2025-09-05T18:45:00.000Z",
+    "updatedAt": "2025-09-05T18:45:00.000Z"
+  },
+  {
+    "id": "sample-4",
+    "title": "Basketball",
+    "description": "Official NBA basketball, used but in great condition. Perfect for outdoor games.",
+    "price": 35.00,
+    "category": "sports",
+    "photos": [],
+    "createdAt": "2025-09-05T17:20:00.000Z",
+    "updatedAt": "2025-09-05T17:20:00.000Z"
+  },
+  {
+    "id": "sample-5",
+    "title": "MacBook Pro 14-inch",
+    "description": "2021 MacBook Pro 14-inch with M1 Pro chip, 16GB RAM, 512GB SSD. Excellent condition.",
+    "price": 1299.99,
+    "category": "electronics",
+    "photos": [],
+    "createdAt": "2025-09-05T16:10:00.000Z",
+    "updatedAt": "2025-09-05T16:10:00.000Z"
+  },
+  {
+    "id": "sample-6",
+    "title": "Designer Handbag",
+    "description": "Authentic designer handbag, gently used. Perfect for special occasions.",
+    "price": 450.00,
+    "category": "fashion",
+    "photos": [],
+    "createdAt": "2025-09-05T15:30:00.000Z",
+    "updatedAt": "2025-09-05T15:30:00.000Z"
+  },
+  {
+    "id": "sample-7",
+    "title": "Sofa Set",
+    "description": "3-piece sofa set in excellent condition. Perfect for family room or living area.",
+    "price": 800.00,
+    "category": "home",
+    "photos": [],
+    "createdAt": "2025-09-05T14:15:00.000Z",
+    "updatedAt": "2025-09-05T14:15:00.000Z"
+  },
+  {
+    "id": "sample-8",
+    "title": "Tennis Racket",
+    "description": "Professional tennis racket, used by intermediate players. Great for improving your game.",
+    "price": 85.00,
+    "category": "sports",
+    "photos": [],
+    "createdAt": "2025-09-05T13:45:00.000Z",
+    "updatedAt": "2025-09-05T13:45:00.000Z"
+  },
+  {
+    "id": "sample-9",
+    "title": "Gaming Headset",
+    "description": "High-quality gaming headset with noise cancellation. Perfect for streaming and gaming.",
+    "price": 150.00,
+    "category": "electronics",
+    "photos": [],
+    "createdAt": "2025-09-05T12:20:00.000Z",
+    "updatedAt": "2025-09-05T12:20:00.000Z"
+  },
+  {
+    "id": "sample-10",
+    "title": "Winter Jacket",
+    "description": "Warm winter jacket, size medium. Perfect for cold weather and outdoor activities.",
+    "price": 75.00,
+    "category": "fashion",
+    "photos": [],
+    "createdAt": "2025-09-05T11:30:00.000Z",
+    "updatedAt": "2025-09-05T11:30:00.000Z"
   }
 ]

@@ -119,12 +119,12 @@ function ListingsContent() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
           <div className="lg:w-80">
-            <div className="bg-dark-800 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Filters</h3>
+            <div className="bg-dark-800 rounded-xl p-6 border border-dark-600">
+              <h3 className="text-lg font-semibold text-white mb-6">Filters</h3>
               
               {/* Search */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-3">
                   Search
                 </label>
                 <input
@@ -132,19 +132,19 @@ function ListingsContent() {
                   value={filters.keyword}
                   onChange={(e) => handleFilterChange({ ...filters, keyword: e.target.value })}
                   placeholder="Search listings..."
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
                 />
               </div>
 
               {/* Category */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-3">
                   Category
                 </label>
                 <select
                   value={filters.category}
                   onChange={(e) => handleFilterChange({ ...filters, category: e.target.value })}
-                  className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
                 >
                   <option value="">All Categories</option>
                   <option value="electronics">Electronics</option>
@@ -157,11 +157,11 @@ function ListingsContent() {
               </div>
 
               {/* Price Range */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-3">
                   Price Range
                 </label>
-                <div className="flex space-x-2">
+                <div className="flex space-x-3">
                   <input
                     type="number"
                     value={filters.minPrice || ''}
@@ -170,7 +170,7 @@ function ListingsContent() {
                       minPrice: e.target.value ? parseFloat(e.target.value) : undefined 
                     })}
                     placeholder="Min"
-                    className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                    className="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
                   />
                   <input
                     type="number"
@@ -180,10 +180,18 @@ function ListingsContent() {
                       maxPrice: e.target.value ? parseFloat(e.target.value) : undefined 
                     })}
                     placeholder="Max"
-                    className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                    className="flex-1 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
                   />
                 </div>
               </div>
+
+              {/* Clear Filters Button */}
+              <button
+                onClick={() => handleFilterChange({ keyword: '', category: '', minPrice: undefined, maxPrice: undefined })}
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-gray-300 hover:bg-dark-600 hover:text-white transition-all duration-200"
+              >
+                Clear Filters
+              </button>
             </div>
           </div>
 
