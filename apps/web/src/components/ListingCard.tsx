@@ -82,10 +82,10 @@ export function ListingCard({ listing }: ListingCardProps) {
 
   return (
     <>
-      <Link href={`/listings/${listing.id}`} className="group">
-        <div className="card hover:scale-105 transition-all duration-200 cursor-pointer overflow-hidden">
+      <Link href={`/listings/${listing.id}`} className="group h-full">
+        <div className="card hover:scale-105 transition-all duration-200 cursor-pointer overflow-hidden h-full flex flex-col">
           {/* Image */}
-          <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-dark-700">
+          <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-dark-700 flex-shrink-0">
             {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
               <img
                 src={listing.photos[0]}
@@ -142,18 +142,18 @@ export function ListingCard({ listing }: ListingCardProps) {
           </div>
 
           {/* Content */}
-          <div className="p-4">
+          <div className="p-4 flex flex-col flex-grow">
             <div className="flex items-start justify-between mb-2">
               <h3 className="text-lg font-semibold text-white line-clamp-2 group-hover:text-accent-400 transition-colors">
                 {listing.title}
               </h3>
             </div>
             
-            <p className="text-gray-400 text-sm line-clamp-2 mb-3 min-h-[2.5rem]">
+            <p className="text-gray-400 text-sm line-clamp-2 mb-3 flex-grow">
               {listing.description}
             </p>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-auto">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-accent-400 fill-current" />
