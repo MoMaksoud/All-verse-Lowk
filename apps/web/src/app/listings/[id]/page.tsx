@@ -33,7 +33,17 @@ export default function ListingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showPricePanel, setShowPricePanel] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(() => {
+    if (typeof window !== 'undefined' && params.id) {
+      try {
+        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        return favorites.includes(params.id as string);
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
@@ -65,9 +75,28 @@ export default function ListingDetailPage() {
 
   const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setIsFavorited(!isFavorited);
-    showToast(isFavorited ? 'Removed from favorites' : 'Added to favorites', 'success');
-  }, [isFavorited]);
+    
+    if (!listing) return;
+    
+    try {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      let updatedFavorites;
+      
+      if (isFavorited) {
+        updatedFavorites = favorites.filter((id: string) => id !== listing.id);
+        showToast('Removed from favorites', 'success');
+      } else {
+        updatedFavorites = [...favorites, listing.id];
+        showToast('Added to favorites', 'success');
+      }
+      
+      localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+      setIsFavorited(!isFavorited);
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      showToast('Failed to update favorites', 'error');
+    }
+  }, [isFavorited, listing]);
 
   const handleShareClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

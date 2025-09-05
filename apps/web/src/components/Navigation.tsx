@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Search, Bell, User, Plus, MessageCircle, ShoppingBag } from 'lucide-react';
+import { Menu, X, Search, Bell, User, Plus, MessageCircle, ShoppingBag, Heart } from 'lucide-react';
 import { Avatar } from '@marketplace/ui';
 import { Logo } from './Logo';
 
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
   { name: 'Marketplace', href: '/listings', icon: ShoppingBag },
+  { name: 'Favorites', href: '/favorites', icon: Heart },
   { name: 'Messages', href: '/messages', icon: MessageCircle },
   { name: 'Sell', href: '/sell', icon: Plus },
 ];

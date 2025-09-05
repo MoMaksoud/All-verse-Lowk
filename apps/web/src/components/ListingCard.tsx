@@ -10,16 +10,43 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        return favorites.includes(listing.id);
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState('');
 
   const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
     e.stopPropagation(); // Stop event bubbling
-    setIsFavorited(!isFavorited);
-    showToast(isFavorited ? 'Removed from favorites' : 'Added to favorites', 'success');
-  }, [isFavorited]);
+    
+    try {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      let updatedFavorites;
+      
+      if (isFavorited) {
+        updatedFavorites = favorites.filter((id: string) => id !== listing.id);
+        showToast('Removed from favorites', 'success');
+      } else {
+        updatedFavorites = [...favorites, listing.id];
+        showToast('Added to favorites', 'success');
+      }
+      
+      localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+      setIsFavorited(!isFavorited);
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      showToast('Failed to update favorites', 'error');
+    }
+  }, [isFavorited, listing.id]);
 
   const handleMessageClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
