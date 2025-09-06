@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     console.log('API Route - Received filters:', filters);
     const result = await dbListings.search(filters, page, limit);
     console.log('API Route - Search result:', result);
-    
+      
     // Apply sorting
     let sortedData = [...result.items];
     switch (sort) {

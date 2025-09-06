@@ -27,7 +27,7 @@ export default function AIPage() {
     {
       id: '1',
       type: 'ai',
-      content: "Hi there! 👋 Welcome to AllVerse GPT! I'm your personal AI assistant here to help you discover amazing products and navigate our marketplace. I can help you find exactly what you're looking for, suggest great deals, and answer any questions you have. What brings you here today?",
+      content: "Hi there! 👋 Welcome to All Verse GPT! I'm your personal AI assistant here to help you discover amazing products and navigate our marketplace. I can help you find exactly what you're looking for, suggest great deals, and answer any questions you have. What brings you here today?",
       timestamp: new Date(),
       suggestions: [
         "Help me find something",
@@ -239,7 +239,7 @@ export default function AIPage() {
                     <Bot className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">AllVerse AI Assistant</h3>
+                    <h3 className="text-white font-semibold">All Verse AI Assistant</h3>
                     <p className="text-gray-400 text-sm">Always ready to help</p>
                   </div>
                 </div>

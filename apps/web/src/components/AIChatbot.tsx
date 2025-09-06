@@ -23,7 +23,7 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
     {
       id: '1',
       type: 'ai',
-      content: "Hi! I'm your AllVerse AI assistant. I can help you find products, answer questions about listings, and guide you through our marketplace. What can I help you with today?",
+      content: "Hi! I'm your All Verse AI assistant. I can help you find products, answer questions about listings, and guide you through our marketplace. What can I help you with today?",
       timestamp: new Date(),
       suggestions: [
         "Show me electronics",
@@ -132,7 +132,7 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
                   <Bot className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">AllVerse AI</h3>
+                  <h3 className="text-white font-semibold">All Verse AI</h3>
                   <p className="text-gray-400 text-sm">Your marketplace assistant</p>
                 </div>
               </div>

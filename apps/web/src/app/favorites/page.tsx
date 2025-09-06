@@ -5,6 +5,7 @@ import { Heart, Search, Filter } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ListingCard } from '@/components/ListingCard';
+import { Navigation } from '@/components/Navigation';
 
 export default function FavoritesPage() {
   const [favorites, setFavorites] = useState<SimpleListing[]>([]);
@@ -103,6 +104,7 @@ export default function FavoritesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950">
+        <Navigation />
         <LoadingSpinner size="lg" text="Loading your favorites..." />
       </div>
     );
@@ -110,23 +112,23 @@ export default function FavoritesPage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
-      {/* Header */}
-      <div className="bg-dark-900 border-b border-dark-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Heart className="w-8 h-8 text-red-500 fill-current" />
-            <h1 className="text-3xl font-bold text-white">My Favorites</h1>
+      <Navigation />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className="flex justify-center mb-4">
+            <Heart className="w-8 h-8 text-accent-500 fill-current" />
           </div>
-          <p className="text-gray-400">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            My Favorites
+          </h1>
+          <p className="text-lg text-gray-400">
             {favorites.length === 0 
               ? "You haven't favorited any items yet" 
-              : `${favorites.length} favorite${favorites.length === 1 ? '' : 's'}`
+              : `${favorites.length} favorite${favorites.length === 1 ? '' : 's'} saved`
             }
           </p>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {favorites.length === 0 ? (
           <div className="text-center py-16">
             <Heart className="w-16 h-16 text-gray-600 mx-auto mb-4" />

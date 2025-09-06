@@ -20,7 +20,7 @@ export function Navigation() {
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'New message from John Doe', time: '2 minutes ago', read: false },
     { id: 2, message: 'Your listing "iPhone 14 Pro" got a new offer', time: '1 hour ago', read: false },
-    { id: 3, message: 'Welcome to AllVerse! Start exploring our marketplace.', time: '1 day ago', read: true },
+    { id: 3, message: 'Welcome to All Verse! Start exploring our marketplace.', time: '1 day ago', read: true },
   ]);
   const pathname = usePathname();
   const router = useRouter();

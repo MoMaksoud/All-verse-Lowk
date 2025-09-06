@@ -63,7 +63,7 @@ export default function HomePage() {
               </div>
               
               <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient">
-                Hi, Welcome to ALLVERSE GPT
+                Hi, Welcome to ALL VERSE GPT
               </h1>
               <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-3xl mx-auto">
                 Your intelligent marketplace assistant. Ask our AI anything and get instant, smart responses that guide you to exactly what you need.
