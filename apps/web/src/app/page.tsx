@@ -11,10 +11,13 @@ import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { AIWidget } from '@/components/AIWidget';
+import { DynamicBackground } from '@/components/DynamicBackground';
+import { useRouteGuard } from '@/hooks/useRouteGuard';
 
 export default function HomePage() {
   const [featuredListings, setFeaturedListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const isHomeRoute = useRouteGuard();
 
   const fetchData = useCallback(async () => {
     try {
@@ -48,28 +51,33 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-950">
+    <div className="min-h-screen home-page">
+      {/* Sitewide Dynamic Background - Only on home route */}
+      {isHomeRoute && <DynamicBackground intensity="low" showParticles={true} />}
+      
       <Navigation />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+      <section className="relative py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="mb-8">
-              <div className="inline-flex items-center gap-2 bg-accent-500/10 border border-accent-500/20 rounded-full px-4 py-2 mb-6">
+              <div className="inline-flex items-center gap-2 bg-accent-500/10 border border-accent-500/20 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
                 <Bot className="w-5 h-5 text-accent-400" />
                 <span className="text-accent-400 font-medium">Powered by Advanced AI</span>
                 <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient">
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient drop-shadow-lg">
                 Hi, Welcome to ALLVERSE GPT
               </h1>
-              <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-3xl mx-auto">
+              <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-3xl mx-auto drop-shadow-md">
                 Your intelligent marketplace assistant. Ask our AI anything and get instant, smart responses that guide you to exactly what you need.
               </p>
             </div>
-            <SearchBar className="max-w-2xl mx-auto" />
+            <div className="relative">
+              <SearchBar className="max-w-2xl mx-auto drop-shadow-lg" />
+            </div>
           </div>
         </div>
       </section>

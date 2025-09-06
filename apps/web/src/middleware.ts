@@ -24,7 +24,7 @@ function getClientIP(request: NextRequest): string {
     return cfConnectingIP;
   }
   
-  // Fallback to a default IP (for development)
+  // Fallback to a default IP (for development) 
   return '127.0.0.1';
 }
 

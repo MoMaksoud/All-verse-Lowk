@@ -20,7 +20,21 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full`}>
-        <div className="min-h-screen bg-dark-950">
+        {/* Dynamic Background Elements */}
+        <div className="floating-particles">
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+          <div className="particle"></div>
+        </div>
+        <div className="grid-overlay"></div>
+        
+        <div className="min-h-screen">
           {children}
         </div>
       </body>
