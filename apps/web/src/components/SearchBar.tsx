@@ -16,8 +16,23 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [isVoiceListening, setIsVoiceListening] = useState(false);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Natural language search examples
+  const placeholderExamples = [
+    "Ask our AI anything...",
+    "Search Nike shoes under $100",
+    "Find gaming laptops under $1500",
+    "Show me iPhone cases",
+    "What's trending in electronics?",
+    "Find MacBook Air deals",
+    "Search for running shoes",
+    "Show me home decor items",
+    "Find sports equipment",
+    "What's popular in fashion?"
+  ];
 
   // Mock search suggestions
   const suggestions = [
@@ -27,6 +42,15 @@ export function SearchBar({ className = '' }: SearchBarProps) {
     { id: 4, text: 'Samsung Galaxy', type: 'recent' },
     { id: 5, text: 'Gaming Laptop', type: 'trending' },
   ];
+
+  // Rotate placeholder examples
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentPlaceholder((prev) => (prev + 1) % placeholderExamples.length);
+    }, 3000); // Change every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [placeholderExamples.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -119,8 +143,8 @@ export function SearchBar({ className = '' }: SearchBarProps) {
               setShowSuggestions(e.target.value.length > 0);
             }}
             onFocus={() => setShowSuggestions(query.length > 0)}
-            placeholder="Ask our AI anything..."
-            className="w-full pl-12 pr-12 py-4 bg-dark-800/90 border border-dark-600 rounded-2xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all duration-200"
+            placeholder={placeholderExamples[currentPlaceholder]}
+            className="w-full pl-12 pr-12 py-4 bg-dark-800/90 border border-dark-600 rounded-2xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all duration-200 placeholder-transition"
           />
           <div className="absolute right-16 top-1/2 transform -translate-y-1/2">
             <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
@@ -166,6 +190,15 @@ export function SearchBar({ className = '' }: SearchBarProps) {
         transcript={voiceTranscript}
         error={voiceError}
       />
+
+      {/* Natural Language Hint */}
+      {!query && !showSuggestions && (
+        <div className="mt-2 text-center">
+          <p className="text-xs text-gray-400">
+            💡 Try asking naturally: "Find laptops under $1000" or "Show me trending electronics"
+          </p>
+        </div>
+      )}
 
       {/* Search Suggestions */}
       {showSuggestions && (

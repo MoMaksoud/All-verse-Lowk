@@ -27,10 +27,10 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
       content: "Hi! I'm your All Verse AI assistant. I can help you find products, answer questions about listings, and guide you through our marketplace. What can I help you with today?",
       timestamp: new Date(),
       suggestions: [
-        "Show me electronics",
-        "Find sports equipment",
-        "What's trending?",
-        "Help me sell something"
+        "Find Nike shoes under $100",
+        "Show me gaming laptops under $1500",
+        "What's trending in electronics?",
+        "Help me sell my iPhone"
       ]
     }
   ]);
@@ -274,7 +274,7 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
-                  placeholder="Ask me anything about our marketplace..."
+                  placeholder="Try: 'Find laptops under $1000' or 'What's trending?'"
                   className="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
                 />
                 <VoiceInputButton
