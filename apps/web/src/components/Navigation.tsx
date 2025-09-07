@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Search, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot } from 'lucide-react';
+import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut } from 'lucide-react';
 import { Avatar } from '@marketplace/ui';
 import { Logo } from './Logo';
+import { useAuth } from '@/contexts/AuthContext';
+import { DefaultAvatar } from './DefaultAvatar';
+import { Profile } from '@marketplace/types';
 
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
@@ -17,6 +20,7 @@ const navigation = [
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'New message from John Doe', time: '2 minutes ago', read: false },
     { id: 2, message: 'Your listing "iPhone 14 Pro" got a new offer', time: '1 hour ago', read: false },
@@ -24,6 +28,7 @@ export function Navigation() {
   ]);
   const pathname = usePathname();
   const router = useRouter();
+  const { currentUser, logout } = useAuth();
 
   const handleNotificationClick = (notificationId: number) => {
     setNotifications(prev => 
@@ -39,6 +44,39 @@ export function Navigation() {
   };
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Failed to logout:', error);
+    }
+  };
+
+  // Fetch profile data for avatar
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const response = await fetch('/api/profile', {
+          headers: {
+            'x-user-id': currentUser.uid,
+          },
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          setProfile(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    fetchProfile();
+  }, [currentUser]);
 
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50">
@@ -74,84 +112,129 @@ export function Navigation() {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            <button 
-              onClick={() => router.push('/listings')}
-              className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
-              title="Search marketplace"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-            
-            {/* Favorites Heart */}
-            <button 
-              onClick={() => router.push('/favorites')}
-              className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
-              title="Favorites"
-            >
-              <Heart className="w-5 h-5" />
-            </button>
-            
-            {/* Notification Bell */}
-            <button 
-              onClick={() => {
-                setShowNotifications(true);
-                // Mark all notifications as read when bell is clicked
-                markAllNotificationsAsRead();
-              }}
-              className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
-              )}
-            </button>
-            
-            <Link
-              href="/sell"
-              className="btn btn-primary flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Sell
-            </Link>
-            <Link href="/profile" className="flex items-center">
-              <Avatar
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
-                alt="Profile"
-                size="sm"
-              />
-            </Link>
+            {currentUser ? (
+              <>
+                {/* Favorites Heart */}
+                <button 
+                  onClick={() => router.push('/favorites')}
+                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  title="Favorites"
+                >
+                  <Heart className="w-5 h-5" />
+                </button>
+                
+                {/* Notification Bell */}
+                <button 
+                  onClick={() => {
+                    setShowNotifications(true);
+                    // Mark all notifications as read when bell is clicked
+                    markAllNotificationsAsRead();
+                  }}
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
+                  )}
+                </button>
+                
+                <Link
+                  href="/sell"
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Sell
+                </Link>
+                <Link href="/profile" className="flex items-center">
+                  {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
+                    <Avatar
+                      src={profile?.profilePictureUrl || currentUser?.photoURL}
+                      alt={currentUser.displayName || "Profile"}
+                      size="sm"
+                    />
+                  ) : (
+                    <DefaultAvatar
+                      name={currentUser?.displayName || undefined}
+                      email={currentUser?.email || undefined}
+                      size="sm"
+                    />
+                  )}
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  title="Logout"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/signin"
+                  className="btn-ghost px-4 py-2 rounded-xl hover:bg-dark-700/50"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="btn btn-primary px-4 py-2 rounded-xl"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Tablet Actions - Show fewer items */}
           <div className="hidden md:flex lg:hidden items-center space-x-2">
-            <button 
-              onClick={() => router.push('/favorites')}
-              className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
-              title="Favorites"
-            >
-              <Heart className="w-5 h-5" />
-            </button>
-            
-            <button 
-              onClick={() => {
-                setShowNotifications(true);
-                markAllNotificationsAsRead();
-              }}
-              className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
-              )}
-            </button>
-            
-            <Link
-              href="/sell"
-              className="btn btn-primary flex items-center gap-1 px-3 py-2 text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Sell</span>
-            </Link>
+            {currentUser ? (
+              <>
+                <button 
+                  onClick={() => router.push('/favorites')}
+                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  title="Favorites"
+                >
+                  <Heart className="w-5 h-5" />
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    setShowNotifications(true);
+                    markAllNotificationsAsRead();
+                  }}
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
+                  )}
+                </button>
+                
+                <Link
+                  href="/sell"
+                  className="btn btn-primary flex items-center gap-1 px-3 py-2 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sell</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/signin"
+                  className="btn-ghost px-3 py-2 text-sm rounded-xl hover:bg-dark-700/50"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="btn btn-primary px-3 py-2 text-sm rounded-xl"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -195,79 +278,110 @@ export function Navigation() {
               {/* Action Buttons */}
               <div className="pt-4 border-t border-dark-600">
                 <div className="space-y-1">
-                  <button 
-                    onClick={() => {
-                      router.push('/listings');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
-                  >
-                    <Search className="w-5 h-5" />
-                    Search Marketplace
-                  </button>
-                  
-                  <button 
-                    onClick={() => {
-                      router.push('/favorites');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
-                  >
-                    <Heart className="w-5 h-5" />
-                    Favorites
-                  </button>
-                  
-                  <button 
-                    onClick={() => {
-                      setShowNotifications(true);
-                      markAllNotificationsAsRead();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left relative"
-                  >
-                    <Bell className="w-5 h-5" />
-                    Notifications
-                    {unreadNotificationsCount > 0 && (
-                      <span className="absolute right-3 w-2 h-2 bg-accent-500 rounded-full"></span>
-                    )}
-                  </button>
+                  {currentUser ? (
+                    <>
+                      <button 
+                        onClick={() => {
+                          router.push('/favorites');
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                      >
+                        <Heart className="w-5 h-5" />
+                        Favorites
+                      </button>
+                      
+                      <button 
+                        onClick={() => {
+                          setShowNotifications(true);
+                          markAllNotificationsAsRead();
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left relative"
+                      >
+                        <Bell className="w-5 h-5" />
+                        Notifications
+                        {unreadNotificationsCount > 0 && (
+                          <span className="absolute right-3 w-2 h-2 bg-accent-500 rounded-full"></span>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/signin"
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <User className="w-5 h-5" />
+                        Sign In
+                      </Link>
+                      <Link
+                        href="/signup"
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-white bg-accent-500 hover:bg-accent-600 w-full text-left"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Plus className="w-5 h-5" />
+                        Sign Up
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
 
               {/* Profile Section */}
-              <div className="pt-4 border-t border-dark-600">
-                <div className="flex items-center px-3 py-3">
-                  <Avatar
-                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
-                    alt="Profile"
-                    size="sm"
-                  />
-                  <div className="ml-3">
-                    <div className="text-base font-medium text-white">
-                      John Doe
-                    </div>
-                    <div className="text-sm font-medium text-gray-400">
-                      john@example.com
+              {currentUser && (
+                <div className="pt-4 border-t border-dark-600">
+                  <div className="flex items-center px-3 py-3">
+                    {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
+                      <Avatar
+                        src={profile?.profilePictureUrl || currentUser?.photoURL}
+                        alt={currentUser.displayName || "Profile"}
+                        size="sm"
+                      />
+                    ) : (
+                      <DefaultAvatar
+                        name={currentUser?.displayName || undefined}
+                        email={currentUser?.email || undefined}
+                        size="sm"
+                      />
+                    )}
+                    <div className="ml-3">
+                      <div className="text-base font-medium text-white">
+                        {currentUser.displayName || "User"}
+                      </div>
+                      <div className="text-sm font-medium text-gray-400">
+                        {currentUser.email}
+                      </div>
                     </div>
                   </div>
+                  <div className="mt-3 space-y-1">
+                    <Link
+                      href="/profile"
+                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Profile
+                    </Link>
+                    <Link
+                      href="/sell"
+                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Sell Item
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-3 py-2 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    >
+                      Logout
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-3 space-y-1">
-                  <Link
-                    href="/profile"
-                    className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Profile
-                  </Link>
-                  <Link
-                    href="/sell"
-                    className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sell Item
-                  </Link>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}

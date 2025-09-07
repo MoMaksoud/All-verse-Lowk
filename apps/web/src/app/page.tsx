@@ -68,13 +68,8 @@ export default function HomePage() {
                 <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
               </div>
               
-<<<<<<< HEAD
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient">
-                Hi, Welcome to ALL VERSE GPT
-=======
               <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient drop-shadow-lg">
-                Hi, Welcome to ALLVERSE GPT
->>>>>>> 644529cb70fcef73d7048957d7514b68656cb92a
+                Hi, Welcome to ALL VERSE GPT
               </h1>
               <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-3xl mx-auto drop-shadow-md">
                 Your intelligent marketplace assistant. Ask our AI anything and get instant, smart responses that guide you to exactly what you need.
