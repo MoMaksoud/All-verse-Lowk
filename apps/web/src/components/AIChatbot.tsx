@@ -30,7 +30,11 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
         "Find Nike shoes under $100",
         "Show me gaming laptops under $1500",
         "What's trending in electronics?",
-        "Help me sell my iPhone"
+        "Help me sell my iPhone",
+        "Find sellers near me",
+        "Show me local electronics",
+        "iPhone cases in Tampa",
+        "Laptops within 10 miles"
       ]
     }
   ]);
@@ -274,7 +278,7 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
-                  placeholder="Try: 'Find laptops under $1000' or 'What's trending?'"
+                  placeholder="Try: 'Find laptops under $1000' or 'Show me sellers in Tampa'"
                   className="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
                 />
                 <VoiceInputButton

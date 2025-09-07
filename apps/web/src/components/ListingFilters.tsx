@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, MapPin, Navigation } from 'lucide-react';
 import type { ListingFilters, Category } from '@marketplace/types';
 
 interface ListingFiltersProps {
@@ -105,6 +105,43 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
             className="px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
             style={{ colorScheme: 'dark' }}
           />
+        </div>
+      </div>
+
+      {/* Location */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Location
+        </label>
+        <div className="relative mb-3">
+          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            value={localFilters.location || ''}
+            onChange={(e) => handleFilterChange('location', e.target.value)}
+            placeholder="City, State or ZIP code..."
+            className="w-full pl-10 pr-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            style={{ colorScheme: 'dark' }}
+          />
+        </div>
+        
+        {/* Distance Range */}
+        <div className="flex items-center gap-2">
+          <Navigation className="text-gray-400 w-4 h-4" />
+          <span className="text-sm text-gray-300">Within</span>
+          <select
+            value={localFilters.maxDistance || ''}
+            onChange={(e) => handleFilterChange('maxDistance', e.target.value ? parseInt(e.target.value) : undefined)}
+            className="px-3 py-1 border border-dark-border rounded-md text-sm bg-dark-surface text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            style={{ colorScheme: 'dark' }}
+          >
+            <option value="" className="bg-dark-surface text-white">Any distance</option>
+            <option value="5" className="bg-dark-surface text-white">5 miles</option>
+            <option value="10" className="bg-dark-surface text-white">10 miles</option>
+            <option value="25" className="bg-dark-surface text-white">25 miles</option>
+            <option value="50" className="bg-dark-surface text-white">50 miles</option>
+            <option value="100" className="bg-dark-surface text-white">100 miles</option>
+          </select>
         </div>
       </div>
 

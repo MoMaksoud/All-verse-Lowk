@@ -7,7 +7,18 @@
     "category": "electronics",
     "photos": ["https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=300&fit=crop"],
     "createdAt": "2025-09-05T21:15:18.060Z",
-    "updatedAt": "2025-09-05T21:15:18.060Z"
+    "updatedAt": "2025-09-05T21:15:18.060Z",
+    "location": {
+      "city": "Tampa",
+      "state": "FL",
+      "zipCode": "33620",
+      "coordinates": {
+        "lat": 27.9506,
+        "lng": -82.4572
+      }
+    },
+    "sellerId": "seller-1",
+    "condition": "good"
   },
   {
     "id": "sample-1",
@@ -17,7 +28,18 @@
     "category": "electronics",
     "photos": ["https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop"],
     "createdAt": "2025-09-05T20:00:00.000Z",
-    "updatedAt": "2025-09-05T20:00:00.000Z"
+    "updatedAt": "2025-09-05T20:00:00.000Z",
+    "location": {
+      "city": "Miami",
+      "state": "FL",
+      "zipCode": "33101",
+      "coordinates": {
+        "lat": 25.7617,
+        "lng": -80.1918
+      }
+    },
+    "sellerId": "seller-2",
+    "condition": "like-new"
   },
   {
     "id": "sample-2",
@@ -27,7 +49,18 @@
     "category": "fashion",
     "photos": ["./images/nike-air-max-270.avif"],
     "createdAt": "2025-09-05T19:30:00.000Z",
-    "updatedAt": "2025-09-05T19:30:00.000Z"
+    "updatedAt": "2025-09-05T19:30:00.000Z",
+    "location": {
+      "city": "Orlando",
+      "state": "FL",
+      "zipCode": "32801",
+      "coordinates": {
+        "lat": 28.5383,
+        "lng": -81.3792
+      }
+    },
+    "sellerId": "seller-3",
+    "condition": "good"
   },
   {
     "id": "sample-3",

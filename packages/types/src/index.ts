@@ -167,6 +167,7 @@ export type ListingFilters = {
   maxPrice?: number;
   condition?: string;
   location?: string;
+  maxDistance?: number; // in miles
   sortBy?: 'price' | 'date' | 'relevance';
   sortOrder?: 'asc' | 'desc';
 };
@@ -212,6 +213,17 @@ export type SimpleListing = {
   photos: string[]; // data URLs or remote URLs
   createdAt: string; // ISO
   updatedAt: string; // ISO
+  location?: {
+    city: string;
+    state: string;
+    zipCode?: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+  };
+  sellerId?: string;
+  condition?: 'new' | 'like-new' | 'good' | 'fair' | 'poor';
 };
 
 export type SimpleListingCreate = {

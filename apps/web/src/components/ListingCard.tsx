@@ -3,9 +3,10 @@
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MessageCircle, Star, Clock, X } from 'lucide-react';
+import { Heart, MessageCircle, Star, Clock, X, MapPin } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
+import { formatLocation } from '@/lib/location';
 
 interface ListingCardProps {
   listing: SimpleListing;
@@ -172,6 +173,16 @@ export function ListingCard({ listing }: ListingCardProps) {
             <p className="text-gray-400 text-sm line-clamp-2 mb-3 flex-grow">
               {listing.description}
             </p>
+            
+            {/* Location */}
+            {listing.location && (
+              <div className="flex items-center gap-1 mb-3">
+                <MapPin className="w-3 h-3 text-gray-500" />
+                <span className="text-xs text-gray-500">
+                  {formatLocation(listing.location)}
+                </span>
+              </div>
+            )}
             
             <div className="flex items-center justify-between mt-auto">
               <div className="flex items-center gap-2">

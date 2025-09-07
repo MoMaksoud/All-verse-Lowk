@@ -31,7 +31,12 @@ export function SearchBar({ className = '' }: SearchBarProps) {
     "Search for running shoes",
     "Show me home decor items",
     "Find sports equipment",
-    "What's popular in fashion?"
+    "What's popular in fashion?",
+    "Find laptops near me",
+    "Show me sellers in Tampa",
+    "iPhone cases within 10 miles",
+    "Gaming laptops in Miami",
+    "Local electronics sellers"
   ];
 
   // Mock search suggestions
@@ -195,7 +200,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
       {!query && !showSuggestions && (
         <div className="mt-2 text-center">
           <p className="text-xs text-gray-400">
-            💡 Try asking naturally: "Find laptops under $1000" or "Show me trending electronics"
+            💡 Try asking naturally: "Find laptops under $1000" or "Show me sellers in Tampa"
           </p>
         </div>
       )}
