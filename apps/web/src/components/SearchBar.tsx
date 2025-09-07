@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, TrendingUp, Clock, Bot, Sparkles } from 'lucide-react';
+import { Search, X, TrendingUp, Clock, Bot, Sparkles, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 
@@ -17,6 +17,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -43,10 +44,56 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   const suggestions = [
     { id: 1, text: 'iPhone 14 Pro', type: 'trending' },
     { id: 2, text: 'MacBook Air', type: 'trending' },
-    { id: 3, text: 'Nike Air Max', type: 'recent' },
-    { id: 4, text: 'Samsung Galaxy', type: 'recent' },
-    { id: 5, text: 'Gaming Laptop', type: 'trending' },
+    { id: 3, text: 'Gaming Laptop', type: 'trending' },
   ];
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('recentSearches');
+        if (saved) {
+          setRecentSearches(JSON.parse(saved));
+        }
+      } catch (error) {
+        console.error('Error loading recent searches:', error);
+      }
+    }
+  }, []);
+
+  // Save recent searches to localStorage
+  const saveRecentSearches = (searches: string[]) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('recentSearches', JSON.stringify(searches));
+        setRecentSearches(searches);
+      } catch (error) {
+        console.error('Error saving recent searches:', error);
+      }
+    }
+  };
+
+  // Add search to recent searches
+  const addToRecentSearches = (searchTerm: string) => {
+    if (!searchTerm.trim()) return;
+    
+    const trimmedTerm = searchTerm.trim();
+    const updated = [trimmedTerm, ...recentSearches.filter(s => s !== trimmedTerm)].slice(0, 5);
+    saveRecentSearches(updated);
+  };
+
+  // Remove individual recent search
+  const removeRecentSearch = (searchTerm: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = recentSearches.filter(s => s !== searchTerm);
+    saveRecentSearches(updated);
+  };
+
+  // Clear all recent searches
+  const clearAllRecentSearches = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    saveRecentSearches([]);
+  };
 
   // Rotate placeholder examples
   useEffect(() => {
@@ -72,6 +119,9 @@ export function SearchBar({ className = '' }: SearchBarProps) {
 
   const handleSearch = async (searchQuery: string) => {
     if (searchQuery.trim()) {
+      // Add to recent searches
+      addToRecentSearches(searchQuery);
+      
       setIsSearching(true);
       
       try {
@@ -232,26 +282,45 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             </div>
 
             {/* Recent Searches */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-300">Recent</span>
-              </div>
-              <div className="space-y-2">
-                {suggestions.filter(s => s.type === 'recent').map((suggestion) => (
+            {recentSearches.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-300">Recent</span>
+                  </div>
                   <button
-                    key={suggestion.id}
-                    onClick={() => handleSuggestionClick(suggestion.text)}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 transition-colors group"
+                    onClick={clearAllRecentSearches}
+                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
                   >
-                    <div className="flex items-center gap-3">
-                      <Clock className="w-4 h-4 text-gray-400 group-hover:text-accent-400" />
-                      <span className="text-gray-300 group-hover:text-white">{suggestion.text}</span>
-                    </div>
+                    <Trash2 className="w-3 h-3" />
+                    Clear all
                   </button>
-                ))}
+                </div>
+                <div className="space-y-2">
+                  {recentSearches.map((search, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleSuggestionClick(search)}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 transition-colors group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Clock className="w-4 h-4 text-gray-400 group-hover:text-accent-400" />
+                          <span className="text-gray-300 group-hover:text-white">{search}</span>
+                        </div>
+                        <button
+                          onClick={(e) => removeRecentSearch(search, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-dark-600 transition-all"
+                        >
+                          <X className="w-3 h-3 text-gray-400 hover:text-red-400" />
+                        </button>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Quick Categories */}
             <div className="mt-4 pt-4 border-t border-dark-600">
