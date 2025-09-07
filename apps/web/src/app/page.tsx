@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
 import Link from 'next/link';
 import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain, Bot, Sparkles, ArrowRight } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
-import { ListingCard } from '@/components/ListingCard';
-import { CategoryCard } from '@/components/CategoryCard';
-import { SearchBar } from '@/components/SearchBar';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { AIWidget } from '@/components/AIWidget';
-import { DynamicBackground } from '@/components/DynamicBackground';
 import { useRouteGuard } from '@/hooks/useRouteGuard';
+
+// Lazy load heavy components
+const ListingCard = lazy(() => import('@/components/ListingCard').then(module => ({ default: module.ListingCard })));
+const CategoryCard = lazy(() => import('@/components/CategoryCard').then(module => ({ default: module.CategoryCard })));
+const SearchBar = lazy(() => import('@/components/SearchBar').then(module => ({ default: module.SearchBar })));
+const AIWidget = lazy(() => import('@/components/AIWidget').then(module => ({ default: module.AIWidget })));
+const DynamicBackground = lazy(() => import('@/components/DynamicBackground').then(module => ({ default: module.DynamicBackground })));
 
 export default function HomePage() {
   const [featuredListings, setFeaturedListings] = useState<SimpleListing[]>([]);
@@ -21,7 +23,8 @@ export default function HomePage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const response = await fetch('/api/listings?limit=8');
+      // Use a smaller limit for faster loading
+      const response = await fetch('/api/listings?limit=6');
       const data = await response.json();
 
       if (response.ok) {
@@ -53,7 +56,11 @@ export default function HomePage() {
   return (
     <div className="min-h-screen home-page">
       {/* Sitewide Dynamic Background - Only on home route */}
-      {isHomeRoute && <DynamicBackground intensity="low" showParticles={true} />}
+      {isHomeRoute && (
+        <Suspense fallback={<div className="fixed inset-0 bg-dark-950" />}>
+          <DynamicBackground intensity="low" showParticles={true} />
+        </Suspense>
+      )}
       
       <Navigation />
       
@@ -76,7 +83,9 @@ export default function HomePage() {
               </p>
             </div>
             <div className="relative">
-              <SearchBar className="max-w-2xl mx-auto drop-shadow-lg" />
+              <Suspense fallback={<div className="h-12 bg-gray-700/50 rounded-lg animate-pulse max-w-2xl mx-auto" />}>
+                <SearchBar className="max-w-2xl mx-auto drop-shadow-lg" />
+              </Suspense>
             </div>
           </div>
         </div>
@@ -151,7 +160,9 @@ export default function HomePage() {
           </div>
           
           <div className="max-w-md mx-auto">
-            <AIWidget />
+            <Suspense fallback={<div className="h-64 bg-gray-700/50 rounded-lg animate-pulse" />}>
+              <AIWidget />
+            </Suspense>
           </div>
         </div>
       </section>
@@ -169,10 +180,18 @@ export default function HomePage() {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <CategoryCard category={{ id: 'electronics', name: 'Electronics', slug: 'electronics', icon: 'electronics.svg', iconImage: '/icons/electronics.svg' }} />
-            <CategoryCard category={{ id: 'fashion', name: 'Fashion', slug: 'fashion', icon: 'fashion.svg', iconImage: '/icons/fashion.svg' }} />
-            <CategoryCard category={{ id: 'home', name: 'Home', slug: 'home', icon: 'home.svg', iconImage: '/icons/home.svg' }} />
-            <CategoryCard category={{ id: 'sports', name: 'Sports', slug: 'sports', icon: 'sports.svg', iconImage: '/icons/sports.svg' }} />
+            <Suspense fallback={<div className="h-32 bg-gray-700/50 rounded-lg animate-pulse" />}>
+              <CategoryCard category={{ id: 'electronics', name: 'Electronics', slug: 'electronics', icon: 'electronics.svg', iconImage: '/icons/electronics.svg' }} />
+            </Suspense>
+            <Suspense fallback={<div className="h-32 bg-gray-700/50 rounded-lg animate-pulse" />}>
+              <CategoryCard category={{ id: 'fashion', name: 'Fashion', slug: 'fashion', icon: 'fashion.svg', iconImage: '/icons/fashion.svg' }} />
+            </Suspense>
+            <Suspense fallback={<div className="h-32 bg-gray-700/50 rounded-lg animate-pulse" />}>
+              <CategoryCard category={{ id: 'home', name: 'Home', slug: 'home', icon: 'home.svg', iconImage: '/icons/home.svg' }} />
+            </Suspense>
+            <Suspense fallback={<div className="h-32 bg-gray-700/50 rounded-lg animate-pulse" />}>
+              <CategoryCard category={{ id: 'sports', name: 'Sports', slug: 'sports', icon: 'sports.svg', iconImage: '/icons/sports.svg' }} />
+            </Suspense>
           </div>
         </div>
       </section>
@@ -200,7 +219,9 @@ export default function HomePage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {featuredListings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
+              <Suspense key={listing.id} fallback={<div className="h-80 bg-gray-700/50 rounded-lg animate-pulse" />}>
+                <ListingCard listing={listing} />
+              </Suspense>
             ))}
           </div>
         </div>

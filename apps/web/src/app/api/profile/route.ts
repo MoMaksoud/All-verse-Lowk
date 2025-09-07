@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProfileService } from '@/lib/firestore';
 
+// Simple in-memory cache for development
+const profileCache = new Map<string, any>();
+const CACHE_TTL = 30000; // 30 seconds
+
 // Helper function to get user ID from request
 // For now, we'll use a simple approach that works with client-side auth
 function getUserIdFromRequest(request: NextRequest): string {
@@ -23,6 +27,13 @@ export async function GET(request: NextRequest) {
   try {
     const userId = getUserIdFromRequest(request);
     
+    // Check cache first
+    const cacheKey = `profile-${userId}`;
+    const cached = profileCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return NextResponse.json({ success: true, data: cached.data });
+    }
+    
     let profile = await ProfileService.getProfile(userId);
     
     if (!profile) {
@@ -33,6 +44,12 @@ export async function GET(request: NextRequest) {
         rating: 0,
       });
     }
+    
+    // Cache the result
+    profileCache.set(cacheKey, {
+      data: profile,
+      timestamp: Date.now()
+    });
     
     return NextResponse.json({ success: true, data: profile });
   } catch (error) {

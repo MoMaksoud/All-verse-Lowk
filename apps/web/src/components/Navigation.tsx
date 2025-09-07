@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle } from 'lucide-react';
-import { Avatar } from '@marketplace/ui';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { DefaultAvatar } from './DefaultAvatar';
 import { Profile } from '@marketplace/types';
+
+// Lazy load heavy components
+const Avatar = lazy(() => import('@marketplace/ui').then(module => ({ default: module.Avatar })));
+const DefaultAvatar = lazy(() => import('./DefaultAvatar').then(module => ({ default: module.DefaultAvatar })));
 
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
@@ -167,17 +169,21 @@ export function Navigation() {
                     className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2"
                   >
                     {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
-                      <Avatar
-                        src={profile?.profilePictureUrl || currentUser?.photoURL}
-                        alt={currentUser.displayName || "Profile"}
-                        size="sm"
-                      />
+                      <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
+                        <Avatar
+                          src={profile?.profilePictureUrl || currentUser?.photoURL}
+                          alt={currentUser.displayName || "Profile"}
+                          size="sm"
+                        />
+                      </Suspense>
                     ) : (
-                      <DefaultAvatar
-                        name={currentUser?.displayName || undefined}
-                        email={currentUser?.email || undefined}
-                        size="sm"
-                      />
+                      <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
+                        <DefaultAvatar
+                          name={currentUser?.displayName || undefined}
+                          email={currentUser?.email || undefined}
+                          size="sm"
+                        />
+                      </Suspense>
                     )}
                     <ChevronDown className="w-4 h-4 text-gray-400" />
                   </button>
@@ -189,17 +195,21 @@ export function Navigation() {
                       <div className="px-4 py-3 border-b border-dark-600">
                         <div className="flex items-center space-x-3">
                           {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
-                            <Avatar
-                              src={profile?.profilePictureUrl || currentUser?.photoURL}
-                              alt={currentUser.displayName || "Profile"}
-                              size="md"
-                            />
+                            <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
+                              <Avatar
+                                src={profile?.profilePictureUrl || currentUser?.photoURL}
+                                alt={currentUser.displayName || "Profile"}
+                                size="md"
+                              />
+                            </Suspense>
                           ) : (
-                            <DefaultAvatar
-                              name={currentUser?.displayName || undefined}
-                              email={currentUser?.email || undefined}
-                              size="md"
-                            />
+                            <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
+                              <DefaultAvatar
+                                name={currentUser?.displayName || undefined}
+                                email={currentUser?.email || undefined}
+                                size="md"
+                              />
+                            </Suspense>
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">

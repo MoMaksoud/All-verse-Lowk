@@ -3,7 +3,7 @@ import { dbListings } from "@/lib/mockDb";
 import { SimpleListingCreate } from "@marketplace/types";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const dynamic = "auto";
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,9 +23,7 @@ export async function GET(req: NextRequest) {
       maxPrice: max,
     };
 
-    console.log('API Route - Received filters:', filters);
     const result = await dbListings.search(filters, page, limit);
-    console.log('API Route - Search result:', result);
       
     // Apply sorting
     let sortedData = [...result.items];
