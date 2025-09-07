@@ -2,13 +2,16 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { User, Settings, Edit, Camera, Save, X, Bell, Eye, EyeOff } from 'lucide-react';
-import { mockApi } from '@marketplace/lib';
-import { User as UserType, Profile } from '@marketplace/types';
+import { Profile } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
+import { useAuth } from '@/contexts/AuthContext';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { DefaultAvatar } from '@/components/DefaultAvatar';
+import { StorageService } from '@/lib/storage';
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<UserType | null>(null);
+  const { currentUser } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -25,20 +28,25 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProfile = async () => {
+      if (!currentUser) return;
+      
       try {
         setLoading(true);
-        const [userResponse, profileResponse] = await Promise.all([
-          mockApi.getCurrentUser(),
-          mockApi.updateProfile({}), // This will return the current profile
-        ]);
-
-        setUser(userResponse.data);
-        setProfile(profileResponse.data);
-        setFormData({
-          bio: profileResponse.data.bio || '',
-          location: profileResponse.data.location || '',
+        const response = await fetch('/api/profile', {
+          headers: {
+            'x-user-id': currentUser.uid,
+          },
         });
+        const result = await response.json();
+        
+        if (result.success) {
+          setProfile(result.data);
+          setFormData({
+            bio: result.data.bio || '',
+            location: result.data.location || '',
+          });
+        }
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {
@@ -46,16 +54,30 @@ export default function ProfilePage() {
       }
     };
 
-    fetchData();
-  }, []);
+    fetchProfile();
+  }, [currentUser]);
 
   const handleSave = async () => {
     try {
-      const updatedProfile = await mockApi.updateProfile(formData);
-      setProfile(updatedProfile.data);
-      setEditing(false);
-      // Show success notification
-      showToast('Profile updated successfully!', 'success');
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser?.uid || '',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setProfile(result.data);
+        setEditing(false);
+        // Show success notification
+        showToast('Profile updated successfully!', 'success');
+      } else {
+        showToast('Failed to update profile', 'error');
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       showToast('Failed to update profile', 'error');
@@ -70,16 +92,57 @@ export default function ProfilePage() {
     setEditing(false);
   };
 
-  const handleProfilePictureUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newAvatarUrl = e.target?.result as string;
-        setUser(prev => prev ? { ...prev, avatar: newAvatarUrl } : null);
-        showToast('Profile picture updated!', 'success');
-      };
-      reader.readAsDataURL(file);
+    console.log('📁 File selected:', file?.name, file?.size, file?.type);
+    console.log('👤 Current user:', currentUser?.uid);
+    
+    if (!file || !currentUser) {
+      console.log('❌ Missing file or user');
+      return;
+    }
+
+    // Validate file
+    const validation = StorageService.validateImageFile(file);
+    console.log('✅ File validation:', validation);
+    
+    if (!validation.valid) {
+      showToast(validation.error || 'Invalid file', 'error');
+      return;
+    }
+
+    try {
+      showToast('Uploading profile picture...', 'success');
+      console.log('🚀 Starting upload...');
+      
+      // Upload to Firebase Storage
+      const downloadURL = await StorageService.uploadProfilePicture(currentUser.uid, file);
+      console.log('✅ Upload successful:', downloadURL);
+      
+      // Update profile in Firestore
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          profilePictureUrl: downloadURL,
+        }),
+      });
+      
+      const result = await response.json();
+      console.log('📝 Profile update result:', result);
+      
+      if (result.success) {
+        setProfile(result.data);
+        showToast('Profile picture updated successfully!', 'success');
+      } else {
+        showToast('Failed to update profile', 'error');
+      }
+    } catch (error) {
+      console.error('❌ Upload error:', error);
+      showToast('Failed to upload profile picture', 'error');
     }
   };
 
@@ -122,20 +185,32 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Profile Not Found</h1>
-          <p className="text-gray-600">Unable to load your profile.</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">Authentication Required</h1>
+          <p className="text-gray-400">Please sign in to view your profile.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-dark-950">
-      <Navigation />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-dark-950">
+        <Navigation />
       
       {/* Notifications Panel */}
       {showNotifications && (
@@ -228,11 +303,19 @@ export default function ProfilePage() {
                 {/* Avatar Section */}
                 <div className="flex items-center space-x-4">
                   <div className="relative">
-                    <img
-                      src={user.avatar || 'https://via.placeholder.com/80x80/1e293b/64748b?text=U'}
-                      alt={user.name}
-                      className="w-20 h-20 rounded-full object-cover"
-                    />
+                    {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
+                      <img
+                        src={profile?.profilePictureUrl || currentUser?.photoURL}
+                        alt={currentUser?.displayName || 'User'}
+                        className="w-20 h-20 rounded-full object-cover"
+                      />
+                    ) : (
+                      <DefaultAvatar
+                        name={currentUser?.displayName || undefined}
+                        email={currentUser?.email || undefined}
+                        size="xl"
+                      />
+                    )}
                     <button 
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute -bottom-1 -right-1 p-2 bg-accent-500 rounded-full hover:bg-accent-600 transition-colors"
@@ -248,9 +331,9 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white">{user.name}</h3>
-                    <p className="text-gray-400">{user.email}</p>
-                    <p className="text-sm text-gray-500">Member since {new Date(user.createdAt).getFullYear()}</p>
+                    <h3 className="text-xl font-semibold text-white">{currentUser?.displayName || 'User'}</h3>
+                    <p className="text-gray-400">{currentUser?.email}</p>
+                    <p className="text-sm text-gray-500">Member since {currentUser?.metadata?.creationTime ? new Date(currentUser.metadata.creationTime).getFullYear() : 'Recently'}</p>
                   </div>
                 </div>
 
@@ -386,6 +469,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

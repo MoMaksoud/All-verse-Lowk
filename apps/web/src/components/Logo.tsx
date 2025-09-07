@@ -24,14 +24,14 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
       <div className={`${iconSizes[size]} relative`}>
         <img
           src="/logo.jpg"
-          alt="ALLVERSE GPT"
+          alt="ALL VERSE GPT"
           className="w-full h-full object-cover rounded-lg"
         />
       </div>
       
       {/* Text */}
       <div className={`flex flex-col ${sizeClasses[size]}`}>
-        <span className="font-bold text-white leading-tight">ALLVERSE GPT</span>
+        <span className="font-bold text-white leading-tight">ALL VERSE GPT</span>
       </div>
     </div>
   );
