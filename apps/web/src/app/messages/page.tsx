@@ -6,6 +6,7 @@ import { Search, Plus, MoreVertical, Send, Image, Paperclip, Smile, X, Check, Ch
 import { mockApi } from '@marketplace/lib';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
+import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 
 interface Message {
   id: string;
@@ -53,6 +54,9 @@ export default function MessagesPage() {
   const [offerAmount, setOfferAmount] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string>('');
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
 
   useEffect(() => {
     // Mock conversations data
@@ -262,6 +266,21 @@ export default function MessagesPage() {
         );
       }, 2000);
     }
+  };
+
+  const handleVoiceResult = (text: string) => {
+    setNewMessage(text);
+    setVoiceTranscript(text);
+    setVoiceError(null);
+    // Auto-send voice input after a short delay
+    setTimeout(() => {
+      handleSendMessage();
+    }, 1000);
+  };
+
+  const handleVoiceError = (error: string) => {
+    setVoiceError(error);
+    setIsVoiceListening(false);
   };
 
   const handleMakeOffer = () => {
@@ -664,6 +683,12 @@ export default function MessagesPage() {
                           className="w-full px-4 py-2 bg-dark-700 border border-dark-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-500 resize-none"
                         />
                       </div>
+                      <VoiceInputButton
+                        onResult={handleVoiceResult}
+                        onError={handleVoiceError}
+                        size="sm"
+                        className="bg-gray-600 hover:bg-gray-500"
+                      />
                       <button className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50">
                         <Smile className="w-4 h-4" />
                       </button>
@@ -675,6 +700,13 @@ export default function MessagesPage() {
                         <Send className="w-4 h-4" />
                       </button>
                     </div>
+                    
+                    {/* Voice Input Status */}
+                    <VoiceInputStatus 
+                      isListening={isVoiceListening}
+                      transcript={voiceTranscript}
+                      error={voiceError}
+                    />
                     
                     {/* Hidden file inputs */}
                     <input

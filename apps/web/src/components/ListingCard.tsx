@@ -2,8 +2,10 @@
 
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Heart, MessageCircle, Star, Clock, X } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
+import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 
 interface ListingCardProps {
   listing: SimpleListing;
@@ -23,6 +25,9 @@ export function ListingCard({ listing }: ListingCardProps) {
   });
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState('');
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
 
   const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
@@ -62,6 +67,17 @@ export function ListingCard({ listing }: ListingCardProps) {
     }
   }, [message]);
 
+  const handleVoiceResult = (text: string) => {
+    setMessage(text);
+    setVoiceTranscript(text);
+    setVoiceError(null);
+  };
+
+  const handleVoiceError = (error: string) => {
+    setVoiceError(error);
+    setIsVoiceListening(false);
+  };
+
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     // Create toast element
     const toast = document.createElement('div');
@@ -87,11 +103,15 @@ export function ListingCard({ listing }: ListingCardProps) {
           {/* Image */}
           <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-dark-700 flex-shrink-0">
             {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
-              <img
+              <Image
                 src={listing.photos[0]}
                 alt={listing.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                loading="lazy"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-300"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                priority={false}
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
                 onError={(e) => {
                   // Fallback to placeholder if image fails to load
                   const target = e.target as HTMLImageElement;
@@ -203,12 +223,29 @@ export function ListingCard({ listing }: ListingCardProps) {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Your Message
                 </label>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Hi! I'm interested in your item..."
-                  rows={4}
-                  className="w-full px-3 py-2 border border-dark-600 rounded-md text-sm bg-dark-700 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
+                <div className="relative">
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Hi! I'm interested in your item..."
+                    rows={4}
+                    className="w-full px-3 py-2 pr-12 border border-dark-600 rounded-md text-sm bg-dark-700 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
+                  />
+                  <div className="absolute bottom-2 right-2">
+                    <VoiceInputButton
+                      onResult={handleVoiceResult}
+                      onError={handleVoiceError}
+                      size="sm"
+                      className="bg-gray-600 hover:bg-gray-500"
+                    />
+                  </div>
+                </div>
+                
+                {/* Voice Input Status */}
+                <VoiceInputStatus 
+                  isListening={isVoiceListening}
+                  transcript={voiceTranscript}
+                  error={voiceError}
                 />
               </div>
 

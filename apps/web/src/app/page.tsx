@@ -7,6 +7,8 @@ import { SimpleListing } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { SkeletonCard, SkeletonCategoryCard, SkeletonSearchBar, SkeletonAIWidget, SkeletonStats, SkeletonHero } from '@/components/SkeletonLoader';
+import { ResourcePreloader } from '@/components/ResourcePreloader';
 import { useRouteGuard } from '@/hooks/useRouteGuard';
 
 // Lazy load heavy components
@@ -23,9 +25,12 @@ export default function HomePage() {
 
   const fetchData = useCallback(async () => {
     try {
+      console.log('Fetching data...');
       // Use a smaller limit for faster loading
       const response = await fetch('/api/listings?limit=6');
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Data received:', data);
 
       if (response.ok) {
         setFeaturedListings(data.data || []);
@@ -36,6 +41,7 @@ export default function HomePage() {
       console.error('Error fetching data:', error);
       setFeaturedListings([]);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   }, []);
@@ -44,17 +50,31 @@ export default function HomePage() {
     fetchData();
   }, [fetchData]);
 
+  // Show skeleton loading instead of spinner for better perceived performance
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-950">
+      <div className="min-h-screen home-page">
         <Navigation />
-        <LoadingSpinner size="lg" text="Loading featured listings..." />
+        <div className="py-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white">
+                Loading...
+              </h1>
+              <p className="text-xl md:text-2xl mb-8 text-gray-300">
+                Please wait while we load the content
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen home-page">
+      <ResourcePreloader />
+      
       {/* Sitewide Dynamic Background - Only on home route */}
       {isHomeRoute && (
         <Suspense fallback={<div className="fixed inset-0 bg-dark-950" />}>
@@ -83,7 +103,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="relative">
-              <Suspense fallback={<div className="h-12 bg-gray-700/50 rounded-lg animate-pulse max-w-2xl mx-auto" />}>
+              <Suspense fallback={<SkeletonSearchBar />}>
                 <SearchBar className="max-w-2xl mx-auto drop-shadow-lg" />
               </Suspense>
             </div>
@@ -160,7 +180,7 @@ export default function HomePage() {
           </div>
           
           <div className="max-w-md mx-auto">
-            <Suspense fallback={<div className="h-64 bg-gray-700/50 rounded-lg animate-pulse" />}>
+            <Suspense fallback={<SkeletonAIWidget />}>
               <AIWidget />
             </Suspense>
           </div>
@@ -180,16 +200,16 @@ export default function HomePage() {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <Suspense fallback={<div className="h-32 bg-gray-700/50 rounded-lg animate-pulse" />}>
+            <Suspense fallback={<SkeletonCategoryCard />}>
               <CategoryCard category={{ id: 'electronics', name: 'Electronics', slug: 'electronics', icon: 'electronics.svg', iconImage: '/icons/electronics.svg' }} />
             </Suspense>
-            <Suspense fallback={<div className="h-32 bg-gray-700/50 rounded-lg animate-pulse" />}>
+            <Suspense fallback={<SkeletonCategoryCard />}>
               <CategoryCard category={{ id: 'fashion', name: 'Fashion', slug: 'fashion', icon: 'fashion.svg', iconImage: '/icons/fashion.svg' }} />
             </Suspense>
-            <Suspense fallback={<div className="h-32 bg-gray-700/50 rounded-lg animate-pulse" />}>
+            <Suspense fallback={<SkeletonCategoryCard />}>
               <CategoryCard category={{ id: 'home', name: 'Home', slug: 'home', icon: 'home.svg', iconImage: '/icons/home.svg' }} />
             </Suspense>
-            <Suspense fallback={<div className="h-32 bg-gray-700/50 rounded-lg animate-pulse" />}>
+            <Suspense fallback={<SkeletonCategoryCard />}>
               <CategoryCard category={{ id: 'sports', name: 'Sports', slug: 'sports', icon: 'sports.svg', iconImage: '/icons/sports.svg' }} />
             </Suspense>
           </div>
@@ -219,7 +239,7 @@ export default function HomePage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {featuredListings.map((listing) => (
-              <Suspense key={listing.id} fallback={<div className="h-80 bg-gray-700/50 rounded-lg animate-pulse" />}>
+              <Suspense key={listing.id} fallback={<SkeletonCard />}>
                 <ListingCard listing={listing} />
               </Suspense>
             ))}

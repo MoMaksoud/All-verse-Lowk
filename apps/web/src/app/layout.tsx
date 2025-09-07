@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   keywords: ['AI', 'marketplace', 'GPT', 'buy', 'sell', 'intelligent'],
   authors: [{ name: 'All-Verse Team' }],
   viewport: 'width=device-width, initial-scale=1',
+  other: {
+    'preload': '/icons/electronics.svg',
+    'prefetch': '/api/listings?limit=6',
+  },
 };
 
 export default function RootLayout({

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Image, Paperclip, Smile, DollarSign, Clock, Check, CheckCheck } from 'lucide-react';
 import { ListingWithSeller } from '@marketplace/types';
+import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 
 interface Message {
   id: string;
@@ -32,6 +33,9 @@ export function ChatWidget({ listing, isOpen, onClose, onOpen }: ChatWidgetProps
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
   const [showQuickQuestions, setShowQuickQuestions] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const quickQuestions = [
@@ -194,6 +198,21 @@ export function ChatWidget({ listing, isOpen, onClose, onOpen }: ChatWidgetProps
         );
       }, 2000);
     }, 1500);
+  };
+
+  const handleVoiceResult = (text: string) => {
+    setNewMessage(text);
+    setVoiceTranscript(text);
+    setVoiceError(null);
+    // Auto-send voice input after a short delay
+    setTimeout(() => {
+      handleSendMessage();
+    }, 1000);
+  };
+
+  const handleVoiceError = (error: string) => {
+    setVoiceError(error);
+    setIsVoiceListening(false);
   };
 
   const handleMakeOffer = () => {
@@ -421,6 +440,12 @@ export function ChatWidget({ listing, isOpen, onClose, onOpen }: ChatWidgetProps
               className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-500 text-sm"
             />
           </div>
+          <VoiceInputButton
+            onResult={handleVoiceResult}
+            onError={handleVoiceError}
+            size="sm"
+            className="bg-gray-600 hover:bg-gray-500"
+          />
           <button className="btn-ghost p-1 rounded hover:bg-dark-600">
             <Smile className="w-4 h-4" />
           </button>
@@ -432,6 +457,13 @@ export function ChatWidget({ listing, isOpen, onClose, onOpen }: ChatWidgetProps
             <Send className="w-4 h-4" />
           </button>
         </div>
+        
+        {/* Voice Input Status */}
+        <VoiceInputStatus 
+          isListening={isVoiceListening}
+          transcript={voiceTranscript}
+          error={voiceError}
+        />
       </div>
 
       {/* Offer Modal */}

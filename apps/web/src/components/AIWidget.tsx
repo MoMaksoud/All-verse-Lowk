@@ -21,7 +21,6 @@ export function AIWidget() {
         </div>
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
         </div>
       </div>
 

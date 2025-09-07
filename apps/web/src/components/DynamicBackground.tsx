@@ -33,11 +33,11 @@ export function DynamicBackground({
   const lastTimeRef = useRef(0);
   const [isVisible, setIsVisible] = useState(true);
 
-  // Intensity settings
+  // Intensity settings - reduced for better performance
   const intensitySettings = {
-    low: { elementCount: 20, speed: 0.2, opacity: 0.15 },
-    med: { elementCount: 40, speed: 0.3, opacity: 0.25 },
-    high: { elementCount: 60, speed: 0.4, opacity: 0.35 }
+    low: { elementCount: 8, speed: 0.1, opacity: 0.1 },
+    med: { elementCount: 15, speed: 0.15, opacity: 0.15 },
+    high: { elementCount: 25, speed: 0.2, opacity: 0.2 }
   };
 
   const settings = intensitySettings[intensity];
@@ -208,11 +208,11 @@ export function DynamicBackground({
     });
   }, []);
 
-  // Animation loop with FPS cap
+  // Animation loop with FPS cap - reduced to 30 FPS for better performance
   const animate = useCallback((currentTime: number) => {
     if (!isVisible) return;
     
-    const deltaTime = Math.min(currentTime - lastTimeRef.current, 1000 / 60); // Cap at 60 FPS
+    const deltaTime = Math.min(currentTime - lastTimeRef.current, 1000 / 30); // Cap at 30 FPS
     lastTimeRef.current = currentTime;
     
     updateElements(deltaTime);

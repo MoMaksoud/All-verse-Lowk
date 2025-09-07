@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, X, TrendingUp, Clock, Bot, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 
 interface SearchBarProps {
   className?: string;
@@ -12,6 +13,9 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -83,6 +87,23 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   const clearSearch = () => {
     setQuery('');
     setShowSuggestions(false);
+    setVoiceError(null);
+    setVoiceTranscript('');
+  };
+
+  const handleVoiceResult = (text: string) => {
+    setQuery(text);
+    setVoiceTranscript(text);
+    setVoiceError(null);
+    // Auto-submit voice input after a short delay
+    setTimeout(() => {
+      handleSearch(text);
+    }, 1000);
+  };
+
+  const handleVoiceError = (error: string) => {
+    setVoiceError(error);
+    setIsVoiceListening(false);
   };
 
   return (
@@ -115,21 +136,36 @@ export function SearchBar({ className = '' }: SearchBarProps) {
           )}
         </div>
         
-        <button
-          type="submit"
-          disabled={isSearching}
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-        >
-          {isSearching ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          ) : (
-            <>
-              <Bot className="w-4 h-4" />
-              Ask AI
-            </>
-          )}
-        </button>
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+          <VoiceInputButton
+            onResult={handleVoiceResult}
+            onError={handleVoiceError}
+            size="sm"
+            className="bg-gray-700 hover:bg-gray-600"
+          />
+          <button
+            type="submit"
+            disabled={isSearching}
+            className="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          >
+            {isSearching ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <>
+                <Bot className="w-4 h-4" />
+                Ask AI
+              </>
+            )}
+          </button>
+        </div>
       </form>
+
+      {/* Voice Input Status */}
+      <VoiceInputStatus 
+        isListening={isVoiceListening}
+        transcript={voiceTranscript}
+        error={voiceError}
+      />
 
       {/* Search Suggestions */}
       {showSuggestions && (
