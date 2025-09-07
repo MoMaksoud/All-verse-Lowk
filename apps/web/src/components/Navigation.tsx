@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut } from 'lucide-react';
+import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle } from 'lucide-react';
 import { Avatar } from '@marketplace/ui';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +20,9 @@ const navigation = [
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'New message from John Doe', time: '2 minutes ago', read: false },
     { id: 2, message: 'Your listing "iPhone 14 Pro" got a new offer', time: '1 hour ago', read: false },
@@ -53,6 +55,20 @@ export function Navigation() {
       console.error('Failed to logout:', error);
     }
   };
+
+  // Handle clicking outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Fetch profile data for avatar
   useEffect(() => {
@@ -145,28 +161,117 @@ export function Navigation() {
                   <Plus className="w-4 h-4" />
                   Sell
                 </Link>
-                <Link href="/profile" className="flex items-center">
-                  {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
-                    <Avatar
-                      src={profile?.profilePictureUrl || currentUser?.photoURL}
-                      alt={currentUser.displayName || "Profile"}
-                      size="sm"
-                    />
-                  ) : (
-                    <DefaultAvatar
-                      name={currentUser?.displayName || undefined}
-                      email={currentUser?.email || undefined}
-                      size="sm"
-                    />
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                    className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2"
+                  >
+                    {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
+                      <Avatar
+                        src={profile?.profilePictureUrl || currentUser?.photoURL}
+                        alt={currentUser.displayName || "Profile"}
+                        size="sm"
+                      />
+                    ) : (
+                      <DefaultAvatar
+                        name={currentUser?.displayName || undefined}
+                        email={currentUser?.email || undefined}
+                        size="sm"
+                      />
+                    )}
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </button>
+
+                  {/* Profile Dropdown Menu */}
+                  {showProfileDropdown && (
+                    <div className="absolute right-0 mt-2 w-64 bg-dark-800 rounded-lg shadow-xl border border-dark-600 py-2 z-50">
+                      {/* Profile Header */}
+                      <div className="px-4 py-3 border-b border-dark-600">
+                        <div className="flex items-center space-x-3">
+                          {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
+                            <Avatar
+                              src={profile?.profilePictureUrl || currentUser?.photoURL}
+                              alt={currentUser.displayName || "Profile"}
+                              size="md"
+                            />
+                          ) : (
+                            <DefaultAvatar
+                              name={currentUser?.displayName || undefined}
+                              email={currentUser?.email || undefined}
+                              size="md"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">
+                              {currentUser.displayName || "User"}
+                            </p>
+                            <p className="text-sm text-gray-400 truncate">
+                              {currentUser.email}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Menu Items */}
+                      <div className="py-2">
+                        <Link
+                          href="/profile"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <UserCircle className="w-4 h-4 mr-3" />
+                          View Profile
+                        </Link>
+                        <Link
+                          href="/profile"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <Settings className="w-4 h-4 mr-3" />
+                          Settings
+                        </Link>
+                        <Link
+                          href="/sell"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <Plus className="w-4 h-4 mr-3" />
+                          Sell Item
+                        </Link>
+                        <Link
+                          href="/favorites"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <Heart className="w-4 h-4 mr-3" />
+                          Favorites
+                        </Link>
+                        <Link
+                          href="/help"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <HelpCircle className="w-4 h-4 mr-3" />
+                          Help & Support
+                        </Link>
+                      </div>
+
+                      {/* Logout */}
+                      <div className="border-t border-dark-600 pt-2">
+                        <button
+                          onClick={() => {
+                            handleLogout();
+                            setShowProfileDropdown(false);
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                          <LogOut className="w-4 h-4 mr-3" />
+                          Logout
+                        </button>
+                      </div>
+                    </div>
                   )}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
-                  title="Logout"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
+                </div>
               </>
             ) : (
               <>
