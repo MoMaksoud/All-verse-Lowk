@@ -4,8 +4,9 @@ import React, { useEffect, useState, Suspense, useCallback, useMemo } from 'reac
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Filter, Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle } from 'lucide-react';
-import { SimpleListing } from '@marketplace/types';
+import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
+import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -14,21 +15,11 @@ function ListingsContent() {
   const searchParams = useSearchParams();
   const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [localFilters, setLocalFilters] = useState({
-    keyword: '',
-    category: '',
-    minPrice: undefined as number | undefined,
-    maxPrice: undefined as number | undefined,
-  });
-  const [appliedFilters, setAppliedFilters] = useState({
-    keyword: '',
-    category: '',
-    minPrice: undefined as number | undefined,
-    maxPrice: undefined as number | undefined,
-  });
+  const [categories, setCategories] = useState<Category[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [appliedFilters, setAppliedFilters] = useState<ListingFilters>({});
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'rating'>('newest');
 
   const fetchData = useCallback(async () => {
@@ -41,6 +32,8 @@ function ListingsContent() {
       if (appliedFilters.category) params.set('category', appliedFilters.category);
       if (appliedFilters.minPrice !== undefined) params.set('min', appliedFilters.minPrice.toString());
       if (appliedFilters.maxPrice !== undefined) params.set('max', appliedFilters.maxPrice.toString());
+      if (appliedFilters.location) params.set('location', appliedFilters.location);
+      if (appliedFilters.maxDistance !== undefined) params.set('maxDistance', appliedFilters.maxDistance.toString());
       params.set('page', currentPage.toString());
       params.set('limit', '12');
       
@@ -76,6 +69,13 @@ function ListingsContent() {
         setListings([]);
         setTotalPages(1);
       }
+      
+      // Fetch categories
+      const categoriesResponse = await fetch('/api/categories');
+      if (categoriesResponse.ok) {
+        const categoriesData = await categoriesResponse.json();
+        setCategories(categoriesData);
+      }
     } catch (error) {
       console.error('Error fetching listings:', error);
       setListings([]);
@@ -103,37 +103,10 @@ function ListingsContent() {
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
     };
 
-    setLocalFilters(newFilters);
     setAppliedFilters(newFilters);
     setCurrentPage(1);
   }, [searchParams]);
 
-  const handleLocalFilterChange = useCallback((newFilters: typeof localFilters) => {
-    setLocalFilters(newFilters);
-  }, []);
-
-  const handleApplyFilters = useCallback(() => {
-    setAppliedFilters(localFilters);
-    setCurrentPage(1);
-  }, [localFilters]);
-
-  const handleClearFilters = useCallback(() => {
-    const clearedFilters = {
-      keyword: '',
-      category: '',
-      minPrice: undefined,
-      maxPrice: undefined,
-    };
-    setLocalFilters(clearedFilters);
-    setAppliedFilters(clearedFilters);
-    setCurrentPage(1);
-  }, []);
-
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleApplyFilters();
-    }
-  }, [handleApplyFilters]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -172,93 +145,11 @@ function ListingsContent() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
           <div className="lg:w-80">
-            <div className="bg-dark-800 rounded-xl p-6 border border-dark-600">
-              <h3 className="text-lg font-semibold text-white mb-6">Filters</h3>
-              
-              {/* Search */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Search
-                </label>
-                <input
-                  type="text"
-                  value={localFilters.keyword}
-                  onChange={(e) => handleLocalFilterChange({ ...localFilters, keyword: e.target.value })}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Search listings..."
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
-                />
-              </div>
-
-              {/* Category */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Category
-                </label>
-                <select
-                  value={localFilters.category}
-                  onChange={(e) => handleLocalFilterChange({ ...localFilters, category: e.target.value })}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
-                >
-                  <option value="">All Categories</option>
-                  <option value="electronics">Electronics</option>
-                  <option value="fashion">Fashion</option>
-                  <option value="home">Home</option>
-                  <option value="sports">Sports</option>
-                  <option value="automotive">Automotive</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              {/* Price Range */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Price Range
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    value={localFilters.minPrice || ''}
-                    onChange={(e) => handleLocalFilterChange({ 
-                      ...localFilters, 
-                      minPrice: e.target.value ? parseFloat(e.target.value) : undefined 
-                    })}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Min"
-                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 appearance-none text-sm"
-                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                  />
-                  <input
-                    type="number"
-                    value={localFilters.maxPrice || ''}
-                    onChange={(e) => handleLocalFilterChange({ 
-                      ...localFilters, 
-                      maxPrice: e.target.value ? parseFloat(e.target.value) : undefined 
-                    })}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Max"
-                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 appearance-none text-sm"
-                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                  />
-                </div>
-              </div>
-
-              {/* Apply Filters Button */}
-              <button
-                onClick={handleApplyFilters}
-                className="w-full px-4 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-lg font-medium transition-all duration-200 mb-3"
-              >
-                Apply Filters
-              </button>
-
-              {/* Clear Filters Button */}
-              <button
-                onClick={handleClearFilters}
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-gray-300 hover:bg-dark-600 hover:text-white transition-all duration-200"
-              >
-                Clear Filters
-              </button>
-            </div>
+            <ListingFiltersComponent
+              filters={appliedFilters}
+              categories={categories}
+              onFiltersChange={setAppliedFilters}
+            />
           </div>
 
           {/* Main Content */}
