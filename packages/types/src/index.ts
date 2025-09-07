@@ -168,6 +168,10 @@ export type ListingFilters = {
   condition?: string;
   location?: string;
   maxDistance?: number; // in miles
+  userCoordinates?: {
+    lat: number;
+    lng: number;
+  };
   sortBy?: 'price' | 'date' | 'relevance';
   sortOrder?: 'asc' | 'desc';
 };

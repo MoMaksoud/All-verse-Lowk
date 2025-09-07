@@ -150,6 +150,59 @@
     "category": "sports",
     "photos": ["/images/yoga-mat-2048px-1653.jpg"],
     "createdAt": "2025-01-15T10:00:00.000Z",
-    "updatedAt": "2025-01-15T10:00:00.000Z"
+    "updatedAt": "2025-01-15T10:00:00.000Z",
+    "location": {
+      "city": "Orlando",
+      "state": "FL",
+      "zipCode": "32801",
+      "coordinates": {
+        "lat": 28.5383,
+        "lng": -81.3792
+      }
+    },
+    "sellerId": "seller-11",
+    "condition": "good"
+  },
+  {
+    "id": "sample-12",
+    "title": "MacBook Pro M2",
+    "description": "Brand new MacBook Pro with M2 chip, 16GB RAM, 512GB SSD. Perfect for professionals.",
+    "price": 1899.99,
+    "category": "electronics",
+    "photos": ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop"],
+    "createdAt": "2025-09-05T18:00:00.000Z",
+    "updatedAt": "2025-09-05T18:00:00.000Z",
+    "location": {
+      "city": "Jacksonville",
+      "state": "FL",
+      "zipCode": "32202",
+      "coordinates": {
+        "lat": 30.3322,
+        "lng": -81.6557
+      }
+    },
+    "sellerId": "seller-12",
+    "condition": "new"
+  },
+  {
+    "id": "sample-13",
+    "title": "Basketball",
+    "description": "Official NBA basketball, barely used. Great for outdoor courts.",
+    "price": 45.00,
+    "category": "sports",
+    "photos": ["https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=300&fit=crop"],
+    "createdAt": "2025-09-05T17:30:00.000Z",
+    "updatedAt": "2025-09-05T17:30:00.000Z",
+    "location": {
+      "city": "Tampa",
+      "state": "FL",
+      "zipCode": "33602",
+      "coordinates": {
+        "lat": 27.9506,
+        "lng": -82.4572
+      }
+    },
+    "sellerId": "seller-13",
+    "condition": "good"
   }
 ]

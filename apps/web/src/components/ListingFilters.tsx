@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search, X, MapPin, Navigation } from 'lucide-react';
+import { LocationAutocomplete } from './LocationAutocomplete';
 import type { ListingFilters, Category } from '@marketplace/types';
 
 interface ListingFiltersProps {
@@ -15,6 +16,15 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
 
   const handleFilterChange = (key: keyof ListingFilters, value: any) => {
     const newFilters = { ...localFilters, [key]: value };
+    setLocalFilters(newFilters);
+  };
+
+  const handleLocationChange = (location: string, coordinates?: { lat: number; lng: number }) => {
+    const newFilters = { 
+      ...localFilters, 
+      location,
+      userCoordinates: coordinates
+    };
     setLocalFilters(newFilters);
   };
 
@@ -113,20 +123,14 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
         <label className="block text-sm font-medium text-gray-300 mb-2">
           Location
         </label>
-        <div className="relative mb-3">
-          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            value={localFilters.location || ''}
-            onChange={(e) => handleFilterChange('location', e.target.value)}
-            placeholder="City, State or ZIP code..."
-            className="w-full pl-10 pr-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-            style={{ colorScheme: 'dark' }}
-          />
-        </div>
+        <LocationAutocomplete
+          value={localFilters.location || ''}
+          onChange={handleLocationChange}
+          placeholder="City, State or ZIP code..."
+        />
         
         {/* Distance Range */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-3">
           <Navigation className="text-gray-400 w-4 h-4" />
           <span className="text-sm text-gray-300">Within</span>
           <select

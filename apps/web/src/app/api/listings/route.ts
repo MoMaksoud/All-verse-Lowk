@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbListings } from "@/lib/mockDb";
 import { SimpleListingCreate } from "@marketplace/types";
+import { calculateDistance } from "@/lib/location";
 
 export const runtime = "nodejs";
 export const dynamic = "auto";
@@ -12,6 +13,10 @@ export async function GET(req: NextRequest) {
     const category = url.searchParams.get('category') || undefined;
     const min = url.searchParams.get('min') ? Number(url.searchParams.get('min')) : undefined;
     const max = url.searchParams.get('max') ? Number(url.searchParams.get('max')) : undefined;
+    const location = url.searchParams.get('location') || undefined;
+    const maxDistance = url.searchParams.get('maxDistance') ? Number(url.searchParams.get('maxDistance')) : undefined;
+    const userLat = url.searchParams.get('userLat') ? Number(url.searchParams.get('userLat')) : undefined;
+    const userLng = url.searchParams.get('userLng') ? Number(url.searchParams.get('userLng')) : undefined;
     const page = Number(url.searchParams.get('page')) || 1;
     const limit = Number(url.searchParams.get('limit')) || 20;
     const sort = url.searchParams.get('sort') || 'recent';
@@ -21,12 +26,32 @@ export async function GET(req: NextRequest) {
       category: category,
       minPrice: min,
       maxPrice: max,
+      location: location,
+      maxDistance: maxDistance,
+      userCoordinates: userLat && userLng ? { lat: userLat, lng: userLng } : undefined,
     };
 
     const result = await dbListings.search(filters, page, limit);
       
+    // Apply location filtering if user coordinates are provided
+    let filteredData = [...result.items];
+    if (filters.userCoordinates && filters.maxDistance) {
+      filteredData = filteredData.filter(listing => {
+        if (!listing.location?.coordinates) return false;
+        
+        const distance = calculateDistance(
+          filters.userCoordinates!.lat,
+          filters.userCoordinates!.lng,
+          listing.location.coordinates.lat,
+          listing.location.coordinates.lng
+        );
+        
+        return distance <= filters.maxDistance!;
+      });
+    }
+      
     // Apply sorting
-    let sortedData = [...result.items];
+    let sortedData = [...filteredData];
     switch (sort) {
       case 'priceAsc':
         sortedData.sort((a, b) => a.price - b.price);
@@ -46,10 +71,10 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json({
       data: sortedData,
-      total: result.total,
+      total: filteredData.length,
       page: page,
       limit: limit,
-      hasMore: result.hasMore
+      hasMore: filteredData.length > page * limit
     });
   } catch (error) {
     console.error('Error fetching listings:', error);
