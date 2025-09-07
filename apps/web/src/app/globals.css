@@ -9,6 +9,23 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
   
+  /* Autofill styling for dark theme */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgb(55, 65, 81, 0.5) inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+    background-color: rgb(55, 65, 81, 0.5) !important;
+  }
+  
+  /* Firefox autofill styling */
+  input:-moz-autofill {
+    background-color: rgb(55, 65, 81, 0.5) !important;
+    color: white !important;
+  }
+  
 body {
   @apply bg-dark-950 text-white;
   background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
