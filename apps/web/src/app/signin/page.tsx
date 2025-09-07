@@ -68,22 +68,22 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8">
         <div className="text-center">
-          <Logo size="lg" className="justify-center mb-8" />
-          <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
-          <p className="text-gray-400">Sign in to your account</p>
+          <Logo size="lg" className="justify-center mb-6 sm:mb-8" />
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Welcome Back</h2>
+          <p className="text-sm sm:text-base text-gray-400">Sign in to your account</p>
         </div>
 
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl p-6 sm:p-8 border border-gray-700">
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                 Email Address
@@ -94,7 +94,7 @@ export default function SignIn() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent focus:bg-gray-700/70 transition-all autofill:bg-gray-700/50 autofill:text-white autofill:shadow-[inset_0_0_0px_1000px_rgb(55,65,81,0.5)]"
+                className="w-full px-3 sm:px-4 py-3 sm:py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent focus:bg-gray-700/70 transition-all autofill:bg-gray-700/50 autofill:text-white autofill:shadow-[inset_0_0_0px_1000px_rgb(55,65,81,0.5)] text-sm sm:text-base"
                 placeholder="Enter your email"
               />
             </div>
@@ -110,28 +110,28 @@ export default function SignIn() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent focus:bg-gray-700/70 transition-all autofill:bg-gray-700/50 autofill:text-white autofill:shadow-[inset_0_0_0px_1000px_rgb(55,65,81,0.5)]"
+                  className="w-full px-3 sm:px-4 py-3 sm:py-3 pr-10 sm:pr-12 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent focus:bg-gray-700/70 transition-all autofill:bg-gray-700/50 autofill:text-white autofill:shadow-[inset_0_0_0px_1000px_rgb(55,65,81,0.5)] text-sm sm:text-base"
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-all duration-200 ease-in-out group"
+                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-all duration-200 ease-in-out group p-1"
                 >
                   <div className="relative">
                     <Eye 
-                      className={`w-5 h-5 transition-all duration-300 ease-in-out ${
+                      className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ease-in-out ${
                         showPassword 
                           ? 'opacity-0 rotate-90 scale-75' 
                           : 'opacity-100 rotate-0 scale-100'
-                      }`} 
+                      }`}
                     />
                     <EyeOff 
-                      className={`w-5 h-5 absolute top-0 left-0 transition-all duration-300 ease-in-out ${
+                      className={`w-4 h-4 sm:w-5 sm:h-5 absolute top-0 left-0 transition-all duration-300 ease-in-out ${
                         showPassword 
                           ? 'opacity-100 rotate-0 scale-100' 
                           : 'opacity-0 -rotate-90 scale-75'
-                      }`} 
+                      }`}
                     />
                   </div>
                 </button>
@@ -141,14 +141,14 @@ export default function SignIn() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200"
+              className="w-full bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 sm:py-3 px-4 rounded-lg transition-colors duration-200 text-sm sm:text-base"
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-400">
+          <div className="mt-5 sm:mt-6 text-center">
+            <p className="text-sm sm:text-base text-gray-400">
               Don't have an account?{' '}
               <Link href="/signup" className="text-accent-400 hover:text-accent-300 font-medium transition-colors">
                 Sign up
