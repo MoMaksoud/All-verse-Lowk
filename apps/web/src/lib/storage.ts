@@ -14,19 +14,34 @@ export class StorageService {
     file: File
   ): Promise<string> {
     try {
+      console.log('🚀 StorageService.uploadProfilePicture called with:', {
+        userId,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        storage: !!storage
+      });
+      
       // Create a reference to the file location
       const fileName = `profile-pictures/${userId}/${Date.now()}-${file.name}`;
+      console.log('📁 File path:', fileName);
+      
       const storageRef = ref(storage, fileName);
+      console.log('📦 Storage ref created:', storageRef);
       
       // Upload the file
+      console.log('⬆️ Starting upload...');
       const uploadResult: UploadResult = await uploadBytes(storageRef, file);
+      console.log('✅ Upload completed:', uploadResult);
       
       // Get the download URL
+      console.log('🔗 Getting download URL...');
       const downloadURL = await getDownloadURL(uploadResult.ref);
+      console.log('✅ Download URL:', downloadURL);
       
       return downloadURL;
     } catch (error) {
-      console.error('Error uploading profile picture:', error);
+      console.error('❌ Error uploading profile picture:', error);
       throw new Error('Failed to upload profile picture');
     }
   }

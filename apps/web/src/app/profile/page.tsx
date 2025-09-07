@@ -135,8 +135,14 @@ export default function ProfilePage() {
       console.log('📝 Profile update result:', result);
       
       if (result.success) {
+        console.log('🔄 Updating profile state with:', result.data);
         setProfile(result.data);
         showToast('Profile picture updated successfully!', 'success');
+        
+        // Force a re-render by updating the profile state
+        setTimeout(() => {
+          console.log('🔄 Current profile state:', profile);
+        }, 100);
       } else {
         showToast('Failed to update profile', 'error');
       }
@@ -303,19 +309,31 @@ export default function ProfilePage() {
                 {/* Avatar Section */}
                 <div className="flex items-center space-x-4">
                   <div className="relative">
-                    {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
-                      <img
-                        src={profile?.profilePictureUrl || currentUser?.photoURL}
-                        alt={currentUser?.displayName || 'User'}
-                        className="w-20 h-20 rounded-full object-cover"
-                      />
-                    ) : (
-                      <DefaultAvatar
-                        name={currentUser?.displayName || undefined}
-                        email={currentUser?.email || undefined}
-                        size="xl"
-                      />
-                    )}
+                    {(() => {
+                      const imageUrl = profile?.profilePictureUrl || currentUser?.photoURL;
+                      console.log('🖼️ Image display logic:', {
+                        profilePictureUrl: profile?.profilePictureUrl,
+                        currentUserPhotoURL: currentUser?.photoURL,
+                        finalImageUrl: imageUrl,
+                        hasImage: !!imageUrl
+                      });
+                      
+                      return imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={currentUser?.displayName || 'User'}
+                          className="w-20 h-20 rounded-full object-cover"
+                          onLoad={() => console.log('✅ Image loaded successfully')}
+                          onError={(e) => console.error('❌ Image failed to load:', e)}
+                        />
+                      ) : (
+                        <DefaultAvatar
+                          name={currentUser?.displayName || undefined}
+                          email={currentUser?.email || undefined}
+                          size="xl"
+                        />
+                      );
+                    })()}
                     <button 
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute -bottom-1 -right-1 p-2 bg-accent-500 rounded-full hover:bg-accent-600 transition-colors"

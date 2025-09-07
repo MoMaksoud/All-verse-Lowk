@@ -4,19 +4,36 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "placeholder-api-key",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "placeholder-auth-domain",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "placeholder-project-id",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "placeholder-storage-bucket",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "placeholder-messaging-sender-id",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "placeholder-app-id",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "placeholder-measurement-id"
+  apiKey: "AIzaSyD2VWEyMQh1HZ9NhfRRIhlT5Nq9XJXGdfs",
+  authDomain: "all-verse-gpt-9c2e1.firebaseapp.com",
+  projectId: "all-verse-gpt-9c2e1",
+  storageBucket: "all-verse-gpt-9c2e1.firebasestorage.app",
+  messagingSenderId: "946851407337",
+  appId: "1:946851407337:web:a600142219cfdfa8e19778",
+  measurementId: "G-JH266QPZGQ"
 };
 
 // Check if Firebase is properly configured
 const isFirebaseConfigured = () => {
-  return !firebaseConfig.apiKey.includes('placeholder') && 
-         !firebaseConfig.projectId.includes('placeholder');
+  // Check if we're on the client side
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  
+  console.log('Firebase Config Debug:', {
+    apiKey: firebaseConfig.apiKey,
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain,
+    appId: firebaseConfig.appId,
+    env: typeof window !== 'undefined' ? 'client' : 'server'
+  });
+  
+  const isConfigured = firebaseConfig.apiKey.length > 20 &&
+         firebaseConfig.projectId.length > 5 &&
+         !firebaseConfig.apiKey.includes('placeholder');
+  
+  console.log('Firebase is configured:', isConfigured);
+  return isConfigured;
 };
 
 // Initialize Firebase
