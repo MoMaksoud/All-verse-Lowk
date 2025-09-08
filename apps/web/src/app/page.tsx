@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain, Bot, Sparkles, ArrowRight } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
@@ -22,6 +23,7 @@ export default function HomePage() {
   const [featuredListings, setFeaturedListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
   const isHomeRoute = useRouteGuard();
+  const router = useRouter();
 
   const fetchData = useCallback(async () => {
     try {
@@ -124,7 +126,10 @@ export default function HomePage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="card hover:scale-105 transition-transform duration-200 cursor-pointer group">
+            <div 
+              className="card hover:scale-105 transition-transform duration-200 cursor-pointer group"
+              onClick={() => router.push('/ai')}
+            >
               <div className="p-6 text-center">
                 <div className="w-16 h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-4 group-hover:glow">
                   <MessageCircle className="w-8 h-8 text-white" />
