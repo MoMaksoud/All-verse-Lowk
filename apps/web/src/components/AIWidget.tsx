@@ -8,7 +8,7 @@ export function AIWidget() {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <div className="bg-gradient-to-br from-dark-800 to-dark-900 border border-dark-600 rounded-2xl p-6 hover:border-accent-500/50 transition-all duration-300 group">
+    <div className="bg-gradient-to-br from-dark-800/90 to-dark-900/90 backdrop-blur-lg border border-white/20 rounded-2xl p-6 hover:border-accent-500/50 transition-all duration-300 group shadow-2xl">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
@@ -16,7 +16,7 @@ export function AIWidget() {
           </div>
           <div>
             <h3 className="text-white font-semibold text-lg">AI Assistant</h3>
-            <p className="text-gray-400 text-sm">Your intelligent marketplace guide</p>
+            <p className="text-white text-sm" style={{textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'}}>Your intelligent marketplace guide</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -29,15 +29,15 @@ export function AIWidget() {
         <div className="grid grid-cols-3 gap-3">
           <div className="text-center">
             <p className="text-2xl font-bold text-accent-400">24/7</p>
-            <p className="text-xs text-gray-400">Available</p>
+            <p className="text-xs text-white" style={{textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'}}>Available</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-green-400">Smart</p>
-            <p className="text-xs text-gray-400">Search</p>
+            <p className="text-xs text-white" style={{textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'}}>Search</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-400">Free</p>
-            <p className="text-xs text-gray-400">To Use</p>
+            <p className="text-xs text-white" style={{textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'}}>To Use</p>
           </div>
         </div>
 
@@ -45,43 +45,43 @@ export function AIWidget() {
         <div className="space-y-2">
           <Link
             href="/ai"
-            className="flex items-center justify-between p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors group"
+            className="flex items-center justify-between p-3 bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 rounded-xl transition-all duration-200 group-chat"
           >
             <div className="flex items-center gap-3">
               <MessageCircle className="w-4 h-4 text-accent-400" />
-              <span className="text-white text-sm">Chat with AI</span>
+              <span className="text-white text-sm font-medium">Chat with AI</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
+            <ArrowRight className="w-4 h-4 text-white group-chat-hover:text-accent-400 transition-colors" />
           </Link>
           
           <Link
             href="/ai"
-            className="flex items-center justify-between p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors group"
+            className="flex items-center justify-between p-3 bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 rounded-xl transition-all duration-200 group-analytics"
           >
             <div className="flex items-center gap-3">
               <BarChart3 className="w-4 h-4 text-accent-400" />
-              <span className="text-white text-sm">View Analytics</span>
+              <span className="text-white text-sm font-medium">View Analytics</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
+            <ArrowRight className="w-4 h-4 text-white group-analytics-hover:text-accent-400 transition-colors" />
           </Link>
           
           <Link
             href="/ai"
-            className="flex items-center justify-between p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors group"
+            className="flex items-center justify-between p-3 bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 rounded-xl transition-all duration-200 group-insights"
           >
             <div className="flex items-center gap-3">
               <TrendingUp className="w-4 h-4 text-accent-400" />
-              <span className="text-white text-sm">Market Insights</span>
+              <span className="text-white text-sm font-medium">Market Insights</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
+            <ArrowRight className="w-4 h-4 text-white group-insights-hover:text-accent-400 transition-colors" />
           </Link>
         </div>
 
         {/* Call to Action */}
-        <div className="pt-4 border-t border-dark-600">
+        <div className="pt-4 border-t border-white/20">
           <Link
             href="/ai"
-            className="w-full bg-accent-500 hover:bg-accent-600 text-white py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 group"
+            className="w-full bg-accent-500/90 hover:bg-accent-600 backdrop-blur-md text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 group border border-accent-400/30 shadow-lg"
           >
             <Bot className="w-4 h-4" />
             Access AI Command Center

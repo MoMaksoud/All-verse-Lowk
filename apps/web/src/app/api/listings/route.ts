@@ -37,13 +37,13 @@ export async function GET(req: NextRequest) {
     let filteredData = [...result.items];
     if (filters.userCoordinates && filters.maxDistance) {
       filteredData = filteredData.filter(listing => {
-        if (!listing.location?.coordinates) return false;
+        if (!(listing as any).location?.coordinates) return false;
         
         const distance = calculateDistance(
           filters.userCoordinates!.lat,
           filters.userCoordinates!.lng,
-          listing.location.coordinates.lat,
-          listing.location.coordinates.lng
+          (listing as any).location.coordinates.lat,
+          (listing as any).location.coordinates.lng
         );
         
         return distance <= filters.maxDistance!;
@@ -91,7 +91,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const listing = dbListings.create(body, 'user1'); // Default seller ID
+    const listing = dbListings.create({
+      ...body,
+      category: body.category as any,
+      sellerId: 'user1',
+      status: 'active' as const,
+      condition: 'Good' as const,
+      currency: 'USD' as const
+    }, 'user1'); // Default seller ID
     return NextResponse.json(listing, { status: 201 });
   } catch (error) {
     console.error('Error creating listing:', error);

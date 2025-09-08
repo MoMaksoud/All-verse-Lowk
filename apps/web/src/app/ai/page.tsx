@@ -359,12 +359,12 @@ export default function AIPage() {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
                     placeholder="Ask me anything about our marketplace..."
-                    className="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
+                    className="flex-1 glass-clear-dark border border-white/20 rounded-xl px-4 py-3 text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50"
                   />
                   <button
                     onClick={() => handleSendMessage(inputValue)}
                     disabled={!inputValue.trim() || isLoading}
-                    className="bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors"
+                    className="bg-accent-500/80 hover:bg-accent-600/90 disabled:bg-gray-600/50 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all duration-200 backdrop-blur-md border border-accent-400/30"
                   >
                     <MessageCircle className="w-4 h-4" />
                   </button>

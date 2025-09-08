@@ -106,7 +106,7 @@ export class ProfileService {
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as FirestoreProfile[];
+      } as any)) as FirestoreProfile[];
     } catch (error) {
       console.error('Error getting all profiles:', error);
       throw error;

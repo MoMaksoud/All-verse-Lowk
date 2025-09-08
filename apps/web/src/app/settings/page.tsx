@@ -20,9 +20,12 @@ import {
   Upload,
   AlertTriangle,
   CheckCircle,
-  X
+  X,
+  ArrowRight
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useFontSize } from '@/contexts/FontSizeContext';
 
 interface SettingsSection {
   id: string;
@@ -71,6 +74,8 @@ const settingsSections: SettingsSection[] = [
 ];
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
+  const { fontSize, setFontSize } = useFontSize();
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -109,9 +114,7 @@ export default function SettingsPage() {
   });
 
   const [appearanceData, setAppearanceData] = useState({
-    theme: 'dark',
     language: 'en',
-    fontSize: 'medium',
     animations: true,
     compactMode: false
   });
@@ -432,20 +435,9 @@ export default function SettingsPage() {
             <input
               type="radio"
               name="theme"
-              value="light"
-              checked={appearanceData.theme === 'light'}
-              onChange={(e) => setAppearanceData({...appearanceData, theme: e.target.value})}
-              className="text-accent-500"
-            />
-            <span className="text-gray-300">Light</span>
-          </label>
-          <label className="flex items-center gap-3">
-            <input
-              type="radio"
-              name="theme"
               value="dark"
-              checked={appearanceData.theme === 'dark'}
-              onChange={(e) => setAppearanceData({...appearanceData, theme: e.target.value})}
+              checked={theme === 'dark'}
+              onChange={(e) => setTheme(e.target.value as 'dark' | 'system')}
               className="text-accent-500"
             />
             <span className="text-gray-300">Dark</span>
@@ -455,8 +447,8 @@ export default function SettingsPage() {
               type="radio"
               name="theme"
               value="system"
-              checked={appearanceData.theme === 'system'}
-              onChange={(e) => setAppearanceData({...appearanceData, theme: e.target.value})}
+              checked={theme === 'system'}
+              onChange={(e) => setTheme(e.target.value as 'dark' | 'system')}
               className="text-accent-500"
             />
             <span className="text-gray-300">System</span>
@@ -481,9 +473,10 @@ export default function SettingsPage() {
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">Font Size</label>
         <select
-          value={appearanceData.fontSize}
-          onChange={(e) => setAppearanceData({...appearanceData, fontSize: e.target.value})}
-          className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
+          value={fontSize}
+          onChange={(e) => setFontSize(e.target.value as 'small' | 'medium' | 'large')}
+          className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500 text-base"
+          style={{ fontSize: '1rem' }}
         >
           <option value="small">Small</option>
           <option value="medium">Medium</option>

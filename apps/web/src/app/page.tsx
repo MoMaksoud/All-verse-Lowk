@@ -100,7 +100,7 @@ export default function HomePage() {
                <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient drop-shadow-lg">
                  Hi, Welcome to ALLVERSE GPT
                </h1>
-              <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-3xl mx-auto drop-shadow-md">
+              <p className="text-xl md:text-2xl mb-8 text-white max-w-3xl mx-auto drop-shadow-lg" style={{textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'}}>
                 Your intelligent marketplace assistant. Ask our AI anything and get instant, smart responses that guide you to exactly what you need.
               </p>
             </div>
@@ -176,10 +176,10 @@ export default function HomePage() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4">
+            <h2 className="text-3xl font-bold text-white mb-4" style={{textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'}}>
               AI Command Center
             </h2>
-            <p className="text-lg text-gray-400">
+            <p className="text-lg text-white" style={{textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'}}>
               Access powerful AI tools and analytics
             </p>
           </div>

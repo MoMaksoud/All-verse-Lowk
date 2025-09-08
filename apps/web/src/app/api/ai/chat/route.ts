@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
     const userMessage = message.toLowerCase().trim();
 
     // Get all listings for context
-    const listings = await db.list();
+    const listingsResponse = await db.list();
+    const listings = listingsResponse.data;
 
     // Smart routing and responses
     let response = '';

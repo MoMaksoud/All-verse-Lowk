@@ -22,7 +22,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const isConfigured = isFirebaseConfigured();
+  const isConfigured = !!isFirebaseConfigured();
 
   function signup(email: string, password: string, displayName: string) {
     if (!auth || !isConfigured) {

@@ -199,7 +199,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             }}
             onFocus={() => setShowSuggestions(query.length > 0)}
             placeholder={placeholderExamples[currentPlaceholder]}
-            className="w-full pl-12 pr-12 py-4 bg-dark-800/90 border border-dark-600 rounded-2xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all duration-200 placeholder-transition"
+            className="w-full pl-12 pr-12 py-4 glass-clear-dark border border-white/20 rounded-2xl text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50 transition-all duration-200 placeholder-transition"
           />
           <div className="absolute right-16 top-1/2 transform -translate-y-1/2">
             <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
@@ -220,12 +220,12 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             onResult={handleVoiceResult}
             onError={handleVoiceError}
             size="sm"
-            className="bg-gray-700 hover:bg-gray-600"
+            className="glass-button-dark hover:bg-black/30"
           />
           <button
             type="submit"
             disabled={isSearching}
-            className="bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className="bg-accent-500/80 hover:bg-accent-600/90 backdrop-blur-md text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 border border-accent-400/30"
           >
             {isSearching ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -249,7 +249,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
       {/* Natural Language Hint */}
       {!query && !showSuggestions && (
         <div className="mt-2 text-center">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-glass-muted">
             💡 Try asking naturally: "Find laptops under $1000" or "Show me sellers in Tampa"
           </p>
         </div>
@@ -257,24 +257,24 @@ export function SearchBar({ className = '' }: SearchBarProps) {
 
       {/* Search Suggestions */}
       {showSuggestions && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-dark-800 rounded-xl border border-dark-600 shadow-xl z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 glass-clear-dark rounded-xl border border-white/20 shadow-xl z-50 max-h-96 overflow-y-auto">
           <div className="p-4">
             {/* Trending Searches */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-4 h-4 text-accent-400" />
-                <span className="text-sm font-medium text-gray-300">Trending</span>
+                <span className="text-sm font-medium text-glass-muted">Trending</span>
               </div>
               <div className="space-y-2">
                 {suggestions.filter(s => s.type === 'trending').map((suggestion) => (
                   <button
                     key={suggestion.id}
                     onClick={() => handleSuggestionClick(suggestion.text)}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 transition-colors group"
+                    className="w-full text-left px-3 py-2 rounded-lg glass-button-dark hover:bg-black/20 transition-all duration-200 group"
                   >
                     <div className="flex items-center gap-3">
                       <Search className="w-4 h-4 text-gray-400 group-hover:text-accent-400" />
-                      <span className="text-gray-300 group-hover:text-white">{suggestion.text}</span>
+                      <span className="text-glass-muted group-hover:text-glass">{suggestion.text}</span>
                     </div>
                   </button>
                 ))}
@@ -287,7 +287,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-300">Recent</span>
+                    <span className="text-sm font-medium text-glass-muted">Recent</span>
                   </div>
                   <button
                     onClick={clearAllRecentSearches}
@@ -302,12 +302,12 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                     <button
                       key={index}
                       onClick={() => handleSuggestionClick(search)}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-dark-700 transition-colors group"
+                      className="w-full text-left px-3 py-2 rounded-lg glass-button-dark hover:bg-black/20 transition-all duration-200 group"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Clock className="w-4 h-4 text-gray-400 group-hover:text-accent-400" />
-                          <span className="text-gray-300 group-hover:text-white">{search}</span>
+                          <span className="text-glass-muted group-hover:text-glass">{search}</span>
                         </div>
                         <button
                           onClick={(e) => removeRecentSearch(search, e)}
@@ -323,8 +323,8 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             )}
 
             {/* Quick Categories */}
-            <div className="mt-4 pt-4 border-t border-dark-600">
-              <div className="text-sm font-medium text-gray-300 mb-3">Quick Categories</div>
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <div className="text-sm font-medium text-glass-muted mb-3">Quick Categories</div>
               <div className="grid grid-cols-2 gap-2">
                 {['Electronics', 'Fashion', 'Home', 'Sports'].map((category) => (
                   <button
@@ -333,7 +333,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                       router.push(`/listings?category=${category.toLowerCase()}`);
                       setShowSuggestions(false);
                     }}
-                    className="px-3 py-2 text-sm bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors text-gray-300 hover:text-white"
+                    className="px-3 py-2 text-sm glass-button-dark rounded-lg hover:bg-black/20 transition-all duration-200 text-glass-muted hover:text-glass"
                   >
                     {category}
                   </button>

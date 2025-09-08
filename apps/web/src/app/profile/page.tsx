@@ -312,9 +312,9 @@ export default function ProfilePage() {
                 <div className="flex items-center space-x-4">
                   <div className="relative">
                     {(() => {
-                      const imageUrl = profile?.profilePictureUrl || currentUser?.photoURL;
+                      const imageUrl = (profile as any)?.profilePictureUrl || currentUser?.photoURL;
                       console.log('🖼️ Image display logic:', {
-                        profilePictureUrl: profile?.profilePictureUrl,
+                        profilePictureUrl: (profile as any)?.profilePictureUrl,
                         currentUserPhotoURL: currentUser?.photoURL,
                         finalImageUrl: imageUrl,
                         hasImage: !!imageUrl

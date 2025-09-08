@@ -19,7 +19,7 @@ export function useVoiceInput({
   const [isSupported, setIsSupported] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     // Check if speech recognition is supported
@@ -38,7 +38,7 @@ export function useVoiceInput({
         setError(null);
       };
 
-      recognition.onresult = (event) => {
+      recognition.onresult = (event: any) => {
         let finalTranscript = '';
         let interimTranscript = '';
 
@@ -59,7 +59,7 @@ export function useVoiceInput({
         }
       };
 
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: any) => {
         const errorMessage = getErrorMessage(event.error);
         setError(errorMessage);
         setIsListening(false);
@@ -144,7 +144,7 @@ function getErrorMessage(error: string): string {
 // Extend Window interface for TypeScript
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
   }
 }
