@@ -233,7 +233,7 @@ export function Navigation() {
                           View Profile
                         </Link>
                         <Link
-                          href="/profile"
+                          href="/settings"
                           className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
                           onClick={() => setShowProfileDropdown(false)}
                         >

@@ -8,10 +8,12 @@ import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { DefaultAvatar } from '@/components/DefaultAvatar';
+import { useRouter } from 'next/navigation';
 import { StorageService } from '@/lib/storage';
 
 export default function ProfilePage() {
   const { currentUser } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -469,14 +471,14 @@ export default function ProfilePage() {
               <h3 className="text-lg font-semibold text-white mb-4">Settings</h3>
               <div className="space-y-3">
                 <button 
-                  onClick={() => showToast('Account settings coming soon!', 'success')}
+                  onClick={() => router.push('/settings')}
                   className="w-full btn btn-outline flex items-center justify-start gap-2"
                 >
                   <Settings className="w-4 h-4" />
                   Account Settings
                 </button>
                 <button 
-                  onClick={() => showToast('Privacy settings coming soon!', 'success')}
+                  onClick={() => router.push('/settings')}
                   className="w-full btn btn-outline flex items-center justify-start gap-2"
                 >
                   <User className="w-4 h-4" />
