@@ -9,35 +9,12 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
   
-  /* Dark theme styles */
-  .dark {
-    --bg-primary: #020617;
-    --bg-secondary: #0f172a;
-    --bg-tertiary: #1e293b;
-    --bg-card: #1e293b;
-    --bg-card-hover: #334155;
-    --text-primary: #ffffff;
-    --text-secondary: #e2e8f0;
-    --text-tertiary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --text-glass: #ffffff;
-    --text-glass-muted: #cbd5e1;
-    --border-primary: #334155;
-    --border-secondary: #475569;
-    --border-muted: #1e293b;
-    --accent-primary: #3b82f6;
-    --accent-secondary: #1d4ed8;
-    --accent-hover: #2563eb;
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
-  }
   
-  /* Autofill styling for dark theme */
-  .dark input:-webkit-autofill,
-  .dark input:-webkit-autofill:hover,
-  .dark input:-webkit-autofill:focus,
-  .dark input:-webkit-autofill:active {
+  /* Autofill styling */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
     -webkit-box-shadow: 0 0 0 30px rgb(55, 65, 81, 0.5) inset !important;
     -webkit-text-fill-color: white !important;
     transition: background-color 5000s ease-in-out 0s;
@@ -45,7 +22,7 @@
   }
   
   /* Firefox autofill styling */
-  .dark input:-moz-autofill {
+  input:-moz-autofill {
     background-color: rgb(55, 65, 81, 0.5) !important;
     color: white !important;
   }
@@ -103,164 +80,14 @@
   }
   
 body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
+  color: #ffffff;
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Dark theme specific background */
-.dark body {
-  background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
-}
 
-/* Font size classes - More noticeable differences */
-.text-size-small {
-  font-size: 12px;
-}
-
-.text-size-small h1 { font-size: 1.5rem; }
-.text-size-small h2 { font-size: 1.25rem; }
-.text-size-small h3 { font-size: 1.125rem; }
-.text-size-small h4 { font-size: 1rem; }
-.text-size-small h5 { font-size: 0.875rem; }
-.text-size-small h6 { font-size: 0.75rem; }
-
-.text-size-small p { font-size: 0.75rem; }
-.text-size-small span { font-size: 0.75rem; }
-.text-size-small div { font-size: 0.75rem; }
-.text-size-small button { font-size: 0.75rem; }
-.text-size-small input { font-size: 0.75rem; }
-.text-size-small textarea { font-size: 0.75rem; }
-.text-size-small select { font-size: 0.75rem; }
-.text-size-small label { font-size: 0.75rem; }
-.text-size-small .text-sm { font-size: 0.625rem; }
-.text-size-small .text-xs { font-size: 0.5rem; }
-.text-size-small .text-lg { font-size: 0.875rem; }
-.text-size-small .text-xl { font-size: 1rem; }
-.text-size-small .text-2xl { font-size: 1.125rem; }
-.text-size-small .text-3xl { font-size: 1.25rem; }
-
-.text-size-medium {
-  font-size: 16px;
-}
-
-.text-size-medium h1 { font-size: 2rem; }
-.text-size-medium h2 { font-size: 1.75rem; }
-.text-size-medium h3 { font-size: 1.5rem; }
-.text-size-medium h4 { font-size: 1.25rem; }
-.text-size-medium h5 { font-size: 1.125rem; }
-.text-size-medium h6 { font-size: 1rem; }
-
-.text-size-medium p { font-size: 1rem; }
-.text-size-medium span { font-size: 1rem; }
-.text-size-medium div { font-size: 1rem; }
-.text-size-medium button { font-size: 1rem; }
-.text-size-medium input { font-size: 1rem; }
-.text-size-medium textarea { font-size: 1rem; }
-.text-size-medium select { font-size: 1rem; }
-.text-size-medium label { font-size: 1rem; }
-.text-size-medium .text-sm { font-size: 0.875rem; }
-.text-size-medium .text-xs { font-size: 0.75rem; }
-.text-size-medium .text-lg { font-size: 1.125rem; }
-.text-size-medium .text-xl { font-size: 1.25rem; }
-.text-size-medium .text-2xl { font-size: 1.5rem; }
-.text-size-medium .text-3xl { font-size: 1.875rem; }
-
-.text-size-large {
-  font-size: 20px;
-}
-
-.text-size-large h1 { font-size: 2.5rem; }
-.text-size-large h2 { font-size: 2.25rem; }
-.text-size-large h3 { font-size: 2rem; }
-.text-size-large h4 { font-size: 1.75rem; }
-.text-size-large h5 { font-size: 1.5rem; }
-.text-size-large h6 { font-size: 1.25rem; }
-
-.text-size-large p { font-size: 1.25rem; }
-.text-size-large span { font-size: 1.25rem; }
-.text-size-large div { font-size: 1.25rem; }
-.text-size-large button { font-size: 1.25rem; }
-.text-size-large input { font-size: 1.25rem; }
-.text-size-large textarea { font-size: 1.25rem; }
-.text-size-large select { font-size: 1.25rem; }
-.text-size-large label { font-size: 1.25rem; }
-.text-size-large .text-sm { font-size: 1.125rem; }
-.text-size-large .text-xs { font-size: 1rem; }
-.text-size-large .text-lg { font-size: 1.375rem; }
-.text-size-large .text-xl { font-size: 1.5rem; }
-.text-size-large .text-2xl { font-size: 1.875rem; }
-.text-size-large .text-3xl { font-size: 2.25rem; }
-
-/* Component-specific font scaling */
-.text-size-small .btn { font-size: 0.75rem; padding: 0.5rem 1rem; }
-.text-size-small .input { font-size: 0.75rem; padding: 0.5rem 0.75rem; }
-.text-size-small .card { font-size: 0.75rem; }
-.text-size-small .card h3 { font-size: 1rem; }
-.text-size-small .card p { font-size: 0.75rem; }
-.text-size-small .nav-link { font-size: 0.75rem; }
-.text-size-small .dropdown-item { font-size: 0.75rem; }
-
-.text-size-medium .btn { font-size: 1rem; padding: 0.75rem 1.5rem; }
-.text-size-medium .input { font-size: 1rem; padding: 0.75rem 1rem; }
-.text-size-medium .card { font-size: 1rem; }
-.text-size-medium .card h3 { font-size: 1.25rem; }
-.text-size-medium .card p { font-size: 1rem; }
-.text-size-medium .nav-link { font-size: 1rem; }
-.text-size-medium .dropdown-item { font-size: 1rem; }
-
-.text-size-large .btn { font-size: 1.25rem; padding: 1rem 2rem; }
-.text-size-large .input { font-size: 1.25rem; padding: 1rem 1.25rem; }
-.text-size-large .card { font-size: 1.25rem; }
-.text-size-large .card h3 { font-size: 1.5rem; }
-.text-size-large .card p { font-size: 1.25rem; }
-.text-size-large .nav-link { font-size: 1.25rem; }
-.text-size-large .dropdown-item { font-size: 1.25rem; }
-
-/* Ensure all Tailwind text classes scale properly */
-.text-size-small [class*="text-"] { font-size: inherit !important; }
-.text-size-medium [class*="text-"] { font-size: inherit !important; }
-.text-size-large [class*="text-"] { font-size: inherit !important; }
-
-/* Additional spacing adjustments for better visual impact */
-.text-size-small .space-y-2 > * + * { margin-top: 0.25rem; }
-.text-size-small .space-y-3 > * + * { margin-top: 0.375rem; }
-.text-size-small .space-y-4 > * + * { margin-top: 0.5rem; }
-.text-size-small .space-y-6 > * + * { margin-top: 0.75rem; }
-.text-size-small .space-y-8 > * + * { margin-top: 1rem; }
-
-.text-size-medium .space-y-2 > * + * { margin-top: 0.5rem; }
-.text-size-medium .space-y-3 > * + * { margin-top: 0.75rem; }
-.text-size-medium .space-y-4 > * + * { margin-top: 1rem; }
-.text-size-medium .space-y-6 > * + * { margin-top: 1.5rem; }
-.text-size-medium .space-y-8 > * + * { margin-top: 2rem; }
-
-.text-size-large .space-y-2 > * + * { margin-top: 0.75rem; }
-.text-size-large .space-y-3 > * + * { margin-top: 1rem; }
-.text-size-large .space-y-4 > * + * { margin-top: 1.25rem; }
-.text-size-large .space-y-6 > * + * { margin-top: 2rem; }
-.text-size-large .space-y-8 > * + * { margin-top: 2.5rem; }
-
-/* Icon scaling */
-.text-size-small svg { width: 0.875rem; height: 0.875rem; }
-.text-size-medium svg { width: 1rem; height: 1rem; }
-.text-size-large svg { width: 1.25rem; height: 1.25rem; }
-
-/* Prevent font size classes from affecting form elements */
-.text-size-small select,
-.text-size-medium select,
-.text-size-large select {
-  font-size: 1rem !important;
-}
-
-.text-size-small select option,
-.text-size-medium select option,
-.text-size-large select option {
-  font-size: 1rem !important;
-}
 
 /* Ensure select elements maintain normal behavior */
 select {
@@ -297,56 +124,7 @@ select:focus {
   transition: all 0.2s ease-in-out !important;
 }
 
-/* Theme-specific text colors and elements */
-.dark {
-  color: var(--text-primary);
-}
-
-.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
-  color: var(--text-primary);
-}
-
-.dark p, .dark span, .dark div {
-  color: var(--text-primary);
-}
-
-.dark .text-gray-300 {
-  color: var(--text-secondary) !important;
-}
-
-.dark .text-gray-400 {
-  color: var(--text-tertiary) !important;
-}
-
-.dark .text-gray-500 {
-  color: var(--text-muted) !important;
-}
-
 /* Glassmorphism text colors */
-.dark .text-glass {
-  color: var(--text-glass) !important;
-}
-
-.dark .text-glass-muted {
-  color: var(--text-glass-muted) !important;
-}
-
-/* Enhanced text contrast for glass elements */
-.glass-clear, .glass-clear-dark {
-  color: var(--text-glass);
-}
-
-.glass-clear .text-gray-300,
-.glass-clear-dark .text-gray-300 {
-  color: var(--text-glass-muted) !important;
-}
-
-.glass-clear .text-gray-400,
-.glass-clear-dark .text-gray-400 {
-  color: var(--text-glass-muted) !important;
-}
-
-/* Force white text for better readability */
 .text-glass {
   color: #ffffff !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -354,7 +132,22 @@ select:focus {
 
 .text-glass-muted {
   color: #e2e8f0 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Enhanced text contrast for glass elements */
+.glass-clear, .glass-clear-dark {
+  color: #ffffff;
+}
+
+.glass-clear .text-gray-300,
+.glass-clear-dark .text-gray-300 {
+  color: #e2e8f0 !important;
+}
+
+.glass-clear .text-gray-400,
+.glass-clear-dark .text-gray-400 {
+  color: #e2e8f0 !important;
 }
 
 /* Override any conflicting text colors */
@@ -372,27 +165,27 @@ select:focus {
 
 /* Theme-specific background overrides */
 .dark .bg-dark-800 {
-  background-color: var(--bg-card) !important;
+  background-color: #1e293b !important;
 }
 
 .dark .bg-dark-700 {
-  background-color: var(--bg-card-hover) !important;
+  background-color: #334155 !important;
 }
 
 .dark .bg-dark-900 {
-  background-color: var(--bg-primary) !important;
+  background-color: #020617 !important;
 }
 
 .dark .bg-dark-950 {
-  background-color: var(--bg-primary) !important;
+  background-color: #020617 !important;
 }
 
 .dark .border-dark-600 {
-  border-color: var(--border-primary) !important;
+  border-color: #334155 !important;
 }
 
 .dark .border-dark-700 {
-  border-color: var(--border-secondary) !important;
+  border-color: #475569 !important;
 }
 
 /* Ensure dynamic background is visible on home page */
@@ -489,77 +282,77 @@ select:focus {
   }
   
   .btn-primary {
-    background-color: var(--accent-primary);
+    background-color: #3b82f6;
     color: white;
-    border: 1px solid var(--accent-primary);
+    border: 1px solid #3b82f6;
     transition: all 0.2s ease;
   }
   
   .btn-primary:hover {
-    background-color: var(--accent-hover);
-    border-color: var(--accent-hover);
-    box-shadow: var(--shadow-md);
+    background-color: #2563eb;
+    border-color: #2563eb;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4);
   }
   
   .btn-secondary {
-    background-color: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-primary);
+    background-color: #1e293b;
+    color: #ffffff;
+    border: 1px solid #334155;
     transition: all 0.2s ease;
   }
   
   .btn-secondary:hover {
     background-color: var(--bg-card-hover);
-    border-color: var(--border-secondary);
+    border-color: #475569;
   }
   
   .btn-outline {
-    border: 1px solid var(--border-primary);
-    background-color: var(--bg-card);
-    color: var(--text-primary);
+    border: 1px solid #334155;
+    background-color: #1e293b;
+    color: #ffffff;
     transition: all 0.2s ease;
   }
   
   .btn-outline:hover {
     background-color: var(--bg-card-hover);
-    border-color: var(--border-secondary);
+    border-color: #475569;
   }
   
   .btn-ghost {
     background-color: transparent;
-    color: var(--text-secondary);
+    color: #e2e8f0;
     border: 1px solid transparent;
     transition: all 0.2s ease;
   }
   
   .btn-ghost:hover {
     background-color: var(--bg-card-hover);
-    color: var(--text-primary);
-    border-color: var(--border-muted);
+    color: #ffffff;
+    border-color: #1e293b;
   }
   
   .input {
     @apply block w-full rounded-xl px-4 py-3 text-sm transition-all duration-200;
-    border: 1px solid var(--border-primary);
-    background-color: var(--bg-card);
-    color: var(--text-primary);
+    border: 1px solid #334155;
+    background-color: #1e293b;
+    color: #ffffff;
   }
   
   .input::placeholder {
-    color: var(--text-tertiary);
+    color: #cbd5e1;
   }
   
   .input:focus {
-    border-color: var(--accent-primary);
+    border-color: #3b82f6;
     outline: none;
-    box-shadow: 0 0 0 1px var(--accent-primary);
-    background-color: var(--bg-card);
+    box-shadow: 0 0 0 1px #3b82f6;
+    background-color: #1e293b;
   }
   
   .input:disabled {
-    background-color: var(--bg-tertiary);
-    color: var(--text-tertiary);
-    border-color: var(--border-muted);
+    background-color: #1e293b;
+    color: #cbd5e1;
+    border-color: #1e293b;
   }
   
   input[type="number"] {
@@ -575,29 +368,29 @@ select:focus {
   
   .card {
     @apply rounded-2xl backdrop-blur-sm;
-    border: 1px solid var(--border-primary);
-    background-color: var(--bg-card);
-    box-shadow: var(--shadow-md);
+    border: 1px solid #334155;
+    background-color: #1e293b;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4);
     transition: all 0.2s ease;
   }
   
   .card:hover {
     background-color: var(--bg-card-hover);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5);
   }
   
   .card-elevated {
     @apply rounded-2xl backdrop-blur-md;
-    background-color: var(--bg-card);
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border-primary);
+    background-color: #1e293b;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+    border: 1px solid #334155;
   }
   
   .glass {
     @apply backdrop-blur-md rounded-2xl;
-    border: 1px solid var(--border-primary);
-    background-color: var(--bg-card);
-    box-shadow: var(--shadow-sm);
+    border: 1px solid #334155;
+    background-color: #1e293b;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   }
   
   .glass-clear {

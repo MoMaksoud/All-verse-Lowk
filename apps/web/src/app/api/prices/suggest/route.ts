@@ -1,26 +1,37 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { GeminiService } from '@/lib/gemini';
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const { title, description, photos } = body;
-    
-    if (!title || !description) {
-      return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
+    const { title, description, category } = await request.json();
+
+    if (!title || !description || !category) {
+      return NextResponse.json(
+        { error: 'Title, description, and category are required' },
+        { status: 400 }
+      );
     }
 
-    // Mock price suggestion logic
-    const base = Math.min(999, Math.round(5 + title.length * 2 + description.length * 0.3));
-    const photoFactor = (photos?.length ?? 0) * 3;
-    const price = Math.max(5, base + photoFactor);
-    const rationale = `Mock AI suggestion: Based on title length (${title.length} chars), description length (${description.length} chars), and ${photos?.length ?? 0} photos. This is a demo calculation.`;
+    // Use Gemini AI to generate price suggestions
+    const priceResponse = await GeminiService.generatePriceSuggestion(title, description, category);
 
-    return NextResponse.json({ price, rationale });
+    if (!priceResponse.success) {
+      return NextResponse.json(
+        { error: priceResponse.error || 'Failed to generate price suggestion' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      suggestion: priceResponse.message,
+      success: true
+    });
+
   } catch (error) {
-    console.error('Error suggesting price:', error);
-    return NextResponse.json({ error: 'Failed to suggest price' }, { status: 500 });
+    console.error('Price suggestion error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

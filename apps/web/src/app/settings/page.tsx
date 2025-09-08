@@ -5,7 +5,6 @@ import {
   User, 
   Bell, 
   Shield, 
-  Palette, 
   CreditCard, 
   Globe, 
   Smartphone, 
@@ -24,8 +23,6 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useFontSize } from '@/contexts/FontSizeContext';
 
 interface SettingsSection {
   id: string;
@@ -54,12 +51,6 @@ const settingsSections: SettingsSection[] = [
     description: 'Customize how and when you receive notifications'
   },
   {
-    id: 'appearance',
-    title: 'Appearance',
-    icon: Palette,
-    description: 'Personalize your interface and theme preferences'
-  },
-  {
     id: 'payment',
     title: 'Payment & Billing',
     icon: CreditCard,
@@ -74,8 +65,6 @@ const settingsSections: SettingsSection[] = [
 ];
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
-  const { fontSize, setFontSize } = useFontSize();
   const [activeSection, setActiveSection] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -113,11 +102,6 @@ export default function SettingsPage() {
     securityAlerts: true
   });
 
-  const [appearanceData, setAppearanceData] = useState({
-    language: 'en',
-    animations: true,
-    compactMode: false
-  });
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -426,86 +410,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  const renderAppearanceSection = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-white mb-4">Theme</h3>
-        <div className="space-y-3">
-          <label className="flex items-center gap-3">
-            <input
-              type="radio"
-              name="theme"
-              value="dark"
-              checked={theme === 'dark'}
-              onChange={(e) => setTheme(e.target.value as 'dark' | 'system')}
-              className="text-accent-500"
-            />
-            <span className="text-gray-300">Dark</span>
-          </label>
-          <label className="flex items-center gap-3">
-            <input
-              type="radio"
-              name="theme"
-              value="system"
-              checked={theme === 'system'}
-              onChange={(e) => setTheme(e.target.value as 'dark' | 'system')}
-              className="text-accent-500"
-            />
-            <span className="text-gray-300">System</span>
-          </label>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Language</label>
-        <select
-          value={appearanceData.language}
-          onChange={(e) => setAppearanceData({...appearanceData, language: e.target.value})}
-          className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-        >
-          <option value="en">English</option>
-          <option value="es">Spanish</option>
-          <option value="fr">French</option>
-          <option value="de">German</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Font Size</label>
-        <select
-          value={fontSize}
-          onChange={(e) => setFontSize(e.target.value as 'small' | 'medium' | 'large')}
-          className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500 text-base"
-          style={{ fontSize: '1rem' }}
-        >
-          <option value="small">Small</option>
-          <option value="medium">Medium</option>
-          <option value="large">Large</option>
-        </select>
-      </div>
-
-      <div className="space-y-3">
-        <label className="flex items-center justify-between">
-          <span className="text-gray-300">Enable animations</span>
-          <input
-            type="checkbox"
-            checked={appearanceData.animations}
-            onChange={(e) => setAppearanceData({...appearanceData, animations: e.target.checked})}
-            className="text-accent-500"
-          />
-        </label>
-        <label className="flex items-center justify-between">
-          <span className="text-gray-300">Compact mode</span>
-          <input
-            type="checkbox"
-            checked={appearanceData.compactMode}
-            onChange={(e) => setAppearanceData({...appearanceData, compactMode: e.target.checked})}
-            className="text-accent-500"
-          />
-        </label>
-      </div>
-    </div>
-  );
 
   const renderPaymentSection = () => (
     <div className="space-y-6">
@@ -611,8 +515,6 @@ export default function SettingsPage() {
         return renderPrivacySection();
       case 'notifications':
         return renderNotificationsSection();
-      case 'appearance':
-        return renderAppearanceSection();
       case 'payment':
         return renderPaymentSection();
       case 'preferences':

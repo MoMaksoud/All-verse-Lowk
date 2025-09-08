@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { GeminiService } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,96 +10,73 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    const userMessage = message.toLowerCase().trim();
+    const userMessage = message.trim();
 
     // Get all listings for context
     const listingsResponse = await db.list();
     const listings = listingsResponse.data;
 
-    // Smart routing and responses
-    let response = '';
-    let suggestions: string[] = [];
-    let listing = null;
+    // Use Gemini AI to generate intelligent responses
+    const aiResponse = await GeminiService.generateMarketplaceResponse(userMessage, {
+      availableListings: listings.slice(0, 10), // Send first 10 listings as context
+      totalListings: listings.length,
+      categories: [...new Set(listings.map(l => l.category))]
+    });
 
-    // Product search queries
-    if (userMessage.includes('show me') || userMessage.includes('find') || userMessage.includes('search')) {
-      const category = extractCategory(userMessage);
-      const priceRange = extractPriceRange(userMessage);
-      
-      if (category) {
-        const categoryListings = listings.filter(l => l.category === category);
-        if (categoryListings.length > 0) {
-          listing = categoryListings[0]; // Show first match
-          response = `I found some ${category} items! Here's one that might interest you. There are ${categoryListings.length} total ${category} items available.`;
-          suggestions = [
-            `Show me more ${category}`,
-            `What's the cheapest ${category}?`,
-            `Show me electronics`,
-            `Find sports equipment`
-          ];
-        } else {
-          response = `I don't see any ${category} items available right now. Would you like me to show you what we have in other categories?`;
-          suggestions = ['Show me electronics', 'Show me fashion', 'Show me home items', 'Show me sports'];
-        }
-      } else {
-        response = `I'd be happy to help you find items! What category are you looking for?`;
-        suggestions = ['Show me electronics', 'Show me fashion', 'Show me home items', 'Show me sports'];
+    // Generate contextual suggestions based on AI response
+    const suggestions = await GeminiService.generateSearchSuggestions(userMessage);
+    
+    // Enhance suggestions based on AI response content
+    let enhancedSuggestions = suggestions;
+    if (aiResponse.message.toLowerCase().includes('electronics')) {
+      enhancedSuggestions = ['Show Electronics', 'Find Laptops', 'Browse Phones', 'See Gaming Gear'];
+    } else if (aiResponse.message.toLowerCase().includes('fashion')) {
+      enhancedSuggestions = ['Browse Fashion', 'Find Shoes', 'See Accessories', 'Show Clothing'];
+    } else if (aiResponse.message.toLowerCase().includes('trending')) {
+      enhancedSuggestions = ['Trending This Week', 'Most Popular', 'New Arrivals', 'Best Deals'];
+    } else if (aiResponse.message.toLowerCase().includes('category')) {
+      enhancedSuggestions = ['Electronics', 'Fashion', 'Home', 'Sports'];
+    }
+
+    // Try to find relevant listings based on the user's message
+    let relevantListing = null;
+    
+    // Simple keyword matching for now (can be enhanced with Gemini)
+    const category = extractCategory(userMessage.toLowerCase());
+    if (category) {
+      const categoryListings = listings.filter(l => l.category === category);
+      if (categoryListings.length > 0) {
+        relevantListing = categoryListings[0];
       }
-    }
-    // Price-related queries
-    else if (userMessage.includes('cheap') || userMessage.includes('budget') || userMessage.includes('affordable')) {
-      const sortedListings = listings.sort((a, b) => a.price - b.price);
-      listing = sortedListings[0];
-      response = `Here's our most affordable item! We have items starting from $${sortedListings[0].price.toLocaleString()}.`;
-      suggestions = ['Show me electronics', 'Show me fashion', 'What\'s trending?', 'Help me sell something'];
-    }
-    // Trending/popular queries
-    else if (userMessage.includes('trending') || userMessage.includes('popular') || userMessage.includes('best')) {
-      const recentListings = listings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      listing = recentListings[0];
-      response = `Here's one of our newest listings! This item was just added and might be what you're looking for.`;
-      suggestions = ['Show me electronics', 'Show me fashion', 'Show me sports', 'What\'s the cheapest?'];
-    }
-    // Selling help
-    else if (userMessage.includes('sell') || userMessage.includes('list') || userMessage.includes('post')) {
-      response = `I can help you sell items! You can create a new listing by going to our "Sell" page. I can also suggest prices for your items. What would you like to sell?`;
-      suggestions = ['How do I price my item?', 'What categories can I sell?', 'Show me electronics', 'Find sports equipment'];
-    }
-    // Price suggestion
-    else if (userMessage.includes('price') || userMessage.includes('worth') || userMessage.includes('value')) {
-      response = `I can help you with pricing! If you have an item to sell, I can suggest a fair price based on similar items in our marketplace. What item are you looking to price?`;
-      suggestions = ['How do I price my item?', 'Show me electronics', 'What\'s trending?', 'Help me sell something'];
-    }
-    // General help
-    else if (userMessage.includes('help') || userMessage.includes('how') || userMessage.includes('what')) {
-      response = `I'm here to help! I can help you find products, suggest prices, and guide you through our marketplace. What would you like to know?`;
-      suggestions = ['Show me electronics', 'Find sports equipment', 'What\'s trending?', 'Help me sell something'];
-    }
-    // Default response
-    else {
-      response = `I understand you're looking for something! I can help you find products, suggest prices, or guide you through our marketplace. What would you like to do?`;
-      suggestions = ['Show me electronics', 'Find sports equipment', 'What\'s trending?', 'Help me sell something'];
     }
 
     return NextResponse.json({
-      response,
-      suggestions,
-      listing: listing ? {
-        id: listing.id,
-        title: listing.title,
-        description: listing.description,
-        price: listing.price,
-        category: listing.category,
-        photos: listing.photos,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt
-      } : null
+      response: aiResponse.message,
+      suggestions: enhancedSuggestions.slice(0, 4), // Use enhanced suggestions
+      listing: relevantListing ? {
+        id: relevantListing.id,
+        title: relevantListing.title,
+        description: relevantListing.description,
+        price: relevantListing.price,
+        category: relevantListing.category,
+        photos: relevantListing.photos,
+        createdAt: relevantListing.createdAt,
+        updatedAt: relevantListing.updatedAt
+      } : null,
+      success: aiResponse.success,
+      error: aiResponse.error
     });
 
   } catch (error) {
     console.error('AI Chat error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        response: 'Sorry, I encountered an error while processing your request. Please try again.',
+        suggestions: ['Show me electronics', 'Find sports equipment', 'What\'s trending?', 'Help me sell something'],
+        listing: null,
+        success: false,
+        error: 'Internal server error'
+      },
       { status: 500 }
     );
   }

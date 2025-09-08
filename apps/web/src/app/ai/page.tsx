@@ -280,18 +280,21 @@ export default function AIPage() {
                   </div>
                 ))}
 
-                {/* Suggestions */}
+                {/* Interactive Suggestions */}
                 {messages[messages.length - 1]?.suggestions && (
-                  <div className="space-y-2">
-                    <p className="text-gray-400 text-sm">Quick suggestions:</p>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="space-y-3 mt-4">
+                    <p className="text-white text-sm font-medium">Quick actions:</p>
+                    <div className="grid grid-cols-2 gap-2">
                       {messages[messages.length - 1].suggestions?.map((suggestion, index) => (
                         <button
                           key={index}
                           onClick={() => handleSuggestionClick(suggestion)}
-                          className="bg-dark-600 hover:bg-dark-500 text-gray-300 text-xs px-3 py-2 rounded-full transition-colors"
+                          className="bg-accent-500/20 hover:bg-accent-500/30 border border-accent-500/30 hover:border-accent-500/50 text-white text-sm px-4 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 group"
                         >
-                          {suggestion}
+                          <span>{suggestion}</span>
+                          <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </button>
                       ))}
                     </div>

@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { FontSizeProvider } from '@/contexts/FontSizeContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${inter.className} h-full`}>
+    <html lang="en" className="h-full dark">
+      <body className={`${inter.className} h-full dark`}>
         {/* Dynamic Background Elements */}
         <div className="floating-particles">
           <div className="particle"></div>
@@ -42,13 +40,9 @@ export default function RootLayout({
         <div className="grid-overlay"></div>
         
         <div className="min-h-screen">
-        <ThemeProvider>
-          <FontSizeProvider>
-            <AuthProvider>
-              {children}
-            </AuthProvider>
-          </FontSizeProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         </div>
       </body>
     </html>

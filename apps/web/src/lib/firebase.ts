@@ -40,20 +40,29 @@ const isFirebaseConfigured = () => {
   return isConfigured;
 };
 
-// Initialize Firebase
+// Initialize Firebase only if properly configured
 let app: any = null;
 let auth: any = null;
 let db: any = null;
 let storage: any = null;
 
-try {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
-} catch (error) {
-  console.warn('Firebase not properly configured. Please set up your Firebase project.');
-  console.warn('Error:', error);
+// Only initialize Firebase if we have valid configuration
+if (firebaseConfig.apiKey && 
+    firebaseConfig.projectId && 
+    firebaseConfig.authDomain && 
+    firebaseConfig.appId &&
+    !firebaseConfig.apiKey.includes('placeholder') &&
+    !firebaseConfig.apiKey.includes('your_firebase')) {
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+  } catch (error) {
+    console.warn('Firebase initialization failed:', error);
+  }
+} else {
+  console.log('Firebase not configured - using mock authentication');
 }
 
 export { auth, db, storage, isFirebaseConfigured };

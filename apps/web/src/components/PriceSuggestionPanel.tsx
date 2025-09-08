@@ -28,13 +28,43 @@ export function PriceSuggestionPanel({
 
     setLoading(true);
     try {
-      const response = await mockApi.getPriceSuggestion(
-        { title: listing.title, description: listing.description }
-      );
+      const response = await fetch('/api/prices/suggest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: listing.title,
+          description: listing.description,
+          category: listing.category
+        }),
+      });
+
+      const data = await response.json();
       
-      onSuggestionSubmitted(response.data);
+      if (data.success) {
+        onSuggestionSubmitted({
+          suggestedPrice: parseFloat(suggestedPrice),
+          reason: reason,
+          aiSuggestion: data.suggestion
+        });
+      } else {
+        console.error('Error getting AI price suggestion:', data.error);
+        // Fallback to manual suggestion
+        onSuggestionSubmitted({
+          suggestedPrice: parseFloat(suggestedPrice),
+          reason: reason,
+          aiSuggestion: null
+        });
+      }
     } catch (error) {
       console.error('Error submitting price suggestion:', error);
+      // Fallback to manual suggestion
+      onSuggestionSubmitted({
+        suggestedPrice: parseFloat(suggestedPrice),
+        reason: reason,
+        aiSuggestion: null
+      });
     } finally {
       setLoading(false);
     }
