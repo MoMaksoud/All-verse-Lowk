@@ -140,6 +140,14 @@ export function ListingCard({ listing }: ListingCardProps) {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-dark-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
             
+            {/* Message Button */}
+            <button 
+              onClick={handleMessageClick}
+              className="absolute top-3 left-3 btn-ghost p-2 rounded-xl backdrop-blur-sm bg-dark-800/50 hover:bg-dark-700/50 transition-all duration-200"
+            >
+              <MessageCircle className="w-4 h-4 text-gray-300" />
+            </button>
+            
             {/* Favorite Button */}
             <button 
               onClick={handleFavoriteClick}
@@ -184,25 +192,16 @@ export function ListingCard({ listing }: ListingCardProps) {
               </div>
             )}
             
-            <div className="flex items-center justify-between mt-auto">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-accent-400 fill-current" />
-                  <span className="text-sm text-gray-300">4.5</span>
-                </div>
-                <span className="text-gray-500">•</span>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-400">{new Date(listing.createdAt).toLocaleDateString()}</span>
-                </div>
+            <div className="flex items-center gap-2 mt-auto">
+              <div className="flex items-center gap-1">
+                <Star className="w-4 h-4 text-accent-400 fill-current" />
+                <span className="text-sm text-gray-300">4.5</span>
               </div>
-              
-              <button 
-                onClick={handleMessageClick}
-                className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </button>
+              <span className="text-gray-500">•</span>
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4 text-gray-400" />
+                <span className="text-sm text-gray-400">{new Date(listing.createdAt).toLocaleDateString()}</span>
+              </div>
             </div>
           </div>
         </div>
