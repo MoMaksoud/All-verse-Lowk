@@ -32,7 +32,7 @@
     position: relative;
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.3) 0%, rgba(15, 23, 42, 0.3) 100%);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(0, 99, 225, 0.2);
     box-shadow: 
       0 8px 32px rgba(0, 0, 0, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -45,7 +45,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+    background: linear-gradient(90deg, transparent, rgba(0, 99, 225, 0.5), transparent);
   }
   
   .futuristic-form::after {
@@ -66,7 +66,7 @@
   }
   
   .animated-border {
-    background: linear-gradient(45deg, #3b82f6, #8b5cf6, #06b6d4, #3b82f6);
+    background: linear-gradient(45deg, #0063e1, #8b5cf6, #06b6d4, #0063e1);
     background-size: 400% 400%;
     animation: gradientShift 3s ease infinite;
     padding: 1px;
@@ -101,25 +101,25 @@ select {
 
 select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #0063e1;
+  box-shadow: 0 0 0 3px rgba(0, 99, 225, 0.1);
 }
 
 /* Custom group hover classes for AI Widget */
 .group-chat:hover .group-chat-hover\:text-accent-400 {
-  color: #60a5fa !important;
+  color: #818cf8 !important;
   transform: translateX(4px) !important;
   transition: all 0.2s ease-in-out !important;
 }
 
 .group-analytics:hover .group-analytics-hover\:text-accent-400 {
-  color: #60a5fa !important;
+  color: #818cf8 !important;
   transform: translateX(4px) !important;
   transition: all 0.2s ease-in-out !important;
 }
 
 .group-insights:hover .group-insights-hover\:text-accent-400 {
-  color: #60a5fa !important;
+  color: #818cf8 !important;
   transform: translateX(4px) !important;
   transition: all 0.2s ease-in-out !important;
 }
@@ -202,9 +202,9 @@ select:focus {
     width: 100%;
     height: 100%;
     background: 
-      radial-gradient(circle at 30% 70%, rgba(59, 130, 246, 0.3) 0%, transparent 60%),
-      radial-gradient(circle at 70% 30%, rgba(37, 99, 235, 0.3) 0%, transparent 60%),
-      radial-gradient(circle at 50% 50%, rgba(29, 78, 216, 0.2) 0%, transparent 60%);
+      radial-gradient(circle at 30% 70%, rgba(0, 99, 225, 0.3) 0%, transparent 60%),
+      radial-gradient(circle at 70% 30%, rgba(0, 82, 184, 0.3) 0%, transparent 60%),
+      radial-gradient(circle at 50% 50%, rgba(0, 65, 143, 0.2) 0%, transparent 60%);
     animation: backgroundPulse 8s ease-in-out infinite;
     z-index: -5;
     pointer-events: none;
@@ -218,9 +218,9 @@ select:focus {
     width: 100%;
     height: 100%;
     background: 
-      radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.25) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(37, 99, 235, 0.25) 0%, transparent 50%),
-      radial-gradient(circle at 40% 40%, rgba(29, 78, 216, 0.15) 0%, transparent 50%);
+      radial-gradient(circle at 20% 80%, rgba(0, 99, 225, 0.25) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(0, 82, 184, 0.25) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(0, 65, 143, 0.15) 0%, transparent 50%);
     animation: backgroundShift 20s ease-in-out infinite;
     z-index: -10;
     pointer-events: none;
@@ -234,8 +234,8 @@ select:focus {
     width: 100%;
     height: 100%;
     background: 
-      linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.08) 50%, transparent 70%),
-      linear-gradient(-45deg, transparent 30%, rgba(37, 99, 235, 0.08) 50%, transparent 70%);
+      linear-gradient(45deg, transparent 30%, rgba(0, 99, 225, 0.08) 50%, transparent 70%),
+      linear-gradient(-45deg, transparent 30%, rgba(0, 82, 184, 0.08) 50%, transparent 70%);
     animation: backgroundShift 25s ease-in-out infinite reverse;
     z-index: -9;
     pointer-events: none;
@@ -282,15 +282,15 @@ select:focus {
   }
   
   .btn-primary {
-    background-color: #3b82f6;
+    background-color: #0063e1;
     color: white;
-    border: 1px solid #3b82f6;
+    border: 1px solid #0063e1;
     transition: all 0.2s ease;
   }
   
   .btn-primary:hover {
-    background-color: #2563eb;
-    border-color: #2563eb;
+    background-color: #0052b8;
+    border-color: #0052b8;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4);
   }
   
@@ -343,9 +343,9 @@ select:focus {
   }
   
   .input:focus {
-    border-color: #3b82f6;
+    border-color: #0063e1;
     outline: none;
-    box-shadow: 0 0 0 1px #3b82f6;
+    box-shadow: 0 0 0 1px #0063e1;
     background-color: #1e293b;
   }
   
@@ -453,10 +453,10 @@ select:focus {
 
   .particle {
     position: absolute;
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(0, 99, 225, 0.15);
     border-radius: 50%;
     animation: float 20s infinite linear;
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 8px rgba(0, 99, 225, 0.2);
     will-change: transform;
   }
 
@@ -557,8 +557,8 @@ select:focus {
     width: 100%;
     height: 100%;
     background-image: 
-      linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+      linear-gradient(rgba(0, 99, 225, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 99, 225, 0.05) 1px, transparent 1px);
     background-size: 50px 50px;
     animation: gridMove 40s linear infinite;
     z-index: -7;
@@ -585,10 +585,10 @@ select:focus {
     right: 0;
     bottom: 0;
     background: 
-      radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 40% 60%, rgba(29, 78, 216, 0.2) 0%, transparent 50%),
-      radial-gradient(circle at 60% 40%, rgba(99, 102, 241, 0.2) 0%, transparent 50%);
+      radial-gradient(circle at 20% 20%, rgba(0, 99, 225, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(0, 82, 184, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 60%, rgba(0, 65, 143, 0.2) 0%, transparent 50%),
+      radial-gradient(circle at 60% 40%, rgba(0, 99, 225, 0.2) 0%, transparent 50%);
     animation: heroGradientShift 15s ease-in-out infinite;
     z-index: -1;
   }
@@ -601,9 +601,9 @@ select:focus {
     right: 0;
     bottom: 0;
     background: 
-      linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.1) 50%, transparent 70%),
-      linear-gradient(-45deg, transparent 30%, rgba(37, 99, 235, 0.1) 50%, transparent 70%),
-      linear-gradient(90deg, transparent 30%, rgba(29, 78, 216, 0.05) 50%, transparent 70%);
+      linear-gradient(45deg, transparent 30%, rgba(0, 99, 225, 0.1) 50%, transparent 70%),
+      linear-gradient(-45deg, transparent 30%, rgba(0, 82, 184, 0.1) 50%, transparent 70%),
+      linear-gradient(90deg, transparent 30%, rgba(0, 65, 143, 0.05) 50%, transparent 70%);
     animation: heroGradientShift 20s ease-in-out infinite reverse;
     z-index: -1;
   }
@@ -640,10 +640,10 @@ select:focus {
 
   .hero-particle {
     position: absolute;
-    background: rgba(59, 130, 246, 0.4);
+    background: rgba(0, 99, 225, 0.4);
     border-radius: 50%;
     animation: heroFloat 20s infinite linear;
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 20px rgba(0, 99, 225, 0.5);
   }
 
   .hero-particle:nth-child(1) {
@@ -751,8 +751,8 @@ select:focus {
     
     .hero-dynamic-bg::before {
       background: 
-        radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.2) 0%, transparent 50%);
+        radial-gradient(circle at 20% 20%, rgba(0, 99, 225, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(0, 82, 184, 0.2) 0%, transparent 50%);
     }
   }
 
@@ -972,9 +972,9 @@ select:focus {
     right: 0;
     bottom: 0;
     background: 
-      radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(37, 99, 235, 0.2) 0%, transparent 50%),
-      radial-gradient(ellipse at 40% 60%, rgba(29, 78, 216, 0.15) 0%, transparent 50%);
+      radial-gradient(ellipse at 20% 20%, rgba(0, 99, 225, 0.2) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(0, 82, 184, 0.2) 0%, transparent 50%),
+      radial-gradient(ellipse at 40% 60%, rgba(0, 65, 143, 0.15) 0%, transparent 50%);
   }
 
   /* Performance optimizations */

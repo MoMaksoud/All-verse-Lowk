@@ -93,7 +93,7 @@ export default function HomePage() {
               </div>
               
                <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gradient drop-shadow-lg">
-                 Hi, Welcome to ALLVERSE GPT
+                 Hi, Welcome to ALL VERSE GPT
                </h1>
               <p className="text-xl md:text-2xl mb-8 text-white max-w-3xl mx-auto drop-shadow-lg" style={{textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'}}>
                 Your intelligent marketplace assistant. Ask our AI anything and get instant, smart responses that guide you to exactly what you need.

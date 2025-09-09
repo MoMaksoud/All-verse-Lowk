@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, MessageCircle, TrendingUp, Users, ShoppingBag, Zap, Brain, BarChart3, Activity, Target, Lightbulb, Sparkles } from 'lucide-react';
+import { Bot, MessageCircle, TrendingUp, Users, ShoppingBag, Zap, Brain, BarChart3, Activity, Target, Lightbulb, Sparkles, Store, ShoppingCart, ArrowRight } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
 
@@ -22,21 +22,17 @@ interface AIStats {
   userSatisfaction: number;
 }
 
+type UserMode = 'buyer' | 'seller';
+
 export default function AIPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'ai',
-      content: "Hi there! 👋 Welcome to All Verse GPT! I'm your personal AI assistant here to help you discover amazing products and navigate our marketplace. I can help you find exactly what you're looking for, suggest great deals, and answer any questions you have. What brings you here today?",
-      timestamp: new Date(),
-      suggestions: [
-        "Help me find something",
-        "Show me trending items",
-        "What's popular right now?",
-        "I'm just browsing"
-      ]
+  const [userMode, setUserMode] = useState<UserMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ai-user-mode');
+      return (saved === 'buyer' || saved === 'seller') ? saved : 'buyer';
     }
-  ]);
+    return 'buyer';
+  });
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'analytics' | 'insights'>('chat');
@@ -49,6 +45,45 @@ export default function AIPage() {
     averageResponseTime: 0.8,
     userSatisfaction: 0
   });
+
+  // Handle mode switching with localStorage persistence
+  const handleModeSwitch = (mode: UserMode) => {
+    setUserMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ai-user-mode', mode);
+    }
+  };
+
+  // Initialize messages based on user mode
+  useEffect(() => {
+    const initialMessage = userMode === 'buyer' 
+      ? {
+          id: '1',
+          type: 'ai' as const,
+          content: "Hi there! 👋 Welcome to All Verse GPT! I'm your personal AI shopping assistant here to help you discover amazing products and find the best deals. I can help you compare prices, suggest alternatives, and answer any questions you have about our marketplace. What are you looking for today?",
+          timestamp: new Date(),
+          suggestions: [
+            "Help me find something",
+            "Show me trending items",
+            "What's popular right now?",
+            "Find me the best deals"
+          ]
+        }
+      : {
+          id: '1',
+          type: 'ai' as const,
+          content: "Hello! 👋 Welcome to All Verse GPT! I'm your AI selling assistant here to help you optimize your listings, analyze market trends, and maximize your sales potential. I can help you with pricing strategies, competitor analysis, and market insights. What would you like to work on today?",
+          timestamp: new Date(),
+          suggestions: [
+            "Help me price my item",
+            "Analyze market trends",
+            "Compare with competitors",
+            "Optimize my listing"
+          ]
+        };
+    
+    setMessages([initialMessage]);
+  }, [userMode]);
 
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || isLoading) return;
@@ -76,7 +111,10 @@ export default function AIPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ 
+          message,
+          userMode: userMode
+        }),
       });
 
       const data = await response.json();
@@ -181,9 +219,39 @@ export default function AIPage() {
           <h1 className="text-3xl font-bold text-white mb-2">
             AI Assistant
           </h1>
-          <p className="text-lg text-gray-400">
-            Your personal shopping companion
+          <p className="text-lg text-gray-400 mb-6">
+            {userMode === 'buyer' ? 'Your personal shopping companion' : 'Your AI selling partner'}
           </p>
+          
+          {/* Mode Toggle */}
+          <div className="flex justify-center mb-6">
+            <div className="bg-dark-800 rounded-xl p-1 border border-dark-600">
+              <div className="flex">
+                <button
+                  onClick={() => handleModeSwitch('buyer')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 ${
+                    userMode === 'buyer'
+                      ? 'bg-accent-500 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white hover:bg-dark-700'
+                  }`}
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  <span className="font-medium">Buyer Mode</span>
+                </button>
+                <button
+                  onClick={() => handleModeSwitch('seller')}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 ${
+                    userMode === 'seller'
+                      ? 'bg-accent-500 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white hover:bg-dark-700'
+                  }`}
+                >
+                  <Store className="w-4 h-4" />
+                  <span className="font-medium">Seller Mode</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Progressive Stats - Only show when user is engaged */}
@@ -236,11 +304,19 @@ export default function AIPage() {
               <div className="flex items-center justify-between p-6 border-b border-dark-600">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-accent-500 rounded-full flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-white" />
+                    {userMode === 'buyer' ? (
+                      <ShoppingCart className="w-5 h-5 text-white" />
+                    ) : (
+                      <Store className="w-5 h-5 text-white" />
+                    )}
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">All Verse AI Assistant</h3>
-                    <p className="text-gray-400 text-sm">Always ready to help</p>
+                    <h3 className="text-white font-semibold">
+                      {userMode === 'buyer' ? 'Shopping Assistant' : 'Selling Assistant'}
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      {userMode === 'buyer' ? 'Finding the best deals for you' : 'Optimizing your sales strategy'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -361,7 +437,10 @@ export default function AIPage() {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputValue)}
-                    placeholder="Ask me anything about our marketplace..."
+                    placeholder={userMode === 'buyer' 
+                      ? "Ask me about products, deals, or recommendations..." 
+                      : "Ask me about pricing, market trends, or selling strategies..."
+                    }
                     className="flex-1 glass-clear-dark border border-white/20 rounded-xl px-4 py-3 text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50"
                   />
                   <button
@@ -417,40 +496,76 @@ export default function AIPage() {
               </div>
             )}
 
-            {/* Quick Actions - Always visible */}
+            {/* Quick Actions - Mode specific */}
             <div className="bg-dark-800 rounded-xl p-6 border border-dark-600">
               <div className="flex items-center gap-3 mb-4">
                 <Lightbulb className="w-5 h-5 text-accent-400" />
-                <h3 className="text-white font-semibold">Quick Actions</h3>
+                <h3 className="text-white font-semibold">
+                  {userMode === 'buyer' ? 'Quick Actions' : 'Selling Tools'}
+                </h3>
               </div>
               <div className="space-y-3">
-                <button
-                  onClick={() => handleSendMessage("Show me trending items")}
-                  className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="w-4 h-4 text-accent-400" />
-                    <span className="text-white text-sm">Trending Items</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => handleSendMessage("Show me electronics")}
-                  className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <ShoppingBag className="w-4 h-4 text-accent-400" />
-                    <span className="text-white text-sm">Browse Electronics</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => handleSendMessage("What's popular right now?")}
-                  className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Activity className="w-4 h-4 text-accent-400" />
-                    <span className="text-white text-sm">What's Popular</span>
-                  </div>
-                </button>
+                {userMode === 'buyer' ? (
+                  <>
+                    <button
+                      onClick={() => handleSendMessage("Show me trending items")}
+                      className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <TrendingUp className="w-4 h-4 text-accent-400" />
+                        <span className="text-white text-sm">Trending Items</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleSendMessage("Show me electronics")}
+                      className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <ShoppingBag className="w-4 h-4 text-accent-400" />
+                        <span className="text-white text-sm">Browse Electronics</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleSendMessage("Find me the best deals")}
+                      className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Activity className="w-4 h-4 text-accent-400" />
+                        <span className="text-white text-sm">Best Deals</span>
+                      </div>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleSendMessage("Help me price my item")}
+                      className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Target className="w-4 h-4 text-accent-400" />
+                        <span className="text-white text-sm">Price My Item</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleSendMessage("Analyze market trends")}
+                      className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <BarChart3 className="w-4 h-4 text-accent-400" />
+                        <span className="text-white text-sm">Market Trends</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleSendMessage("Compare with competitors")}
+                      className="w-full text-left p-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Brain className="w-4 h-4 text-accent-400" />
+                        <span className="text-white text-sm">Competitor Analysis</span>
+                      </div>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
