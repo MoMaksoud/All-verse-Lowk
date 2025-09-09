@@ -45,13 +45,55 @@ export const UserSchema = z.object({
 export type User = z.infer<typeof UserSchema>;
 
 /** PROFILE */
+export const GenderSchema = z.enum(['male', 'female', 'non-binary', 'prefer-not-to-say']);
+export type Gender = z.infer<typeof GenderSchema>;
+
+export const ShoppingFrequencySchema = z.enum(['daily', 'weekly', 'monthly', 'occasionally', 'rarely']);
+export type ShoppingFrequency = z.infer<typeof ShoppingFrequencySchema>;
+
+export const UserActivitySchema = z.enum(['browse-only', 'buy-only', 'sell-only', 'both-buy-sell']);
+export type UserActivity = z.infer<typeof UserActivitySchema>;
+
+export const ItemConditionPreferenceSchema = z.enum(['new-only', 'second-hand-only', 'both']);
+export type ItemConditionPreference = z.infer<typeof ItemConditionPreferenceSchema>;
+
 export const ProfileSchema = z.object({
   userId: z.string(),
+  username: z.string().min(3).max(30),
   bio: z.string().max(280).optional(),
+  createdAt: z.string(), // ISO timestamp
+  gender: GenderSchema.optional(),
+  age: z.number().min(13).max(120).optional(),
   location: z.string().max(120).optional(),
-  rating: z.number().min(0).max(5).optional(),
+  profilePicture: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  rating: z.number().min(0).max(5).default(0),
+  interestCategories: z.array(z.string()).default([]), // ['electronics', 'home', 'clothing', etc.]
+  userActivity: UserActivitySchema.default('both-buy-sell'),
+  budget: z.object({
+    min: z.number().min(0).optional(),
+    max: z.number().min(0).optional(),
+    currency: z.string().default('USD')
+  }).optional(),
+  shoppingFrequency: ShoppingFrequencySchema.optional(),
+  itemConditionPreference: ItemConditionPreferenceSchema.default('both'),
+  updatedAt: z.string().optional(),
 });
 export type Profile = z.infer<typeof ProfileSchema>;
+
+export const CreateProfileInput = ProfileSchema.omit({
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+  rating: true,
+});
+export type CreateProfileInput = z.infer<typeof CreateProfileInput>;
+
+export const UpdateProfileInput = ProfileSchema.partial().omit({
+  userId: true,
+  createdAt: true,
+});
+export type UpdateProfileInput = z.infer<typeof UpdateProfileInput>;
 
 /** LISTING */
 export const ListingCondition = z.enum(['New', 'Like New', 'Good', 'Fair', 'For Parts']);

@@ -8,6 +8,7 @@ import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { DefaultAvatar } from '@/components/DefaultAvatar';
+import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { useRouter } from 'next/navigation';
 import { StorageService } from '@/lib/storage';
 
@@ -26,6 +27,10 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     bio: '',
     location: '',
+    username: '',
+    phoneNumber: '',
+    age: '',
+    gender: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,11 +48,18 @@ export default function ProfilePage() {
         const result = await response.json();
         
         if (result.success) {
+          console.log('Profile fetched successfully:', JSON.stringify(result.data, null, 2));
           setProfile(result.data);
           setFormData({
             bio: result.data.bio || '',
             location: result.data.location || '',
+            username: result.data.username || '',
+            phoneNumber: result.data.phoneNumber || '',
+            age: result.data.age?.toString() || '',
+            gender: result.data.gender || '',
           });
+        } else {
+          console.log('Profile fetch failed:', result);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -90,6 +102,10 @@ export default function ProfilePage() {
     setFormData({
       bio: profile?.bio || '',
       location: profile?.location || '',
+      username: profile?.username || '',
+      phoneNumber: profile?.phoneNumber || '',
+      age: profile?.age?.toString() || '',
+      gender: profile?.gender || '',
     });
     setEditing(false);
   };
@@ -304,11 +320,6 @@ export default function ProfilePage() {
                   <div className="relative">
                     {(() => {
                       const imageUrl = (profile as any)?.profilePictureUrl || currentUser?.photoURL;
-                        profilePictureUrl: (profile as any)?.profilePictureUrl,
-                        currentUserPhotoURL: currentUser?.photoURL,
-                        finalImageUrl: imageUrl,
-                        hasImage: !!imageUrl
-                      });
                       
                       return imageUrl ? (
                         <img
@@ -434,6 +445,13 @@ onLoad={() => {}}
               </div>
             </div>
           </div>
+
+          {/* Comprehensive Profile Display */}
+          {profile && (
+            <div className="lg:col-span-2">
+              <ProfileDisplay profile={profile} className="mb-6" />
+            </div>
+          )}
 
           {/* Sidebar */}
           <div className="lg:col-span-1">

@@ -12,14 +12,27 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 
-// Profile interface
+// Profile interface - updated to match new comprehensive profile schema
 export interface FirestoreProfile {
   userId: string;
+  username: string;
   bio?: string;
+  createdAt: any;
+  gender?: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+  age?: number;
   location?: string;
-  rating?: number;
-  profilePictureUrl?: string;
-  createdAt?: any;
+  profilePicture?: string;
+  phoneNumber?: string;
+  rating: number;
+  interestCategories: string[];
+  userActivity: 'browse-only' | 'buy-only' | 'sell-only' | 'both-buy-sell';
+  budget?: {
+    min?: number;
+    max?: number;
+    currency: string;
+  };
+  shoppingFrequency?: 'daily' | 'weekly' | 'monthly' | 'occasionally' | 'rarely';
+  itemConditionPreference: 'new-only' | 'second-hand-only' | 'both';
   updatedAt?: any;
 }
 
@@ -52,13 +65,28 @@ export class ProfileService {
       
       const profileToSave: FirestoreProfile = {
         userId,
-        ...existingProfile,
-        ...profileData,
+        username: profileData.username !== undefined ? profileData.username : (existingProfile?.username || ''),
+        bio: profileData.bio !== undefined ? profileData.bio : existingProfile?.bio,
+        createdAt: profileData.createdAt !== undefined ? profileData.createdAt : (existingProfile?.createdAt || serverTimestamp()),
+        gender: profileData.gender !== undefined ? profileData.gender : existingProfile?.gender,
+        age: profileData.age !== undefined ? profileData.age : existingProfile?.age,
+        location: profileData.location !== undefined ? profileData.location : existingProfile?.location,
+        profilePicture: profileData.profilePicture !== undefined ? profileData.profilePicture : existingProfile?.profilePicture,
+        phoneNumber: profileData.phoneNumber !== undefined ? profileData.phoneNumber : existingProfile?.phoneNumber,
+        rating: profileData.rating !== undefined ? profileData.rating : (existingProfile?.rating || 0),
+        interestCategories: profileData.interestCategories !== undefined ? profileData.interestCategories : (existingProfile?.interestCategories || []),
+        userActivity: profileData.userActivity !== undefined ? profileData.userActivity : (existingProfile?.userActivity || 'both-buy-sell'),
+        budget: profileData.budget !== undefined ? profileData.budget : existingProfile?.budget,
+        shoppingFrequency: profileData.shoppingFrequency !== undefined ? profileData.shoppingFrequency : existingProfile?.shoppingFrequency,
+        itemConditionPreference: profileData.itemConditionPreference !== undefined ? profileData.itemConditionPreference : (existingProfile?.itemConditionPreference || 'both'),
         updatedAt: serverTimestamp(),
-        ...(existingProfile ? {} : { createdAt: serverTimestamp() })
       };
       
+      console.log('Saving to Firestore:', JSON.stringify(profileToSave, null, 2));
+      
       await setDoc(profileRef, profileToSave, { merge: true });
+      
+      console.log('Profile saved to Firestore successfully');
       
       return profileToSave;
     } catch (error) {

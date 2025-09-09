@@ -7,6 +7,8 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
+import { ProfileSetupForm } from '@/components/ProfileSetupForm';
+import { CreateProfileInput } from '@marketplace/types';
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -19,6 +21,9 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState(false);
   const { signup, isConfigured } = useAuth();
   const router = useRouter();
 
@@ -42,12 +47,61 @@ export default function SignUp() {
       setError('');
       setLoading(true);
       await signup(formData.email, formData.password, formData.displayName);
-      router.push('/');
+      setShowProfileSetup(true);
     } catch (error: any) {
       setError('Failed to create account. Please try again.');
     }
 
     setLoading(false);
+  }
+
+  async function handleProfileSubmit(profileData: CreateProfileInput) {
+    try {
+      setProfileLoading(true);
+      
+      // Create profile with the user's display name as username if not provided
+      const profileToCreate = {
+        ...profileData,
+        username: profileData.username || formData.displayName,
+        userId: currentUser?.uid, // Add user ID
+      };
+
+      // Save profile to Firestore
+      const response = await fetch('/api/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser?.uid || '',
+        },
+        body: JSON.stringify(profileToCreate),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Profile creation failed:', errorData);
+        throw new Error('Failed to create profile');
+      }
+
+      const result = await response.json();
+      console.log('Profile created successfully:', result);
+
+      // Show success message
+      setProfileSuccess(true);
+      
+      // Redirect to home page after a short delay
+      setTimeout(() => {
+        router.push('/');
+      }, 2000);
+    } catch (error) {
+      setError('Failed to create profile. Please try again.');
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  function handleProfileCancel() {
+    // Skip profile setup and go to home page
+    router.push('/');
   }
 
   if (!isConfigured) {
@@ -84,6 +138,35 @@ export default function SignUp() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show profile setup form after successful signup
+  if (showProfileSetup) {
+    return (
+      <div className="min-h-screen relative overflow-hidden">
+        <DynamicBackground intensity="low" showParticles={true} />
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8">
+          {profileSuccess ? (
+            <div className="max-w-md mx-auto bg-dark-800 rounded-2xl p-8 border border-dark-700 text-center">
+              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Profile Created Successfully!</h2>
+              <p className="text-gray-400 mb-4">Your profile has been saved and you'll be redirected shortly.</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto"></div>
+            </div>
+          ) : (
+            <ProfileSetupForm
+              onSubmit={handleProfileSubmit}
+              onCancel={handleProfileCancel}
+              isLoading={profileLoading}
+            />
+          )}
         </div>
       </div>
     );
