@@ -43,6 +43,7 @@ function ListingsContent() {
       
       console.log('Applied filters:', appliedFilters);
       console.log('API URL:', `/api/listings?${params.toString()}`);
+      console.log('Category filter value:', appliedFilters.category);
       
       // Add sort parameter
       switch (sortBy) {
@@ -107,6 +108,9 @@ function ListingsContent() {
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
     };
 
+    console.log('URL params parsed:', { category, keyword, minPrice, maxPrice });
+    console.log('Setting filters to:', newFilters);
+    
     setAppliedFilters(newFilters);
     setCurrentPage(1);
   }, [searchParams]);

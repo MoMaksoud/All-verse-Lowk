@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, X, MapPin, Navigation } from 'lucide-react';
 import { LocationAutocomplete } from './LocationAutocomplete';
 import type { ListingFilters, Category } from '@marketplace/types';
@@ -13,6 +13,11 @@ interface ListingFiltersProps {
 
 export function ListingFilters({ filters, categories, onFiltersChange }: ListingFiltersProps) {
   const [localFilters, setLocalFilters] = useState<ListingFilters>(filters);
+
+  // Sync local filters with props when they change (e.g., from URL params)
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
 
   const handleFilterChange = (key: keyof ListingFilters, value: any) => {
     const newFilters = { ...localFilters, [key]: value };
@@ -86,7 +91,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
         >
           <option value="" className="bg-dark-surface text-white">All Categories</option>
           {categories.map((category) => (
-            <option key={category.id} value={category.name} className="bg-dark-surface text-white">
+            <option key={category.id} value={category.id} className="bg-dark-surface text-white">
               {category.name}
             </option>
           ))}

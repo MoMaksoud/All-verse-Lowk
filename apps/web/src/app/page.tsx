@@ -8,13 +8,12 @@ import { SimpleListing } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { SkeletonCard, SkeletonCategoryCard, SkeletonSearchBar, SkeletonAIWidget, SkeletonStats, SkeletonHero } from '@/components/SkeletonLoader';
+import { SkeletonCard, SkeletonSearchBar, SkeletonAIWidget, SkeletonStats, SkeletonHero } from '@/components/SkeletonLoader';
 import { ResourcePreloader } from '@/components/ResourcePreloader';
 import { useRouteGuard } from '@/hooks/useRouteGuard';
 
 // Lazy load heavy components
 const ListingCard = lazy(() => import('@/components/ListingCard').then(module => ({ default: module.ListingCard })));
-const CategoryCard = lazy(() => import('@/components/CategoryCard').then(module => ({ default: module.CategoryCard })));
 const SearchBar = lazy(() => import('@/components/SearchBar').then(module => ({ default: module.SearchBar })));
 const AIWidget = lazy(() => import('@/components/AIWidget').then(module => ({ default: module.AIWidget })));
 const DynamicBackground = lazy(() => import('@/components/DynamicBackground').then(module => ({ default: module.DynamicBackground })));
@@ -192,34 +191,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Categories */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Browse Categories
-            </h2>
-            <p className="text-lg text-gray-400">
-              Explore our AI-curated categories
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <Suspense fallback={<SkeletonCategoryCard />}>
-              <CategoryCard category={{ id: 'electronics', name: 'Electronics', slug: 'electronics', icon: 'electronics.svg', iconImage: '/icons/electronics.svg' }} />
-            </Suspense>
-            <Suspense fallback={<SkeletonCategoryCard />}>
-              <CategoryCard category={{ id: 'fashion', name: 'Fashion', slug: 'fashion', icon: 'fashion.svg', iconImage: '/icons/fashion.svg' }} />
-            </Suspense>
-            <Suspense fallback={<SkeletonCategoryCard />}>
-              <CategoryCard category={{ id: 'home', name: 'Home', slug: 'home', icon: 'home.svg', iconImage: '/icons/home.svg' }} />
-            </Suspense>
-            <Suspense fallback={<SkeletonCategoryCard />}>
-              <CategoryCard category={{ id: 'sports', name: 'Sports', slug: 'sports', icon: 'sports.svg', iconImage: '/icons/sports.svg' }} />
-            </Suspense>
-          </div>
-        </div>
-      </section>
 
       {/* Featured Listings */}
       <section className="py-16">

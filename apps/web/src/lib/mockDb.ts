@@ -145,6 +145,34 @@ const listingsData: Listing[] = [
     createdAt: '2024-01-15T08:30:00Z',
     updatedAt: '2024-01-15T08:30:00Z',
   },
+  {
+    id: 'listing7',
+    sellerId: 'user1',
+    title: 'Coffee Table - Modern Design',
+    description: 'Beautiful modern coffee table with glass top and wooden legs. Perfect for living room.',
+    price: 299.99,
+    currency: 'USD',
+    category: 'home' as ListingCategory,
+    condition: 'Like New',
+    photos: [],
+    status: 'active',
+    createdAt: '2024-01-16T12:00:00Z',
+    updatedAt: '2024-01-16T12:00:00Z',
+  },
+  {
+    id: 'listing8',
+    sellerId: 'user2',
+    title: 'Smart Home Speaker - Amazon Echo',
+    description: 'Amazon Echo Dot with Alexa. Voice-controlled smart speaker, excellent condition.',
+    price: 49.99,
+    currency: 'USD',
+    category: 'home' as ListingCategory,
+    condition: 'Like New',
+    photos: [],
+    status: 'active',
+    createdAt: '2024-01-17T15:30:00Z',
+    updatedAt: '2024-01-17T15:30:00Z',
+  },
 ];
 
 // Chat Types
@@ -578,9 +606,14 @@ export const dbListings = {
   async search(filters: any = {}, page: number = 1, limit: number = 20): Promise<{ items: Listing[], total: number, hasMore: boolean }> {
     let filteredListings = [...listingsData];
 
+    console.log('mockDb search called with filters:', filters);
+    console.log('Total listings before filtering:', filteredListings.length);
+
     // Apply filters
     if (filters.category) {
+      console.log('Filtering by category:', filters.category);
       filteredListings = filteredListings.filter(listing => listing.category === filters.category);
+      console.log('Listings after category filter:', filteredListings.length);
     }
 
     if (filters.keyword) {
