@@ -7,8 +7,6 @@ if (!apiKey) {
   throw new Error('GEMINI_API_KEY environment variable is required. Please add it to your .env.local file.');
 }
 
-console.log('Gemini API Key loaded:', apiKey ? 'Yes' : 'No');
-
 const genAI = new GoogleGenerativeAI(apiKey);
 
 // Get the generative model
@@ -55,26 +53,26 @@ export class GeminiService {
    */
   static async generateMarketplaceResponse(userMessage: string, context?: any): Promise<ChatResponse> {
     const marketplacePrompt = `
-You are an AI assistant for ALL VERSE GPT, a modern AI-powered marketplace. Your role is to help users with:
+        You are an AI assistant for ALL VERSE GPT, a modern AI-powered marketplace. Your role is to help users with:
 
-1. Product searches and recommendations
-2. Marketplace navigation and features
-3. Buying and selling guidance
-4. General marketplace questions
+        1. Product searches and recommendations
+        2. Marketplace navigation and features
+        3. Buying and selling guidance
+        4. General marketplace questions
 
-User message: "${userMessage}"
+        User message: "${userMessage}"
 
-Context: ${context ? JSON.stringify(context) : 'No additional context'}
+        Context: ${context ? JSON.stringify(context) : 'No additional context'}
 
-Please provide a helpful, friendly response that guides the user. When asking questions or offering options, phrase them in a way that suggests clickable buttons.
+        Please provide a helpful, friendly response that guides the user. When asking questions or offering options, phrase them in a way that suggests clickable buttons.
 
-Examples of good interactive responses:
-- "What category interests you? **Electronics**, **Fashion**, **Home**, or **Sports**?"
-- "Would you like to see **Trending Items**, **Best Deals**, **New Arrivals**, or **Popular Brands**?"
-- "I can help you find **Laptops**, **Phones**, **Gaming Gear**, or **Accessories**"
+        Examples of good interactive responses:
+        - "What category interests you? **Electronics**, **Fashion**, **Home**, or **Sports**?"
+        - "Would you like to see **Trending Items**, **Best Deals**, **New Arrivals**, or **Popular Brands**?"
+        - "I can help you find **Laptops**, **Phones**, **Gaming Gear**, or **Accessories**"
 
-Always end with a question that offers specific clickable options. Keep responses concise but informative, and maintain a helpful, professional tone.
-    `;
+        Always end with a question that offers specific clickable options. Keep responses concise but informative, and maintain a helpful, professional tone.
+            `;
 
     return this.generateResponse(marketplacePrompt);
   }
@@ -88,20 +86,20 @@ Always end with a question that offers specific clickable options. Keep response
       'No specific products available';
 
     const recommendationPrompt = `
-You are a product recommendation AI for ALL VERSE GPT marketplace. 
+      You are a product recommendation AI for ALL VERSE GPT marketplace. 
 
-User is looking for: "${query}"
+      User is looking for: "${query}"
 
-${productsContext}
+      ${productsContext}
 
-Please provide:
-1. Relevant product categories to search
-2. Search tips and keywords
-3. General advice about finding similar products
-4. Any marketplace features that might help
+      Please provide:
+      1. Relevant product categories to search
+      2. Search tips and keywords
+      3. General advice about finding similar products
+      4. Any marketplace features that might help
 
-Keep the response helpful and actionable.
-    `;
+      Keep the response helpful and actionable.
+          `;
 
     return this.generateResponse(recommendationPrompt);
   }
@@ -112,18 +110,18 @@ Keep the response helpful and actionable.
   static async generateSearchSuggestions(query: string): Promise<string[]> {
     try {
       const prompt = `
-Generate 4 interactive search suggestions for a marketplace based on this query: "${query}"
+        Generate 4 interactive search suggestions for a marketplace based on this query: "${query}"
 
-The suggestions should be:
-- Short and actionable (2-4 words)
-- Clickable button-style options
-- Relevant to what the user is looking for
-- Include specific categories or actions
+        The suggestions should be:
+        - Short and actionable (2-4 words)
+        - Clickable button-style options
+        - Relevant to what the user is looking for
+        - Include specific categories or actions
 
-Examples: "Show Electronics", "Find Laptops", "Browse Fashion", "See Deals"
+        Examples: "Show Electronics", "Find Laptops", "Browse Fashion", "See Deals"
 
-Return only the suggestions, one per line, without numbering or bullets.
-      `;
+        Return only the suggestions, one per line, without numbering or bullets.
+              `;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
@@ -144,25 +142,22 @@ Return only the suggestions, one per line, without numbering or bullets.
     }
   }
 
-  /**
-   * Generate price suggestions
-   */
   static async generatePriceSuggestion(productTitle: string, productDescription: string, category: string): Promise<ChatResponse> {
     const pricePrompt = `
-You are a pricing expert for ALL VERSE GPT marketplace. Help suggest a fair price for this product:
+      You are a pricing expert for ALL VERSE GPT marketplace. Help suggest a fair price for this product:
 
-Title: "${productTitle}"
-Description: "${productDescription}"
-Category: "${category}"
+      Title: "${productTitle}"
+      Description: "${productDescription}"
+      Category: "${category}"
 
-Please provide:
-1. Suggested price range (low to high)
-2. Reasoning for the price
-3. Tips for competitive pricing
-4. Market considerations
+      Please provide:
+      1. Suggested price range (low to high)
+      2. Reasoning for the price
+      3. Tips for competitive pricing
+      4. Market considerations
 
-Keep the response practical and helpful for sellers.
-    `;
+      Keep the response practical and helpful for sellers.
+          `;
 
     return this.generateResponse(pricePrompt);
   }

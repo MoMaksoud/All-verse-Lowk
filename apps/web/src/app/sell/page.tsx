@@ -140,7 +140,6 @@ export default function SellPage() {
       }
       
       const result = await response.json();
-      console.log('Listing created:', result);
       
       // Reset form
       setFormData({

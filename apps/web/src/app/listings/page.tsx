@@ -40,11 +40,7 @@ function ListingsContent() {
       }
       params.set('page', currentPage.toString());
       params.set('limit', '12');
-      
-      console.log('Applied filters:', appliedFilters);
-      console.log('API URL:', `/api/listings?${params.toString()}`);
-      console.log('Category filter value:', appliedFilters.category);
-      
+    
       // Add sort parameter
       switch (sortBy) {
         case 'price-low':
@@ -65,7 +61,6 @@ function ListingsContent() {
       const response = await fetch(`/api/listings?${params.toString()}`);
       const data = await response.json();
 
-      console.log('API Response:', data);
 
       if (response.ok) {
         setListings(data.data || []);
@@ -108,8 +103,6 @@ function ListingsContent() {
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
     };
 
-    console.log('URL params parsed:', { category, keyword, minPrice, maxPrice });
-    console.log('Setting filters to:', newFilters);
     
     setAppliedFilters(newFilters);
     setCurrentPage(1);

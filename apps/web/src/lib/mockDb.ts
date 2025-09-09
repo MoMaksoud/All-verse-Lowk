@@ -606,14 +606,9 @@ export const dbListings = {
   async search(filters: any = {}, page: number = 1, limit: number = 20): Promise<{ items: Listing[], total: number, hasMore: boolean }> {
     let filteredListings = [...listingsData];
 
-    console.log('mockDb search called with filters:', filters);
-    console.log('Total listings before filtering:', filteredListings.length);
-
     // Apply filters
     if (filters.category) {
-      console.log('Filtering by category:', filters.category);
       filteredListings = filteredListings.filter(listing => listing.category === filters.category);
-      console.log('Listings after category filter:', filteredListings.length);
     }
 
     if (filters.keyword) {

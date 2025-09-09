@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 const categories: Category[] = [
   { 
-    id: 'cat1', 
+    id: 'electronics', 
     name: 'Electronics', 
     slug: 'electronics', 
     icon: '📱',
@@ -16,7 +16,7 @@ const categories: Category[] = [
     children: [] 
   },
   { 
-    id: 'cat2', 
+    id: 'fashion', 
     name: 'Fashion', 
     slug: 'fashion', 
     icon: '👕',
@@ -24,7 +24,7 @@ const categories: Category[] = [
     children: [] 
   },
   { 
-    id: 'cat3', 
+    id: 'sports', 
     name: 'Sports', 
     slug: 'sports', 
     icon: '⚽',
@@ -32,7 +32,7 @@ const categories: Category[] = [
     children: [] 
   },
   { 
-    id: 'cat4', 
+    id: 'home-garden', 
     name: 'Home', 
     slug: 'home-garden', 
     icon: '🏠',
@@ -40,7 +40,7 @@ const categories: Category[] = [
     children: [] 
   },
   { 
-    id: 'cat5', 
+    id: 'books', 
     name: 'Books', 
     slug: 'books', 
     icon: '📚',
@@ -48,7 +48,7 @@ const categories: Category[] = [
     children: [] 
   },
   { 
-    id: 'cat6', 
+    id: 'automotive', 
     name: 'Automotive', 
     slug: 'automotive', 
     icon: '🚗',

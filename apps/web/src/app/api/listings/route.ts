@@ -31,8 +31,6 @@ export async function GET(req: NextRequest) {
       userCoordinates: userLat && userLng ? { lat: userLat, lng: userLng } : undefined,
     };
 
-    console.log('API received filters:', filters);
-    console.log('Category filter:', category);
 
     const result = await dbListings.search(filters, page, limit);
       

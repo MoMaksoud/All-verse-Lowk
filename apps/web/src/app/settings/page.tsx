@@ -122,7 +122,6 @@ export default function SettingsPage() {
 
   const handleDeleteAccount = async () => {
     // Handle account deletion
-    console.log('Account deletion requested');
     setShowDeleteModal(false);
   };
 

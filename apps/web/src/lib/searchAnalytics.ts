@@ -285,5 +285,4 @@ export function getPopularSearchesByCategory(category: string, limit: number = 5
 // Track a search (for analytics)
 export function trackSearch(query: string, category?: string) {
   // In a real app, this would send data to analytics service
-  console.log(`Search tracked: "${query}" in category: ${category || 'unknown'}`);
 }

@@ -96,17 +96,13 @@ export default function ProfilePage() {
 
   const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    console.log('📁 File selected:', file?.name, file?.size, file?.type);
-    console.log('👤 Current user:', currentUser?.uid);
     
     if (!file || !currentUser) {
-      console.log('❌ Missing file or user');
       return;
     }
 
     // Validate file
     const validation = StorageService.validateImageFile(file);
-    console.log('✅ File validation:', validation);
     
     if (!validation.valid) {
       showToast(validation.error || 'Invalid file', 'error');
@@ -115,11 +111,9 @@ export default function ProfilePage() {
 
     try {
       showToast('Uploading profile picture...', 'success');
-      console.log('🚀 Starting upload...');
       
       // Upload to Firebase Storage
       const downloadURL = await StorageService.uploadProfilePicture(currentUser.uid, file);
-      console.log('✅ Upload successful:', downloadURL);
       
       // Update profile in Firestore
       const response = await fetch('/api/profile', {
@@ -134,16 +128,13 @@ export default function ProfilePage() {
       });
       
       const result = await response.json();
-      console.log('📝 Profile update result:', result);
       
       if (result.success) {
-        console.log('🔄 Updating profile state with:', result.data);
         setProfile(result.data);
         showToast('Profile picture updated successfully!', 'success');
         
         // Force a re-render by updating the profile state
         setTimeout(() => {
-          console.log('🔄 Current profile state:', profile);
         }, 100);
       } else {
         showToast('Failed to update profile', 'error');
@@ -313,7 +304,6 @@ export default function ProfilePage() {
                   <div className="relative">
                     {(() => {
                       const imageUrl = (profile as any)?.profilePictureUrl || currentUser?.photoURL;
-                      console.log('🖼️ Image display logic:', {
                         profilePictureUrl: (profile as any)?.profilePictureUrl,
                         currentUserPhotoURL: currentUser?.photoURL,
                         finalImageUrl: imageUrl,
@@ -325,7 +315,7 @@ export default function ProfilePage() {
                           src={imageUrl}
                           alt={currentUser?.displayName || 'User'}
                           className="w-20 h-20 rounded-full object-cover"
-                          onLoad={() => console.log('✅ Image loaded successfully')}
+onLoad={() => {}}
                           onError={(e) => console.error('❌ Image failed to load:', e)}
                         />
                       ) : (

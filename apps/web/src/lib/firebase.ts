@@ -20,14 +20,6 @@ const isFirebaseConfigured = () => {
     return false;
   }
   
-  console.log('Firebase Config Debug:', {
-    apiKey: firebaseConfig.apiKey ? 'Set' : 'Not set',
-    projectId: firebaseConfig.projectId ? 'Set' : 'Not set',
-    authDomain: firebaseConfig.authDomain ? 'Set' : 'Not set',
-    appId: firebaseConfig.appId ? 'Set' : 'Not set',
-    env: typeof window !== 'undefined' ? 'client' : 'server'
-  });
-  
   const isConfigured = firebaseConfig.apiKey &&
          firebaseConfig.projectId &&
          firebaseConfig.authDomain &&
@@ -35,8 +27,6 @@ const isFirebaseConfigured = () => {
          firebaseConfig.apiKey.length > 20 &&
          firebaseConfig.projectId.length > 5 &&
          !firebaseConfig.apiKey.includes('placeholder');
-  
-  console.log('Firebase is configured:', isConfigured);
   return isConfigured;
 };
 
@@ -61,8 +51,6 @@ if (firebaseConfig.apiKey &&
   } catch (error) {
     console.warn('Firebase initialization failed:', error);
   }
-} else {
-  console.log('Firebase not configured - using mock authentication');
 }
 
 export { auth, db, storage, isFirebaseConfigured };

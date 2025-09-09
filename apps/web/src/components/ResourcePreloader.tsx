@@ -30,7 +30,6 @@ export function ResourcePreloader() {
           },
         });
       } catch (error) {
-        console.log('Prefetch failed:', error);
       }
     };
 

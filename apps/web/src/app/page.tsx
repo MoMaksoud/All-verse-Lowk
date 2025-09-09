@@ -26,12 +26,9 @@ export default function HomePage() {
 
   const fetchData = useCallback(async () => {
     try {
-      console.log('Fetching data...');
       // Use a smaller limit for faster loading
       const response = await fetch('/api/listings?limit=6');
-      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('Data received:', data);
 
       if (response.ok) {
         setFeaturedListings(data.data || []);
@@ -42,7 +39,6 @@ export default function HomePage() {
       console.error('Error fetching data:', error);
       setFeaturedListings([]);
     } finally {
-      console.log('Setting loading to false');
       setLoading(false);
     }
   }, []);
