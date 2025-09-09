@@ -22,6 +22,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
   const handleFilterChange = (key: keyof ListingFilters, value: any) => {
     const newFilters = { ...localFilters, [key]: value };
     setLocalFilters(newFilters);
+    // Don't auto-apply - only update local state
   };
 
   const handleLocationChange = (location: string, coordinates?: { lat: number; lng: number }) => {
@@ -31,6 +32,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
       userCoordinates: coordinates
     };
     setLocalFilters(newFilters);
+    // Don't auto-apply - only update local state
   };
 
   const handleApplyFilters = () => {
@@ -41,6 +43,14 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
     const clearedFilters: ListingFilters = {};
     setLocalFilters(clearedFilters);
     onFiltersChange(clearedFilters);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Clear any pending debounced calls and apply immediately
+      onFiltersChange(localFilters);
+    }
   };
 
   const hasActiveFilters = Object.values(filters).some(value => value !== undefined && value !== '');
@@ -71,6 +81,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
             type="text"
             value={localFilters.keyword || ''}
             onChange={(e) => handleFilterChange('keyword', e.target.value)}
+            onKeyPress={handleKeyPress}
             placeholder="Search listings..."
             className="w-full pl-10 pr-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
             style={{ colorScheme: 'dark' }}
@@ -108,6 +119,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
             type="number"
             value={localFilters.minPrice || ''}
             onChange={(e) => handleFilterChange('minPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
+            onKeyPress={handleKeyPress}
             placeholder="Min"
             className="px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
             style={{ colorScheme: 'dark' }}
@@ -116,6 +128,7 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
             type="number"
             value={localFilters.maxPrice || ''}
             onChange={(e) => handleFilterChange('maxPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
+            onKeyPress={handleKeyPress}
             placeholder="Max"
             className="px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
             style={{ colorScheme: 'dark' }}
