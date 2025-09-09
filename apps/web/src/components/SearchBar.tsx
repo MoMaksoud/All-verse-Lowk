@@ -18,6 +18,8 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -94,6 +96,42 @@ export function SearchBar({ className = '' }: SearchBarProps) {
     e.stopPropagation();
     saveRecentSearches([]);
   };
+
+  // Fetch autocomplete suggestions
+  const fetchSuggestions = async (searchQuery: string) => {
+    if (searchQuery.length < 1) {
+      setAutocompleteSuggestions([]);
+      return;
+    }
+
+    setIsLoadingSuggestions(true);
+    try {
+      const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(searchQuery)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setAutocompleteSuggestions(data.data.suggestions || []);
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setAutocompleteSuggestions([]);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
+
+  // Debounced search for suggestions
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (query.length >= 1) {
+        fetchSuggestions(query);
+      } else {
+        setAutocompleteSuggestions([]);
+      }
+    }, 200); // 200ms delay for faster response
+
+    return () => clearTimeout(timeoutId);
+  }, [query]);
 
   // Rotate placeholder examples
   useEffect(() => {
@@ -186,7 +224,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   };
 
   return (
-    <div ref={searchRef} className={`relative ${className}`}>
+    <div ref={searchRef} className={`relative z-50 ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           <Bot className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-accent-400" />
@@ -195,9 +233,9 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              setShowSuggestions(e.target.value.length > 0);
+              setShowSuggestions(true);
             }}
-            onFocus={() => setShowSuggestions(query.length > 0)}
+            onFocus={() => setShowSuggestions(true)}
             placeholder={placeholderExamples[currentPlaceholder]}
             className="w-full pl-12 pr-12 py-4 glass-clear-dark border border-white/20 rounded-2xl text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50 transition-all duration-200 placeholder-transition"
           />
@@ -257,37 +295,80 @@ export function SearchBar({ className = '' }: SearchBarProps) {
 
       {/* Search Suggestions */}
       {showSuggestions && (
-        <div className="absolute top-full left-0 right-0 mt-2 glass-clear-dark rounded-xl border border-white/20 shadow-xl z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-dark-800 rounded-xl border border-dark-600 shadow-2xl z-[9999] max-h-96 overflow-y-auto">
           <div className="p-4">
-            {/* Trending Searches */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4 text-accent-400" />
-                <span className="text-sm font-medium text-glass-muted">Trending</span>
-              </div>
-              <div className="space-y-2">
-                {suggestions.filter(s => s.type === 'trending').map((suggestion) => (
-                  <button
-                    key={suggestion.id}
-                    onClick={() => handleSuggestionClick(suggestion.text)}
-                    className="w-full text-left px-3 py-2 rounded-lg glass-button-dark hover:bg-black/20 transition-all duration-200 group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Search className="w-4 h-4 text-gray-400 group-hover:text-accent-400" />
-                      <span className="text-glass-muted group-hover:text-glass">{suggestion.text}</span>
+            {/* Autocomplete Suggestions */}
+            {query.length >= 1 && autocompleteSuggestions.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Bot className="w-4 h-4 text-accent-400" />
+                  <span className="text-sm font-medium text-gray-300">
+                    {isLoadingSuggestions ? 'Finding suggestions...' : `Suggestions (${autocompleteSuggestions.length})`}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  {isLoadingSuggestions ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-400"></div>
                     </div>
-                  </button>
-                ))}
+                  ) : (
+                    autocompleteSuggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="w-full text-left px-3 py-2 rounded-lg bg-dark-700/50 hover:bg-dark-600 transition-all duration-200 group border border-transparent hover:border-dark-500"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Search className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
+                          <span className="text-gray-300 group-hover:text-white transition-colors">{suggestion}</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* No suggestions message */}
+            {query.length >= 1 && autocompleteSuggestions.length === 0 && !isLoadingSuggestions && (
+              <div className="mb-4">
+                <div className="text-center py-4 text-gray-400 text-sm">
+                  No suggestions found for "{query}"
+                </div>
+              </div>
+            )}
+
+            {/* Trending Searches - show when no query or when query has no suggestions */}
+            {(!query || (query.length >= 1 && autocompleteSuggestions.length === 0 && !isLoadingSuggestions)) && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="w-4 h-4 text-accent-400" />
+                  <span className="text-sm font-medium text-gray-300">Trending</span>
+                </div>
+                <div className="space-y-1">
+                  {suggestions.filter(s => s.type === 'trending').map((suggestion) => (
+                    <button
+                      key={suggestion.id}
+                      onClick={() => handleSuggestionClick(suggestion.text)}
+                      className="w-full text-left px-3 py-2 rounded-lg bg-dark-700/50 hover:bg-dark-600 transition-all duration-200 group border border-transparent hover:border-dark-500"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Search className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
+                        <span className="text-gray-300 group-hover:text-white transition-colors">{suggestion.text}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Recent Searches */}
             {recentSearches.length > 0 && (
-              <div>
+              <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm font-medium text-glass-muted">Recent</span>
+                    <span className="text-sm font-medium text-gray-300">Recent</span>
                   </div>
                   <button
                     onClick={clearAllRecentSearches}
@@ -297,17 +378,17 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                     Clear all
                   </button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {recentSearches.map((search, index) => (
                     <button
                       key={index}
                       onClick={() => handleSuggestionClick(search)}
-                      className="w-full text-left px-3 py-2 rounded-lg glass-button-dark hover:bg-black/20 transition-all duration-200 group"
+                      className="w-full text-left px-3 py-2 rounded-lg bg-dark-700/50 hover:bg-dark-600 transition-all duration-200 group border border-transparent hover:border-dark-500"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Clock className="w-4 h-4 text-gray-400 group-hover:text-accent-400" />
-                          <span className="text-glass-muted group-hover:text-glass">{search}</span>
+                          <Clock className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
+                          <span className="text-gray-300 group-hover:text-white transition-colors">{search}</span>
                         </div>
                         <button
                           onClick={(e) => removeRecentSearch(search, e)}
@@ -323,8 +404,8 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             )}
 
             {/* Quick Categories */}
-            <div className="mt-4 pt-4 border-t border-white/20">
-              <div className="text-sm font-medium text-glass-muted mb-3">Quick Categories</div>
+            <div className="mt-4 pt-4 border-t border-dark-600">
+              <div className="text-sm font-medium text-gray-300 mb-3">Quick Categories</div>
               <div className="grid grid-cols-2 gap-2">
                 {['Electronics', 'Fashion', 'Home', 'Sports'].map((category) => (
                   <button
@@ -333,7 +414,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                       router.push(`/listings?category=${category.toLowerCase()}`);
                       setShowSuggestions(false);
                     }}
-                    className="px-3 py-2 text-sm glass-button-dark rounded-lg hover:bg-black/20 transition-all duration-200 text-glass-muted hover:text-glass"
+                    className="px-3 py-2 text-sm bg-dark-700/50 hover:bg-dark-600 rounded-lg transition-all duration-200 text-gray-300 hover:text-white border border-transparent hover:border-dark-500"
                   >
                     {category}
                   </button>
