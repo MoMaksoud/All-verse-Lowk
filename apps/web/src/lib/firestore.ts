@@ -60,25 +60,29 @@ export class ProfileService {
   // Create or update user profile
   static async saveProfile(userId: string, profileData: Partial<FirestoreProfile>): Promise<FirestoreProfile> {
     try {
-      const profileRef = doc(db, this.collectionName, userId);
-      const existingProfile = await this.getProfile(userId);
+      console.log('ProfileService.saveProfile called with userId:', userId);
+      console.log('ProfileService.saveProfile called with profileData:', JSON.stringify(profileData, null, 2));
       
+      const profileRef = doc(db, this.collectionName, userId);
+      console.log('Profile reference created:', profileRef);
+      
+      // Create a simple profile object with required fields
       const profileToSave: FirestoreProfile = {
         userId,
-        username: profileData.username !== undefined ? profileData.username : (existingProfile?.username || ''),
-        bio: profileData.bio !== undefined ? profileData.bio : existingProfile?.bio,
-        createdAt: profileData.createdAt !== undefined ? profileData.createdAt : (existingProfile?.createdAt || serverTimestamp()),
-        gender: profileData.gender !== undefined ? profileData.gender : existingProfile?.gender,
-        age: profileData.age !== undefined ? profileData.age : existingProfile?.age,
-        location: profileData.location !== undefined ? profileData.location : existingProfile?.location,
-        profilePicture: profileData.profilePicture !== undefined ? profileData.profilePicture : existingProfile?.profilePicture,
-        phoneNumber: profileData.phoneNumber !== undefined ? profileData.phoneNumber : existingProfile?.phoneNumber,
-        rating: profileData.rating !== undefined ? profileData.rating : (existingProfile?.rating || 0),
-        interestCategories: profileData.interestCategories !== undefined ? profileData.interestCategories : (existingProfile?.interestCategories || []),
-        userActivity: profileData.userActivity !== undefined ? profileData.userActivity : (existingProfile?.userActivity || 'both-buy-sell'),
-        budget: profileData.budget !== undefined ? profileData.budget : existingProfile?.budget,
-        shoppingFrequency: profileData.shoppingFrequency !== undefined ? profileData.shoppingFrequency : existingProfile?.shoppingFrequency,
-        itemConditionPreference: profileData.itemConditionPreference !== undefined ? profileData.itemConditionPreference : (existingProfile?.itemConditionPreference || 'both'),
+        username: profileData.username || '',
+        bio: profileData.bio,
+        createdAt: profileData.createdAt || new Date().toISOString(),
+        gender: profileData.gender,
+        age: profileData.age,
+        location: profileData.location,
+        profilePicture: profileData.profilePicture,
+        phoneNumber: profileData.phoneNumber,
+        rating: profileData.rating || 0,
+        interestCategories: profileData.interestCategories || [],
+        userActivity: profileData.userActivity || 'both-buy-sell',
+        budget: profileData.budget,
+        shoppingFrequency: profileData.shoppingFrequency,
+        itemConditionPreference: profileData.itemConditionPreference || 'both',
         updatedAt: serverTimestamp(),
       };
       
@@ -91,6 +95,11 @@ export class ProfileService {
       return profileToSave;
     } catch (error) {
       console.error('Error saving profile:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      });
       throw error;
     }
   }

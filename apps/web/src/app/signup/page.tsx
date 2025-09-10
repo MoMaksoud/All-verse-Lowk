@@ -24,7 +24,7 @@ export default function SignUp() {
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
-  const { signup, isConfigured } = useAuth();
+  const { signup, isConfigured, currentUser } = useAuth();
   const router = useRouter();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -57,6 +57,12 @@ export default function SignUp() {
 
   async function handleProfileSubmit(profileData: CreateProfileInput) {
     try {
+      // Check if user is authenticated
+      if (!currentUser?.uid) {
+        setError('You must be logged in to create a profile');
+        return;
+      }
+      
       setProfileLoading(true);
       
       // Create profile with the user's display name as username if not provided
@@ -75,7 +81,7 @@ export default function SignUp() {
         },
         body: JSON.stringify(profileToCreate),
       });
-
+      
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Profile creation failed:', errorData);
@@ -93,6 +99,7 @@ export default function SignUp() {
         router.push('/');
       }, 2000);
     } catch (error) {
+      console.error('Profile creation error:', error);
       setError('Failed to create profile. Please try again.');
     } finally {
       setProfileLoading(false);

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { success, error } from '@/lib/response';
 import { CreateProfileInput, ProfileSchema } from '@marketplace/types';
-import { ProfileService } from '@/lib/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { unauthorized, badRequest, notFound, internal } from '@/lib/errors';
 
 export const runtime = 'nodejs';
@@ -15,7 +16,7 @@ export const POST = withApi(async (req: NextRequest) => {
     // Get user ID from request body or headers
     const userId = body.userId || req.headers.get('x-user-id');
     if (!userId) {
-      throw unauthorized('User ID required');
+      return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'User ID required' } }, { status: 401 });
     }
     
     // Validate the profile data
@@ -34,22 +35,24 @@ export const POST = withApi(async (req: NextRequest) => {
       rating: 0,
     };
 
-    console.log('Profile data to save:', JSON.stringify(profileData, null, 2));
-
-    // Save to Firestore
-    const profile = await ProfileService.saveProfile(userId, profileData);
+    // Save to Firestore directly
+    const profileRef = doc(db, 'profiles', userId);
+    const profileToSave = {
+      ...profileData,
+      updatedAt: serverTimestamp(),
+    };
     
-    console.log('Profile saved successfully:', JSON.stringify(profile, null, 2));
+    await setDoc(profileRef, profileToSave, { merge: true });
 
-    return NextResponse.json(success(profile), { status: 201 });
+    return NextResponse.json({ success: true, data: profileData }, { status: 201 });
   } catch (err: any) {
     console.error('Profile creation error:', err);
     
     if (err.name === 'ZodError') {
-      throw badRequest('Invalid profile data');
+      return NextResponse.json({ error: { code: 'BAD_REQUEST', message: 'Invalid profile data' } }, { status: 400 });
     }
 
-    throw internal('Failed to create profile');
+    return NextResponse.json({ error: { code: 'INTERNAL', message: 'Failed to create profile' } }, { status: 500 });
   }
 });
 
@@ -57,57 +60,87 @@ export const GET = withApi(async (req: NextRequest) => {
   try {
     // Get user ID from headers
     const userId = req.headers.get('x-user-id');
+    
     if (!userId) {
-      throw unauthorized('User ID required');
+      return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'User ID required' } }, { status: 401 });
     }
 
-    // Get user profile
-    const profile = await ProfileService.getProfile(userId);
+    // Get user profile directly from Firestore
+    const profileRef = doc(db, 'profiles', userId);
+    const profileSnap = await getDoc(profileRef);
 
-    if (!profile) {
-      throw notFound('Profile not found');
+    if (!profileSnap.exists()) {
+      return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Profile not found' } }, { status: 404 });
     }
 
-    return NextResponse.json(success(profile));
+    const profile = profileSnap.data();
+    
+    // Convert Firestore Timestamps to ISO strings for JSON serialization
+    const serializedProfile = {
+      ...profile,
+      updatedAt: profile.updatedAt?.toDate?.()?.toISOString() || profile.updatedAt,
+      createdAt: profile.createdAt?.toDate?.()?.toISOString() || profile.createdAt,
+    };
+    
+    return NextResponse.json({ success: true, data: serializedProfile });
   } catch (err: any) {
     console.error('Profile fetch error:', err);
-    throw internal('Failed to fetch profile');
+    return NextResponse.json({ error: { code: 'INTERNAL', message: 'Failed to fetch profile' } }, { status: 500 });
   }
 });
 
 export const PUT = withApi(async (req: NextRequest) => {
   try {
+    const body = await req.json();
+    console.log('PUT request body:', body);
+    
     // Get user ID from headers
     const userId = req.headers.get('x-user-id');
+    console.log('User ID:', userId);
+    
     if (!userId) {
-      throw unauthorized('User ID required');
+      return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'User ID required' } }, { status: 401 });
     }
 
-    const body = await req.json();
-    
     // Validate the update data
-    const validatedData = ProfileSchema.partial().omit({
-      userId: true,
-      createdAt: true,
-    }).parse(body);
+    let validatedData;
+    try {
+      validatedData = ProfileSchema.partial().omit({
+        userId: true,
+        createdAt: true,
+        rating: true,
+      }).parse(body);
+      console.log('Validation successful:', validatedData);
+    } catch (validationError: any) {
+      console.error('Validation error:', validationError);
+      return NextResponse.json({ error: { code: 'BAD_REQUEST', message: 'Invalid profile data: ' + validationError.message } }, { status: 400 });
+    }
 
     // Add updatedAt timestamp
     const updateData = {
       ...validatedData,
+      updatedAt: serverTimestamp(),
+    };
+
+    // Update profile in Firestore directly
+    const profileRef = doc(db, 'profiles', userId);
+    await setDoc(profileRef, updateData, { merge: true });
+
+    // Return the updated profile data
+    const updatedProfile = {
+      ...validatedData,
+      userId: userId,
       updatedAt: new Date().toISOString(),
     };
 
-    // Update profile in Firestore
-    const profile = await ProfileService.updateProfile(userId, updateData);
-
-    return NextResponse.json(success(profile));
+    return NextResponse.json({ success: true, data: updatedProfile });
   } catch (err: any) {
     console.error('Profile update error:', err);
     
     if (err.name === 'ZodError') {
-      throw badRequest('Invalid profile data');
+      return NextResponse.json({ error: { code: 'BAD_REQUEST', message: 'Invalid profile data' } }, { status: 400 });
     }
 
-    throw internal('Failed to update profile');
+    return NextResponse.json({ error: { code: 'INTERNAL', message: 'Failed to update profile' } }, { status: 500 });
   }
 });
