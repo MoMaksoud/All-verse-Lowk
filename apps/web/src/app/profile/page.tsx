@@ -144,7 +144,7 @@ export default function ProfilePage() {
                       <div className="relative flex-shrink-0">
                         <DefaultAvatar
                           name={profile.username}
-                          email={currentUser?.email}
+                          email={currentUser?.email || undefined}
                           size="xl"
                         />
                         <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-accent-500 hover:bg-accent-600 rounded-full flex items-center justify-center transition-colors">

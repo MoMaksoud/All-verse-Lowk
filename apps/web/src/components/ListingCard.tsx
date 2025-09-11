@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, MessageCircle, Star, Clock, X, MapPin, ShoppingCart } from 'lucide-react';
@@ -13,7 +13,7 @@ interface ListingCardProps {
   listing: SimpleListing;
 }
 
-export function ListingCard({ listing }: ListingCardProps) {
+export const ListingCard = memo(function ListingCard({ listing }: ListingCardProps) {
   const { currentUser } = useAuth();
   const [isFavorited, setIsFavorited] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -330,4 +330,4 @@ export function ListingCard({ listing }: ListingCardProps) {
       )}
     </>
   );
-}
+});

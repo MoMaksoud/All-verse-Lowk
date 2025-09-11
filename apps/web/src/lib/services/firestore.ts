@@ -71,7 +71,7 @@ abstract class BaseFirestoreService<T> {
 
   protected async getDocs(query?: any): Promise<QueryDocumentSnapshot[]> {
     const snapshot = await getDocs(query || this.getCollection());
-    return snapshot.docs;
+    return snapshot.docs as QueryDocumentSnapshot[];
   }
 
   protected async setDoc(id: string, data: any): Promise<void> {
@@ -259,7 +259,7 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
 
     // Apply pagination
     if (paginationOptions) {
-      q = this.createPaginationQuery(q, paginationOptions);
+      q = this.createPaginationQuery(q, paginationOptions) as any;
     }
 
     const docs = await this.getDocs(q);
@@ -466,10 +466,10 @@ export class MessagesService extends BaseFirestoreService<FirestoreMessage> {
 
   async getMessage(conversationId: string, messageId: string): Promise<FirestoreMessage | null> {
     const docRef = doc(db, this.collectionName, conversationId, 'threads', messageId);
-    const doc = await getDoc(docRef);
-    if (!doc.exists()) return null;
+    const docSnapshot = await getDoc(docRef);
+    if (!docSnapshot.exists()) return null;
     
-    return { id: doc.id, ...doc.data() } as FirestoreMessage & { id: string };
+    return { id: docSnapshot.id, ...docSnapshot.data() } as FirestoreMessage & { id: string };
   }
 
   async createMessage(conversationId: string, messageData: CreateMessageInput): Promise<string> {
@@ -489,7 +489,7 @@ export class MessagesService extends BaseFirestoreService<FirestoreMessage> {
 
   async updateMessage(conversationId: string, messageId: string, updates: UpdateMessageInput): Promise<void> {
     const docRef = doc(db, this.collectionName, conversationId, 'threads', messageId);
-    await updateDoc(docRef, updates);
+    await updateDoc(docRef, updates as any);
   }
 
   async getMessages(conversationId: string, limitCount: number = 50): Promise<FirestoreMessage[]> {
@@ -504,7 +504,7 @@ export class MessagesService extends BaseFirestoreService<FirestoreMessage> {
 
   async markAsRead(conversationId: string, messageId: string): Promise<void> {
     await this.updateMessage(conversationId, messageId, {
-      readAt: serverTimestamp(),
+      readAt: serverTimestamp() as any,
     });
   }
 }

@@ -48,7 +48,11 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         phoneNumber: profile.phoneNumber || '',
         interestCategories: profile.interestCategories || [],
         userActivity: profile.userActivity || '',
-        budget: profile.budget || { min: 0, max: 1000, currency: 'USD' },
+        budget: profile.budget ? {
+          min: profile.budget.min || 0,
+          max: profile.budget.max || 1000,
+          currency: profile.budget.currency || 'USD'
+        } : { min: 0, max: 1000, currency: 'USD' },
         shoppingFrequency: profile.shoppingFrequency || '',
         itemConditionPreference: profile.itemConditionPreference || '',
       });

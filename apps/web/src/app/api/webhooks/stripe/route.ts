@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
     }
 
     const event = verification.event;
+    if (!event) {
+      console.error('Event is undefined');
+      return NextResponse.json({ error: 'Invalid event' }, { status: 400 });
+    }
 
     // Handle different event types
     switch (event.type) {
@@ -62,14 +66,14 @@ async function handlePaymentSucceeded(paymentIntent: any) {
     
     if (payment) {
       // Update payment status
-      await firestoreServices.payments.updatePayment(payment.id, {
+      await firestoreServices.payments.updatePayment((payment as any).id, {
         status: 'succeeded',
       });
 
       // Update order status
       const order = await firestoreServices.orders.getOrder(payment.orderId);
       if (order) {
-        await firestoreServices.orders.updateOrder(order.id, {
+        await firestoreServices.orders.updateOrder((order as any).id, {
           status: 'paid',
         });
       }
@@ -89,14 +93,14 @@ async function handlePaymentFailed(paymentIntent: any) {
     
     if (payment) {
       // Update payment status
-      await firestoreServices.payments.updatePayment(payment.id, {
+      await firestoreServices.payments.updatePayment((payment as any).id, {
         status: 'failed',
       });
 
       // Update order status
       const order = await firestoreServices.orders.getOrder(payment.orderId);
       if (order) {
-        await firestoreServices.orders.updateOrder(order.id, {
+        await firestoreServices.orders.updateOrder((order as any).id, {
           status: 'cancelled',
         });
       }
@@ -116,14 +120,14 @@ async function handlePaymentCanceled(paymentIntent: any) {
     
     if (payment) {
       // Update payment status
-      await firestoreServices.payments.updatePayment(payment.id, {
+      await firestoreServices.payments.updatePayment((payment as any).id, {
         status: 'failed',
       });
 
       // Update order status
       const order = await firestoreServices.orders.getOrder(payment.orderId);
       if (order) {
-        await firestoreServices.orders.updateOrder(order.id, {
+        await firestoreServices.orders.updateOrder((order as any).id, {
           status: 'cancelled',
         });
       }

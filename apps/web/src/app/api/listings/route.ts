@@ -5,6 +5,7 @@ import { calculateDistance } from "@/lib/location";
 
 export const runtime = "nodejs";
 export const dynamic = "auto";
+export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(req: NextRequest) {
   try {
@@ -72,17 +73,25 @@ export async function GET(req: NextRequest) {
         break;
       case 'rating':
         // For now, sort by newest since we don't have ratings in SimpleListing
-        sortedData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        sortedData.sort((a, b) => {
+          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
+          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
+          return bTime - aTime;
+        });
         break;
       case 'recent':
       default:
-        sortedData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        sortedData.sort((a, b) => {
+          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
+          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
+          return bTime - aTime;
+        });
         break;
     }
     
     // Transform FirestoreListing to SimpleListing format
     const transformedItems = result.items.map(listing => ({
-      id: listing.id,
+      id: (listing as any).id, // FirestoreListing & { id: string }
       title: listing.title,
       description: listing.description,
       price: listing.price,
@@ -94,7 +103,7 @@ export async function GET(req: NextRequest) {
       location: undefined, // Add location if available
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       data: transformedItems,
       pagination: {
         page: result.page,
@@ -103,6 +112,10 @@ export async function GET(req: NextRequest) {
         hasMore: result.hasMore,
       },
     });
+    
+    // Add caching headers
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    return response;
   } catch (error) {
     console.error('Error fetching listings:', error);
     return NextResponse.json({ error: 'Failed to fetch listings' }, { status: 500 });

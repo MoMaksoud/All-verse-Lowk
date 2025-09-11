@@ -28,7 +28,7 @@ export const GET = withApi(async (req: NextRequest) => {
 
     // Transform Firestore orders to include proper date formatting
     const transformedOrders = orders.map(order => ({
-      id: order.id,
+      id: (order as any).id, // FirestoreOrder & { id: string }
       buyerId: order.buyerId,
       items: order.items,
       subtotal: order.subtotal,

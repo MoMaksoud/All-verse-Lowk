@@ -14,7 +14,7 @@ export const GET = withApi(async (req: NextRequest) => {
     const role = url.searchParams.get("role") as 'buyer' | 'seller' | 'admin' | null;
     const q = url.searchParams.get("q") ?? undefined;
 
-    let users;
+    let users: any[];
     if (role) {
       users = await firestoreServices.users.getUsersByRole(role);
     } else {

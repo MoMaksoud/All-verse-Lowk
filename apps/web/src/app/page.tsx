@@ -26,8 +26,12 @@ export default function HomePage() {
 
   const fetchData = useCallback(async () => {
     try {
-      // Use a smaller limit for faster loading
-      const response = await fetch('/api/listings?limit=6');
+      // Use a smaller limit for faster loading and add caching
+      const response = await fetch('/api/listings?limit=4', {
+        headers: {
+          'Cache-Control': 'max-age=300', // 5 minutes cache
+        },
+      });
       const data = await response.json();
 
       if (response.ok) {

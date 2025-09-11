@@ -3,7 +3,7 @@ import { loadStripe } from '@stripe/stripe-js';
 
 // Server-side Stripe instance
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-08-27.basil',
 });
 
 // Client-side Stripe instance
@@ -14,7 +14,7 @@ export const getStripe = () => {
 // Stripe configuration
 export const STRIPE_CONFIG = {
   currency: 'usd',
-  payment_method_types: ['card'],
+  payment_method_types: ['card'] as const,
   mode: 'payment' as const,
 };
 
@@ -53,7 +53,7 @@ export async function createCheckoutSession(
 ) {
   try {
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: STRIPE_CONFIG.payment_method_types,
+      payment_method_types: [...STRIPE_CONFIG.payment_method_types],
       line_items: lineItems,
       mode: STRIPE_CONFIG.mode,
       success_url: successUrl,

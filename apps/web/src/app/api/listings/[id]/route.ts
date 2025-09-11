@@ -20,7 +20,7 @@ export const GET = withApi(async (
 
     // Transform FirestoreListing to SimpleListing format
     const simpleListing = {
-      id: listing.id,
+      id: (listing as any).id, // FirestoreListing & { id: string }
       title: listing.title,
       description: listing.description,
       price: listing.price,

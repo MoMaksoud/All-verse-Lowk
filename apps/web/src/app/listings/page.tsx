@@ -39,7 +39,7 @@ function ListingsContent() {
         params.set('userLng', appliedFilters.userCoordinates.lng.toString());
       }
       params.set('page', currentPage.toString());
-      params.set('limit', '12');
+      params.set('limit', '9'); // Reduced from 12 to 9 for faster loading
     
       // Add sort parameter
       switch (sortBy) {

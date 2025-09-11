@@ -29,6 +29,10 @@ export async function POST(req: NextRequest) {
     }
 
     const paymentIntent = paymentResult.paymentIntent;
+    if (!paymentIntent) {
+      console.error('Payment intent is undefined');
+      return NextResponse.json({ error: 'Payment intent not found' }, { status: 404 });
+    }
     console.log('Payment intent status:', paymentIntent.status);
 
     // Find the order associated with this payment intent
@@ -41,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    console.log('Found order:', order.id);
+    console.log('Found order:', (order as any).id);
 
     // Update payment status
     const paymentStatus = paymentIntent.status === 'succeeded' ? 'succeeded' : 'failed';
@@ -58,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (paymentIntent.status === 'succeeded') {
       // Update order status to paid
       try {
-        await firestoreServices.orders.updateOrder(order.id, {
+        await firestoreServices.orders.updateOrder((order as any).id, {
           status: 'paid',
         });
         console.log('Order status updated to paid');
@@ -90,7 +94,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         status: 'succeeded',
-        orderId: order.id,
+        orderId: (order as any).id,
         message: 'Payment successful! Your order has been confirmed.',
       });
     } else if (paymentIntent.status === 'requires_payment_method') {
@@ -99,7 +103,7 @@ export async function POST(req: NextRequest) {
       console.log('Simulating successful payment for testing');
       
       // Update order status to paid
-      await firestoreServices.orders.updateOrder(order.id, {
+      await firestoreServices.orders.updateOrder((order as any).id, {
         status: 'paid',
       });
 
@@ -114,7 +118,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         status: 'succeeded',
-        orderId: order.id,
+        orderId: (order as any).id,
         message: 'Payment successful! Your order has been confirmed.',
       });
     } else if (paymentIntent.status === 'requires_confirmation') {
@@ -122,19 +126,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         status: paymentIntent.status,
-        orderId: order.id,
+        orderId: (order as any).id,
         message: 'Payment is still processing. Please wait a moment and try again.',
       });
     } else {
       // Update order status to cancelled
-      await firestoreServices.orders.updateOrder(order.id, {
+      await firestoreServices.orders.updateOrder((order as any).id, {
         status: 'cancelled',
       });
 
       return NextResponse.json({
         success: false,
         status: paymentIntent.status,
-        orderId: order.id,
+        orderId: (order as any).id,
         message: 'Payment failed. Please try again.',
       });
     }

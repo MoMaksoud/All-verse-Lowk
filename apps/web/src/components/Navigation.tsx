@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle, ShoppingCart } from 'lucide-react';
@@ -50,14 +50,15 @@ export function Navigation() {
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
-  // Fetch cart item count
-  const fetchCartCount = async () => {
+  // Fetch cart item count with caching
+  const fetchCartCount = useCallback(async () => {
     if (!currentUser?.uid) return;
     
     try {
       const response = await fetch('/api/carts', {
         headers: {
           'x-user-id': currentUser.uid,
+          'Cache-Control': 'max-age=60', // Cache for 1 minute
         },
       });
       
@@ -69,11 +70,15 @@ export function Navigation() {
     } catch (error) {
       console.error('Error fetching cart count:', error);
     }
-  };
+  }, [currentUser?.uid]);
 
   useEffect(() => {
     fetchCartCount();
-  }, [currentUser]);
+    
+    // Only refetch cart count every 30 seconds to reduce API calls
+    const interval = setInterval(fetchCartCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchCartCount]);
 
   const handleLogout = async () => {
     try {
