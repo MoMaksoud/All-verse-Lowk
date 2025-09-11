@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
@@ -239,13 +240,13 @@ export default function ProfilePage() {
               <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700">
                 <h3 className="text-lg font-semibold text-white mb-4">Settings</h3>
                 <div className="space-y-3">
-                  <button
-                    onClick={() => setShowEditModal(true)}
+                  <Link
+                    href="/settings"
                     className="w-full flex items-center px-4 py-3 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors"
                   >
                     <Settings className="w-5 h-5 mr-3 text-accent-500" />
                     Account Settings
-                  </button>
+                  </Link>
                   <button className="w-full flex items-center px-4 py-3 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors">
                     <Shield className="w-5 h-5 mr-3 text-accent-500" />
                     Privacy

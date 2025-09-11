@@ -1,204 +1,612 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
-import { CreateProfileInput, Profile } from '@marketplace/types';
-import { ArrowLeft, Save, User, MapPin, Heart, DollarSign, ShoppingBag } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  User, 
+  Shield, 
+  Bell, 
+  Eye, 
+  Palette, 
+  CreditCard, 
+  Link as LinkIcon,
+  Settings,
+  Lock,
+  Smartphone,
+  Mail,
+  Globe,
+  Trash2,
+  ChevronRight
+} from 'lucide-react';
+
+type SettingsSection = 'account' | 'security' | 'notifications' | 'privacy' | 'preferences' | 'billing' | 'integrations';
 
 export default function SettingsPage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const { currentUser } = useAuth();
+  const [activeSection, setActiveSection] = useState<SettingsSection>('account');
+  const { currentUser, logout } = useAuth();
   const router = useRouter();
 
-  const [formData, setFormData] = useState<CreateProfileInput>({
-    username: '',
-    bio: '',
-    gender: undefined,
-    age: undefined,
-    location: '',
-    phoneNumber: '',
-    interestCategories: [],
-    userActivity: 'both-buy-sell',
-    budget: {
-      min: undefined,
-      max: undefined,
-      currency: 'USD'
+  const settingsSections = [
+    {
+      id: 'account' as SettingsSection,
+      name: 'Account Management',
+      icon: User,
+      description: 'Manage your personal information and profile'
     },
-    shoppingFrequency: undefined,
-    itemConditionPreference: 'both',
-  });
-
-  const [showAgeValidation, setShowAgeValidation] = useState(false);
-
-  useEffect(() => {
-    if (currentUser?.uid) {
-      fetchProfile();
+    {
+      id: 'security' as SettingsSection,
+      name: 'Security & Login',
+      icon: Shield,
+      description: 'Password, 2FA, and device management'
+    },
+    {
+      id: 'notifications' as SettingsSection,
+      name: 'Notifications',
+      icon: Bell,
+      description: 'Email and app notification preferences'
+    },
+    {
+      id: 'privacy' as SettingsSection,
+      name: 'Privacy & Data',
+      icon: Eye,
+      description: 'Data sharing and privacy controls'
+    },
+    {
+      id: 'preferences' as SettingsSection,
+      name: 'App Preferences',
+      icon: Palette,
+      description: 'Theme, language, and display settings'
+    },
+    {
+      id: 'billing' as SettingsSection,
+      name: 'Billing & Payments',
+      icon: CreditCard,
+      description: 'Subscription and payment methods'
+    },
+    {
+      id: 'integrations' as SettingsSection,
+      name: 'Integrations',
+      icon: LinkIcon,
+      description: 'Connected services and third-party apps'
     }
-  }, [currentUser]);
-
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/profile', {
-        headers: {
-          'x-user-id': currentUser?.uid || '',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        setProfile(result.data);
-        // Populate form with existing data
-        setFormData({
-          username: result.data.username || '',
-          bio: result.data.bio || '',
-          gender: result.data.gender,
-          age: result.data.age,
-          location: result.data.location || '',
-          phoneNumber: result.data.phoneNumber || '',
-          interestCategories: result.data.interestCategories || [],
-          userActivity: result.data.userActivity || 'both-buy-sell',
-          budget: result.data.budget || { min: undefined, max: undefined, currency: 'USD' },
-          shoppingFrequency: result.data.shoppingFrequency,
-          itemConditionPreference: result.data.itemConditionPreference || 'both',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setError('Failed to load profile data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInputChange = (field: keyof CreateProfileInput, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleBudgetChange = (field: 'min' | 'max', value: number | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      budget: {
-        ...prev.budget,
-        [field]: value,
-        currency: 'USD'
-      }
-    }));
-  };
-
-  const handleCategoryToggle = (categoryId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      interestCategories: prev.interestCategories.includes(categoryId)
-        ? prev.interestCategories.filter(id => id !== categoryId)
-        : [...prev.interestCategories, categoryId]
-    }));
-  };
-
-  const isAgeInvalid = () => {
-    return formData.age !== undefined && formData.age !== null && (formData.age < 13 || formData.age > 120);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!currentUser?.uid) {
-      setError('You must be logged in to update your profile');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError('');
-
-      // Send all profile fields
-      const profileData = {
-        username: formData.username,
-        bio: formData.bio,
-        age: formData.age,
-        gender: formData.gender,
-        location: formData.location,
-        phoneNumber: formData.phoneNumber,
-        interestCategories: formData.interestCategories,
-        userActivity: formData.userActivity,
-        budget: formData.budget,
-        shoppingFrequency: formData.shoppingFrequency,
-        itemConditionPreference: formData.itemConditionPreference,
-      };
-
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify(profileData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update profile');
-      }
-
-      const result = await response.json();
-      console.log('Profile updated successfully:', result);
-      
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
-    } catch (error) {
-      console.error('Profile update error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update profile');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const INTEREST_CATEGORIES = [
-    { id: 'electronics', name: 'Electronics', icon: '📱' },
-    { id: 'fashion', name: 'Fashion', icon: '👕' },
-    { id: 'home', name: 'Home & Garden', icon: '🏠' },
-    { id: 'books', name: 'Books', icon: '📚' },
-    { id: 'sports', name: 'Sports', icon: '⚽' },
-    { id: 'automotive', name: 'Automotive', icon: '🚗' },
-    { id: 'furniture', name: 'Furniture', icon: '🪑' },
-    { id: 'beauty', name: 'Beauty & Health', icon: '💄' },
-    { id: 'toys', name: 'Toys & Games', icon: '🎮' },
-    { id: 'music', name: 'Music & Instruments', icon: '🎵' },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-white text-xl">Loading profile...</div>
+  const renderAccountManagement = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2">Personal Details</h2>
+        <p className="text-gray-400 mb-4">Manage your personal information and profile details</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <User className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Display Name</h3>
+                <p className="text-gray-400 text-sm">Your public display name</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-white mr-2">{currentUser?.displayName || 'Not set'}</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Mail className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Email Address</h3>
+                <p className="text-gray-400 text-sm">Your account email address</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-white mr-2">{currentUser?.email || 'Not set'}</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Smartphone className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Phone Number</h3>
+                <p className="text-gray-400 text-sm">Add a phone number for account recovery</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-gray-400 mr-2">Not set</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <User className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Profile Picture</h3>
+                <p className="text-gray-400 text-sm">Update your profile photo</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-accent-500 rounded-full mr-2"></div>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+
+  const renderSecurityLogin = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2">Security & Login</h2>
+        <p className="text-gray-400 mb-4">Manage your account security and login settings</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Lock className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Password</h3>
+                <p className="text-gray-400 text-sm">Change your account password</p>
+              </div>
+            </div>
+            <button className="text-accent-500 hover:text-accent-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Shield className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Two-Factor Authentication</h3>
+                <p className="text-gray-400 text-sm">Add an extra layer of security</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-red-400 text-sm mr-2">Disabled</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Smartphone className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Connected Devices</h3>
+                <p className="text-gray-400 text-sm">Manage devices logged into your account</p>
+              </div>
+            </div>
+            <button className="text-accent-500 hover:text-accent-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Trash2 className="w-5 h-5 text-red-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Delete Account</h3>
+                <p className="text-gray-400 text-sm">Permanently delete your account and data</p>
+              </div>
+            </div>
+            <button className="text-red-500 hover:text-red-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderNotifications = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2">Communication & Notifications</h2>
+        <p className="text-gray-400 mb-4">Control how and when you receive notifications</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Bell className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Push Notifications</h3>
+                <p className="text-gray-400 text-sm">Receive notifications in your browser</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="relative">
+                <input type="checkbox" className="sr-only" defaultChecked />
+                <div className="w-10 h-6 bg-accent-500 rounded-full shadow-inner"></div>
+                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 right-1 transition-transform"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Mail className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Email Notifications</h3>
+                <p className="text-gray-400 text-sm">Receive notifications via email</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="relative">
+                <input type="checkbox" className="sr-only" defaultChecked />
+                <div className="w-10 h-6 bg-accent-500 rounded-full shadow-inner"></div>
+                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 right-1 transition-transform"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Bell className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Message Notifications</h3>
+                <p className="text-gray-400 text-sm">Get notified about new messages</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="relative">
+                <input type="checkbox" className="sr-only" defaultChecked />
+                <div className="w-10 h-6 bg-accent-500 rounded-full shadow-inner"></div>
+                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 right-1 transition-transform"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Bell className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Listing Updates</h3>
+                <p className="text-gray-400 text-sm">Notifications about your listings</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="relative">
+                <input type="checkbox" className="sr-only" />
+                <div className="w-10 h-6 bg-gray-600 rounded-full shadow-inner"></div>
+                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 left-1 transition-transform"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPrivacyData = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2">Privacy & Data Controls</h2>
+        <p className="text-gray-400 mb-4">Manage how your data is used and shared</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Eye className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Profile Visibility</h3>
+                <p className="text-gray-400 text-sm">Control who can see your profile</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-green-400 text-sm mr-2">Public</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Eye className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Data Sharing</h3>
+                <p className="text-gray-400 text-sm">Control how your data is shared with partners</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="relative">
+                <input type="checkbox" className="sr-only" />
+                <div className="w-10 h-6 bg-gray-600 rounded-full shadow-inner"></div>
+                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 left-1 transition-transform"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Eye className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Cookie Preferences</h3>
+                <p className="text-gray-400 text-sm">Manage cookies and tracking</p>
+              </div>
+            </div>
+            <button className="text-accent-500 hover:text-accent-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Eye className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Download Your Data</h3>
+                <p className="text-gray-400 text-sm">Request a copy of your data</p>
+              </div>
+            </div>
+            <button className="text-accent-500 hover:text-accent-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPreferences = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2">App/Website Preferences</h2>
+        <p className="text-gray-400 mb-4">Customize your experience</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Palette className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Theme</h3>
+                <p className="text-gray-400 text-sm">Choose your preferred theme</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-white mr-2">Dark</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Globe className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Language</h3>
+                <p className="text-gray-400 text-sm">Select your preferred language</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-white mr-2">English</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Globe className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Time Zone</h3>
+                <p className="text-gray-400 text-sm">Set your local time zone</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-white mr-2">UTC-5 (EST)</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderBilling = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2">Billing & Payments</h2>
+        <p className="text-gray-400 mb-4">Manage your subscription and payment methods</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <CreditCard className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Subscription Plan</h3>
+                <p className="text-gray-400 text-sm">Your current subscription details</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-green-400 text-sm mr-2">Free Plan</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <CreditCard className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Payment Methods</h3>
+                <p className="text-gray-400 text-sm">Manage your payment methods</p>
+              </div>
+            </div>
+            <button className="text-accent-500 hover:text-accent-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <CreditCard className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Billing History</h3>
+                <p className="text-gray-400 text-sm">View your past invoices and payments</p>
+              </div>
+            </div>
+            <button className="text-accent-500 hover:text-accent-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderIntegrations = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-2">Integrations & Connections</h2>
+        <p className="text-gray-400 mb-4">Manage your connected services and third-party apps</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <LinkIcon className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Google Account</h3>
+                <p className="text-gray-400 text-sm">Connect your Google account</p>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-red-400 text-sm mr-2">Not Connected</span>
+              <button className="text-accent-500 hover:text-accent-400">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <LinkIcon className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">Social Media</h3>
+                <p className="text-gray-400 text-sm">Connect your social media accounts</p>
+              </div>
+            </div>
+            <button className="text-accent-500 hover:text-accent-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-dark-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <LinkIcon className="w-5 h-5 text-accent-500 mr-3" />
+              <div>
+                <h3 className="text-white font-medium">API Access</h3>
+                <p className="text-gray-400 text-sm">Manage your API keys and access</p>
+              </div>
+            </div>
+            <button className="text-accent-500 hover:text-accent-400">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'account':
+        return renderAccountManagement();
+      case 'security':
+        return renderSecurityLogin();
+      case 'notifications':
+        return renderNotifications();
+      case 'privacy':
+        return renderPrivacyData();
+      case 'preferences':
+        return renderPreferences();
+      case 'billing':
+        return renderBilling();
+      case 'integrations':
+        return renderIntegrations();
+      default:
+        return renderAccountManagement();
+    }
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
       <DynamicBackground intensity="low" showParticles={true} />
       
       <div className="relative z-10 min-h-screen px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <button
@@ -210,278 +618,49 @@ export default function SettingsPage() {
             </button>
             <Logo size="md" />
             <div className="w-20"></div> {/* Spacer for centering */}
-      </div>
+          </div>
 
           {/* Main Content */}
-          <div className="bg-dark-800 rounded-2xl p-8 border border-dark-700">
-            <div className="flex items-center mb-8">
-              <User className="w-8 h-8 text-accent-500 mr-3" />
-              <h1 className="text-3xl font-bold text-white">Profile Settings</h1>
-      </div>
-
-            {error && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg">
-                {error}
-      </div>
-            )}
-
-            {success && (
-              <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg">
-                Profile updated successfully!
-        </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Basic Information */}
-    <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-white flex items-center">
-                  <User className="w-5 h-5 mr-2 text-accent-500" />
-                  Basic Information
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Username *
-          </label>
-            <input
-                      type="text"
-                      value={formData.username}
-                      onChange={(e) => handleInputChange('username', e.target.value)}
-                      placeholder="Choose a unique username"
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                      maxLength={30}
-                      required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formData.username.length}/30 characters
-                    </p>
-      </div>
-
-      <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Age
-          </label>
-            <input
-                      type="number"
-                      value={formData.age || ''}
-                      onChange={(e) => handleInputChange('age', e.target.value ? parseInt(e.target.value) : undefined)}
-                      onBlur={() => setShowAgeValidation(true)}
-                      onClick={() => setShowAgeValidation(true)}
-                      placeholder="Age"
-                      min="13"
-                      max="120"
-                      className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 ${
-                        showAgeValidation && isAgeInvalid()
-                          ? 'border-red-500 focus:ring-red-500'
-                          : 'border-dark-600 focus:ring-accent-500'
-                      }`}
-                    />
-                    {showAgeValidation && isAgeInvalid() && (
-                      <p className="text-xs text-red-400 mt-1">
-                        Age must be 18+
-                      </p>
-                    )}
-        </div>
-      </div>
-
-      <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Bio
-          </label>
-                  <textarea
-                    value={formData.bio}
-                    onChange={(e) => handleInputChange('bio', e.target.value)}
-                    placeholder="Tell us about yourself..."
-                    className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    rows={3}
-                    maxLength={280}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {(formData.bio || '').length}/280 characters
-                  </p>
-      </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Gender
-          </label>
-                    <select
-                      value={formData.gender || ''}
-                      onChange={(e) => handleInputChange('gender', e.target.value || undefined)}
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    >
-                      <option value="">Prefer not to say</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="non-binary">Non-binary</option>
-                      <option value="prefer-not-to-say">Prefer not to say</option>
-                    </select>
-      </div>
-
-      <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Location
-          </label>
-            <input
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                      placeholder="City, State"
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    />
-        </div>
-      </div>
-
-      <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Phone Number
-                  </label>
-            <input
-                    type="tel"
-                    value={formData.phoneNumber}
-                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                    placeholder="Phone number"
-                    className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-            />
-          </div>
-        </div>
-
-              {/* Interest Categories */}
-    <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-white flex items-center">
-                  <Heart className="w-5 h-5 mr-2 text-accent-500" />
-                  Interest Categories
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {INTEREST_CATEGORIES.map((category) => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => handleCategoryToggle(category.id)}
-                      className={`p-4 rounded-lg border-2 transition-colors ${
-                        formData.interestCategories.includes(category.id)
-                          ? 'border-accent-500 bg-accent-500/10 text-accent-400'
-                          : 'border-dark-600 bg-dark-700 text-gray-300 hover:border-dark-500'
-                      }`}
-                    >
-                      <div className="text-2xl mb-2">{category.icon}</div>
-                      <div className="text-sm font-medium">{category.name}</div>
-                    </button>
-                  ))}
-            </div>
-          </div>
-
-              {/* Shopping Preferences */}
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-white flex items-center">
-                  <ShoppingBag className="w-5 h-5 mr-2 text-accent-500" />
-                  Shopping Preferences
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      User Activity
-                    </label>
-                    <select
-                      value={formData.userActivity}
-                      onChange={(e) => handleInputChange('userActivity', e.target.value)}
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    >
-                      <option value="browse-only">Browse and buy items only</option>
-                      <option value="buy-only">Buy items only</option>
-                      <option value="sell-only">Sell items only</option>
-                      <option value="both-buy-sell">Both buy and sell items</option>
-                    </select>
-              </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Shopping Frequency
-                    </label>
-                    <select
-                      value={formData.shoppingFrequency || ''}
-                      onChange={(e) => handleInputChange('shoppingFrequency', e.target.value || undefined)}
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    >
-                      <option value="">Not specified</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="occasionally">Occasionally</option>
-                      <option value="rarely">Rarely</option>
-                    </select>
-                  </div>
+          <div className="flex gap-8">
+            {/* Sidebar */}
+            <div className="w-80 flex-shrink-0">
+              <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700">
+                <div className="flex items-center mb-6">
+                  <Settings className="w-6 h-6 text-accent-500 mr-3" />
+                  <h1 className="text-2xl font-bold text-white">Settings</h1>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Item Condition Preference
-                  </label>
-                  <select
-                    value={formData.itemConditionPreference}
-                    onChange={(e) => handleInputChange('itemConditionPreference', e.target.value)}
-                    className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                  >
-                    <option value="new-only">New items only</option>
-                    <option value="second-hand-only">Second-hand items only</option>
-                    <option value="both">Both new and second-hand</option>
-                  </select>
-                </div>
+                
+                <nav className="space-y-2">
+                  {settingsSections.map((section) => {
+                    const Icon = section.icon;
+                    return (
+                      <button
+                        key={section.id}
+                        onClick={() => setActiveSection(section.id)}
+                        className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors text-left ${
+                          activeSection === section.id
+                            ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
+                            : 'text-gray-300 hover:text-white hover:bg-dark-700/50'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5 mr-3" />
+                        <div>
+                          <div className="font-medium">{section.name}</div>
+                          <div className="text-xs text-gray-400">{section.description}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </nav>
               </div>
-
-              {/* Budget */}
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-white flex items-center">
-                  <DollarSign className="w-5 h-5 mr-2 text-accent-500" />
-                  Budget
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Minimum Budget
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.budget?.min || ''}
-                      onChange={(e) => handleBudgetChange('min', e.target.value ? parseInt(e.target.value) : undefined)}
-                      placeholder="Min amount"
-                      min="0"
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    />
             </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Maximum Budget
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.budget?.max || ''}
-                      onChange={(e) => handleBudgetChange('max', e.target.value ? parseInt(e.target.value) : undefined)}
-                      placeholder="Max amount"
-                      min="0"
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    />
-          </div>
-        </div>
-      </div>
-
-              {/* Submit Button */}
-              <div className="flex justify-end pt-6 border-t border-dark-700">
-                <button
-                  type="submit"
-                  disabled={saving || isAgeInvalid()}
-                  className="flex items-center px-8 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                >
-                  <Save className="w-5 h-5 mr-2" />
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
+            {/* Content Area */}
+            <div className="flex-1">
+              <div className="bg-dark-800 rounded-2xl p-8 border border-dark-700">
+                {renderContent()}
               </div>
-            </form>
+            </div>
           </div>
         </div>
       </div>
