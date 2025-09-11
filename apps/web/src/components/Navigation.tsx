@@ -125,16 +125,16 @@ export function Navigation() {
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 relative">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center">
               <Logo size="md" />
             </Link>
           </div>
 
-          {/* Desktop Navigation - Absolutely Centered */}
-          <div className="hidden md:flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
+          {/* Desktop Navigation - Centered */}
+          <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
@@ -155,13 +155,13 @@ export function Navigation() {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-3 flex-shrink-0">
             {currentUser ? (
               <>
                 {/* Favorites Heart */}
                 <button 
                   onClick={() => router.push('/favorites')}
-                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                   title="Favorites"
                 >
                   <Heart className="w-5 h-5" />
@@ -174,7 +174,7 @@ export function Navigation() {
                     // Mark all notifications as read when bell is clicked
                     markAllNotificationsAsRead();
                   }}
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadNotificationsCount > 0 && (
@@ -185,7 +185,7 @@ export function Navigation() {
                 {/* Shopping Cart */}
                 <Link
                   href="/cart"
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                 >
                   <ShoppingCart className="w-5 h-5" />
                   {cartItemCount > 0 && (
@@ -341,12 +341,12 @@ export function Navigation() {
           </div>
 
           {/* Tablet Actions - Show fewer items */}
-          <div className="hidden md:flex lg:hidden items-center space-x-2">
+          <div className="hidden md:flex lg:hidden items-center space-x-3 flex-shrink-0">
             {currentUser ? (
               <>
                 <button 
                   onClick={() => router.push('/favorites')}
-                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                   title="Favorites"
                 >
                   <Heart className="w-5 h-5" />
@@ -357,7 +357,7 @@ export function Navigation() {
                     setShowNotifications(true);
                     markAllNotificationsAsRead();
                   }}
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadNotificationsCount > 0 && (
@@ -367,7 +367,7 @@ export function Navigation() {
 
                 <Link
                   href="/cart"
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                 >
                   <ShoppingCart className="w-5 h-5" />
                   {cartItemCount > 0 && (
@@ -404,7 +404,7 @@ export function Navigation() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex-shrink-0">
             <button
               type="button"
               className="btn-ghost p-2 rounded-xl"
