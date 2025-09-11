@@ -29,21 +29,36 @@ export const dbUsers: User[] = [
 export const dbProfiles: Profile[] = [
   {
     userId: 'user1',
+    username: 'techguru',
     bio: 'Tech enthusiast and gadget collector',
     location: 'San Francisco, CA',
     rating: 4.8,
+    createdAt: '2024-01-15T10:30:00Z',
+    interestCategories: ['electronics', 'gadgets'],
+    userActivity: 'both-buy-sell',
+    itemConditionPreference: 'both',
   },
   {
     userId: 'user2',
+    username: 'fashionista',
     bio: 'Fashion lover and style consultant',
     location: 'New York, NY',
     rating: 4.9,
+    createdAt: '2024-01-20T14:15:00Z',
+    interestCategories: ['fashion', 'accessories'],
+    userActivity: 'both-buy-sell',
+    itemConditionPreference: 'both',
   },
   {
     userId: 'user3',
+    username: 'sportspro',
     bio: 'Sports equipment specialist',
     location: 'Los Angeles, CA',
     rating: 4.7,
+    createdAt: '2024-01-25T09:45:00Z',
+    interestCategories: ['sports', 'fitness'],
+    userActivity: 'both-buy-sell',
+    itemConditionPreference: 'both',
   },
 ];
 
@@ -536,9 +551,14 @@ export const dbProfilesOperations = {
   async create(profileData: Omit<Profile, 'userId'> & { userId: string }): Promise<Profile> {
     const newProfile: Profile = {
       userId: profileData.userId,
+      username: profileData.username || 'user' + Date.now(),
       bio: profileData.bio || '',
       location: profileData.location || '',
       rating: profileData.rating || 0,
+      createdAt: profileData.createdAt || new Date().toISOString(),
+      interestCategories: profileData.interestCategories || [],
+      userActivity: profileData.userActivity || 'both-buy-sell',
+      itemConditionPreference: profileData.itemConditionPreference || 'both',
     };
     dbProfiles.push(newProfile);
     return newProfile;

@@ -24,7 +24,7 @@ export default function SignUp() {
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
-  const { signup, isConfigured } = useAuth();
+  const { signup, isConfigured, currentUser } = useAuth();
   const router = useRouter();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
