@@ -135,7 +135,7 @@ function ListingsContent() {
           <div className="flex justify-center mb-4">
             <Logo size="md" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-5xl font-bold text-white mb-2">
             Browse Listings
           </h1>
           <p className="text-lg text-gray-400">

@@ -435,7 +435,7 @@ export default function SellPage() {
           <div className="flex justify-center mb-4">
             <Logo size="md" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Sell Your Item</h1>
+          <h1 className="text-5xl font-bold text-white mb-2">Sell Your Item</h1>
           <p className="text-lg text-gray-400">Upload a photo and let AI do the work for you</p>
         </div>
 

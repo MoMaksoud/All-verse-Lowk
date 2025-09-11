@@ -576,9 +576,9 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   const renderContent = () => {
     switch (activeSection) {
@@ -616,25 +616,23 @@ export default function SettingsPage() {
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back
             </button>
-            <Logo size="md" />
-            <div className="w-20"></div> {/* Spacer for centering */}
-          </div>
+            <div className="flex-1"></div> {/* Spacer for centering */}
+      </div>
 
           {/* Main Content */}
           <div className="flex gap-8">
             {/* Sidebar */}
             <div className="w-80 flex-shrink-0">
               <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700">
-                <div className="flex items-center mb-6">
-                  <Settings className="w-6 h-6 text-accent-500 mr-3" />
-                  <h1 className="text-2xl font-bold text-white">Settings</h1>
+                <div className="mb-6">
+                  <h1 className="text-5xl font-bold text-white">Settings</h1>
                 </div>
-                
+
                 <nav className="space-y-2">
                   {settingsSections.map((section) => {
                     const Icon = section.icon;
                     return (
-                      <button
+                    <button
                         key={section.id}
                         onClick={() => setActiveSection(section.id)}
                         className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors text-left ${
@@ -648,12 +646,12 @@ export default function SettingsPage() {
                           <div className="font-medium">{section.name}</div>
                           <div className="text-xs text-gray-400">{section.description}</div>
                         </div>
-                      </button>
+                    </button>
                     );
                   })}
                 </nav>
-              </div>
-            </div>
+                  </div>
+                </div>
 
             {/* Content Area */}
             <div className="flex-1">

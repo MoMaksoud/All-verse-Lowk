@@ -312,7 +312,7 @@ export default function ListingDetailPage() {
                   <Tag className="w-4 h-4 text-accent-500" />
                   <span className="text-sm text-gray-400 capitalize">{listing.category}</span>
                 </div>
-                <h1 className="text-3xl font-bold text-white mb-4">
+                <h1 className="text-5xl font-bold text-white mb-4">
                   {listing.title}
                 </h1>
                 <div className="flex items-center gap-4 text-sm text-gray-400 mb-6">

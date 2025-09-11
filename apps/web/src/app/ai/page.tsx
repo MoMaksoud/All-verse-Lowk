@@ -216,7 +216,7 @@ export default function AIPage() {
               <Bot className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-5xl font-bold text-white mb-2">
             AI Assistant
           </h1>
           <p className="text-lg text-gray-400 mb-6">
