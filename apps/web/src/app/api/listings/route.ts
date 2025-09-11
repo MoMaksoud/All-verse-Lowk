@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dbListings } from "@/lib/mockDb";
-import { SimpleListingCreate } from "@marketplace/types";
+import { firestoreServices } from "@/lib/services/firestore";
+import { CreateListingInput } from "@/lib/types/firestore";
 import { calculateDistance } from "@/lib/location";
 
 export const runtime = "nodejs";
@@ -32,7 +32,17 @@ export async function GET(req: NextRequest) {
     };
 
 
-    const result = await dbListings.search(filters, page, limit);
+    const sortOptions = {
+      field: sort === 'priceAsc' ? 'price' : sort === 'priceDesc' ? 'price' : 'createdAt',
+      direction: sort === 'priceAsc' ? 'asc' as const : 'desc' as const,
+    };
+
+    const paginationOptions = {
+      page,
+      limit,
+    };
+
+    const result = await firestoreServices.listings.searchListings(filters, sortOptions, paginationOptions);
       
     // Apply location filtering if user coordinates are provided
     let filteredData = [...result.items];
@@ -71,11 +81,13 @@ export async function GET(req: NextRequest) {
     }
     
     return NextResponse.json({
-      data: sortedData,
-      total: filteredData.length,
-      page: page,
-      limit: limit,
-      hasMore: filteredData.length > page * limit
+      data: result.items,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        hasMore: result.hasMore,
+      },
     });
   } catch (error) {
     console.error('Error fetching listings:', error);
@@ -85,21 +97,29 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as SimpleListingCreate;
+    const userId = req.headers.get('x-user-id');
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
+    }
+
+    const body = await req.json() as CreateListingInput;
     
     // Basic validation
     if (!body.title || !body.description || typeof body.price !== 'number' || !body.category) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const listing = dbListings.create({
+    const listingData = {
       ...body,
-      category: body.category as any,
-      sellerId: 'user1',
-      status: 'active' as const,
-      condition: 'Good' as const,
-      currency: 'USD' as const
-    }, 'user1'); // Default seller ID
+      sellerId: userId,
+      inventory: body.inventory || 1,
+      currency: body.currency || 'USD',
+      condition: body.condition || 'good',
+    };
+
+    const listingId = await firestoreServices.listings.createListing(listingData);
+    const listing = await firestoreServices.listings.getListing(listingId);
+    
     return NextResponse.json(listing, { status: 201 });
   } catch (error) {
     console.error('Error creating listing:', error);

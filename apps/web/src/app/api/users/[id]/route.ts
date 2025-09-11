@@ -1,23 +1,35 @@
 import { NextRequest } from "next/server";
 import { withApi } from "@/lib/withApi";
-import { dbUsersOperations } from "@/lib/mockDb";
-import { notFound } from "@/lib/errors";
-import { success } from "@/lib/response";
+import { firestoreServices } from "@/lib/services/firestore";
+import { notFound, badRequest } from "@/lib/errors";
+import { success, error } from "@/lib/response";
+import { UpdateUserInput } from "@/lib/types/firestore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = withApi(async (_req: NextRequest, { params }: { params: { id: string } }) => {
-  const id = params.id;
-  const row = await dbUsersOperations.findById(id);
-  if (!row) throw notFound("User not found");
-  return success(row);
+  try {
+    const id = params.id;
+    const user = await firestoreServices.users.getUser(id);
+    if (!user) return error(notFound("User not found"));
+    return success(user);
+  } catch (err) {
+    console.error('Error fetching user:', err);
+    return error(notFound("User not found"));
+  }
 });
 
 export const PATCH = withApi(async (req: NextRequest, { params }: { params: { id: string } }) => {
-  const id = params.id;
-  const patch = await req.json();
-  const updated = await dbUsersOperations.update(id, patch);
-  if (!updated) throw notFound("User not found");
-  return success(updated);
+  try {
+    const id = params.id;
+    const updates = await req.json() as UpdateUserInput;
+    await firestoreServices.users.updateUser(id, updates);
+    const updatedUser = await firestoreServices.users.getUser(id);
+    if (!updatedUser) return error(notFound("User not found"));
+    return success(updatedUser);
+  } catch (err) {
+    console.error('Error updating user:', err);
+    return error(badRequest("Failed to update user"));
+  }
 });
