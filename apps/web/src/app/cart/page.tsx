@@ -28,7 +28,7 @@ interface Listing {
   title: string;
   description: string;
   price: number;
-  images: string[];
+  photos: string[];
   category: string;
   condition: string;
   sellerId: string;
@@ -60,8 +60,7 @@ export default function CartPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const cart = data.data;
+        const cart = await response.json();
         setCartItems(cart.items || []);
 
         // Fetch listing details for each cart item
@@ -69,7 +68,7 @@ export default function CartPage() {
           const listingResponse = await fetch(`/api/listings/${item.listingId}`);
           if (listingResponse.ok) {
             const listingData = await listingResponse.json();
-            return { id: item.listingId, listing: listingData.data };
+            return { id: item.listingId, listing: listingData };
           }
           return null;
         });
@@ -219,9 +218,9 @@ export default function CartPage() {
                           <div className="flex items-center space-x-4">
                             {/* Image */}
                             <div className="w-20 h-20 bg-dark-600 rounded-lg flex items-center justify-center">
-                              {listing.images && listing.images.length > 0 ? (
+                              {listing.photos && listing.photos.length > 0 ? (
                                 <img
-                                  src={listing.images[0]}
+                                  src={listing.photos[0]}
                                   alt={listing.title}
                                   className="w-full h-full object-cover rounded-lg"
                                 />

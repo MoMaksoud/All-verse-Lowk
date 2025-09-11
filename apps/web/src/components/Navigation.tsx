@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle } from 'lucide-react';
+import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle, ShoppingCart } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Profile } from '@marketplace/types';
@@ -24,6 +24,7 @@ export function Navigation() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'New message from John Doe', time: '2 minutes ago', read: false },
@@ -48,6 +49,31 @@ export function Navigation() {
   };
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+  // Fetch cart item count
+  const fetchCartCount = async () => {
+    if (!currentUser?.uid) return;
+    
+    try {
+      const response = await fetch('/api/carts', {
+        headers: {
+          'x-user-id': currentUser.uid,
+        },
+      });
+      
+      if (response.ok) {
+        const cart = await response.json();
+        const totalItems = cart.items?.reduce((sum: number, item: any) => sum + item.qty, 0) || 0;
+        setCartItemCount(totalItems);
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCartCount();
+  }, [currentUser]);
 
   const handleLogout = async () => {
     try {
@@ -155,6 +181,19 @@ export function Navigation() {
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
                   )}
                 </button>
+
+                {/* Shopping Cart */}
+                <Link
+                  href="/cart"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                      {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
+                  )}
+                </Link>
                 
                 <Link
                   href="/sell"
@@ -325,6 +364,18 @@ export function Navigation() {
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
                   )}
                 </button>
+
+                <Link
+                  href="/cart"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                      {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
+                  )}
+                </Link>
                 
                 <Link
                   href="/sell"
@@ -404,6 +455,17 @@ export function Navigation() {
                       >
                         <Heart className="w-5 h-5" />
                         Favorites
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          router.push('/cart');
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        Cart {cartItemCount > 0 && `(${cartItemCount})`}
                       </button>
                       
                       <button 

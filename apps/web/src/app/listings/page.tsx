@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Filter, Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle } from 'lucide-react';
+import { Filter, Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart } from 'lucide-react';
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
@@ -207,7 +207,7 @@ function ListingsContent() {
             {memoizedListings.length > 0 ? (
               <>
                 {viewMode === 'grid' ? (
-                  <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {memoizedListings.map((listing) => (
                       <ListingCard
                         key={listing.id}
@@ -247,22 +247,8 @@ function ListingsContent() {
                             
                             {/* Content */}
                             <div className="flex-1 p-4 flex items-center justify-between">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-lg font-semibold text-white truncate group-hover:text-accent-400 transition-colors">
-                                  {listing.title}
-                                </h3>
-                                <p className="text-gray-400 text-sm mt-1 line-clamp-2">
-                                  {listing.description}
-                                </p>
-                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                                  <span className="text-accent-400 font-semibold">${listing.price.toLocaleString()}</span>
-                                  <span>•</span>
-                                  <span className="capitalize">{listing.category}</span>
-                                </div>
-                              </div>
-                              
-                              {/* Actions */}
-                              <div className="flex items-center gap-2 ml-4">
+                              <div className="flex items-center gap-4">
+                                {/* Heart Button - Left Side */}
                                 <button 
                                   onClick={(e) => {
                                     e.preventDefault();
@@ -272,6 +258,35 @@ function ListingsContent() {
                                   className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
                                 >
                                   <Heart className="w-4 h-4 text-gray-400" />
+                                </button>
+                                
+                                {/* Product Info */}
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-lg font-semibold text-white truncate group-hover:text-accent-400 transition-colors">
+                                    {listing.title}
+                                  </h3>
+                                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">
+                                    {listing.description}
+                                  </p>
+                                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                                    <span className="text-accent-400 font-semibold">${listing.price.toLocaleString()}</span>
+                                    <span>•</span>
+                                    <span className="capitalize">{listing.category}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Cart and Message Actions - Right Side */}
+                              <div className="flex items-center gap-2 ml-4">
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    // Add to cart functionality here
+                                  }}
+                                  className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+                                >
+                                  <ShoppingCart className="w-4 h-4 text-gray-400" />
                                 </button>
                                 <button 
                                   onClick={(e) => {

@@ -3,7 +3,6 @@ import { withApi } from "@/lib/withApi";
 import { firestoreServices } from "@/lib/services/firestore";
 import { success, error } from "@/lib/response";
 import { badRequest, unauthorized } from "@/lib/errors";
-import { CreateOrderInput } from "@/lib/types/firestore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,29 +14,36 @@ export const GET = withApi(async (req: NextRequest) => {
       return error(unauthorized("User ID is required"));
     }
 
-    const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type'); // 'buyer' or 'seller'
-    const status = searchParams.get('status');
+    const url = new URL(req.url);
+    const role = url.searchParams.get('role') || 'buyer'; // 'buyer' or 'seller'
 
     let orders;
-    if (type === 'seller') {
+    if (role === 'buyer') {
+      orders = await firestoreServices.orders.getOrdersByBuyer(userId);
+    } else if (role === 'seller') {
       orders = await firestoreServices.orders.getOrdersBySeller(userId);
     } else {
-      orders = await firestoreServices.orders.getOrdersByBuyer(userId);
+      return error(badRequest("Invalid role parameter. Must be 'buyer' or 'seller'"));
     }
 
-    // Filter by status if provided
-    if (status) {
-      orders = orders.filter(order => order.status === status);
-    }
+    // Transform Firestore orders to include proper date formatting
+    const transformedOrders = orders.map(order => ({
+      id: order.id,
+      buyerId: order.buyerId,
+      items: order.items,
+      subtotal: order.subtotal,
+      fees: order.fees,
+      tax: order.tax,
+      total: order.total,
+      currency: order.currency,
+      status: order.status,
+      paymentIntentId: order.paymentIntentId,
+      createdAt: order.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      updatedAt: order.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      shippingAddress: order.shippingAddress,
+    }));
 
-    return success({
-      orders,
-      total: orders.length,
-      page: 1,
-      limit: 100,
-      hasMore: false
-    });
+    return success(transformedOrders);
   } catch (err) {
     console.error('Error fetching orders:', err);
     return error(badRequest("Failed to fetch orders"));
@@ -51,23 +57,32 @@ export const POST = withApi(async (req: NextRequest) => {
       return error(unauthorized("User ID is required"));
     }
 
-    const body = await req.json() as CreateOrderInput;
-    
+    const body = await req.json();
+    const { items, subtotal, fees, tax, total, currency, paymentIntentId, shippingAddress } = body;
+
     // Validate required fields
-    if (!body.items || !body.shippingAddress || !body.paymentIntentId) {
-      return error(badRequest("Missing required fields: items, shippingAddress, paymentIntentId"));
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return error(badRequest("Items are required"));
+    }
+    if (!subtotal || !fees || !tax || !total || !currency || !paymentIntentId || !shippingAddress) {
+      return error(badRequest("Missing required fields: subtotal, fees, tax, total, currency, paymentIntentId, shippingAddress"));
     }
 
-    // Set buyer ID from authenticated user
     const orderData = {
-      ...body,
       buyerId: userId,
+      items,
+      subtotal,
+      fees,
+      tax,
+      total,
+      currency,
+      paymentIntentId,
+      shippingAddress,
     };
 
     const orderId = await firestoreServices.orders.createOrder(orderData);
-    const order = await firestoreServices.orders.getOrder(orderId);
     
-    return success(order, { status: 201 });
+    return success({ orderId }, { status: 201 });
   } catch (err) {
     console.error('Error creating order:', err);
     return error(badRequest("Failed to create order"));

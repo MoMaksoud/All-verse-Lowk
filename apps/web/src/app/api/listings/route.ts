@@ -80,8 +80,22 @@ export async function GET(req: NextRequest) {
         break;
     }
     
+    // Transform FirestoreListing to SimpleListing format
+    const transformedItems = result.items.map(listing => ({
+      id: listing.id,
+      title: listing.title,
+      description: listing.description,
+      price: listing.price,
+      category: listing.category,
+      photos: listing.images || [],
+      createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      sellerId: listing.sellerId,
+      location: undefined, // Add location if available
+    }));
+
     return NextResponse.json({
-      data: result.items,
+      data: transformedItems,
       pagination: {
         page: result.page,
         limit: result.limit,

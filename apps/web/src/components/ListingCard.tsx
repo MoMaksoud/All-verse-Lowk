@@ -3,16 +3,18 @@
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MessageCircle, Star, Clock, X, MapPin } from 'lucide-react';
+import { Heart, MessageCircle, Star, Clock, X, MapPin, ShoppingCart } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 import { formatLocation } from '@/lib/location';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ListingCardProps {
   listing: SimpleListing;
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
+  const { currentUser } = useAuth();
   const [isFavorited, setIsFavorited] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -28,7 +30,46 @@ export function ListingCard({ listing }: ListingCardProps) {
   const [message, setMessage] = useState('');
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [addingToCart, setAddingToCart] = useState(false);
   const [isVoiceListening, setIsVoiceListening] = useState(false);
+
+  const addToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentUser) {
+      alert('Please sign in to add items to cart');
+      return;
+    }
+
+    setAddingToCart(true);
+    try {
+      const response = await fetch('/api/carts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          sellerId: listing.sellerId || 'test-seller',
+          qty: 1,
+          priceAtAdd: listing.price,
+        }),
+      });
+
+      if (response.ok) {
+        alert('Added to cart!');
+      } else {
+        alert('Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Error adding to cart');
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
@@ -146,6 +187,15 @@ export function ListingCard({ listing }: ListingCardProps) {
               className="absolute top-3 left-3 btn-ghost p-2 rounded-xl backdrop-blur-sm bg-dark-800/50 hover:bg-dark-700/50 transition-all duration-200"
             >
               <MessageCircle className="w-4 h-4 text-gray-300" />
+            </button>
+
+            {/* Add to Cart Button */}
+            <button 
+              onClick={addToCart}
+              disabled={addingToCart}
+              className="absolute top-12 left-3 btn-ghost p-2 rounded-xl backdrop-blur-sm bg-dark-800/50 hover:bg-dark-700/50 transition-all duration-200 disabled:opacity-50"
+            >
+              <ShoppingCart className="w-4 h-4 text-gray-300" />
             </button>
             
             {/* Favorite Button */}
