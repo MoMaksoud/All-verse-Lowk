@@ -154,6 +154,7 @@ export interface UpdateOrderInput {
 // ============================================================================
 export interface FirestorePayment {
   orderId: string;
+  userId: string; // Track which user made the payment
   amount: number;
   currency: string;
   stripeEventId: string;
@@ -163,6 +164,7 @@ export interface FirestorePayment {
 
 export interface CreatePaymentInput {
   orderId: string;
+  userId: string; // Track which user made the payment
   amount: number;
   currency: string;
   stripeEventId: string;
@@ -259,6 +261,31 @@ export interface ApiError {
 }
 
 // ============================================================================
+// PHOTO UPLOAD TYPES
+// ============================================================================
+export interface PhotoUploadResult {
+  url: string;
+  path: string;
+  size: number;
+  type: string;
+}
+
+export interface ProfilePhotoUpload {
+  userId: string;
+  photoUrl: string;
+  photoPath: string;
+  uploadedAt: Timestamp;
+}
+
+export interface ListingPhotoUpload {
+  listingId: string;
+  userId: string;
+  photoUrls: string[];
+  photoPaths: string[];
+  uploadedAt: Timestamp;
+}
+
+// ============================================================================
 // COLLECTION NAMES
 // ============================================================================
 export const COLLECTIONS = {
@@ -269,6 +296,8 @@ export const COLLECTIONS = {
   PAYMENTS: 'payments',
   MESSAGES: 'messages',
   CONVERSATIONS: 'conversations',
+  PROFILE_PHOTOS: 'profile_photos',
+  LISTING_PHOTOS: 'listing_photos',
 } as const;
 
 export type CollectionName = typeof COLLECTIONS[keyof typeof COLLECTIONS];

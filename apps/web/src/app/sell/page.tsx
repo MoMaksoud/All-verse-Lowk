@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap } from 'lucide-react';
 import { SimpleListingCreate } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
+import { PhotoUpload } from '@/components/PhotoUpload';
+import { useAuth } from '@/contexts/AuthContext';
+import { firestoreServices } from '@/lib/services/firestore';
 
 const steps = [
   { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
@@ -16,17 +19,33 @@ const steps = [
 
 export default function SellPage() {
   const router = useRouter();
+  const { currentUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<SimpleListingCreate & { images: File[] }>({
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [listingId, setListingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<SimpleListingCreate & {
+    marketResearch?: {
+      averagePrice: number;
+      priceRange: { min: number; max: number };
+      marketDemand: 'high' | 'medium' | 'low';
+      competitorCount: number;
+    };
+  }>({
     title: '',
     description: '',
     price: 0,
     category: '',
-    photos: [],
-    images: []
+    photos: []
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!currentUser) {
+      router.push('/signin');
+    }
+  }, [currentUser, router]);
 
   // Remove categories fetch since we'll use hardcoded categories
 
@@ -37,18 +56,18 @@ export default function SellPage() {
     }
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
+  const handlePhotoUpload = (urls: string[]) => {
+    console.log('📸 Photos uploaded locally:', urls.length);
     setFormData((prev) => ({
       ...prev,
-      images: [...prev.images, ...files]
+      photos: urls
     }));
   };
 
-  const handleRemoveImage = (index: number) => {
+  const handleRemovePhoto = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      images: prev.images?.filter((_: File, i: number) => i !== index) || []
+      photos: prev.photos.filter((_, i) => i !== index)
     }));
   };
 
@@ -57,7 +76,7 @@ export default function SellPage() {
 
     switch (step) {
       case 1:
-        if (!formData.images?.length) stepErrors.images = 'At least one image is required';
+        if (!formData.photos?.length) stepErrors.photos = 'At least one photo is required';
         break;
       case 2:
         // AI will fill this automatically, so we'll skip validation for now
@@ -75,9 +94,132 @@ export default function SellPage() {
     return Object.keys(stepErrors).length === 0;
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length));
+      if (currentStep === 1) {
+        // Create listing first, then upload photos
+        await createListingAndUploadPhotos();
+      } else {
+        setCurrentStep(prev => Math.min(prev + 1, steps.length));
+      }
+    }
+  };
+
+  const createListingAndUploadPhotos = async () => {
+    if (!currentUser || !formData.photos.length) return;
+
+    try {
+      setLoading(true);
+      
+      // Create listing with photos directly
+      const listingData = {
+        title: 'AI Analyzing...',
+        description: 'AI is analyzing your photos...',
+        price: 0,
+        category: 'other',
+        photos: formData.photos, // Include photos directly
+        condition: 'good' as const,
+        inventory: 1,
+        sellerId: currentUser.uid,
+      };
+      
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify(listingData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create listing');
+      }
+      
+      const result = await response.json();
+      setListingId(result.id);
+      setCurrentStep(2);
+      
+      // Start AI analysis
+      await performAIAnalysis(result.id);
+      
+    } catch (error) {
+      console.error('Error creating listing:', error);
+      setErrors({ submit: 'Failed to create listing. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const performAIAnalysis = async (listingId: string) => {
+    if (!currentUser || !formData.photos.length) return;
+
+    try {
+      setAiAnalyzing(true);
+      
+      console.log('🤖 Starting real AI analysis...');
+      
+      // Call real AI analysis API
+      const response = await fetch('/api/ai/analyze-product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          imageUrls: formData.photos,
+          listingId: listingId
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('AI analysis failed');
+      }
+      
+      const result = await response.json();
+      const analysis = result.analysis;
+      
+      console.log('🤖 AI analysis result:', analysis);
+      
+      // Update listing with AI-generated data
+      const aiData = {
+        title: analysis.title,
+        description: analysis.description,
+        category: analysis.category,
+        price: analysis.suggestedPrice,
+        condition: analysis.condition,
+        marketResearch: analysis.marketResearch,
+      };
+      
+      const updateResponse = await fetch(`/api/listings/${listingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify(aiData),
+      });
+      
+      if (updateResponse.ok) {
+        // Immediately update form data to show AI results
+        setFormData(prev => ({ ...prev, ...aiData }));
+        setCurrentStep(3);
+        console.log('🤖 Listing updated with AI analysis');
+        console.log('🤖 Form data updated:', aiData);
+      } else {
+        // Even if database update fails, still update the form
+        setFormData(prev => ({ ...prev, ...aiData }));
+        setCurrentStep(3);
+        console.log('🤖 Form updated with AI analysis (database update failed)');
+      }
+      
+    } catch (error) {
+      console.error('Error in AI analysis:', error);
+      setErrors({ submit: 'AI analysis failed. You can still edit manually.' });
+      setCurrentStep(3);
+    } finally {
+      setAiAnalyzing(false);
     }
   };
 
@@ -88,13 +230,17 @@ export default function SellPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
+    if (!currentUser || !listingId) {
+      setErrors({ submit: 'No listing found to update' });
+      return;
+    }
+    
     // Validation
     const newErrors: Record<string, string> = {};
     if (!formData.title.trim()) newErrors.title = 'Title is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (formData.price <= 0) newErrors.price = 'Price must be greater than 0';
     if (!formData.category) newErrors.category = 'Category is required';
-    // Condition and location not required for MVP
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -104,61 +250,37 @@ export default function SellPage() {
     try {
       setLoading(true);
       
-      // Convert images to data URLs for MVP
-      let photoUrls: string[] = [];
-      if (formData.images && formData.images.length > 0) {
-        photoUrls = await Promise.all(
-          formData.images.map((file) => {
-            return new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(file);
-            });
-          })
-        );
-      }
-      
-      // Create listing
+      // Update listing with final data
       const listingData = {
         title: formData.title,
         description: formData.description,
         price: formData.price,
         category: formData.category,
-        photos: photoUrls
+        condition: 'good' as const,
+        inventory: 1,
+        isActive: true,
       };
       
-      const response = await fetch('/api/listings', {
-        method: 'POST',
+      const response = await fetch(`/api/listings/${listingId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
         },
         body: JSON.stringify(listingData),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create listing');
+        throw new Error('Failed to update listing');
       }
       
-      const result = await response.json();
-      
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        price: 0,
-        category: '',
-        photos: [],
-        images: []
-      });
-      setErrors({});
-      
       // Show success message
-      alert('Listing created successfully!');
-      router.push(`/listings/${result.id}`);
+      alert('Listing published successfully!');
+      router.push(`/listings/${listingId}`);
       
     } catch (error) {
-      console.error('Error creating listing:', error);
-      alert('Failed to create listing. Please try again.');
+      console.error('Error updating listing:', error);
+      setErrors({ submit: 'Failed to publish listing. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -171,48 +293,19 @@ export default function SellPage() {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
-                Upload Your Item Photo
+                Upload Your Item Photos
               </label>
-              <div className="border-2 border-dashed border-dark-600 rounded-xl p-8 text-center hover:border-accent-500 transition-colors">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <div className="mt-4">
-                  <label className="cursor-pointer">
-                    <span className="btn btn-primary">Choose Photo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                <p className="text-sm text-gray-400 mt-2">
-                  Upload a clear photo of your item for AI analysis
-                </p>
-              </div>
-              {errors.images && <p className="text-red-400 text-sm mt-1">{errors.images}</p>}
+              <PhotoUpload
+                type="listing"
+                listingId={listingId || `temp-${Date.now()}`}
+                maxPhotos={10}
+                existingPhotos={formData.photos}
+                onUpload={handlePhotoUpload}
+                onRemove={handleRemovePhoto}
+                className="max-w-2xl mx-auto"
+              />
+              {errors.photos && <p className="text-red-400 text-sm mt-1">{errors.photos}</p>}
             </div>
-
-            {formData.images && formData.images.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-white mb-3">Uploaded Photo</h4>
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <img
-                      src={URL.createObjectURL(formData.images[0])}
-                      alt="Item preview"
-                      className="w-64 h-64 object-cover rounded-xl"
-                    />
-                    <button
-                      onClick={() => handleRemoveImage(0)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         );
 
@@ -223,46 +316,46 @@ export default function SellPage() {
               <div className="animate-pulse">
                 <Brain className="mx-auto h-16 w-16 text-accent-500 mb-4" />
                 <h3 className="text-xl font-semibold text-white mb-2">AI Analysis in Progress</h3>
-                <p className="text-gray-400 mb-6">Our AI is analyzing your photo and generating details...</p>
+                <p className="text-gray-400 mb-6">Our AI is analyzing your photos and generating details...</p>
               </div>
               
               <div className="space-y-4 max-w-md mx-auto">
                 <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
                   <span className="text-gray-400">Title</span>
-                  <span className="text-white">Analyzing...</span>
+                  <span className="text-white animate-pulse">
+                    {aiAnalyzing ? 'Analyzing photos...' : 'Complete'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
                   <span className="text-gray-400">Category</span>
-                  <span className="text-white">Analyzing...</span>
+                  <span className="text-white animate-pulse">
+                    {aiAnalyzing ? 'Identifying product...' : 'Complete'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
                   <span className="text-gray-400">Price</span>
-                  <span className="text-white">Analyzing...</span>
+                  <span className="text-white animate-pulse">
+                    {aiAnalyzing ? 'Calculating market value...' : 'Complete'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
                   <span className="text-gray-400">Description</span>
-                  <span className="text-white">Analyzing...</span>
+                  <span className="text-white animate-pulse">
+                    {aiAnalyzing ? 'Generating details...' : 'Complete'}
+                  </span>
                 </div>
               </div>
               
-              <div className="mt-6">
-                <button
-                  onClick={() => {
-                    // Simulate AI completion - in real app, this would be API call
-                    setFormData(prev => ({
-                      ...prev,
-                      title: 'Sample Item Title',
-                      description: 'This is a sample description generated by AI based on your photo.',
-                      category: 'electronics',
-                      price: 99.99
-                    }));
-                    setCurrentStep(3);
-                  }}
-                  className="btn btn-primary"
-                >
-                  Complete AI Analysis
-                </button>
-              </div>
+              {!aiAnalyzing && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => setCurrentStep(3)}
+                    className="btn btn-primary"
+                  >
+                    Review & Edit
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -273,6 +366,15 @@ export default function SellPage() {
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white mb-2">Review & Edit AI Suggestions</h3>
               <p className="text-gray-400 text-sm">Review the AI-generated details and make any adjustments</p>
+              {formData.title && formData.description && formData.price > 0 && formData.category && (
+                <div className="mt-3 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-400">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium">✅ Ready to Post!</span>
+                  </div>
+                  <p className="text-green-300 text-xs mt-1">All required fields are filled. You can post your listing now.</p>
+                </div>
+              )}
             </div>
 
             <div>
@@ -345,20 +447,22 @@ export default function SellPage() {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (formData.title && formData.description) {
+                    if (formData.title && formData.description && formData.photos.length > 0) {
                       try {
-                        const response = await fetch('/api/prices/suggest', {
+                        const response = await fetch('/api/ai/analyze-product', {
                           method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
+                          headers: { 
+                            'Content-Type': 'application/json',
+                            'x-user-id': currentUser?.uid || ''
+                          },
                           body: JSON.stringify({
-                            title: formData.title,
-                            description: formData.description,
-                            photos: formData.images?.map(img => URL.createObjectURL(img)) || []
+                            imageUrls: formData.photos,
+                            listingId: 'price-suggestion'
                           })
                         });
                         const result = await response.json();
-                        if (result.price) {
-                          handleInputChange('price', result.price);
+                        if (result.analysis?.suggestedPrice) {
+                          handleInputChange('price', result.analysis.suggestedPrice);
                         }
                       } catch (error) {
                         console.error('Error getting price suggestion:', error);
@@ -373,6 +477,36 @@ export default function SellPage() {
               {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
             </div>
 
+            {/* AI Market Research Display */}
+            {formData.marketResearch && (
+              <div className="bg-dark-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-white mb-3">🤖 AI Market Analysis</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-400">Market Price:</span>
+                    <span className="ml-2 text-white">${formData.marketResearch.averagePrice.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Price Range:</span>
+                    <span className="ml-2 text-white">${formData.marketResearch.priceRange.min} - ${formData.marketResearch.priceRange.max}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Demand:</span>
+                    <span className={`ml-2 capitalize ${
+                      formData.marketResearch.marketDemand === 'high' ? 'text-green-400' :
+                      formData.marketResearch.marketDemand === 'medium' ? 'text-yellow-400' : 'text-red-400'
+                    }`}>
+                      {formData.marketResearch.marketDemand}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Competitors:</span>
+                    <span className="ml-2 text-white">{formData.marketResearch.competitorCount} listings</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Location field removed for MVP */}
           </div>
         );
@@ -384,10 +518,10 @@ export default function SellPage() {
               <h3 className="text-lg font-semibold text-white mb-4">Final Review & Publish</h3>
               
               <div className="space-y-4">
-                {formData.images && formData.images.length > 0 && (
+                {formData.photos && formData.photos.length > 0 && (
                   <div className="flex justify-center mb-4">
                     <img
-                      src={URL.createObjectURL(formData.images[0])}
+                      src={formData.photos[0]}
                       alt="Item preview"
                       className="w-32 h-32 object-cover rounded-lg"
                     />
@@ -490,9 +624,10 @@ export default function SellPage() {
             {currentStep < steps.length ? (
               <button
                 onClick={nextStep}
-                className="btn btn-primary flex items-center gap-2"
+                disabled={loading || aiAnalyzing}
+                className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {currentStep === 1 ? 'Analyze with AI' : currentStep === 2 ? 'Review & Edit' : 'Continue'}
+                {loading ? 'Creating...' : aiAnalyzing ? 'AI Scanning Photos...' : currentStep === 1 ? 'Analyze with AI' : currentStep === 2 ? 'Review & Edit' : 'Continue'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (

@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
     // Create payment record
     const paymentData: CreatePaymentInput = {
       orderId,
+      userId, // Track which user made the payment
       amount: total,
       currency: 'USD',
       stripeEventId: paymentResult.paymentIntentId!,

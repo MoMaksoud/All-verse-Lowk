@@ -40,6 +40,8 @@ import {
   UpdateMessageInput,
   FirestoreConversation,
   CreateConversationInput,
+  ProfilePhotoUpload,
+  ListingPhotoUpload,
   PaginationOptions,
   PaginatedResult,
   SearchFilters,
@@ -550,6 +552,70 @@ export class ConversationsService extends BaseFirestoreService<FirestoreConversa
 }
 
 // ============================================================================
+// PROFILE PHOTOS SERVICE
+// ============================================================================
+class ProfilePhotosService extends BaseFirestoreService<ProfilePhotoUpload> {
+  constructor() {
+    super(COLLECTIONS.PROFILE_PHOTOS);
+  }
+
+  async saveProfilePhoto(data: ProfilePhotoUpload): Promise<void> {
+    const docRef = doc(db, this.collectionName, data.userId);
+    await setDoc(docRef, {
+      ...data,
+      uploadedAt: serverTimestamp(),
+    });
+  }
+
+  async getProfilePhoto(userId: string): Promise<ProfilePhotoUpload | null> {
+    const docRef = doc(db, this.collectionName, userId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return { ...docSnap.data(), userId } as ProfilePhotoUpload;
+    }
+    return null;
+  }
+
+  async deleteProfilePhoto(userId: string): Promise<void> {
+    const docRef = doc(db, this.collectionName, userId);
+    await deleteDoc(docRef);
+  }
+}
+
+// ============================================================================
+// LISTING PHOTOS SERVICE
+// ============================================================================
+class ListingPhotosService extends BaseFirestoreService<ListingPhotoUpload> {
+  constructor() {
+    super(COLLECTIONS.LISTING_PHOTOS);
+  }
+
+  async saveListingPhotos(data: ListingPhotoUpload): Promise<void> {
+    const docRef = doc(db, this.collectionName, data.listingId);
+    await setDoc(docRef, {
+      ...data,
+      uploadedAt: serverTimestamp(),
+    });
+  }
+
+  async getListingPhotos(listingId: string): Promise<ListingPhotoUpload | null> {
+    const docRef = doc(db, this.collectionName, listingId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return { ...docSnap.data(), listingId } as ListingPhotoUpload;
+    }
+    return null;
+  }
+
+  async deleteListingPhotos(listingId: string): Promise<void> {
+    const docRef = doc(db, this.collectionName, listingId);
+    await deleteDoc(docRef);
+  }
+}
+
+// ============================================================================
 // EXPORT ALL SERVICES
 // ============================================================================
 export const firestoreServices = {
@@ -560,4 +626,6 @@ export const firestoreServices = {
   payments: new PaymentsService(),
   messages: new MessagesService(),
   conversations: new ConversationsService(),
+  profilePhotos: new ProfilePhotosService(),
+  listingPhotos: new ListingPhotosService(),
 };
