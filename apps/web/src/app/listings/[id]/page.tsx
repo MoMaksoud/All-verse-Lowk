@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { Heart, Share2, MapPin, Eye, Star, MessageCircle, DollarSign, X, Edit, Trash2, ArrowLeft, Clock, Tag } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Navigation } from '@/components/Navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -29,6 +31,7 @@ const formatRelativeTime = (dateString: string) => {
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { currentUser } = useAuth();
   const [listing, setListing] = useState<SimpleListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -49,6 +52,7 @@ export default function ListingDetailPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!params.id) return;
@@ -150,6 +154,43 @@ export default function ListingDetailPage() {
     }
   }, [listing]);
 
+  const addToCart = useCallback(async () => {
+    if (!listing) return;
+    
+    if (!currentUser) {
+      showToast('Please sign in to add items to cart', 'error');
+      return;
+    }
+
+    setAddingToCart(true);
+    try {
+      const response = await fetch('/api/carts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          sellerId: listing.sellerId || 'test-seller',
+          qty: 1,
+          priceAtAdd: listing.price,
+        }),
+      });
+
+      if (response.ok) {
+        showToast('Added to cart!', 'success');
+      } else {
+        showToast('Failed to add to cart', 'error');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showToast('Error adding to cart', 'error');
+    } finally {
+      setAddingToCart(false);
+    }
+  }, [listing, currentUser]);
+
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
     showToast('Link copied to clipboard!', 'success');
@@ -194,6 +235,7 @@ export default function ListingDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950">
+        <Navigation />
         <LoadingSpinner size="lg" text="Loading listing details..." />
       </div>
     );
@@ -201,16 +243,19 @@ export default function ListingDetailPage() {
 
   if (!listing) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
-          <p className="text-gray-400">The listing you're looking for doesn't exist.</p>
-          <button
-            onClick={() => router.push('/listings')}
-            className="mt-4 btn btn-primary"
-          >
-            Back to Listings
-          </button>
+      <div className="min-h-screen bg-dark-950">
+        <Navigation />
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
+            <p className="text-gray-400">The listing you're looking for doesn't exist.</p>
+            <button
+              onClick={() => router.push('/listings')}
+              className="mt-4 btn btn-primary"
+            >
+              Back to Listings
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -218,6 +263,8 @@ export default function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
+      <Navigation />
+      
       {/* Header */}
       <div className="bg-dark-900 border-b border-dark-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -249,7 +296,7 @@ export default function ListingDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Main Content */}
           <div className="space-y-6">
@@ -315,16 +362,6 @@ export default function ListingDetailPage() {
                 <h1 className="text-5xl font-bold text-white mb-4">
                   {listing.title}
                 </h1>
-                <div className="flex items-center gap-4 text-sm text-gray-400 mb-6">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{formatRelativeTime(listing.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-400" />
-                    <span>4.5 (12 reviews)</span>
-                  </div>
-                </div>
               </div>
 
               <div className="prose prose-invert max-w-none">
@@ -374,8 +411,12 @@ export default function ListingDetailPage() {
 
 
               <div className="space-y-2">
-                <button className="btn btn-primary w-full py-3 text-base font-medium">
-                  Buy Now
+                <button 
+                  onClick={addToCart}
+                  disabled={addingToCart}
+                  className="btn btn-primary w-full py-3 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {addingToCart ? 'Adding to Cart...' : 'Buy Now'}
                 </button>
                 <button
                   onClick={handleSuggestPrice}
@@ -413,6 +454,18 @@ export default function ListingDetailPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Date and Rating - Bottom Right */}
+        <div className="absolute bottom-8 right-8 w-64 text-sm text-gray-400 bg-dark-800/80 backdrop-blur-sm rounded-lg px-4 py-2 border border-dark-700 relative">
+          <div className="flex items-center gap-1">
+            <Star className="w-4 h-4 text-yellow-400" />
+            <span>4.5 (12 reviews)</span>
+          </div>
+          <div className="absolute bottom-2 right-4 flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            <span>{formatRelativeTime(listing.createdAt)}</span>
           </div>
         </div>
       </div>

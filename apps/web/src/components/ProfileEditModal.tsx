@@ -37,6 +37,26 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   const [success, setSuccess] = useState(false);
   const [showAgeValidation, setShowAgeValidation] = useState(false);
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscKey);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -156,7 +176,14 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="bg-dark-800 rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-dark-700">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-white">Edit Profile</h2>

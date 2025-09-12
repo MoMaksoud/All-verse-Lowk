@@ -10,9 +10,11 @@ import { ListingFilters as ListingFiltersComponent } from '@/components/ListingF
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
+  const { currentUser } = useAuth();
   const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -21,6 +23,7 @@ function ListingsContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [appliedFilters, setAppliedFilters] = useState<ListingFilters>({});
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'rating'>('newest');
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -113,6 +116,57 @@ function ListingsContent() {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 3000);
+  }, []);
+
+  const addToCart = useCallback(async (listing: SimpleListing) => {
+    if (!currentUser) {
+      showToast('Please sign in to add items to cart', 'error');
+      return;
+    }
+
+    setAddingToCart(listing.id);
+    try {
+      const response = await fetch('/api/carts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          sellerId: listing.sellerId || 'test-seller',
+          qty: 1,
+          priceAtAdd: listing.price,
+        }),
+      });
+
+      if (response.ok) {
+        showToast('Added to cart!', 'success');
+      } else {
+        showToast('Failed to add to cart', 'error');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showToast('Error adding to cart', 'error');
+    } finally {
+      setAddingToCart(null);
+    }
+  }, [currentUser, showToast]);
 
   const memoizedListings = useMemo(() => listings, [listings]);
 
@@ -218,7 +272,7 @@ function ListingsContent() {
                 ) : (
                   <div className="space-y-4">
                     {memoizedListings.map((listing) => (
-                      <div key={listing.id} className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:bg-dark-700 transition-all duration-200">
+                      <div key={listing.id} className="listing-container bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:bg-dark-700 transition-all duration-200 relative">
                         <Link href={`/listings/${listing.id}`} className="group">
                           <div className="flex">
                             {/* Image - Compact */}
@@ -246,62 +300,63 @@ function ListingsContent() {
                             </div>
                             
                             {/* Content */}
-                            <div className="flex-1 p-4 flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                {/* Heart Button - Left Side */}
-                                <button 
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Add favorite functionality here
-                                  }}
-                                  className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
-                                >
-                                  <Heart className="w-4 h-4 text-gray-400" />
-                                </button>
-                                
-                                {/* Product Info */}
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="text-lg font-semibold text-white truncate group-hover:text-accent-400 transition-colors">
-                                    {listing.title}
-                                  </h3>
-                                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">
-                                    {listing.description}
-                                  </p>
-                                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                                    <span className="text-accent-400 font-semibold">${listing.price.toLocaleString()}</span>
-                                    <span>•</span>
-                                    <span className="capitalize">{listing.category}</span>
-                                  </div>
+                            <div className="flex-1 p-4 flex items-center">
+                              {/* Product Info */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-lg font-semibold text-white group-hover:text-accent-400 transition-colors">
+                                  {listing.title}
+                                </h3>
+                                <p className="text-gray-400 text-sm mt-1 leading-relaxed">
+                                  {listing.description}
+                                </p>
+                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                                  <span className="text-accent-400 font-semibold">${listing.price.toLocaleString()}</span>
+                                  <span>•</span>
+                                  <span className="capitalize">{listing.category}</span>
+                                  <span>•</span>
+                                  <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">
+                                    Like New
+                                  </span>
                                 </div>
-                              </div>
-                              
-                              {/* Cart and Message Actions - Right Side */}
-                              <div className="flex items-center gap-2 ml-4">
-                                <button 
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Add to cart functionality here
-                                  }}
-                                  className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
-                                >
-                                  <ShoppingCart className="w-4 h-4 text-gray-400" />
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Add message functionality here
-                                  }}
-                                  className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
-                                >
-                                  <MessageCircle className="w-4 h-4 text-gray-400" />
-                                </button>
                               </div>
                             </div>
                           </div>
                         </Link>
+                        
+                        {/* Action Icons - Right Side */}
+                        <div className="action-icons">
+                          <button 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              addToCart(listing);
+                            }}
+                            disabled={addingToCart === listing.id}
+                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ShoppingCart className={`w-4 h-4 ${addingToCart === listing.id ? 'text-accent-500' : 'text-gray-400'}`} />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Add message functionality here
+                            }}
+                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+                          >
+                            <MessageCircle className="w-4 h-4 text-gray-400" />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Add favorite functionality here
+                            }}
+                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+                          >
+                            <Heart className="w-4 h-4 text-gray-400" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

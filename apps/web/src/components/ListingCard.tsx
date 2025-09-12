@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, MessageCircle, Star, Clock, X, MapPin, ShoppingCart } from 'lucide-react';
@@ -32,6 +32,26 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [addingToCart, setAddingToCart] = useState(false);
   const [isVoiceListening, setIsVoiceListening] = useState(false);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showMessageModal) {
+        setShowMessageModal(false);
+      }
+    };
+
+    if (showMessageModal) {
+      document.addEventListener('keydown', handleEscKey);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showMessageModal]);
 
   const addToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -141,21 +161,15 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
   return (
     <>
       <Link href={`/listings/${listing.id}`} className="group h-full">
-        <div className="card hover:scale-105 transition-all duration-200 cursor-pointer overflow-hidden h-full flex flex-col">
-          {/* Image */}
-          <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-dark-700 flex-shrink-0">
+        <div className="listing-container">
+          {/* Image Section with Overlay */}
+          <div className="image-section relative overflow-hidden rounded-t-2xl">
             {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
-              <Image
+              <img
                 src={listing.photos[0]}
                 alt={listing.title}
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-300"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                priority={false}
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+                className="w-full h-full object-cover bg-slate-900"
                 onError={(e) => {
-                  // Fallback to placeholder if image fails to load
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                   const parent = target.parentElement;
@@ -179,58 +193,39 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
                 </div>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-dark-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-            
-            {/* Message Button */}
-            <button 
-              onClick={handleMessageClick}
-              className="absolute top-3 left-3 btn-ghost p-2 rounded-xl backdrop-blur-sm bg-dark-800/50 hover:bg-dark-700/50 transition-all duration-200"
-            >
-              <MessageCircle className="w-4 h-4 text-gray-300" />
-            </button>
 
-            {/* Add to Cart Button */}
-            <button 
-              onClick={addToCart}
-              disabled={addingToCart}
-              className="absolute top-12 left-3 btn-ghost p-2 rounded-xl backdrop-blur-sm bg-dark-800/50 hover:bg-dark-700/50 transition-all duration-200 disabled:opacity-50"
-            >
-              <ShoppingCart className="w-4 h-4 text-gray-300" />
-            </button>
-            
-            {/* Favorite Button */}
-            <button 
-              onClick={handleFavoriteClick}
-              className={`absolute top-3 right-3 btn-ghost p-2 rounded-xl backdrop-blur-sm transition-all duration-200 ${
-                isFavorited 
-                  ? 'bg-red-500/80 hover:bg-red-600/80' 
-                  : 'bg-dark-800/50 hover:bg-dark-700/50'
-              }`}
-            >
-              <Heart className={`w-4 h-4 transition-all duration-200 ${
-                isFavorited ? 'text-white fill-current' : 'text-gray-300'
-              }`} />
-            </button>
-            
-            {/* Price Badge */}
-            <div className="absolute bottom-3 left-3">
-              <div className="bg-accent-500 text-white px-3 py-1 rounded-xl text-sm font-semibold">
-                ${listing.price.toLocaleString()}
+            {/* Readability gradient */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
+
+            {/* Rating + Date chip (moved here) */}
+            <div className="date-rating absolute bottom-3 right-3 z-20 inline-flex items-center gap-2 rounded-full bg-black/60 text-white px-3 py-1.5 backdrop-blur">
+              <div className="rating-item flex items-center gap-1">
+                <Star className="w-3 h-3 fill-current text-yellow-400" />
+                <span>4.5</span>
+              </div>
+              <div className="date-item flex items-center gap-1 opacity-90">
+                <Clock className="w-3 h-3" />
+                <span>{new Date(listing.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
           </div>
-
+          
           {/* Content */}
-          <div className="p-4 flex flex-col flex-grow">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="text-lg font-semibold text-white line-clamp-2 group-hover:text-accent-400 transition-colors">
-                {listing.title}
-              </h3>
-            </div>
+          <div className="content-area">
+            <h3 className="group-hover:text-accent-400 transition-colors">
+              {listing.title}
+            </h3>
             
-            <p className="text-gray-400 text-sm line-clamp-2 mb-3 flex-grow">
+            <p className="text-gray-400 text-sm leading-relaxed">
               {listing.description}
             </p>
+            
+            {/* Price and Category */}
+            <div className="price-category">
+              <span className="price">${listing.price.toLocaleString()}</span>
+              <span className="category">{listing.category}</span>
+              <span className="condition">Like New</span>
+            </div>
             
             {/* Location */}
             {listing.location && (
@@ -241,17 +236,32 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
                 </span>
               </div>
             )}
-            
-            <div className="flex items-center gap-2 mt-auto">
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-accent-400 fill-current" />
-                <span className="text-sm text-gray-300">4.5</span>
-              </div>
-              <span className="text-gray-500">•</span>
-              <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-400">{new Date(listing.createdAt).toLocaleDateString()}</span>
-              </div>
+
+            {/* Action Icons - Centered at Bottom */}
+            <div className="action-icons">
+              <button 
+                onClick={addToCart}
+                disabled={addingToCart}
+                className="p-2 rounded-lg hover:bg-dark-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ShoppingCart className={`w-4 h-4 ${addingToCart ? 'text-accent-500' : 'text-gray-400'}`} />
+              </button>
+              <button 
+                onClick={handleMessageClick}
+                className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 text-gray-400" />
+              </button>
+              <button 
+                onClick={handleFavoriteClick}
+                className={`p-2 rounded-lg hover:bg-dark-600 transition-colors ${
+                  isFavorited ? 'text-red-500' : 'text-gray-400'
+                }`}
+              >
+                <Heart className={`w-4 h-4 transition-all duration-200 ${
+                  isFavorited ? 'text-red-500 fill-current' : 'text-gray-400'
+                }`} />
+              </button>
             </div>
           </div>
         </div>
@@ -259,7 +269,14 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
 
       {/* Message Modal */}
       {showMessageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowMessageModal(false);
+            }
+          }}
+        >
           <div className="bg-dark-800 rounded-lg max-w-md w-full border border-dark-600">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
