@@ -11,10 +11,12 @@ import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
   const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -117,25 +119,10 @@ function ListingsContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.remove();
-      }
-    }, 3000);
-  }, []);
 
   const addToCart = useCallback(async (listing: SimpleListing) => {
     if (!currentUser) {
-      showToast('Please sign in to add items to cart', 'error');
+      showError('Please sign in to add items to cart');
       return;
     }
 
@@ -156,17 +143,17 @@ function ListingsContent() {
       });
 
       if (response.ok) {
-        showToast('Added to cart!', 'success');
+        showSuccess('Added to cart!');
       } else {
-        showToast('Failed to add to cart', 'error');
+        showError('Failed to add to cart');
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      showToast('Error adding to cart', 'error');
+      showError('Error adding to cart');
     } finally {
       setAddingToCart(null);
     }
-  }, [currentUser, showToast]);
+  }, [currentUser, showSuccess, showError]);
 
   const memoizedListings = useMemo(() => listings, [listings]);
 

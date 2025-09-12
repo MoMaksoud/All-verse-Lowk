@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle, ShoppingCart } from 'lucide-react';
+import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle, ShoppingCart, Package, List } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Profile } from '@marketplace/types';
@@ -291,6 +291,22 @@ export function Navigation() {
                         >
                           <Plus className="w-4 h-4 mr-3" />
                           Sell Item
+                        </Link>
+                        <Link
+                          href="/my-listings"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <List className="w-4 h-4 mr-3" />
+                          My Listings
+                        </Link>
+                        <Link
+                          href="/orders"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <Package className="w-4 h-4 mr-3" />
+                          My Orders
                         </Link>
                         <Link
                           href="/favorites"

@@ -536,6 +536,79 @@ export class GeminiService {
 
     return this.generateResponse(pricePrompt);
   }
+
+  /**
+   * Generate intelligent listings based on user query using Gemini AI
+   */
+  static async generateIntelligentListings(query: string): Promise<ChatResponse> {
+    const listingsPrompt = `
+      You are an intelligent product curator for ALL VERSE GPT marketplace! 🎯
+
+      User query: "${query}"
+
+      Generate 3-4 realistic product listings that would match this search. Each listing should be a JSON object with these exact fields:
+
+      {
+        "id": "unique-id",
+        "title": "Product Name",
+        "price": {"value": number, "currency": "USD"},
+        "condition": "New|Like New|Excellent|Good|Fair",
+        "seller": {"id": "seller-id", "name": "Seller Name"},
+        "imageUrl": "https://images.unsplash.com/photo-[relevant-photo-id]?w=400&h=300&fit=crop",
+        "url": "/listings/unique-id",
+        "category": "electronics|fashion|home|sports|other",
+        "badges": ["Trending"|"New"|"Hot"|"Popular"|"Deal"],
+        "location": "City, State",
+        "createdAt": "2025-01-XXTXX:XX:XX.000Z",
+        "score": 0.XX
+      }
+
+      Guidelines:
+      - Make titles realistic and specific (e.g., "iPhone 13 Pro 128GB" not just "iPhone")
+      - Price ranges: Electronics $50-2000, Fashion $20-500, Home $30-800, Sports $25-400
+      - Use realistic seller names like "TechDeals", "FashionForward", "HomeDecor"
+      - Choose appropriate Unsplash photo IDs for each product type
+      - Use Florida cities for locations
+      - Score should be 0.80-0.98 for relevance
+      - Make badges contextually relevant
+
+      Return ONLY a valid JSON array of listings, no other text.
+
+      Examples based on query context:
+      - "iPhone" → iPhone 13 Pro, iPhone 14, iPhone SE, AirPods
+      - "laptop" → MacBook Pro, Dell XPS, HP Pavilion, Gaming Laptop
+      - "shoes" → Nike Air Max, Adidas Ultraboost, Converse Chuck Taylor
+      - "trending" → Mix of popular items across categories
+      - "deals" → Items under $200 with "Deal" badges
+    `;
+
+    try {
+      const result = await model.generateContent(listingsPrompt);
+      const response = await result.response;
+      const text = response.text();
+
+      // Try to parse the JSON response
+      const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+      const listings = JSON.parse(cleanText);
+
+      if (Array.isArray(listings) && listings.length > 0) {
+        return {
+          message: 'AI-generated listings created successfully',
+          success: true,
+          listings: listings
+        };
+      } else {
+        throw new Error('Invalid listings format');
+      }
+    } catch (error) {
+      console.error('Gemini listings generation error:', error);
+      return {
+        message: 'Failed to generate AI listings',
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
 }
 
 export default GeminiService;

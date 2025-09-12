@@ -8,6 +8,7 @@ import { SimpleListing } from '@marketplace/types';
 import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 import { formatLocation } from '@/lib/location';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 interface ListingCardProps {
   listing: SimpleListing;
@@ -15,6 +16,7 @@ interface ListingCardProps {
 
 export const ListingCard = memo(function ListingCard({ listing }: ListingCardProps) {
   const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [isFavorited, setIsFavorited] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -111,7 +113,7 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
       setIsFavorited(!isFavorited);
     } catch (error) {
       console.error('Error updating favorites:', error);
-      showToast('Failed to update favorites', 'error');
+      showError('Failed to update favorites');
     }
   }, [isFavorited, listing.id]);
 
@@ -123,7 +125,7 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
 
   const handleSendMessage = useCallback(() => {
     if (message.trim()) {
-      showToast('Message sent!', 'success');
+      showSuccess('Message sent!');
       setMessage('');
       setShowMessageModal(false);
     }
@@ -140,23 +142,6 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
     setIsVoiceListening(false);
   };
 
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    // Create toast element
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    // Remove toast after 3 seconds
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.remove();
-      }
-    }, 3000);
-  }, []);
 
   return (
     <>

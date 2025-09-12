@@ -89,19 +89,26 @@ export async function GET(req: NextRequest) {
         break;
     }
     
-    // Transform FirestoreListing to SimpleListing format
-    const transformedItems = result.items.map(listing => ({
-      id: (listing as any).id, // FirestoreListing & { id: string }
-      title: listing.title,
-      description: listing.description,
-      price: listing.price,
-      category: listing.category,
-      photos: listing.images || [],
-      createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-      updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-      sellerId: listing.sellerId,
-      location: undefined, // Add location if available
-    }));
+    // Transform FirestoreListing to SimpleListing format and filter out placeholder listings
+    const transformedItems = result.items
+      .filter(listing => {
+        // Filter out placeholder listings
+        return listing.title !== 'AI Analyzing...' && 
+               listing.description !== 'AI is analyzing your photos...' &&
+               listing.price > 0;
+      })
+      .map(listing => ({
+        id: (listing as any).id, // FirestoreListing & { id: string }
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+        category: listing.category,
+        photos: listing.images || [],
+        createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        sellerId: listing.sellerId,
+        location: undefined, // Add location if available
+      }));
 
     const response = NextResponse.json({
       data: transformedItems,

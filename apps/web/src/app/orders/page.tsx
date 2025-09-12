@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigation } from '@/components/Navigation';
 import { DynamicBackground } from '@/components/DynamicBackground';
+import { Card } from '@/components/ui/Card';
 import { 
   Package, 
   Calendar, 
@@ -165,21 +166,23 @@ export default function OrdersPage() {
               <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
             </div>
           ) : orders.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-white mb-2">No orders found</h2>
-              <p className="text-gray-400 mb-6">You haven't made any purchases yet.</p>
-              <Link
-                href="/listings"
-                className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-              >
-                Browse Listings
-              </Link>
-            </div>
+            <Card>
+              <div className="text-center py-12">
+                <Package className="w-16 h-16 text-zinc-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-white mb-2">No orders found</h2>
+                <p className="text-zinc-400 mb-6">You haven't made any purchases yet.</p>
+                <Link
+                  href="/listings"
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+                >
+                  Browse Listings
+                </Link>
+              </div>
+            </Card>
           ) : (
             <div className="space-y-6">
               {orders.map((order) => (
-                <div key={order.id} className="bg-dark-800 rounded-2xl p-6 border border-dark-700">
+                <Card key={order.id}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <h3 className="text-lg font-semibold text-white">
@@ -258,7 +261,7 @@ export default function OrdersPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}
@@ -268,14 +271,14 @@ export default function OrdersPage() {
       {/* Order Details Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl border border-dark-700 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-white">
                 Order Details #{selectedOrder.id.slice(-8).toUpperCase()}
               </h3>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="text-gray-400 hover:text-white"
+                className="text-zinc-400 hover:text-white"
               >
                 <XCircle className="w-6 h-6" />
               </button>
@@ -284,7 +287,7 @@ export default function OrdersPage() {
             <div className="space-y-6">
               {/* Status */}
               <div className="flex items-center gap-3">
-                <span className="text-gray-400">Status:</span>
+                <span className="text-zinc-400">Status:</span>
                 <div className={`px-3 py-1 rounded-full border text-sm font-medium flex items-center gap-2 ${getStatusColor(selectedOrder.status)}`}>
                   {getStatusIcon(selectedOrder.status)}
                   {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
@@ -296,11 +299,11 @@ export default function OrdersPage() {
                 <h4 className="text-white font-medium mb-3">Items</h4>
                 <div className="space-y-3">
                   {selectedOrder.items.map((item, index) => (
-                    <div key={index} className="bg-dark-700 rounded-lg p-4">
+                    <div key={index} className="bg-zinc-800 rounded-xl p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h5 className="text-white font-medium">{item.title}</h5>
-                          <p className="text-gray-400 text-sm">Seller ID: {item.sellerId}</p>
+                          <p className="text-zinc-400 text-sm">Seller ID: {item.sellerId}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-white font-medium">
@@ -322,8 +325,8 @@ export default function OrdersPage() {
                   <MapPin className="w-4 h-4" />
                   Shipping Address
                 </h4>
-                <div className="bg-dark-700 rounded-lg p-4">
-                  <div className="text-gray-300">
+                <div className="bg-zinc-800 rounded-xl p-4">
+                  <div className="text-zinc-300">
                     <p className="font-medium">{selectedOrder.shippingAddress.name}</p>
                     <p>{selectedOrder.shippingAddress.street}</p>
                     <p>
@@ -337,20 +340,20 @@ export default function OrdersPage() {
               {/* Order Summary */}
               <div>
                 <h4 className="text-white font-medium mb-3">Order Summary</h4>
-                <div className="bg-dark-700 rounded-lg p-4 space-y-2">
+                <div className="bg-zinc-800 rounded-xl p-4 space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Subtotal:</span>
+                    <span className="text-zinc-400">Subtotal:</span>
                     <span className="text-white">{formatCurrency(selectedOrder.subtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Tax:</span>
+                    <span className="text-zinc-400">Tax:</span>
                     <span className="text-white">{formatCurrency(selectedOrder.tax)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Fees:</span>
+                    <span className="text-zinc-400">Fees:</span>
                     <span className="text-white">{formatCurrency(selectedOrder.fees)}</span>
                   </div>
-                  <div className="border-t border-dark-600 pt-2">
+                  <div className="border-t border-zinc-700 pt-2">
                     <div className="flex justify-between">
                       <span className="text-white font-semibold">Total:</span>
                       <span className="text-accent-500 font-semibold text-lg">
@@ -362,7 +365,7 @@ export default function OrdersPage() {
               </div>
 
               {/* Dates */}
-              <div className="flex items-center gap-4 text-sm text-gray-400">
+              <div className="flex items-center gap-4 text-sm text-zinc-400">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   <span>Ordered: {formatDate(selectedOrder.createdAt)}</span>
