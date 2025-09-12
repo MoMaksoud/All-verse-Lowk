@@ -160,7 +160,7 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
 
   return (
     <>
-      <Link href={`/listings/${listing.id}`} className="group h-full">
+      <Link href={`/listings/${listing.id}`} className="group/card h-full">
         <div className="listing-container">
           {/* Image Section with Overlay */}
           <div className="image-section relative overflow-hidden rounded-t-2xl">
@@ -197,16 +197,21 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
             {/* Readability gradient */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
 
-            {/* Rating + Date chip (moved here) */}
-            <div className="date-rating absolute bottom-3 right-3 z-20 inline-flex items-center gap-2 rounded-full bg-black/60 text-white px-3 py-1.5 backdrop-blur">
-              <div className="rating-item flex items-center gap-1">
+            {/* Rating/Date chip with hover expansion */}
+            <div className="absolute bottom-3 right-3 z-20 inline-flex items-center rounded-full bg-black/60 text-white px-2.5 py-1 backdrop-blur transition-all duration-500 ease-in-out shadow">
+              {/* Rating always visible */}
+              <span className="inline-flex items-center gap-1 text-sm font-medium">
                 <Star className="w-3 h-3 fill-current text-yellow-400" />
-                <span>4.5</span>
-              </div>
-              <div className="date-item flex items-center gap-1 opacity-90">
-                <Clock className="w-3 h-3" />
-                <span>{new Date(listing.createdAt).toLocaleDateString()}</span>
-              </div>
+                4.5
+              </span>
+
+              {/* Date expands on hover */}
+              {listing.createdAt && (
+                <span className="ml-2 overflow-hidden max-w-0 opacity-0 translate-x-2 group-hover/card:max-w-[160px] group-hover/card:opacity-100 group-hover/card:translate-x-0 transition-all duration-500 ease-in-out whitespace-nowrap text-sm">
+                  <Clock className="w-3 h-3 mr-1 inline" />
+                  {new Date(listing.createdAt).toLocaleDateString()}
+                </span>
+              )}
             </div>
           </div>
           

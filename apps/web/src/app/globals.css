@@ -1120,34 +1120,9 @@ select:focus {
   margin-bottom: 8px; /* Reduced margin */
 }
 
-/* Date/Rating Chip - Enhanced Tailwind Styles */
-.listing-container .date-rating {
-  font-size: 0.75rem;
-  font-weight: 500;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
+/* Date/Rating Chip - Now handled by Tailwind classes */
 
-.listing-container .date-rating:hover {
-  transform: scale(1.05);
-  background: rgba(0, 0, 0, 0.8) !important;
-}
-
-.listing-container .date-rating .rating-item,
-.listing-container .date-rating .date-item,
-.listing-container .date-rating .condition-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.listing-container .date-rating .rating-item svg {
-  color: #fbbf24; /* Keep yellow star for rating */
-}
-
-.listing-container .date-rating .date-item svg {
-  color: #e2e8f0; /* Light gray for clock icon */
-}
+/* Old date-rating styles removed - now using Tailwind */
 
 /* Action Icons Bar - Static at Bottom */
 .listing-container .action-icons {
@@ -1256,10 +1231,7 @@ select:focus {
     padding: 12px; /* Reduced padding for mobile */
   }
   
-  .listing-container .date-rating {
-    font-size: 0.7rem; /* Smaller text for mobile */
-    padding: 0.25rem 0.5rem; /* Smaller padding for mobile */
-  }
+  /* Date-rating hover effects now handled by Tailwind */
   
   .listing-container .action-icons {
     margin: 8px 12px 12px 12px; /* Reduced margins for mobile */
@@ -1291,15 +1263,7 @@ select:focus {
   margin-bottom: 8px; /* Reduced margin to prevent content overflow */
 }
 
-/* Ensure date-rating doesn't interfere with content */
-.listing-container .date-rating {
-  pointer-events: none; /* Allow clicks to pass through to content below */
-}
-
-.listing-container .date-rating .rating-item,
-.listing-container .date-rating .date-item {
-  pointer-events: auto; /* Re-enable pointer events for interactive elements */
-}
+/* Date-rating now handled by Tailwind classes */
 
 /* Hover effects optimization */
 @media (hover: hover) {
