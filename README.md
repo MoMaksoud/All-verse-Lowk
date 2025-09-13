@@ -26,10 +26,8 @@ We’re not publishing full technical details here — our focus is on building 
 ## 📬 Get In Touch  
 We’d love to connect with collaborators, mentors, and anyone excited about the future of AI-powered commerce.  
 
-- ✉️ Email: [your email or contact link]  
-- 🌍 LinkedIn: [your LinkedIn page]  
-- 💬 Discord/Community: [invite link if you want]  
-
+- ✉️ Email: allversegpt@gmail.com  
+- 🌍 LinkedIn: [[your LinkedIn page]](https://www.linkedin.com/in/dustin-harrell-43a540249/)
 ---
 
 ✨ *All Verse GPT is currently in development. Stay tuned as we continue building and sharing updates on our journey.*  
