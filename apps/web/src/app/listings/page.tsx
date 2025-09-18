@@ -3,16 +3,20 @@
 import React, { useEffect, useState, Suspense, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Filter, Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle } from 'lucide-react';
+import { Filter, Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart } from 'lucide-react';
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
+  const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -21,6 +25,7 @@ function ListingsContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [appliedFilters, setAppliedFilters] = useState<ListingFilters>({});
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'rating'>('newest');
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -39,7 +44,7 @@ function ListingsContent() {
         params.set('userLng', appliedFilters.userCoordinates.lng.toString());
       }
       params.set('page', currentPage.toString());
-      params.set('limit', '12');
+      params.set('limit', '9'); // Reduced from 12 to 9 for faster loading
     
       // Add sort parameter
       switch (sortBy) {
@@ -114,6 +119,42 @@ function ListingsContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+
+  const addToCart = useCallback(async (listing: SimpleListing) => {
+    if (!currentUser) {
+      showError('Please sign in to add items to cart');
+      return;
+    }
+
+    setAddingToCart(listing.id);
+    try {
+      const response = await fetch('/api/carts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          sellerId: listing.sellerId || 'test-seller',
+          qty: 1,
+          priceAtAdd: listing.price,
+        }),
+      });
+
+      if (response.ok) {
+        showSuccess('Added to cart!');
+      } else {
+        showError('Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showError('Error adding to cart');
+    } finally {
+      setAddingToCart(null);
+    }
+  }, [currentUser, showSuccess, showError]);
+
   const memoizedListings = useMemo(() => listings, [listings]);
 
   if (loading) {
@@ -135,7 +176,7 @@ function ListingsContent() {
           <div className="flex justify-center mb-4">
             <Logo size="md" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-5xl font-bold text-white mb-2">
             Browse Listings
           </h1>
           <p className="text-lg text-gray-400">
@@ -207,7 +248,7 @@ function ListingsContent() {
             {memoizedListings.length > 0 ? (
               <>
                 {viewMode === 'grid' ? (
-                  <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {memoizedListings.map((listing) => (
                       <ListingCard
                         key={listing.id}
@@ -218,7 +259,7 @@ function ListingsContent() {
                 ) : (
                   <div className="space-y-4">
                     {memoizedListings.map((listing) => (
-                      <div key={listing.id} className="bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:bg-dark-700 transition-all duration-200">
+                      <div key={listing.id} className="listing-container bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:bg-dark-700 transition-all duration-200 relative">
                         <Link href={`/listings/${listing.id}`} className="group">
                           <div className="flex">
                             {/* Image - Compact */}
@@ -246,47 +287,63 @@ function ListingsContent() {
                             </div>
                             
                             {/* Content */}
-                            <div className="flex-1 p-4 flex items-center justify-between">
+                            <div className="flex-1 p-4 flex items-center">
+                              {/* Product Info */}
                               <div className="flex-1 min-w-0">
-                                <h3 className="text-lg font-semibold text-white truncate group-hover:text-accent-400 transition-colors">
+                                <h3 className="text-lg font-semibold text-white group-hover:text-accent-400 transition-colors">
                                   {listing.title}
                                 </h3>
-                                <p className="text-gray-400 text-sm mt-1 line-clamp-2">
+                                <p className="text-gray-400 text-sm mt-1 leading-relaxed">
                                   {listing.description}
                                 </p>
                                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
                                   <span className="text-accent-400 font-semibold">${listing.price.toLocaleString()}</span>
                                   <span>•</span>
                                   <span className="capitalize">{listing.category}</span>
+                                  <span>•</span>
+                                  <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">
+                                    Like New
+                                  </span>
                                 </div>
-                              </div>
-                              
-                              {/* Actions */}
-                              <div className="flex items-center gap-2 ml-4">
-                                <button 
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Add favorite functionality here
-                                  }}
-                                  className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
-                                >
-                                  <Heart className="w-4 h-4 text-gray-400" />
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Add message functionality here
-                                  }}
-                                  className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
-                                >
-                                  <MessageCircle className="w-4 h-4 text-gray-400" />
-                                </button>
                               </div>
                             </div>
                           </div>
                         </Link>
+                        
+                        {/* Action Icons - Right Side */}
+                        <div className="action-icons">
+                          <button 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              addToCart(listing);
+                            }}
+                            disabled={addingToCart === listing.id}
+                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ShoppingCart className={`w-4 h-4 ${addingToCart === listing.id ? 'text-accent-500' : 'text-gray-400'}`} />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Add message functionality here
+                            }}
+                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+                          >
+                            <MessageCircle className="w-4 h-4 text-gray-400" />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // Add favorite functionality here
+                            }}
+                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+                          >
+                            <Heart className="w-4 h-4 text-gray-400" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

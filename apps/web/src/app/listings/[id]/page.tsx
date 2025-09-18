@@ -6,6 +6,13 @@ import Image from 'next/image';
 import { Heart, Share2, MapPin, Eye, Star, MessageCircle, DollarSign, X, Edit, Trash2, ArrowLeft, Clock, Tag } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { Navigation } from '@/components/Navigation';
+import { SellerInfo } from '@/components/SellerInfo';
+import { ListingActions } from '@/components/ListingActions';
+import { PriceSuggestionModal } from '@/components/PriceSuggestionModal';
+import { Card } from '@/components/ui/Card';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -29,6 +36,8 @@ const formatRelativeTime = (dateString: string) => {
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [listing, setListing] = useState<SimpleListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -49,6 +58,10 @@ export default function ListingDetailPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPriceSuggestionModal, setShowPriceSuggestionModal] = useState(false);
+  const [priceSuggestion, setPriceSuggestion] = useState('');
+  const [priceSuggestionLoading, setPriceSuggestionLoading] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!params.id) return;
@@ -84,17 +97,17 @@ export default function ListingDetailPage() {
       
       if (isFavorited) {
         updatedFavorites = favorites.filter((id: string) => id !== listing.id);
-        showToast('Removed from favorites', 'success');
+        showSuccess('Removed from favorites');
       } else {
         updatedFavorites = [...favorites, listing.id];
-        showToast('Added to favorites', 'success');
+        showSuccess('Added to favorites');
       }
       
       localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
       setIsFavorited(!isFavorited);
     } catch (error) {
       console.error('Error updating favorites:', error);
-      showToast('Failed to update favorites', 'error');
+      showError('Failed to update favorites');
     }
   }, [isFavorited, listing]);
 
@@ -114,16 +127,19 @@ export default function ListingDetailPage() {
     try {
       // Simulate sending message
       await new Promise(resolve => setTimeout(resolve, 1000));
-      showToast('Message sent successfully!', 'success');
+      showSuccess('Message sent successfully!');
       setMessage('');
       setShowMessageModal(false);
     } catch (error) {
-      showToast('Failed to send message', 'error');
+      showError('Failed to send message');
     }
   }, [message]);
 
   const handleSuggestPrice = useCallback(async () => {
     if (!listing) return;
+    
+    setPriceSuggestionLoading(true);
+    setShowPriceSuggestionModal(true);
     
     try {
       const response = await fetch('/api/prices/suggest', {
@@ -134,25 +150,70 @@ export default function ListingDetailPage() {
         body: JSON.stringify({
           title: listing.title,
           description: listing.description,
-          photos: listing.photos,
+          category: listing.category,
         }),
       });
       
       if (response.ok) {
         const data = await response.json();
-        showToast(`Suggested price: ${formatCurrency(data.price)}`, 'success');
+        if (data.success && data.suggestion) {
+          setPriceSuggestion(data.suggestion);
+        } else {
+          throw new Error('Invalid response format');
+        }
       } else {
-        throw new Error('Failed to get price suggestion');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get price suggestion');
       }
     } catch (error) {
       console.error('Error getting price suggestion:', error);
-      showToast('Failed to get price suggestion', 'error');
+      setPriceSuggestion('Sorry, I was unable to generate a price suggestion at this time. Please try again later or consider researching similar listings manually.');
+      showError('Failed to get price suggestion');
+    } finally {
+      setPriceSuggestionLoading(false);
     }
   }, [listing]);
 
+  const addToCart = useCallback(async () => {
+    if (!listing) return;
+    
+    if (!currentUser) {
+      showError('Please sign in to add items to cart');
+      return;
+    }
+
+    setAddingToCart(true);
+    try {
+      const response = await fetch('/api/carts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          sellerId: listing.sellerId || 'test-seller',
+          qty: 1,
+          priceAtAdd: listing.price,
+        }),
+      });
+
+      if (response.ok) {
+        showSuccess('Added to cart!');
+      } else {
+        showError('Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showError('Error adding to cart');
+    } finally {
+      setAddingToCart(false);
+    }
+  }, [listing, currentUser]);
+
   const copyToClipboard = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
-    showToast('Link copied to clipboard!', 'success');
+    showSuccess('Link copied to clipboard!');
   }, []);
 
   const handleDeleteListing = useCallback(async () => {
@@ -164,36 +225,22 @@ export default function ListingDetailPage() {
       });
       
       if (response.ok) {
-        showToast('Listing deleted successfully!', 'success');
+        showSuccess('Listing deleted successfully!');
         router.push('/listings');
       } else {
         throw new Error('Failed to delete listing');
       }
     } catch (error) {
       console.error('Error deleting listing:', error);
-      showToast('Failed to delete listing', 'error');
+      showError('Failed to delete listing');
     }
   }, [listing, router]);
 
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.remove();
-      }
-    }, 3000);
-  }, []);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950">
+        <Navigation />
         <LoadingSpinner size="lg" text="Loading listing details..." />
       </div>
     );
@@ -201,16 +248,19 @@ export default function ListingDetailPage() {
 
   if (!listing) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
-          <p className="text-gray-400">The listing you're looking for doesn't exist.</p>
-          <button
-            onClick={() => router.push('/listings')}
-            className="mt-4 btn btn-primary"
-          >
-            Back to Listings
-          </button>
+      <div className="min-h-screen bg-dark-950">
+        <Navigation />
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
+            <p className="text-gray-400">The listing you're looking for doesn't exist.</p>
+            <button
+              onClick={() => router.push('/listings')}
+              className="mt-4 btn btn-primary"
+            >
+              Back to Listings
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -218,6 +268,8 @@ export default function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
+      <Navigation />
+      
       {/* Header */}
       <div className="bg-dark-900 border-b border-dark-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -249,13 +301,13 @@ export default function ListingDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Main Content */}
-          <div className="space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content - Left Side */}
+          <div className="lg:col-span-2 space-y-6">
             {/* Photo Gallery */}
-            <div className="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden">
-              <div className="relative aspect-[4/3] bg-dark-700 max-w-2xl mx-auto">
+            <Card>
+              <div className="relative aspect-[4/3] bg-zinc-800 max-w-2xl mx-auto rounded-xl overflow-hidden">
                 {listing.photos && listing.photos.length > 0 && listing.photos[selectedImage] ? (
                   <Image
                     src={listing.photos[selectedImage]}
@@ -268,8 +320,8 @@ export default function ListingDetailPage() {
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-dark-700">
-                    <div className="text-center text-gray-400">
+                  <div className="w-full h-full flex items-center justify-center bg-zinc-800">
+                    <div className="text-center text-zinc-400">
                       <div className="text-5xl mb-3">📦</div>
                       <div className="text-base">No Image Available</div>
                     </div>
@@ -279,140 +331,82 @@ export default function ListingDetailPage() {
               
               {/* Thumbnail Navigation */}
               {listing.photos && listing.photos.length > 1 && (
-                <div className="p-4 border-t border-dark-700">
-                  <div className="flex gap-2 overflow-x-auto justify-center">
-                    {listing.photos.map((image: string, index: number) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 ${
-                          selectedImage === index ? 'border-accent-500' : 'border-dark-600'
-                        }`}
-                      >
-                        <img
-                          src={image}
-                          alt={`${listing.title} - Image ${index + 1}`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = 'https://via.placeholder.com/64x64/1e293b/64748b?text=?';
-                          }}
-                        />
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex gap-2 overflow-x-auto justify-center">
+                  {listing.photos.map((image: string, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 ${
+                        selectedImage === index ? 'border-blue-500' : 'border-zinc-700'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${listing.title} - Image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://via.placeholder.com/64x64/1e293b/64748b?text=?';
+                        }}
+                      />
+                    </button>
+                  ))}
                 </div>
               )}
-            </div>
+            </Card>
 
             {/* Listing Details */}
-            <div className="bg-dark-800 rounded-xl border border-dark-700 p-6">
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Tag className="w-4 h-4 text-accent-500" />
-                  <span className="text-sm text-gray-400 capitalize">{listing.category}</span>
-                </div>
-                <h1 className="text-3xl font-bold text-white mb-4">
-                  {listing.title}
-                </h1>
-                <div className="flex items-center gap-4 text-sm text-gray-400 mb-6">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{formatRelativeTime(listing.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-400" />
-                    <span>4.5 (12 reviews)</span>
-                  </div>
-                </div>
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <Tag className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-zinc-400 capitalize">{listing.category}</span>
               </div>
-
-              <div className="prose prose-invert max-w-none">
-                <h3 className="text-xl font-semibold text-white mb-4">Description</h3>
-                <p className="text-gray-300 leading-relaxed text-lg">{listing.description}</p>
+              <h1 className="text-2xl font-semibold text-zinc-100 mb-4">
+                {listing.title}
+              </h1>
+              <div>
+                <h3 className="text-lg font-medium text-zinc-200 mb-3">Description</h3>
+                <p className="text-zinc-300 leading-relaxed">{listing.description}</p>
               </div>
-            </div>
+            </Card>
 
             {/* Seller Information */}
-            <div className="bg-dark-800 rounded-xl border border-dark-700 p-6">
-              <h3 className="text-xl font-semibold text-white mb-4">Seller Information</h3>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-accent-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold text-lg">U</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-white text-lg">Marketplace User</p>
-                    <p className="text-sm text-gray-400">Member since 2024</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="text-sm text-gray-300">4.8 (127 reviews)</span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleMessageClick}
-                  className="btn btn-outline flex items-center gap-2"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Contact Seller
-                </button>
-              </div>
-            </div>
+            <SellerInfo
+              seller={{
+                name: "Marketplace User",
+                since: "2024",
+                rating: 4.8,
+                reviews: 127,
+                id: listing.sellerId
+              }}
+              onContactClick={() => handleMessageClick({} as React.MouseEvent)}
+            />
           </div>
 
-          {/* Sidebar */}
+          {/* Actions Box - Right Side */}
           <div className="space-y-6">
-            {/* Price and Actions */}
-            <div className="bg-dark-800 rounded-xl border border-dark-700 p-5 sticky top-6">
-              <div className="text-center mb-5">
-                <div className="text-3xl font-bold text-accent-500 mb-1">
-                  {formatCurrency(listing.price)}
-                </div>
-                <p className="text-sm text-gray-400">Current asking price</p>
-              </div>
+            <ListingActions
+              price={listing.price}
+              onBuyNow={() => addToCart()}
+              onSuggestPrice={() => handleSuggestPrice()}
+              onMessageSeller={() => handleMessageClick({} as React.MouseEvent)}
+              onEditListing={() => setShowEditModal(true)}
+              onDeleteListing={() => setShowDeleteModal(true)}
+              addingToCart={addingToCart}
+              suggestingPrice={priceSuggestionLoading}
+            />
+          </div>
+        </div>
 
-
-              <div className="space-y-2">
-                <button className="btn btn-primary w-full py-3 text-base font-medium">
-                  Buy Now
-                </button>
-                <button
-                  onClick={handleSuggestPrice}
-                  className="btn btn-secondary w-full py-3 text-base flex items-center justify-center gap-2"
-                >
-                  <DollarSign className="w-4 h-4" />
-                  Suggest Price
-                </button>
-                <button
-                  onClick={handleMessageClick}
-                  className="btn btn-outline w-full py-3 text-base flex items-center justify-center gap-2"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Message Seller
-                </button>
-              </div>
-
-              <div className="mt-5 pt-5 border-t border-dark-700">
-                <h4 className="font-medium text-white mb-3 text-sm">Quick Actions</h4>
-                <div className="space-y-1">
-                  <button
-                    onClick={() => setShowEditModal(true)}
-                    className="w-full flex items-center gap-2 text-gray-300 hover:text-white transition-colors py-2 text-sm"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit Listing
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="w-full flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors py-2 text-sm"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete Listing
-                  </button>
-                </div>
-              </div>
-            </div>
+        {/* Date and Rating - Bottom Right */}
+        <div className="absolute bottom-8 right-8 w-64 text-sm text-gray-400 bg-dark-800/80 backdrop-blur-sm rounded-lg px-4 py-2 border border-dark-700 relative">
+          <div className="flex items-center gap-1">
+            <Star className="w-4 h-4 text-yellow-400" />
+            <span>4.5 (12 reviews)</span>
+          </div>
+          <div className="absolute bottom-2 right-4 flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            <span>{formatRelativeTime(listing.createdAt)}</span>
           </div>
         </div>
       </div>
@@ -516,6 +510,14 @@ export default function ListingDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Price Suggestion Modal */}
+      <PriceSuggestionModal
+        isOpen={showPriceSuggestionModal}
+        onClose={() => setShowPriceSuggestionModal(false)}
+        suggestion={priceSuggestion}
+        loading={priceSuggestionLoading}
+      />
     </div>
   );
 }

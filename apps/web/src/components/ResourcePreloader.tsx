@@ -20,21 +20,22 @@ export function ResourcePreloader() {
       document.head.appendChild(link);
     });
 
-    // Prefetch API data
+    // Prefetch API data - reduced to essential data only
     const prefetchData = async () => {
       try {
-        await fetch('/api/listings?limit=6', {
+        await fetch('/api/listings?limit=3', {
           method: 'GET',
           headers: {
-            'Cache-Control': 'max-age=300', // 5 minutes cache
+            'Cache-Control': 'max-age=600', // 10 minutes cache
           },
         });
       } catch (error) {
+        // Silently fail - prefetch is not critical
       }
     };
 
-    // Prefetch after initial load
-    const timer = setTimeout(prefetchData, 1000);
+    // Prefetch after initial load - increased delay to reduce initial load impact
+    const timer = setTimeout(prefetchData, 3000);
     
     return () => {
       clearTimeout(timer);

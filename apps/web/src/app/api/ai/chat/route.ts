@@ -4,7 +4,7 @@ import { GeminiService } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json();
+    const { message, userMode = 'buyer' } = await request.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -20,22 +20,39 @@ export async function POST(request: NextRequest) {
     const aiResponse = await GeminiService.generateMarketplaceResponse(userMessage, {
       availableListings: listings.slice(0, 10), // Send first 10 listings as context
       totalListings: listings.length,
-      categories: [...new Set(listings.map(l => l.category))]
+      categories: [...new Set(listings.map(l => l.category))],
+      userMode: userMode
     });
 
-    // Generate contextual suggestions based on AI response
+    // Generate contextual suggestions based on AI response and user mode
     const suggestions = await GeminiService.generateSearchSuggestions(userMessage);
     
-    // Enhance suggestions based on AI response content
+    // Enhance suggestions based on AI response content and user mode
     let enhancedSuggestions = suggestions;
-    if (aiResponse.message.toLowerCase().includes('electronics')) {
-      enhancedSuggestions = ['Show Electronics', 'Find Laptops', 'Browse Phones', 'See Gaming Gear'];
-    } else if (aiResponse.message.toLowerCase().includes('fashion')) {
-      enhancedSuggestions = ['Browse Fashion', 'Find Shoes', 'See Accessories', 'Show Clothing'];
-    } else if (aiResponse.message.toLowerCase().includes('trending')) {
-      enhancedSuggestions = ['Trending This Week', 'Most Popular', 'New Arrivals', 'Best Deals'];
-    } else if (aiResponse.message.toLowerCase().includes('category')) {
-      enhancedSuggestions = ['Electronics', 'Fashion', 'Home', 'Sports'];
+    
+    if (userMode === 'buyer') {
+      if (aiResponse.message.toLowerCase().includes('electronics')) {
+        enhancedSuggestions = ['Show Electronics', 'Find Laptops', 'Browse Phones', 'See Gaming Gear'];
+      } else if (aiResponse.message.toLowerCase().includes('fashion')) {
+        enhancedSuggestions = ['Browse Fashion', 'Find Shoes', 'See Accessories', 'Show Clothing'];
+      } else if (aiResponse.message.toLowerCase().includes('trending')) {
+        enhancedSuggestions = ['Trending This Week', 'Most Popular', 'New Arrivals', 'Best Deals'];
+      } else if (aiResponse.message.toLowerCase().includes('category')) {
+        enhancedSuggestions = ['Electronics', 'Fashion', 'Home', 'Sports'];
+      } else {
+        enhancedSuggestions = ['Find me deals', 'Show trending items', 'Browse categories', 'What\'s popular?'];
+      }
+    } else {
+      // Seller mode suggestions
+      if (aiResponse.message.toLowerCase().includes('price') || aiResponse.message.toLowerCase().includes('pricing')) {
+        enhancedSuggestions = ['Price my item', 'Market analysis', 'Competitor pricing', 'Value estimation'];
+      } else if (aiResponse.message.toLowerCase().includes('trend') || aiResponse.message.toLowerCase().includes('market')) {
+        enhancedSuggestions = ['Market trends', 'Seasonal analysis', 'Demand patterns', 'Popular categories'];
+      } else if (aiResponse.message.toLowerCase().includes('competitor') || aiResponse.message.toLowerCase().includes('compare')) {
+        enhancedSuggestions = ['Competitor analysis', 'Price comparison', 'Market positioning', 'Unique selling points'];
+      } else {
+        enhancedSuggestions = ['Optimize my listing', 'Market insights', 'Pricing strategy', 'Sales tips'];
+      }
     }
 
     // Try to find relevant listings based on the user's message

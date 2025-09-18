@@ -119,7 +119,7 @@ export default function FavoritesPage() {
           <div className="flex justify-center mb-4">
             <Heart className="w-8 h-8 text-accent-500 fill-current" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-5xl font-bold text-white mb-2">
             My Favorites
           </h1>
           <p className="text-lg text-gray-400">

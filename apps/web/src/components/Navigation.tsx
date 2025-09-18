@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle } from 'lucide-react';
+import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle, ShoppingCart, Package, List } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Profile } from '@marketplace/types';
@@ -24,6 +24,7 @@ export function Navigation() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'New message from John Doe', time: '2 minutes ago', read: false },
@@ -48,6 +49,36 @@ export function Navigation() {
   };
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+  // Fetch cart item count with caching
+  const fetchCartCount = useCallback(async () => {
+    if (!currentUser?.uid) return;
+    
+    try {
+      const response = await fetch('/api/carts', {
+        headers: {
+          'x-user-id': currentUser.uid,
+          'Cache-Control': 'max-age=60', // Cache for 1 minute
+        },
+      });
+      
+      if (response.ok) {
+        const cart = await response.json();
+        const totalItems = cart.items?.reduce((sum: number, item: any) => sum + item.qty, 0) || 0;
+        setCartItemCount(totalItems);
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+    }
+  }, [currentUser?.uid]);
+
+  useEffect(() => {
+    fetchCartCount();
+    
+    // Only refetch cart count every 30 seconds to reduce API calls
+    const interval = setInterval(fetchCartCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchCartCount]);
 
   const handleLogout = async () => {
     try {
@@ -99,16 +130,16 @@ export function Navigation() {
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 relative">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center">
               <Logo size="md" />
             </Link>
           </div>
 
-          {/* Desktop Navigation - Absolutely Centered */}
-          <div className="hidden md:flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
+          {/* Desktop Navigation - Centered */}
+          <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
@@ -129,13 +160,13 @@ export function Navigation() {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-3 flex-shrink-0">
             {currentUser ? (
               <>
                 {/* Favorites Heart */}
                 <button 
                   onClick={() => router.push('/favorites')}
-                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                   title="Favorites"
                 >
                   <Heart className="w-5 h-5" />
@@ -148,13 +179,26 @@ export function Navigation() {
                     // Mark all notifications as read when bell is clicked
                     markAllNotificationsAsRead();
                   }}
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadNotificationsCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
                   )}
                 </button>
+
+                {/* Shopping Cart */}
+                <Link
+                  href="/cart"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                      {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
+                  )}
+                </Link>
                 
                 <Link
                   href="/sell"
@@ -249,6 +293,22 @@ export function Navigation() {
                           Sell Item
                         </Link>
                         <Link
+                          href="/my-listings"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <List className="w-4 h-4 mr-3" />
+                          My Listings
+                        </Link>
+                        <Link
+                          href="/orders"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <Package className="w-4 h-4 mr-3" />
+                          My Orders
+                        </Link>
+                        <Link
                           href="/favorites"
                           className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
                           onClick={() => setShowProfileDropdown(false)}
@@ -302,12 +362,12 @@ export function Navigation() {
           </div>
 
           {/* Tablet Actions - Show fewer items */}
-          <div className="hidden md:flex lg:hidden items-center space-x-2">
+          <div className="hidden md:flex lg:hidden items-center space-x-3 flex-shrink-0">
             {currentUser ? (
               <>
                 <button 
                   onClick={() => router.push('/favorites')}
-                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                   title="Favorites"
                 >
                   <Heart className="w-5 h-5" />
@@ -318,13 +378,25 @@ export function Navigation() {
                     setShowNotifications(true);
                     markAllNotificationsAsRead();
                   }}
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadNotificationsCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
                   )}
                 </button>
+
+                <Link
+                  href="/cart"
+                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                      {cartItemCount > 99 ? '99+' : cartItemCount}
+                    </span>
+                  )}
+                </Link>
                 
                 <Link
                   href="/sell"
@@ -353,7 +425,7 @@ export function Navigation() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex-shrink-0">
             <button
               type="button"
               className="btn-ghost p-2 rounded-xl"
@@ -404,6 +476,17 @@ export function Navigation() {
                       >
                         <Heart className="w-5 h-5" />
                         Favorites
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          router.push('/cart');
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        Cart {cartItemCount > 0 && `(${cartItemCount})`}
                       </button>
                       
                       <button 

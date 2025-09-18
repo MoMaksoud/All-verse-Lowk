@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dbListings } from "@/lib/mockDb";
-import { SimpleListingCreate } from "@marketplace/types";
+import { firestoreServices } from "@/lib/services/firestore";
+import { CreateListingInput } from "@/lib/types/firestore";
 import { calculateDistance } from "@/lib/location";
 
 export const runtime = "nodejs";
 export const dynamic = "auto";
+export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,7 +33,17 @@ export async function GET(req: NextRequest) {
     };
 
 
-    const result = await dbListings.search(filters, page, limit);
+    const sortOptions = {
+      field: sort === 'priceAsc' ? 'price' : sort === 'priceDesc' ? 'price' : 'createdAt',
+      direction: sort === 'priceAsc' ? 'asc' as const : 'desc' as const,
+    };
+
+    const paginationOptions = {
+      page,
+      limit,
+    };
+
+    const result = await firestoreServices.listings.searchListings(filters, sortOptions, paginationOptions);
       
     // Apply location filtering if user coordinates are provided
     let filteredData = [...result.items];
@@ -62,21 +73,56 @@ export async function GET(req: NextRequest) {
         break;
       case 'rating':
         // For now, sort by newest since we don't have ratings in SimpleListing
-        sortedData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        sortedData.sort((a, b) => {
+          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
+          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
+          return bTime - aTime;
+        });
         break;
       case 'recent':
       default:
-        sortedData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        sortedData.sort((a, b) => {
+          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
+          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
+          return bTime - aTime;
+        });
         break;
     }
     
-    return NextResponse.json({
-      data: sortedData,
-      total: filteredData.length,
-      page: page,
-      limit: limit,
-      hasMore: filteredData.length > page * limit
+    // Transform FirestoreListing to SimpleListing format and filter out placeholder listings
+    const transformedItems = result.items
+      .filter(listing => {
+        // Filter out placeholder listings
+        return listing.title !== 'AI Analyzing...' && 
+               listing.description !== 'AI is analyzing your photos...' &&
+               listing.price > 0;
+      })
+      .map(listing => ({
+        id: (listing as any).id, // FirestoreListing & { id: string }
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+        category: listing.category,
+        photos: listing.images || [],
+        createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        sellerId: listing.sellerId,
+        location: undefined, // Add location if available
+      }));
+
+    const response = NextResponse.json({
+      data: transformedItems,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        hasMore: result.hasMore,
+      },
     });
+    
+    // Add caching headers
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    return response;
   } catch (error) {
     console.error('Error fetching listings:', error);
     return NextResponse.json({ error: 'Failed to fetch listings' }, { status: 500 });
@@ -85,21 +131,29 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as SimpleListingCreate;
+    const userId = req.headers.get('x-user-id');
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
+    }
+
+    const body = await req.json() as CreateListingInput;
     
     // Basic validation
     if (!body.title || !body.description || typeof body.price !== 'number' || !body.category) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const listing = dbListings.create({
+    const listingData = {
       ...body,
-      category: body.category as any,
-      sellerId: 'user1',
-      status: 'active' as const,
-      condition: 'Good' as const,
-      currency: 'USD' as const
-    }, 'user1'); // Default seller ID
+      sellerId: userId,
+      inventory: body.inventory || 1,
+      currency: body.currency || 'USD',
+      condition: body.condition || 'good',
+    };
+
+    const listingId = await firestoreServices.listings.createListing(listingData);
+    const listing = await firestoreServices.listings.getListing(listingId);
+    
     return NextResponse.json(listing, { status: 201 });
   } catch (error) {
     console.error('Error creating listing:', error);

@@ -155,39 +155,18 @@ export function SearchBar({ className = '' }: SearchBarProps) {
     };
   }, []);
 
-  const handleSearch = async (searchQuery: string) => {
+  const handleSearch = (searchQuery: string) => {
     if (searchQuery.trim()) {
       // Add to recent searches
       addToRecentSearches(searchQuery);
       
       setIsSearching(true);
       
-      try {
-        // Try AI-powered search first
-        const response = await fetch('/api/ai/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: searchQuery }),
-        });
-
-        const data = await response.json();
-        
-        if (data.listing) {
-          // If AI found a specific listing, go to it
-          router.push(`/listings/${data.listing.id}`);
-        } else {
-          // Otherwise, do regular search
-          router.push(`/listings?q=${encodeURIComponent(searchQuery)}`);
-        }
-      } catch (error) {
-        // Fallback to regular search
-        router.push(`/listings?q=${encodeURIComponent(searchQuery)}`);
-      } finally {
-        setIsSearching(false);
-        setShowSuggestions(false);
-      }
+      // Navigate to AI page with query parameter
+      router.push(`/ai?query=${encodeURIComponent(searchQuery)}`);
+      
+      setIsSearching(false);
+      setShowSuggestions(false);
     }
   };
 

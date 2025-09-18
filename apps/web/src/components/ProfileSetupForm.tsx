@@ -25,6 +25,7 @@ const INTEREST_CATEGORIES = [
 
 export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: ProfileSetupFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [showAgeValidation, setShowAgeValidation] = useState(false);
   const [formData, setFormData] = useState<CreateProfileInput>({
     username: '',
     bio: '',
@@ -86,8 +87,11 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
   };
 
   const handleSubmit = () => {
-    console.log('ProfileSetupForm submitting data:', JSON.stringify(formData, null, 2));
     onSubmit(formData);
+  };
+
+  const isAgeInvalid = () => {
+    return formData.age !== undefined && formData.age !== null && (formData.age < 13 || formData.age > 120);
   };
 
   const isStepValid = () => {
@@ -95,7 +99,8 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
       case 1:
         return formData.username.length >= 3;
       case 2:
-        return true; // Optional fields
+        // Age validation: if age is provided, it must be between 13-120
+        return !isAgeInvalid();
       case 3:
         return formData.interestCategories.length > 0;
       case 4:
@@ -176,11 +181,22 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
               type="number"
               value={formData.age || ''}
               onChange={(e) => handleInputChange('age', e.target.value ? parseInt(e.target.value) : undefined)}
+              onBlur={() => setShowAgeValidation(true)}
+              onClick={() => setShowAgeValidation(true)}
               placeholder="Age"
               min="13"
               max="120"
-              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+              className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 ${
+                showAgeValidation && isAgeInvalid()
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-dark-600 focus:ring-accent-500'
+              }`}
             />
+            {showAgeValidation && isAgeInvalid() && (
+              <p className="text-xs text-red-400 mt-1">
+                Age must be 18+
+              </p>
+            )}
           </div>
         </div>
 

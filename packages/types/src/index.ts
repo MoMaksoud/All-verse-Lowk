@@ -281,3 +281,134 @@ export type SimpleListingCreate = {
 };
 
 export type SimpleListingUpdate = Partial<SimpleListingCreate>;
+
+// ============================================================================
+// FIRESTORE TYPES (New Database Schema)
+// ============================================================================
+
+/** User Role */
+export const UserRole = z.enum(['buyer', 'seller', 'admin']);
+export type UserRole = z.infer<typeof UserRole>;
+
+/** Firestore User */
+export const FirestoreUserSchema = z.object({
+  displayName: z.string(),
+  photoURL: z.string().optional(),
+  phone: z.string().optional(),
+  role: UserRole,
+  createdAt: z.any(), // Timestamp
+  updatedAt: z.any(), // Timestamp
+});
+export type FirestoreUser = z.infer<typeof FirestoreUserSchema>;
+
+/** Firestore Listing */
+export const FirestoreListingSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  price: z.number(),
+  currency: z.string(),
+  images: z.array(z.string()),
+  category: z.string(),
+  condition: z.enum(['new', 'like-new', 'good', 'fair']),
+  sellerId: z.string(),
+  inventory: z.number(),
+  isActive: z.boolean(),
+  createdAt: z.any(), // Timestamp
+  updatedAt: z.any(), // Timestamp
+  soldCount: z.number(),
+});
+export type FirestoreListing = z.infer<typeof FirestoreListingSchema>;
+
+/** Cart Item */
+export const CartItemSchema = z.object({
+  listingId: z.string(),
+  sellerId: z.string(),
+  qty: z.number(),
+  priceAtAdd: z.number(),
+});
+export type CartItem = z.infer<typeof CartItemSchema>;
+
+/** Firestore Cart */
+export const FirestoreCartSchema = z.object({
+  items: z.array(CartItemSchema),
+  updatedAt: z.any(), // Timestamp
+});
+export type FirestoreCart = z.infer<typeof FirestoreCartSchema>;
+
+/** Order Item */
+export const OrderItemSchema = z.object({
+  listingId: z.string(),
+  title: z.string(),
+  qty: z.number(),
+  unitPrice: z.number(),
+  sellerId: z.string(),
+});
+export type OrderItem = z.infer<typeof OrderItemSchema>;
+
+/** Shipping Address */
+export const ShippingAddressSchema = z.object({
+  name: z.string(),
+  street: z.string(),
+  city: z.string(),
+  state: z.string(),
+  zip: z.string(),
+  country: z.string(),
+});
+export type ShippingAddress = z.infer<typeof ShippingAddressSchema>;
+
+/** Order Status */
+export const OrderStatus = z.enum(['pending', 'paid', 'shipped', 'delivered', 'cancelled']);
+export type OrderStatus = z.infer<typeof OrderStatus>;
+
+/** Firestore Order */
+export const FirestoreOrderSchema = z.object({
+  buyerId: z.string(),
+  items: z.array(OrderItemSchema),
+  subtotal: z.number(),
+  fees: z.number(),
+  tax: z.number(),
+  total: z.number(),
+  currency: z.string(),
+  status: OrderStatus,
+  paymentIntentId: z.string(),
+  createdAt: z.any(), // Timestamp
+  updatedAt: z.any(), // Timestamp
+  shippingAddress: ShippingAddressSchema,
+});
+export type FirestoreOrder = z.infer<typeof FirestoreOrderSchema>;
+
+/** Payment Status */
+export const PaymentStatus = z.enum(['pending', 'succeeded', 'failed', 'refunded']);
+export type PaymentStatus = z.infer<typeof PaymentStatus>;
+
+/** Firestore Payment */
+export const FirestorePaymentSchema = z.object({
+  orderId: z.string(),
+  amount: z.number(),
+  currency: z.string(),
+  stripeEventId: z.string(),
+  status: PaymentStatus,
+  createdAt: z.any(), // Timestamp
+});
+export type FirestorePayment = z.infer<typeof FirestorePaymentSchema>;
+
+/** Firestore Message */
+export const FirestoreMessageSchema = z.object({
+  senderId: z.string(),
+  recipientId: z.string(),
+  text: z.string(),
+  attachments: z.array(z.string()),
+  createdAt: z.any(), // Timestamp
+  readAt: z.any().nullable(), // Timestamp or null
+});
+export type FirestoreMessage = z.infer<typeof FirestoreMessageSchema>;
+
+/** Firestore Conversation */
+export const FirestoreConversationSchema = z.object({
+  participants: z.array(z.string()),
+  lastMessage: FirestoreMessageSchema.optional(),
+  lastMessageAt: z.any(), // Timestamp
+  createdAt: z.any(), // Timestamp
+  updatedAt: z.any(), // Timestamp
+});
+export type FirestoreConversation = z.infer<typeof FirestoreConversationSchema>;

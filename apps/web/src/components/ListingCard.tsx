@@ -1,18 +1,22 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, memo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MessageCircle, Star, Clock, X, MapPin } from 'lucide-react';
+import { Heart, MessageCircle, Star, Clock, X, MapPin, ShoppingCart } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 import { formatLocation } from '@/lib/location';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 interface ListingCardProps {
   listing: SimpleListing;
 }
 
-export function ListingCard({ listing }: ListingCardProps) {
+export const ListingCard = memo(function ListingCard({ listing }: ListingCardProps) {
+  const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [isFavorited, setIsFavorited] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -28,7 +32,66 @@ export function ListingCard({ listing }: ListingCardProps) {
   const [message, setMessage] = useState('');
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [addingToCart, setAddingToCart] = useState(false);
   const [isVoiceListening, setIsVoiceListening] = useState(false);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showMessageModal) {
+        setShowMessageModal(false);
+      }
+    };
+
+    if (showMessageModal) {
+      document.addEventListener('keydown', handleEscKey);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showMessageModal]);
+
+  const addToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentUser) {
+      alert('Please sign in to add items to cart');
+      return;
+    }
+
+    setAddingToCart(true);
+    try {
+      const response = await fetch('/api/carts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          sellerId: listing.sellerId || 'test-seller',
+          qty: 1,
+          priceAtAdd: listing.price,
+        }),
+      });
+
+      if (response.ok) {
+        alert('Added to cart!');
+      } else {
+        alert('Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Error adding to cart');
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
@@ -50,7 +113,7 @@ export function ListingCard({ listing }: ListingCardProps) {
       setIsFavorited(!isFavorited);
     } catch (error) {
       console.error('Error updating favorites:', error);
-      showToast('Failed to update favorites', 'error');
+      showError('Failed to update favorites');
     }
   }, [isFavorited, listing.id]);
 
@@ -62,7 +125,7 @@ export function ListingCard({ listing }: ListingCardProps) {
 
   const handleSendMessage = useCallback(() => {
     if (message.trim()) {
-      showToast('Message sent!', 'success');
+      showSuccess('Message sent!');
       setMessage('');
       setShowMessageModal(false);
     }
@@ -79,42 +142,19 @@ export function ListingCard({ listing }: ListingCardProps) {
     setIsVoiceListening(false);
   };
 
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    // Create toast element
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    // Remove toast after 3 seconds
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.remove();
-      }
-    }, 3000);
-  }, []);
 
   return (
     <>
-      <Link href={`/listings/${listing.id}`} className="group h-full">
-        <div className="card hover:scale-105 transition-all duration-200 cursor-pointer overflow-hidden h-full flex flex-col">
-          {/* Image */}
-          <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-dark-700 flex-shrink-0">
+      <Link href={`/listings/${listing.id}`} className="group/card h-full">
+        <div className="listing-container">
+          {/* Image Section with Overlay */}
+          <div className="image-section relative overflow-hidden rounded-t-2xl">
             {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
-              <Image
+              <img
                 src={listing.photos[0]}
                 alt={listing.title}
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-300"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                priority={false}
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+                className="w-full h-full object-cover bg-slate-900"
                 onError={(e) => {
-                  // Fallback to placeholder if image fails to load
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                   const parent = target.parentElement;
@@ -138,49 +178,44 @@ export function ListingCard({ listing }: ListingCardProps) {
                 </div>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-dark-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-            
-            {/* Message Button */}
-            <button 
-              onClick={handleMessageClick}
-              className="absolute top-3 left-3 btn-ghost p-2 rounded-xl backdrop-blur-sm bg-dark-800/50 hover:bg-dark-700/50 transition-all duration-200"
-            >
-              <MessageCircle className="w-4 h-4 text-gray-300" />
-            </button>
-            
-            {/* Favorite Button */}
-            <button 
-              onClick={handleFavoriteClick}
-              className={`absolute top-3 right-3 btn-ghost p-2 rounded-xl backdrop-blur-sm transition-all duration-200 ${
-                isFavorited 
-                  ? 'bg-red-500/80 hover:bg-red-600/80' 
-                  : 'bg-dark-800/50 hover:bg-dark-700/50'
-              }`}
-            >
-              <Heart className={`w-4 h-4 transition-all duration-200 ${
-                isFavorited ? 'text-white fill-current' : 'text-gray-300'
-              }`} />
-            </button>
-            
-            {/* Price Badge */}
-            <div className="absolute bottom-3 left-3">
-              <div className="bg-accent-500 text-white px-3 py-1 rounded-xl text-sm font-semibold">
-                ${listing.price.toLocaleString()}
-              </div>
+
+            {/* Readability gradient */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
+
+            {/* Rating/Date chip with hover expansion */}
+            <div className="absolute bottom-3 right-3 z-20 inline-flex items-center rounded-full bg-black/60 text-white px-2.5 py-1 backdrop-blur transition-all duration-500 ease-in-out shadow">
+              {/* Rating always visible */}
+              <span className="inline-flex items-center gap-1 text-sm font-medium">
+                <Star className="w-3 h-3 fill-current text-yellow-400" />
+                4.5
+              </span>
+
+              {/* Date expands on hover */}
+              {listing.createdAt && (
+                <span className="ml-2 overflow-hidden max-w-0 opacity-0 translate-x-2 group-hover/card:max-w-[160px] group-hover/card:opacity-100 group-hover/card:translate-x-0 transition-all duration-500 ease-in-out whitespace-nowrap text-sm">
+                  <Clock className="w-3 h-3 mr-1 inline" />
+                  {new Date(listing.createdAt).toLocaleDateString()}
+                </span>
+              )}
             </div>
           </div>
-
+          
           {/* Content */}
-          <div className="p-4 flex flex-col flex-grow">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="text-lg font-semibold text-white line-clamp-2 group-hover:text-accent-400 transition-colors">
-                {listing.title}
-              </h3>
-            </div>
+          <div className="content-area">
+            <h3 className="group-hover:text-accent-400 transition-colors">
+              {listing.title}
+            </h3>
             
-            <p className="text-gray-400 text-sm line-clamp-2 mb-3 flex-grow">
+            <p className="text-gray-400 text-sm leading-relaxed">
               {listing.description}
             </p>
+            
+            {/* Price and Category */}
+            <div className="price-category">
+              <span className="price">${listing.price.toLocaleString()}</span>
+              <span className="category">{listing.category}</span>
+              <span className="condition">Like New</span>
+            </div>
             
             {/* Location */}
             {listing.location && (
@@ -191,17 +226,32 @@ export function ListingCard({ listing }: ListingCardProps) {
                 </span>
               </div>
             )}
-            
-            <div className="flex items-center gap-2 mt-auto">
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-accent-400 fill-current" />
-                <span className="text-sm text-gray-300">4.5</span>
-              </div>
-              <span className="text-gray-500">•</span>
-              <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-400">{new Date(listing.createdAt).toLocaleDateString()}</span>
-              </div>
+
+            {/* Action Icons - Centered at Bottom */}
+            <div className="action-icons">
+              <button 
+                onClick={addToCart}
+                disabled={addingToCart}
+                className="p-2 rounded-lg hover:bg-dark-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ShoppingCart className={`w-4 h-4 ${addingToCart ? 'text-accent-500' : 'text-gray-400'}`} />
+              </button>
+              <button 
+                onClick={handleMessageClick}
+                className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 text-gray-400" />
+              </button>
+              <button 
+                onClick={handleFavoriteClick}
+                className={`p-2 rounded-lg hover:bg-dark-600 transition-colors ${
+                  isFavorited ? 'text-red-500' : 'text-gray-400'
+                }`}
+              >
+                <Heart className={`w-4 h-4 transition-all duration-200 ${
+                  isFavorited ? 'text-red-500 fill-current' : 'text-gray-400'
+                }`} />
+              </button>
             </div>
           </div>
         </div>
@@ -209,7 +259,14 @@ export function ListingCard({ listing }: ListingCardProps) {
 
       {/* Message Modal */}
       {showMessageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowMessageModal(false);
+            }
+          }}
+        >
           <div className="bg-dark-800 rounded-lg max-w-md w-full border border-dark-600">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -280,4 +337,4 @@ export function ListingCard({ listing }: ListingCardProps) {
       )}
     </>
   );
-}
+});

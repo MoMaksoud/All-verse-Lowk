@@ -5,7 +5,7 @@ import {
   deleteObject,
   UploadResult 
 } from 'firebase/storage';
-import { storage } from './firebase';
+import { storage, isFirebaseConfigured } from './firebase';
 
 export class StorageService {
   // Upload profile picture
@@ -14,6 +14,15 @@ export class StorageService {
     file: File
   ): Promise<string> {
     try {
+      // Check if Firebase is configured
+      if (!isFirebaseConfigured() || !storage) {
+        // Fallback: Convert to data URL
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
       
       // Create a reference to the file location
       const fileName = `profile-pictures/${userId}/${Date.now()}-${file.name}`;
@@ -29,7 +38,12 @@ export class StorageService {
       return downloadURL;
     } catch (error) {
       console.error('❌ Error uploading profile picture:', error);
-      throw new Error('Failed to upload profile picture');
+      // Fallback: Convert to data URL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
     }
   }
 
@@ -58,6 +72,16 @@ export class StorageService {
     imageIndex: number = 0
   ): Promise<string> {
     try {
+      // Check if Firebase is configured
+      if (!isFirebaseConfigured() || !storage) {
+        // Fallback: Convert to data URL
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+
       const fileName = `listings/${listingId}/${imageIndex}-${Date.now()}-${file.name}`;
       const storageRef = ref(storage, fileName);
       
@@ -67,7 +91,12 @@ export class StorageService {
       return downloadURL;
     } catch (error) {
       console.error('Error uploading listing image:', error);
-      throw new Error('Failed to upload listing image');
+      // Fallback: Convert to data URL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
     }
   }
 

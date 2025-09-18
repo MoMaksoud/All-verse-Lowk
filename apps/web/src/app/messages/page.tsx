@@ -432,7 +432,7 @@ export default function MessagesPage() {
           <div className="flex justify-center mb-4">
             <Logo size="md" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Messages</h1>
+          <h1 className="text-5xl font-bold text-white mb-2">Messages</h1>
           <p className="text-lg text-gray-400">Connect with buyers and sellers</p>
         </div>
 

@@ -15,11 +15,6 @@ const firebaseConfig = {
 
 // Check if Firebase is properly configured
 const isFirebaseConfigured = () => {
-  // Check if we're on the client side
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  
   const isConfigured = firebaseConfig.apiKey &&
          firebaseConfig.projectId &&
          firebaseConfig.authDomain &&
