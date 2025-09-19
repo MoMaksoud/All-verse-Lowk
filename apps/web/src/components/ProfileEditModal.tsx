@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Profile } from '@marketplace/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { SimpleLocationAutocomplete } from '@/components/SimpleLocationAutocomplete';
 import { User, Save, X, Heart, DollarSign, ShoppingBag, Star } from 'lucide-react';
 
 interface ProfileEditModalProps {
@@ -300,12 +301,16 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Location
                 </label>
-                <input
-                  type="text"
+                <SimpleLocationAutocomplete
                   value={formData.location}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
-                  placeholder="City, State"
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  onChange={(location, coordinates) => {
+                    handleInputChange('location', location);
+                    if (coordinates) {
+                      console.log('Location coordinates:', coordinates);
+                    }
+                  }}
+                  placeholder="City, State or ZIP code"
+                  className="w-full"
                 />
               </div>
             </div>

@@ -1,142 +1,339 @@
-import { 
-  ref, 
-  uploadBytes, 
-  getDownloadURL, 
-  deleteObject,
-  UploadResult 
-} from 'firebase/storage';
-import { storage, isFirebaseConfigured } from './firebase';
+import { storage } from './firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject, getMetadata, updateMetadata } from 'firebase/storage';
 
-export class StorageService {
-  // Upload profile picture
-  static async uploadProfilePicture(
-    userId: string, 
-    file: File
-  ): Promise<string> {
+export interface UploadResult {
+  url: string;
+  path: string;
+  size: number;
+  type: string;
+  userId: string;
+  userEmail: string;
+  uploadedAt: string;
+}
+
+export interface UserMetadata {
+  userId: string;
+  userEmail: string;
+  uploadedAt: string;
+  listingId?: string;
+  category?: string;
+}
+
+export interface UploadProgress {
+  bytesTransferred: number;
+  totalBytes: number;
+  percentage: number;
+}
+
+class StorageService {
+  // Upload a file to Firebase Storage with user tracking
+  static async uploadFile(
+    file: File,
+    path: string,
+    userMetadata: UserMetadata,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
     try {
-      // Check if Firebase is configured
-      if (!isFirebaseConfigured() || !storage) {
-        // Fallback: Convert to data URL
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
+      if (!storage) {
+        throw new Error('Firebase Storage is not initialized');
       }
-      
+
+      console.log('📤 Uploading file with user tracking:', {
+        userId: userMetadata.userId,
+        userEmail: userMetadata.userEmail,
+        path: path
+      });
+
       // Create a reference to the file location
-      const fileName = `profile-pictures/${userId}/${Date.now()}-${file.name}`;
-      
-      const storageRef = ref(storage, fileName);
+      const storageRef = ref(storage, path);
       
       // Upload the file
-      const uploadResult: UploadResult = await uploadBytes(storageRef, file);
+      const snapshot = await uploadBytes(storageRef, file);
       
       // Get the download URL
-      const downloadURL = await getDownloadURL(uploadResult.ref);
+      const downloadURL = await getDownloadURL(snapshot.ref);
       
-      return downloadURL;
-    } catch (error) {
-      console.error('❌ Error uploading profile picture:', error);
-      // Fallback: Convert to data URL
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
+      // Get file metadata
+      const metadata = await getMetadata(snapshot.ref);
+      
+      // Update metadata with user information
+      const customMetadata = {
+        userId: userMetadata.userId,
+        userEmail: userMetadata.userEmail,
+        uploadedAt: userMetadata.uploadedAt,
+        listingId: userMetadata.listingId || '',
+        category: userMetadata.category || '',
+        originalFileName: file.name,
+        fileSize: file.size.toString(),
+        contentType: file.type
+      };
+
+      await updateMetadata(snapshot.ref, {
+        customMetadata: customMetadata
       });
-    }
-  }
 
-  // Delete profile picture
-  static async deleteProfilePicture(imageUrl: string): Promise<void> {
-    try {
-      // Extract the file path from the URL
-      const url = new URL(imageUrl);
-      const pathMatch = url.pathname.match(/\/o\/(.+)\?/);
+      console.log('✅ File uploaded successfully with user tracking:', {
+        url: downloadURL,
+        userId: userMetadata.userId,
+        userEmail: userMetadata.userEmail
+      });
       
-      if (pathMatch) {
-        const filePath = decodeURIComponent(pathMatch[1]);
-        const fileRef = ref(storage, filePath);
-        await deleteObject(fileRef);
-      }
+      return {
+        url: downloadURL,
+        path: snapshot.ref.fullPath,
+        size: metadata.size,
+        type: metadata.contentType || file.type,
+        userId: userMetadata.userId,
+        userEmail: userMetadata.userEmail,
+        uploadedAt: userMetadata.uploadedAt,
+      };
     } catch (error) {
-      console.error('Error deleting profile picture:', error);
-      // Don't throw error for deletion failures
+      console.error('❌ Error uploading file:', error);
+      throw new Error(`Failed to upload file: ${error}`);
     }
   }
 
-  // Upload listing image
-  static async uploadListingImage(
-    listingId: string, 
+  // Upload profile picture
+  static async uploadProfilePicture(
     file: File,
-    imageIndex: number = 0
-  ): Promise<string> {
+    userId: string,
+    userEmail: string,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Profile picture must be an image file');
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('Profile picture must be smaller than 5MB');
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const extension = file.name.split('.').pop();
+    const filename = `profile_${userId}_${timestamp}.${extension}`;
+    const path = `profile-pictures/${filename}`;
+
+    const userMetadata: UserMetadata = {
+      userId,
+      userEmail,
+      uploadedAt: new Date().toISOString(),
+      category: 'profile-picture'
+    };
+
+    return this.uploadFile(file, path, userMetadata, onProgress);
+  }
+
+  // Upload listing photos
+  static async uploadListingPhoto(
+    file: File,
+    userId: string,
+    userEmail: string,
+    listingId: string,
+    photoIndex: number,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Listing photo must be an image file');
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('Listing photo must be smaller than 10MB');
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const extension = file.name.split('.').pop();
+    const filename = `listing_${listingId}_${photoIndex}_${timestamp}.${extension}`;
+    const path = `listing-photos/${filename}`;
+
+    const userMetadata: UserMetadata = {
+      userId,
+      userEmail,
+      uploadedAt: new Date().toISOString(),
+      listingId,
+      category: 'listing-photo'
+    };
+
+    return this.uploadFile(file, path, userMetadata, onProgress);
+  }
+
+  // Upload listing videos
+  static async uploadListingVideo(
+    file: File,
+    userId: string,
+    userEmail: string,
+    listingId: string,
+    videoIndex: number,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+      throw new Error('Listing video must be a video file');
+    }
+
+    // Validate file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      throw new Error('Listing video must be smaller than 100MB');
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const extension = file.name.split('.').pop();
+    const filename = `listing_${listingId}_video_${videoIndex}_${timestamp}.${extension}`;
+    const path = `listing-videos/${filename}`;
+
+    const userMetadata: UserMetadata = {
+      userId,
+      userEmail,
+      uploadedAt: new Date().toISOString(),
+      listingId,
+      category: 'listing-video'
+    };
+
+    return this.uploadFile(file, path, userMetadata, onProgress);
+  }
+
+  // Upload chat attachments
+  static async uploadChatAttachment(
+    file: File,
+    userId: string,
+    userEmail: string,
+    conversationId: string,
+    messageId: string,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    // Validate file type
+    const allowedTypes = ['image/', 'video/', 'application/pdf', 'text/'];
+    const isValidType = allowedTypes.some(type => file.type.startsWith(type));
+    
+    if (!isValidType) {
+      throw new Error('File type not supported for chat attachments');
+    }
+
+    // Validate file size (max 25MB)
+    if (file.size > 25 * 1024 * 1024) {
+      throw new Error('Chat attachment must be smaller than 25MB');
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const extension = file.name.split('.').pop();
+    const filename = `chat_${conversationId}_${messageId}_${timestamp}.${extension}`;
+    const path = `chat-attachments/${filename}`;
+
+    const userMetadata: UserMetadata = {
+      userId,
+      userEmail,
+      uploadedAt: new Date().toISOString(),
+      listingId: conversationId,
+      category: 'chat-attachment'
+    };
+
+    return this.uploadFile(file, path, userMetadata, onProgress);
+  }
+
+  // Get all files uploaded by a specific user
+  static async getUserFiles(userId: string): Promise<UploadResult[]> {
     try {
-      // Check if Firebase is configured
-      if (!isFirebaseConfigured() || !storage) {
-        // Fallback: Convert to data URL
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
+      if (!storage) {
+        throw new Error('Firebase Storage is not initialized');
       }
 
-      const fileName = `listings/${listingId}/${imageIndex}-${Date.now()}-${file.name}`;
-      const storageRef = ref(storage, fileName);
+      // This would require listing files and filtering by metadata
+      // For now, we'll return an empty array as Firebase Storage doesn't have
+      // a direct way to query by custom metadata
+      console.log('📋 Getting files for user:', userId);
       
-      const uploadResult: UploadResult = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(uploadResult.ref);
+      // TODO: Implement file listing with metadata filtering
+      // This would require storing file references in Firestore for efficient querying
       
-      return downloadURL;
+      return [];
     } catch (error) {
-      console.error('Error uploading listing image:', error);
-      // Fallback: Convert to data URL
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
+      console.error('Error getting user files:', error);
+      throw new Error(`Failed to get user files: ${error}`);
     }
   }
 
-  // Upload multiple listing images
-  static async uploadListingImages(
-    listingId: string, 
-    files: File[]
-  ): Promise<string[]> {
+  // Get file metadata including user information
+  static async getFileMetadata(path: string): Promise<any> {
     try {
-      const uploadPromises = files.map((file, index) => 
-        this.uploadListingImage(listingId, file, index)
-      );
+      if (!storage) {
+        throw new Error('Firebase Storage is not initialized');
+      }
+
+      const storageRef = ref(storage, path);
+      const metadata = await getMetadata(storageRef);
       
-      const downloadURLs = await Promise.all(uploadPromises);
-      return downloadURLs;
+      return {
+        ...metadata,
+        customMetadata: metadata.customMetadata || {}
+      };
     } catch (error) {
-      console.error('Error uploading listing images:', error);
-      throw new Error('Failed to upload listing images');
+      console.error('Error getting file metadata:', error);
+      throw new Error(`Failed to get file metadata: ${error}`);
     }
   }
 
-  // Validate file type and size
-  static validateImageFile(file: File): { valid: boolean; error?: string } {
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  // Delete a file from Firebase Storage
+  static async deleteFile(path: string): Promise<void> {
+    try {
+      if (!storage) {
+        throw new Error('Firebase Storage is not initialized');
+      }
+
+      const storageRef = ref(storage, path);
+      await deleteObject(storageRef);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      throw new Error(`Failed to delete file: ${error}`);
+    }
+  }
+
+  // Generate a unique filename
+  static generateUniqueFilename(originalName: string, prefix?: string): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    const extension = originalName.split('.').pop();
+    const baseName = originalName.split('.').slice(0, -1).join('.');
     
-    if (!allowedTypes.includes(file.type)) {
-      return { 
-        valid: false, 
-        error: 'Please upload a valid image file (JPEG, PNG, or WebP)' 
-      };
+    if (prefix) {
+      return `${prefix}_${timestamp}_${random}.${extension}`;
     }
     
+    return `${baseName}_${timestamp}_${random}.${extension}`;
+  }
+
+  // Validate file before upload
+  static validateFile(file: File, options: {
+    maxSize?: number;
+    allowedTypes?: string[];
+    required?: boolean;
+  } = {}): { isValid: boolean; error?: string } {
+    const { maxSize = 10 * 1024 * 1024, allowedTypes = [], required = true } = options;
+
+    if (required && !file) {
+      return { isValid: false, error: 'File is required' };
+    }
+
     if (file.size > maxSize) {
-      return { 
-        valid: false, 
-        error: 'Image size must be less than 5MB' 
-      };
+      const maxSizeMB = Math.round(maxSize / (1024 * 1024));
+      return { isValid: false, error: `File must be smaller than ${maxSizeMB}MB` };
     }
-    
-    return { valid: true };
+
+    if (allowedTypes.length > 0) {
+      const isValidType = allowedTypes.some(type => file.type.startsWith(type));
+      if (!isValidType) {
+        return { isValid: false, error: `File type not supported. Allowed types: ${allowedTypes.join(', ')}` };
+      }
+    }
+
+    return { isValid: true };
   }
 }
+
+export default StorageService;

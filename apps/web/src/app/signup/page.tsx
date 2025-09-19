@@ -9,6 +9,10 @@ import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import { ProfileSetupForm } from '@/components/ProfileSetupForm';
 import { CreateProfileInput } from '@marketplace/types';
+import { FirebaseStatus } from '@/components/FirebaseStatus';
+import { EnvChecker } from '@/components/EnvChecker';
+import { FirebaseTest } from '@/components/FirebaseTest';
+import { StorageTest } from '@/components/StorageTest';
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -72,9 +76,12 @@ export default function SignUp() {
         userId: currentUser?.uid, // Add user ID
       };
 
+      console.log('Creating profile with data:', profileToCreate);
+      console.log('User ID:', currentUser?.uid);
+
       // Save profile to Firestore
       const response = await fetch('/api/profile', {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': currentUser?.uid || '',
@@ -168,11 +175,32 @@ export default function SignUp() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto"></div>
             </div>
           ) : (
-            <ProfileSetupForm
-              onSubmit={handleProfileSubmit}
-              onCancel={handleProfileCancel}
-              isLoading={profileLoading}
-            />
+            <div className="max-w-md mx-auto">
+              {/* Back to Home Button */}
+              <div className="mb-6 text-center">
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to Home
+                </Link>
+              </div>
+              
+              {/* Email verification notice */}
+              <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-4 py-3 rounded-lg mb-6">
+                <p className="font-medium mb-2">📧 Check your email!</p>
+                <p className="text-sm">We've sent a verification link to <strong>{formData.email}</strong>. Please check your email and click the verification link to complete your account setup.</p>
+              </div>
+              
+              <ProfileSetupForm
+                onSubmit={handleProfileSubmit}
+                onCancel={handleProfileCancel}
+                isLoading={profileLoading}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -324,17 +352,42 @@ export default function SignUp() {
               </button>
             </form>
 
-            <div className="mt-5 sm:mt-6 text-center relative z-10">
+            <div className="mt-5 sm:mt-6 text-center relative z-10 space-y-4">
               <p className="text-sm sm:text-base text-gray-400">
                 Already have an account?{' '}
                 <Link href="/signin" className="text-accent-400 hover:text-accent-300 font-medium transition-colors">
                   Sign in
                 </Link>
               </p>
+              
+              {/* Back to Home Button */}
+              <div className="pt-2 border-t border-gray-600/30">
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to Home
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Temporary Firebase status component */}
+      <FirebaseStatus />
+      
+      {/* Temporary environment checker */}
+      <EnvChecker />
+      
+      {/* Temporary Firebase test */}
+      <FirebaseTest />
+      
+      {/* Temporary Storage test */}
+      <StorageTest />
     </div>
   );
 }

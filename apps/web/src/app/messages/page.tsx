@@ -7,6 +7,7 @@ import { mockApi } from '@marketplace/lib';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
   id: string;
@@ -41,6 +42,7 @@ interface Conversation {
 
 export default function MessagesPage() {
   const router = useRouter();
+  const { currentUser } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -59,164 +61,106 @@ export default function MessagesPage() {
   const [isVoiceListening, setIsVoiceListening] = useState(false);
 
   useEffect(() => {
-    // Mock conversations data
-    const mockConversations: Conversation[] = [
-      {
-        id: '1',
-        listingId: '1',
-        listingTitle: 'iPhone 14 Pro',
-        listingImage: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=150&h=150&fit=crop',
-        otherUser: {
-          id: 'user1',
-          name: 'John Doe',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-          isOnline: true,
-        },
-        lastMessage: {
-          id: 'msg1',
-          text: 'Is this still available?',
-          senderId: 'user1',
-          timestamp: '2024-01-15T10:30:00Z',
-          type: 'text',
-          status: 'read',
-          deliveredAt: '2024-01-15T10:30:05Z',
-          readAt: '2024-01-15T10:31:30Z',
-        },
-        unreadCount: 2,
-        updatedAt: '2024-01-15T10:30:00Z',
-      },
-      {
-        id: '2',
-        listingId: '2',
-        listingTitle: 'MacBook Air M2',
-        listingImage: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=150&h=150&fit=crop',
-        otherUser: {
-          id: 'user2',
-          name: 'Jane Smith',
-          avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-          isOnline: false,
-        },
-        lastMessage: {
-          id: 'msg2',
-          text: 'I can offer $1200',
-          senderId: 'user2',
-          timestamp: '2024-01-15T09:15:00Z',
-          type: 'offer',
-          offer: { amount: 1200, currency: 'USD' },
-          status: 'delivered',
-          deliveredAt: '2024-01-15T09:15:04Z',
-        },
-        unreadCount: 0,
-        updatedAt: '2024-01-15T09:15:00Z',
-      },
-      {
-        id: '3',
-        listingId: '3',
-        listingTitle: 'Nike Air Max 270',
-        listingImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=150&h=150&fit=crop',
-        otherUser: {
-          id: 'user3',
-          name: 'Mike Johnson',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-          isOnline: true,
-        },
-        lastMessage: {
-          id: 'msg3',
-          text: 'Can you ship to NYC?',
-          senderId: 'currentUser',
-          timestamp: '2024-01-15T08:45:00Z',
-          type: 'text',
-          status: 'sent',
-        },
-        unreadCount: 0,
-        updatedAt: '2024-01-15T08:45:00Z',
-      },
-    ];
+    const fetchConversations = async () => {
+      try {
+        setLoading(true);
+        
+        if (!currentUser?.uid) {
+          setLoading(false);
+          return;
+        }
 
-    setConversations(mockConversations);
-    setLoading(false);
-  }, []);
+        const response = await fetch('/api/messages', {
+          headers: {
+            'x-user-id': currentUser.uid,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setConversations(data.data || []);
+        } else {
+          console.error('Failed to fetch conversations');
+          setConversations([]);
+        }
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+        setConversations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+  }, [currentUser]);
 
   useEffect(() => {
-    if (selectedConversation) {
-      // Mock messages for selected conversation
-      const mockMessages: Message[] = [
-        {
-          id: '1',
-          text: 'Hi! I saw your listing for the iPhone 14 Pro',
-          senderId: selectedConversation.otherUser.id,
-          timestamp: '2024-01-15T10:00:00Z',
-          type: 'text',
-          status: 'read',
-          deliveredAt: '2024-01-15T10:00:05Z',
-          readAt: '2024-01-15T10:01:30Z',
-        },
-        {
-          id: '2',
-          text: 'Hello! Yes, it\'s still available. Are you interested?',
-          senderId: 'currentUser',
-          timestamp: '2024-01-15T10:05:00Z',
-          type: 'text',
-          status: 'read',
-          deliveredAt: '2024-01-15T10:05:03Z',
-          readAt: '2024-01-15T10:06:15Z',
-        },
-        {
-          id: '3',
-          text: 'Is this still available?',
-          senderId: selectedConversation.otherUser.id,
-          timestamp: '2024-01-15T10:30:00Z',
-          type: 'text',
-          status: 'delivered',
-          deliveredAt: '2024-01-15T10:30:02Z',
-        },
-      ];
-      setMessages(mockMessages);
-    }
-  }, [selectedConversation]);
+    const fetchMessages = async () => {
+      if (!selectedConversation || !currentUser?.uid) {
+        setMessages([]);
+        return;
+      }
 
-  const handleSendMessage = () => {
-    if (newMessage.trim() && selectedConversation) {
-      const message: Message = {
-        id: Date.now().toString(),
-        text: newMessage,
-        senderId: 'currentUser',
-        timestamp: new Date().toISOString(),
-        type: 'text',
-        status: 'sent',
-      };
-      setMessages([...messages, message]);
-      setNewMessage('');
-      
-      // Update conversation's last message
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === selectedConversation.id 
-            ? { ...conv, lastMessage: message, updatedAt: message.timestamp }
-            : conv
-        )
-      );
+      try {
+        const response = await fetch(`/api/messages/${selectedConversation.id}`, {
+          headers: {
+            'x-user-id': currentUser.uid,
+          },
+        });
 
-      // Simulate delivery and read status
-      setTimeout(() => {
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === message.id 
-              ? { ...msg, status: 'delivered', deliveredAt: new Date().toISOString() }
-              : msg
-          )
-        );
-      }, 2000);
+        if (response.ok) {
+          const data = await response.json();
+          setMessages(data.data || []);
+        } else {
+          console.error('Failed to fetch messages');
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        setMessages([]);
+      }
+    };
 
-      setTimeout(() => {
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === message.id 
-              ? { ...msg, status: 'read', readAt: new Date().toISOString() }
-              : msg
-          )
-        );
-      }, 5000);
+    fetchMessages();
+  }, [selectedConversation, currentUser]);
+
+  const handleSendMessage = async () => {
+    if (newMessage.trim() && selectedConversation && currentUser?.uid) {
+      try {
+        const response = await fetch(`/api/messages/${selectedConversation.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': currentUser.uid,
+          },
+          body: JSON.stringify({
+            text: newMessage,
+            type: 'text',
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const newMessageData = data.message;
+          
+          // Add the new message to the messages list
+          setMessages(prev => [...prev, newMessageData]);
+          setNewMessage('');
+          
+          // Update conversation's last message
+          setConversations(prev => 
+            prev.map(conv => 
+              conv.id === selectedConversation.id 
+                ? { ...conv, lastMessage: newMessageData, updatedAt: new Date().toISOString() }
+                : conv
+            )
+          );
+        } else {
+          console.error('Failed to send message');
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
     }
   };
 

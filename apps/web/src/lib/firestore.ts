@@ -66,23 +66,26 @@ export class ProfileService {
       const profileRef = doc(db, this.collectionName, userId);
       console.log('Profile reference created:', profileRef);
       
+      // Check if profile already exists
+      const existingProfile = await this.getProfile(userId);
+      
       // Create a simple profile object with required fields
       const profileToSave: FirestoreProfile = {
         userId,
-        username: profileData.username || '',
-        bio: profileData.bio,
-        createdAt: profileData.createdAt || new Date().toISOString(),
-        gender: profileData.gender,
-        age: profileData.age,
-        location: profileData.location,
-        profilePicture: profileData.profilePicture,
-        phoneNumber: profileData.phoneNumber,
-        rating: profileData.rating || 0,
-        interestCategories: profileData.interestCategories || [],
-        userActivity: profileData.userActivity || 'both-buy-sell',
-        budget: profileData.budget,
-        shoppingFrequency: profileData.shoppingFrequency,
-        itemConditionPreference: profileData.itemConditionPreference || 'both',
+        username: profileData.username || existingProfile?.username || '',
+        bio: profileData.bio || existingProfile?.bio || '',
+        createdAt: existingProfile?.createdAt || serverTimestamp(),
+        gender: profileData.gender || existingProfile?.gender,
+        age: profileData.age || existingProfile?.age,
+        location: profileData.location || existingProfile?.location || '',
+        profilePicture: profileData.profilePicture || existingProfile?.profilePicture || '',
+        phoneNumber: profileData.phoneNumber || existingProfile?.phoneNumber || '',
+        rating: profileData.rating || existingProfile?.rating || 0,
+        interestCategories: profileData.interestCategories || existingProfile?.interestCategories || [],
+        userActivity: profileData.userActivity || existingProfile?.userActivity || 'both-buy-sell',
+        budget: profileData.budget || existingProfile?.budget,
+        shoppingFrequency: profileData.shoppingFrequency || existingProfile?.shoppingFrequency,
+        itemConditionPreference: profileData.itemConditionPreference || existingProfile?.itemConditionPreference || 'both',
         updatedAt: serverTimestamp(),
       };
       
@@ -100,6 +103,33 @@ export class ProfileService {
         stack: error instanceof Error ? error.stack : undefined,
         name: error instanceof Error ? error.name : undefined
       });
+      throw error;
+    }
+  }
+
+  // Create a new user profile (for new users)
+  static async createUserProfile(userId: string, userData: {
+    displayName: string;
+    email?: string;
+    phoneNumber?: string;
+    photoURL?: string;
+  }): Promise<FirestoreProfile> {
+    try {
+      const profileData: Partial<FirestoreProfile> = {
+        username: userData.displayName || userData.email?.split('@')[0] || 'user',
+        bio: '',
+        location: '',
+        rating: 0,
+        interestCategories: [],
+        userActivity: 'both-buy-sell',
+        itemConditionPreference: 'both',
+        phoneNumber: userData.phoneNumber || '',
+        profilePicture: userData.photoURL || '',
+      };
+
+      return await this.saveProfile(userId, profileData);
+    } catch (error) {
+      console.error('Error creating user profile:', error);
       throw error;
     }
   }
@@ -222,6 +252,224 @@ export class ListingService {
     } catch (error) {
       console.error('Error getting all listings:', error);
       throw error;
+    }
+  }
+}
+
+// Message and Conversation interfaces
+export interface FirestoreMessage {
+  id?: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  type: 'text' | 'image' | 'offer' | 'question';
+  offer?: {
+    amount: number;
+    currency: string;
+  };
+  timestamp?: any;
+  deliveredAt?: any;
+  readAt?: any;
+  status: 'sending' | 'sent' | 'delivered' | 'read';
+}
+
+export interface FirestoreConversation {
+  id?: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  lastMessageId?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+// Messages Service
+export class MessagesService {
+  private static conversationsCollection = 'conversations';
+  private static messagesCollection = 'messages';
+
+  // Get conversations for a user
+  static async getUserConversations(userId: string): Promise<any[]> {
+    try {
+      const conversationsRef = collection(db, this.conversationsCollection);
+      const q = query(
+        conversationsRef, 
+        where('buyerId', '==', userId)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      const conversations = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FirestoreConversation[];
+
+      // Also get conversations where user is seller
+      const sellerQ = query(
+        conversationsRef, 
+        where('sellerId', '==', userId)
+      );
+      const sellerSnapshot = await getDocs(sellerQ);
+      
+      const sellerConversations = sellerSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FirestoreConversation[];
+
+      // Combine and return enriched conversations
+      const allConversations = [...conversations, ...sellerConversations];
+      return await this.enrichConversations(allConversations, userId);
+    } catch (error) {
+      console.error('Error getting user conversations:', error);
+      throw error;
+    }
+  }
+
+  // Get messages for a conversation
+  static async getConversationMessages(conversationId: string): Promise<FirestoreMessage[]> {
+    try {
+      const messagesRef = collection(db, this.messagesCollection);
+      const q = query(
+        messagesRef, 
+        where('conversationId', '==', conversationId)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FirestoreMessage[];
+    } catch (error) {
+      console.error('Error getting conversation messages:', error);
+      throw error;
+    }
+  }
+
+  // Create a new conversation
+  static async createConversation(conversationData: Omit<FirestoreConversation, 'id' | 'createdAt' | 'updatedAt'>): Promise<FirestoreConversation> {
+    try {
+      const conversationsRef = collection(db, this.conversationsCollection);
+      const newConversationRef = doc(conversationsRef);
+      
+      const conversationToSave: FirestoreConversation = {
+        ...conversationData,
+        id: newConversationRef.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      await setDoc(newConversationRef, conversationToSave);
+      return conversationToSave;
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
+  }
+
+  // Send a message
+  static async sendMessage(messageData: Omit<FirestoreMessage, 'id' | 'timestamp'>): Promise<FirestoreMessage> {
+    try {
+      const messagesRef = collection(db, this.messagesCollection);
+      const newMessageRef = doc(messagesRef);
+      
+      const messageToSave: FirestoreMessage = {
+        ...messageData,
+        id: newMessageRef.id,
+        timestamp: serverTimestamp(),
+        status: 'sent'
+      };
+      
+      await setDoc(newMessageRef, messageToSave);
+
+      // Update conversation's last message and timestamp
+      const conversationRef = doc(db, this.conversationsCollection, messageData.conversationId);
+      await updateDoc(conversationRef, {
+        lastMessageId: newMessageRef.id,
+        updatedAt: serverTimestamp()
+      });
+
+      return messageToSave;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to enrich conversations with listing and user data
+  private static async enrichConversations(conversations: FirestoreConversation[], userId: string): Promise<any[]> {
+    try {
+      const enrichedConversations = await Promise.all(
+        conversations.map(async (conv) => {
+          // Get listing data
+          const listingRef = doc(db, 'listings', conv.listingId);
+          const listingSnap = await getDoc(listingRef);
+          const listing = listingSnap.exists() ? { id: listingSnap.id, ...listingSnap.data() } : null;
+
+          // Get other user data
+          const otherUserId = conv.buyerId === userId ? conv.sellerId : conv.buyerId;
+          const profileRef = doc(db, 'profiles', otherUserId);
+          const profileSnap = await getDoc(profileRef);
+          const profile = profileSnap.exists() ? profileSnap.data() : null;
+
+          // Get last message
+          let lastMessage = null;
+          if (conv.lastMessageId) {
+            const messageRef = doc(db, this.messagesCollection, conv.lastMessageId);
+            const messageSnap = await getDoc(messageRef);
+            lastMessage = messageSnap.exists() ? { id: messageSnap.id, ...messageSnap.data() } : null;
+          }
+
+          return {
+            id: conv.id,
+            listingId: conv.listingId,
+            listingTitle: listing?.title || 'Unknown Listing',
+            listingImage: listing?.images?.[0] || '',
+            otherUser: {
+              id: otherUserId,
+              name: profile?.username || 'Unknown User',
+              avatar: profile?.profilePicture || '',
+              isOnline: false, // This would need real-time implementation
+            },
+            lastMessage: lastMessage || {
+              id: '',
+              conversationId: conv.id,
+              senderId: '',
+              text: 'No messages yet',
+              type: 'text',
+              timestamp: conv.createdAt,
+              status: 'sent',
+            },
+            unreadCount: 0, // This would need to be calculated
+            updatedAt: conv.updatedAt,
+          };
+        })
+      );
+
+      return enrichedConversations;
+    } catch (error) {
+      console.error('Error enriching conversations:', error);
+      return conversations.map(conv => ({
+        id: conv.id,
+        listingId: conv.listingId,
+        listingTitle: 'Unknown Listing',
+        listingImage: '',
+        otherUser: {
+          id: conv.buyerId === userId ? conv.sellerId : conv.buyerId,
+          name: 'Unknown User',
+          avatar: '',
+          isOnline: false,
+        },
+        lastMessage: {
+          id: '',
+          conversationId: conv.id,
+          senderId: '',
+          text: 'No messages yet',
+          type: 'text',
+          timestamp: conv.createdAt,
+          status: 'sent',
+        },
+        unreadCount: 0,
+        updatedAt: conv.updatedAt,
+      }));
     }
   }
 }

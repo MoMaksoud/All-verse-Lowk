@@ -2,29 +2,29 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, Search, X } from 'lucide-react';
-import { googleMapsService, GooglePlacePrediction } from '@/lib/googleMaps';
 
 interface LocationSuggestion {
   place_id: string;
   description: string;
   main_text: string;
   secondary_text: string;
-  types: string[];
+  lat?: number;
+  lng?: number;
 }
 
-interface LocationAutocompleteProps {
+interface SimpleLocationAutocompleteProps {
   value: string;
   onChange: (location: string, coordinates?: { lat: number; lng: number }) => void;
   placeholder?: string;
   className?: string;
 }
 
-export function LocationAutocomplete({ 
+export function SimpleLocationAutocomplete({ 
   value, 
   onChange, 
   placeholder = "City, State or ZIP code...",
   className = ""
-}: LocationAutocompleteProps) {
+}: SimpleLocationAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +32,7 @@ export function LocationAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
 
-  // Debounced search function with Google Maps API and Nominatim fallback
+  // Search locations using Nominatim (OpenStreetMap) API
   const searchLocations = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
       setSuggestions([]);
@@ -43,60 +43,43 @@ export function LocationAutocomplete({
     setIsLoading(true);
     
     try {
-      // Try Google Maps first
-      const predictions = await googleMapsService.getPlacePredictions(query);
+      console.log('🔍 Searching for:', query);
       
-      if (predictions.length > 0) {
-        const formattedSuggestions = predictions.map((prediction: GooglePlacePrediction) => ({
-          place_id: prediction.place_id,
-          description: prediction.description,
-          main_text: prediction.structured_formatting.main_text,
-          secondary_text: prediction.structured_formatting.secondary_text,
-          types: prediction.types,
-        }));
-        
-        setSuggestions(formattedSuggestions);
-        setIsOpen(formattedSuggestions.length > 0);
-        setSelectedIndex(-1);
-      } else {
-        // Fallback to Nominatim if Google Maps returns no results
-        await searchWithNominatim(query);
-      }
-    } catch (error) {
-      console.error('Error with Google Maps, trying Nominatim fallback:', error);
-      await searchWithNominatim(query);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Fallback search function using Nominatim (OpenStreetMap) API
-  const searchWithNominatim = async (query: string) => {
-    try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=us`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&countrycodes=us&extratags=1`
       );
       
       if (response.ok) {
         const data = await response.json();
-        const formattedSuggestions = data.map((item: any) => ({
-          place_id: item.place_id,
+        console.log('📍 Nominatim results:', data.length, 'locations found');
+        
+        const formattedSuggestions = data.map((item: any, index: number) => ({
+          place_id: item.place_id || `nominatim_${index}`,
           description: item.display_name,
           main_text: item.display_name.split(',')[0] || item.display_name,
-          secondary_text: item.display_name.split(',').slice(1).join(',').trim() || '',
-          types: [item.type],
+          secondary_text: item.display_name.split(',').slice(1, 3).join(',').trim() || '',
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
         }));
         
         setSuggestions(formattedSuggestions);
         setIsOpen(formattedSuggestions.length > 0);
         setSelectedIndex(-1);
+        
+        console.log('✅ Suggestions set:', formattedSuggestions.length);
+      } else {
+        console.error('❌ Nominatim API error:', response.status);
+        setSuggestions([]);
+        setIsOpen(false);
       }
     } catch (error) {
-      console.error('Error fetching location suggestions from Nominatim:', error);
+      console.error('❌ Error fetching location suggestions:', error);
       setSuggestions([]);
       setIsOpen(false);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
   // Handle input change with debouncing
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,58 +98,18 @@ export function LocationAutocomplete({
   };
 
   // Handle suggestion selection
-  const handleSuggestionSelect = async (suggestion: LocationSuggestion) => {
-    try {
-      // Try to get detailed place information from Google Maps
-      const placeDetails = await googleMapsService.getPlaceDetails(suggestion.place_id);
-      
-      if (placeDetails) {
-        const formattedLocation = googleMapsService.formatLocationFromPlaceDetails(placeDetails);
-        onChange(formattedLocation, {
-          lat: placeDetails.geometry.location.lat,
-          lng: placeDetails.geometry.location.lng,
-        });
-      } else {
-        // Fallback: try to get coordinates from Nominatim
-        const coordinates = await getNominatimCoordinates(suggestion.description);
-        onChange(suggestion.description, coordinates);
-      }
-      
-      setIsOpen(false);
-      setSuggestions([]);
-      setSelectedIndex(-1);
-    } catch (error) {
-      console.error('Error getting place details:', error);
-      // Final fallback: just use the description
-      onChange(suggestion.description);
-      setIsOpen(false);
-      setSuggestions([]);
-      setSelectedIndex(-1);
-    }
+  const handleSuggestionSelect = (suggestion: LocationSuggestion) => {
+    console.log('📍 Location selected:', suggestion.description);
+    
+    onChange(suggestion.description, {
+      lat: suggestion.lat || 0,
+      lng: suggestion.lng || 0,
+    });
+    
+    setIsOpen(false);
+    setSuggestions([]);
+    setSelectedIndex(-1);
   };
-
-  // Get coordinates from Nominatim for fallback
-  const getNominatimCoordinates = async (location: string) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1&addressdetails=1&countrycodes=us`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.length > 0) {
-          return {
-            lat: parseFloat(data[0].lat),
-            lng: parseFloat(data[0].lon),
-          };
-        }
-      }
-    } catch (error) {
-      console.error('Error getting coordinates from Nominatim:', error);
-    }
-    return undefined;
-  };
-
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {

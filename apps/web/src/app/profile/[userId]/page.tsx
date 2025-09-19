@@ -33,40 +33,59 @@ export default function UserProfilePage() {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        // Mock profile data
-        const mockProfile: UserProfile = {
+        
+        // Fetch user profile
+        const profileResponse = await fetch(`/api/profile?userId=${params.userId}`, {
+          headers: {
+            'x-user-id': params.userId as string,
+          },
+        });
+
+        if (!profileResponse.ok) {
+          throw new Error('Failed to fetch profile');
+        }
+
+        const profileData = await profileResponse.json();
+        
+        // Fetch user's listings
+        const listingsResponse = await fetch(`/api/my-listings`, {
+          headers: {
+            'x-user-id': params.userId as string,
+          },
+        });
+
+        let listings = [];
+        if (listingsResponse.ok) {
+          const listingsData = await listingsResponse.json();
+          listings = listingsData.data || [];
+        }
+
+        // Transform profile data to match UserProfile interface
+        const userProfile: UserProfile = {
           id: params.userId as string,
-          name: 'John Doe',
-          email: 'john@example.com',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-          bio: 'Tech enthusiast and gadget collector. I love finding great deals and helping others discover amazing products.',
-          location: 'San Francisco, CA',
-          rating: 4.8,
-          reviewCount: 127,
-          memberSince: '2023-01-15',
-          isVerified: true,
-          listings: [
-            {
-              id: '1',
-              title: 'iPhone 14 Pro - Excellent Condition',
-              price: 899.99,
-              currency: 'USD',
-              photos: ['https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop'],
-              createdAt: '2024-01-10T10:00:00Z',
-            },
-            {
-              id: '2',
-              title: 'MacBook Air M1 - Like New',
-              price: 999.99,
-              currency: 'USD',
-              photos: ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop'],
-              createdAt: '2024-01-08T14:30:00Z',
-            },
-          ],
+          name: profileData.data?.username || 'Unknown User',
+          email: '', // Email is not exposed in public profiles
+          avatar: profileData.data?.profilePicture || '',
+          bio: profileData.data?.bio || '',
+          location: profileData.data?.location || '',
+          rating: profileData.data?.rating || 0,
+          reviewCount: 0, // This would need to be calculated from reviews
+          memberSince: profileData.data?.createdAt || new Date().toISOString(),
+          isVerified: false, // This would need verification logic
+          listings: listings.map((listing: any) => ({
+            id: listing.id,
+            title: listing.title,
+            price: listing.price,
+            currency: 'USD',
+            photos: listing.photos || [],
+            createdAt: listing.createdAt,
+          })),
         };
-        setProfile(mockProfile);
+
+        setProfile(userProfile);
       } catch (error) {
         console.error('Error fetching profile:', error);
+        setProfile(null);
       } finally {
         setLoading(false);
       }

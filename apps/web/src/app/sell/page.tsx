@@ -24,6 +24,7 @@ export default function SellPage() {
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [listingId, setListingId] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [formData, setFormData] = useState<SimpleListingCreate & {
     marketResearch?: {
       averagePrice: number;
@@ -111,13 +112,13 @@ export default function SellPage() {
     try {
       setLoading(true);
       
-      // Create listing with photos directly
+      // Create listing first with empty photos array
       const listingData = {
         title: 'AI Analyzing...',
         description: 'AI is analyzing your photos...',
         price: 0,
         category: 'other',
-        photos: formData.photos, // Include photos directly
+        photos: [], // Start with empty array, photos will be uploaded separately
         condition: 'good' as const,
         inventory: 1,
         sellerId: currentUser.uid,
@@ -447,29 +448,59 @@ export default function SellPage() {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (formData.title && formData.description && formData.photos.length > 0) {
-                      try {
-                        const response = await fetch('/api/ai/analyze-product', {
-                          method: 'POST',
-                          headers: { 
-                            'Content-Type': 'application/json',
-                            'x-user-id': currentUser?.uid || ''
-                          },
-                          body: JSON.stringify({
-                            imageUrls: formData.photos,
-                            listingId: 'price-suggestion'
-                          })
-                        });
-                        const result = await response.json();
-                        if (result.analysis?.suggestedPrice) {
-                          handleInputChange('price', result.analysis.suggestedPrice);
-                        }
-                      } catch (error) {
-                        console.error('Error getting price suggestion:', error);
+                    if (!currentUser) {
+                      alert('Please sign in to get price suggestions');
+                      return;
+                    }
+                    
+                    if (formData.photos.length === 0) {
+                      alert('Please upload photos first to get accurate price suggestions');
+                      return;
+                    }
+                    
+                    try {
+                      console.log('💰 Getting price suggestion for photos:', formData.photos);
+                      
+                      const response = await fetch('/api/ai/analyze-product', {
+                        method: 'POST',
+                        headers: { 
+                          'Content-Type': 'application/json',
+                          'x-user-id': currentUser.uid
+                        },
+                        body: JSON.stringify({
+                          imageUrls: formData.photos,
+                          listingId: 'price-suggestion'
+                        })
+                      });
+                      
+                      if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to get price suggestion');
                       }
+                      
+                      const result = await response.json();
+                      console.log('💰 Price suggestion result:', result);
+                      
+                      if (result.success && result.analysis?.suggestedPrice) {
+                        handleInputChange('price', result.analysis.suggestedPrice);
+                        
+                        // Update AI analysis data if available
+                        if (result.analysis.priceAnalysis) {
+                          setAiAnalysis(result.analysis.priceAnalysis);
+                        }
+                        
+                        console.log('✅ Price suggestion updated:', result.analysis.suggestedPrice);
+                      } else {
+                        console.error('❌ No price suggestion in response:', result);
+                        alert('Unable to get price suggestion. Please try again.');
+                      }
+                    } catch (error) {
+                      console.error('❌ Error getting price suggestion:', error);
+                      alert(`Error getting price suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     }
                   }}
                   className="btn btn-outline whitespace-nowrap"
+                  disabled={!currentUser || formData.photos.length === 0}
                 >
                   Suggest Price
                 </button>
@@ -478,32 +509,93 @@ export default function SellPage() {
             </div>
 
             {/* AI Market Research Display */}
-            {formData.marketResearch && (
+            {(formData.marketResearch || aiAnalysis) && (
               <div className="bg-dark-700 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-white mb-3">🤖 AI Market Analysis</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                
+                {/* Basic Market Data */}
+                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                   <div>
                     <span className="text-gray-400">Market Price:</span>
-                    <span className="ml-2 text-white">${formData.marketResearch.averagePrice.toFixed(2)}</span>
+                    <span className="ml-2 text-white">
+                      ${(aiAnalysis?.suggestedPrice || formData.marketResearch?.averagePrice || 0).toFixed(2)}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-400">Price Range:</span>
-                    <span className="ml-2 text-white">${formData.marketResearch.priceRange.min} - ${formData.marketResearch.priceRange.max}</span>
+                    <span className="ml-2 text-white">
+                      ${aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0} - 
+                      ${aiAnalysis?.priceRange?.max || formData.marketResearch?.priceRange?.max || 0}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-400">Demand:</span>
                     <span className={`ml-2 capitalize ${
-                      formData.marketResearch.marketDemand === 'high' ? 'text-green-400' :
-                      formData.marketResearch.marketDemand === 'medium' ? 'text-yellow-400' : 'text-red-400'
+                      (aiAnalysis?.marketData?.demandLevel || formData.marketResearch?.marketDemand) === 'high' ? 'text-green-400' :
+                      (aiAnalysis?.marketData?.demandLevel || formData.marketResearch?.marketDemand) === 'medium' ? 'text-yellow-400' : 'text-red-400'
                     }`}>
-                      {formData.marketResearch.marketDemand}
+                      {aiAnalysis?.marketData?.demandLevel || formData.marketResearch?.marketDemand || 'medium'}
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-400">Competitors:</span>
-                    <span className="ml-2 text-white">{formData.marketResearch.competitorCount} listings</span>
+                    <span className="ml-2 text-white">
+                      {aiAnalysis?.marketData?.competitorCount || formData.marketResearch?.competitorCount || 0} listings
+                    </span>
                   </div>
                 </div>
+
+                {/* Detailed Reasoning */}
+                {aiAnalysis?.reasoning && (
+                  <div className="mb-4">
+                    <h5 className="text-xs font-medium text-gray-300 mb-2">💡 Price Reasoning:</h5>
+                    <p className="text-xs text-gray-400 leading-relaxed">{aiAnalysis.reasoning}</p>
+                  </div>
+                )}
+
+                {/* Platform Research */}
+                {aiAnalysis?.platformResearch && (
+                  <div className="mb-4">
+                    <h5 className="text-xs font-medium text-gray-300 mb-2">🔍 Platform Research:</h5>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {aiAnalysis.platformResearch.eBay && (
+                        <div className="text-gray-400">
+                          <span className="font-medium">eBay:</span> {aiAnalysis.platformResearch.eBay}
+                        </div>
+                      )}
+                      {aiAnalysis.platformResearch.amazon && (
+                        <div className="text-gray-400">
+                          <span className="font-medium">Amazon:</span> {aiAnalysis.platformResearch.amazon}
+                        </div>
+                      )}
+                      {aiAnalysis.platformResearch.facebookMarketplace && (
+                        <div className="text-gray-400">
+                          <span className="font-medium">Facebook:</span> {aiAnalysis.platformResearch.facebookMarketplace}
+                        </div>
+                      )}
+                      {aiAnalysis.platformResearch.craigslist && (
+                        <div className="text-gray-400">
+                          <span className="font-medium">Craigslist:</span> {aiAnalysis.platformResearch.craigslist}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Price Factors */}
+                {aiAnalysis?.priceFactors && (
+                  <div>
+                    <h5 className="text-xs font-medium text-gray-300 mb-2">📊 Key Price Factors:</h5>
+                    <ul className="text-xs text-gray-400 space-y-1">
+                      {aiAnalysis.priceFactors.map((factor: string, index: number) => (
+                        <li key={index} className="flex items-start">
+                          <span className="text-gray-500 mr-2">•</span>
+                          <span>{factor}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 

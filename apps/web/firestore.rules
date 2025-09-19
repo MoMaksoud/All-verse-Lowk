@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own profile
+    match /profiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow public read access for other users' profiles (for public profile pages)
+      allow read: if request.auth != null;
+    }
+
+    // Users can read all active listings
+    match /listings/{listingId} {
+      allow read: if resource.data.status == 'active';
+      // Users can create listings
+      allow create: if request.auth != null && 
+                      request.auth.uid == resource.data.sellerId;
+      // Users can update their own listings
+      allow update: if request.auth != null && 
+                       request.auth.uid == resource.data.sellerId;
+      // Users can delete their own listings
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.sellerId;
+    }
+
+    // Conversations - users can only access conversations they're part of
+    match /conversations/{conversationId} {
+      allow read, write: if request.auth != null && 
+                           (request.auth.uid == resource.data.buyerId || 
+                            request.auth.uid == resource.data.sellerId);
+      allow create: if request.auth != null && 
+                        request.auth.uid == resource.data.buyerId;
+    }
+
+    // Messages - users can only access messages in conversations they're part of
+    match /messages/{messageId} {
+      allow read, write: if request.auth != null && 
+                           exists(/databases/$(database)/documents/conversations/$(resource.data.conversationId)) &&
+                           (request.auth.uid == get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.buyerId ||
+                            request.auth.uid == get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.sellerId);
+      allow create: if request.auth != null && 
+                        request.auth.uid == resource.data.senderId &&
+                        exists(/databases/$(database)/documents/conversations/$(resource.data.conversationId)) &&
+                        (request.auth.uid == get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.buyerId ||
+                         request.auth.uid == get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.sellerId);
+    }
+
+    // Profile photos - users can manage their own photos
+    match /profilePhotos/{photoId} {
+      allow read, write: if request.auth != null && 
+                           request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && 
+                        request.auth.uid == resource.data.userId;
+    }
+
+    // Listing photos - users can manage photos for their own listings
+    match /listingPhotos/{photoId} {
+      allow read, write: if request.auth != null && 
+                           exists(/databases/$(database)/documents/listings/$(resource.data.listingId)) &&
+                           request.auth.uid == get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.sellerId;
+      allow create: if request.auth != null && 
+                        exists(/databases/$(database)/documents/listings/$(resource.data.listingId)) &&
+                        request.auth.uid == get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.sellerId;
+    }
+
+    // Default deny rule for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

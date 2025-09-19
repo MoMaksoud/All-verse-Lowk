@@ -3,6 +3,8 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { Upload, X, Image as ImageIcon, Camera } from 'lucide-react';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PhotoUploadProps {
   onUpload: (urls: string[]) => void;
@@ -25,7 +27,16 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const { currentUser } = useAuth();
   const { uploading, error, uploadProfilePhoto, uploadListingPhotos, clearError } = usePhotoUpload();
+  const { uploadListingPhoto, isUploading, progress, error: uploadError } = useFileUpload({
+    onSuccess: (result) => {
+      console.log('✅ Photo uploaded to Firebase:', result.url);
+    },
+    onError: (error) => {
+      console.error('❌ Photo upload failed:', error);
+    },
+  });
 
   const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -48,18 +59,27 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
           urls = [result.url];
         }
       } else if (type === 'listing') {
-        // For listing photos, convert to data URLs locally
-        console.log('Converting listing photos to data URLs:', validFiles.length);
-        urls = await Promise.all(
-          validFiles.map(file => {
-            return new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(file);
-            });
-          })
-        );
-        console.log('Photos converted to data URLs:', urls.length);
+        // For listing photos, upload to Firebase Storage
+        console.log('📸 Uploading listing photos to Firebase:', validFiles.length);
+        
+        if (!currentUser?.uid || !listingId) {
+          console.error('❌ Missing user ID or listing ID for photo upload');
+          return;
+        }
+
+        const uploadPromises = validFiles.map(async (file, index) => {
+          try {
+            const result = await uploadListingPhoto(file, currentUser.uid, currentUser.email || '', listingId, existingPhotos.length + index);
+            return result?.url || '';
+          } catch (error) {
+            console.error('❌ Failed to upload photo:', error);
+            return '';
+          }
+        });
+
+        const uploadedUrls = await Promise.all(uploadPromises);
+        urls = uploadedUrls.filter(url => url !== '');
+        console.log('✅ Photos uploaded to Firebase:', urls.length);
       }
 
       if (urls.length > 0) {
@@ -68,7 +88,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     } catch (err) {
       console.error('Upload error:', err);
     }
-  }, [existingPhotos, maxPhotos, type, uploadProfilePhoto, onUpload, clearError]);
+  }, [existingPhotos, maxPhotos, type, uploadProfilePhoto, uploadListingPhoto, currentUser, onUpload, clearError]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -97,6 +117,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   }, [onRemove]);
 
   const remainingSlots = maxPhotos - existingPhotos.length;
+  const isUploadingPhotos = uploading || isUploading;
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -106,7 +127,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
           className={`
             relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
             ${dragOver ? 'border-accent-500 bg-accent-500/10' : 'border-gray-600 hover:border-gray-500'}
-            ${uploading ? 'opacity-50 cursor-not-allowed' : ''}
+            ${isUploadingPhotos ? 'opacity-50 cursor-not-allowed' : ''}
           `}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -120,7 +141,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             multiple={type === 'listing'}
             onChange={(e) => handleFileSelect(e.target.files)}
             className="hidden"
-            disabled={uploading}
+            disabled={isUploadingPhotos}
           />
 
           <div className="flex flex-col items-center space-y-2">
@@ -131,8 +152,8 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             )}
             
             <div className="text-sm text-gray-400">
-              {uploading ? (
-                <span className="text-accent-500">Uploading...</span>
+              {isUploadingPhotos ? (
+                <span className="text-accent-500">Uploading to Firebase...</span>
               ) : (
                 <>
                   <span className="text-accent-500 hover:text-accent-400">Click to upload</span>
@@ -150,9 +171,9 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       )}
 
       {/* Error Message */}
-      {error && (
+      {(error || uploadError) && (
         <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-          {error}
+          {error || uploadError}
         </div>
       )}
 
@@ -178,12 +199,18 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       )}
 
       {/* Upload Progress */}
-      {uploading && (
-        <div className="w-full bg-gray-700 rounded-full h-2">
-          <div 
-            className="bg-accent-500 h-2 rounded-full transition-all duration-300"
-            style={{ width: '100%' }}
-          />
+      {isUploadingPhotos && (
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm text-gray-300">
+            <span>Uploading to Firebase...</span>
+            {progress && <span>{progress.percentage.toFixed(0)}%</span>}
+          </div>
+          <div className="w-full bg-gray-700 rounded-full h-2">
+            <div 
+              className="bg-accent-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: progress ? `${progress.percentage}%` : '100%' }}
+            />
+          </div>
         </div>
       )}
     </div>

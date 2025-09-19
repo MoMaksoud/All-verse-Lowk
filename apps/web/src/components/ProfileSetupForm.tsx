@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, User, MapPin, Heart, DollarSign, ShoppingBag } from 'lucide-react';
 import { CreateProfileInput, Gender, ShoppingFrequency, UserActivity, ItemConditionPreference } from '@marketplace/types';
+import { SimpleLocationAutocomplete } from '@/components/SimpleLocationAutocomplete';
+import { FileUpload } from '@/components/FileUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProfileSetupFormProps {
   onSubmit: (profileData: CreateProfileInput) => void;
@@ -24,6 +27,7 @@ const INTEREST_CATEGORIES = [
 ];
 
 export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: ProfileSetupFormProps) {
+  const { currentUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [showAgeValidation, setShowAgeValidation] = useState(false);
   const [formData, setFormData] = useState<CreateProfileInput>({
@@ -204,12 +208,17 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Location
           </label>
-          <input
-            type="text"
+          <SimpleLocationAutocomplete
             value={formData.location || ''}
-            onChange={(e) => handleInputChange('location', e.target.value)}
+            onChange={(location, coordinates) => {
+              handleInputChange('location', location);
+              // Store coordinates if needed for future use
+              if (coordinates) {
+                console.log('Location coordinates:', coordinates);
+              }
+            }}
             placeholder="City, State or ZIP code"
-            className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+            className="w-full"
           />
         </div>
 
@@ -393,40 +402,34 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
       </div>
 
       <div className="space-y-4">
-        <div className="flex justify-center">
-          <div className="w-32 h-32 bg-dark-700 border-2 border-dashed border-dark-600 rounded-full flex items-center justify-center">
-            {formData.profilePicture ? (
+        {/* Profile Picture Preview */}
+        {formData.profilePicture && (
+          <div className="flex justify-center">
+            <div className="w-32 h-32 bg-dark-700 border-2 border-dark-600 rounded-full flex items-center justify-center overflow-hidden">
               <img
                 src={formData.profilePicture}
                 alt="Profile preview"
                 className="w-full h-full rounded-full object-cover"
               />
-            ) : (
-              <User className="w-12 h-12 text-gray-400" />
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="text-center">
-          <label className="inline-flex items-center px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg cursor-pointer transition-colors">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = (e) => {
-                    handleInputChange('profilePicture', e.target?.result as string);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
-              className="hidden"
-            />
-            Choose Profile Picture
-          </label>
-        </div>
+        {/* File Upload Component */}
+        <FileUpload
+          onUploadComplete={(result) => {
+            handleInputChange('profilePicture', result.url);
+          }}
+          onUploadError={(error) => {
+            console.error('Profile picture upload error:', error);
+          }}
+          accept="image/*"
+          maxSize={5 * 1024 * 1024} // 5MB
+          maxFiles={1}
+          uploadType="profile-picture"
+          userId={currentUser?.uid}
+          className="max-w-md mx-auto"
+        />
 
         <div className="text-center text-sm text-gray-400">
           <p>You can skip this and add a picture later</p>

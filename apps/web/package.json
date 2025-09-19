@@ -25,6 +25,7 @@
     "autoprefixer": "^10.4.0",
     "clsx": "^2.0.0",
     "cors": "^2.8.5",
+    "critters": "^0.0.23",
     "express-rate-limit": "^7.1.5",
     "firebase": "^12.2.1",
     "helmet": "^7.1.0",

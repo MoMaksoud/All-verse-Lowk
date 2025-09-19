@@ -1,66 +1,143 @@
-import { NextRequest } from "next/server";
-import { withApi } from "@/lib/withApi";
-import { success } from "@/lib/response";
-import { makeError } from "@marketplace/types";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { randomUUID } from "crypto";
+import { NextRequest, NextResponse } from 'next/server';
+import StorageService from '@/lib/storage';
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export const POST = withApi(async (req: NextRequest) => {
+export async function POST(request: NextRequest) {
   try {
-    const formData = await req.formData();
-    const files = formData.getAll("files") as File[];
+    const userId = request.headers.get('x-user-id');
+    const userEmail = request.headers.get('x-user-email');
     
-    if (!files || files.length === 0) {
-      throw makeError("BAD_REQUEST", "No files provided");
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 401 }
+      );
     }
 
-    if (files.length > 5) {
-      throw makeError("BAD_REQUEST", "Maximum 5 files allowed");
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'User email is required' },
+        { status: 401 }
+      );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), "public", "uploads");
-    try {
-      await mkdir(uploadsDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const uploadType = formData.get('uploadType') as string;
+    const listingId = formData.get('listingId') as string;
+    const conversationId = formData.get('conversationId') as string;
+    const messageId = formData.get('messageId') as string;
+    const customPath = formData.get('customPath') as string;
+
+    if (!file) {
+      return NextResponse.json(
+        { error: 'No file provided' },
+        { status: 400 }
+      );
     }
 
-    const uploadedUrls: string[] = [];
-
-    // Process files in order
-    for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        throw makeError("BAD_REQUEST", "Only image files are allowed");
-      }
-
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        throw makeError("TOO_LARGE", "File size must be less than 10MB");
-      }
-
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      
-      // Generate unique filename
-      const fileExtension = file.name.split('.').pop() || 'jpg';
-      const filename = `${randomUUID()}.${fileExtension}`;
-      const filepath = join(uploadsDir, filename);
-      
-      await writeFile(filepath, buffer);
-      
-      // Return URL path
-      uploadedUrls.push(`/uploads/${filename}`);
+    let result;
+    
+    switch (uploadType) {
+      case 'profile-picture':
+        result = await StorageService.uploadProfilePicture(file, userId, userEmail);
+        break;
+      case 'listing-photo':
+        if (!listingId) {
+          return NextResponse.json(
+            { error: 'Listing ID is required for listing photo upload' },
+            { status: 400 }
+          );
+        }
+        const photoIndex = parseInt(formData.get('photoIndex') as string) || 0;
+        result = await StorageService.uploadListingPhoto(file, userId, userEmail, listingId, photoIndex);
+        break;
+      case 'listing-video':
+        if (!listingId) {
+          return NextResponse.json(
+            { error: 'Listing ID is required for listing video upload' },
+            { status: 400 }
+          );
+        }
+        const videoIndex = parseInt(formData.get('videoIndex') as string) || 0;
+        result = await StorageService.uploadListingVideo(file, userId, userEmail, listingId, videoIndex);
+        break;
+      case 'chat-attachment':
+        if (!conversationId || !messageId) {
+          return NextResponse.json(
+            { error: 'Conversation ID and Message ID are required for chat attachment upload' },
+            { status: 400 }
+          );
+        }
+        result = await StorageService.uploadChatAttachment(file, userId, userEmail, conversationId, messageId);
+        break;
+      case 'custom':
+        if (!customPath) {
+          return NextResponse.json(
+            { error: 'Custom path is required for custom upload' },
+            { status: 400 }
+          );
+        }
+        const userMetadata = {
+          userId,
+          userEmail,
+          uploadedAt: new Date().toISOString(),
+          category: 'custom'
+        };
+        result = await StorageService.uploadFile(file, customPath, userMetadata);
+        break;
+      default:
+        return NextResponse.json(
+          { error: 'Invalid upload type' },
+          { status: 400 }
+        );
     }
 
-    return success({ urls: uploadedUrls });
+    return NextResponse.json({
+      success: true,
+      data: result
+    });
+
   } catch (error: any) {
-    if (error.error) {
-      throw error;
-    }
-    throw makeError("INTERNAL", "Failed to upload files");
+    console.error('Upload error:', error);
+    return NextResponse.json(
+      { error: 'Upload failed', details: error.message },
+      { status: 500 }
+    );
   }
-});
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const userId = request.headers.get('x-user-id');
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 401 }
+      );
+    }
+
+    const { path } = await request.json();
+    
+    if (!path) {
+      return NextResponse.json(
+        { error: 'File path is required' },
+        { status: 400 }
+      );
+    }
+
+    await StorageService.deleteFile(path);
+
+    return NextResponse.json({
+      success: true,
+      message: 'File deleted successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Delete error:', error);
+    return NextResponse.json(
+      { error: 'Delete failed', details: error.message },
+      { status: 500 }
+    );
+  }
+}
