@@ -23,6 +23,7 @@ export default function SellPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [priceSuggesting, setPriceSuggesting] = useState(false);
   const [listingId, setListingId] = useState<string | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [formData, setFormData] = useState<SimpleListingCreate & {
@@ -32,12 +33,16 @@ export default function SellPage() {
       marketDemand: 'high' | 'medium' | 'low';
       competitorCount: number;
     };
+    condition?: string;
+    size?: string;
   }>({
     title: '',
     description: '',
     price: 0,
     category: '',
-    photos: []
+    photos: [],
+    condition: 'Good',
+    size: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -426,8 +431,113 @@ export default function SellPage() {
               {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
             </div>
 
-            {/* Condition field removed for MVP */}
+            {/* Condition Field */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Condition
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {['New', 'Like New', 'Excellent', 'Good', 'Fair', 'Poor'].map((condition) => (
+                  <button
+                    key={condition}
+                    type="button"
+                    onClick={() => handleInputChange('condition', condition)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      formData.condition === condition
+                        ? 'bg-accent-500 text-white'
+                        : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                    }`}
+                  >
+                    {condition}
+                  </button>
+                ))}
+              </div>
+            </div>
 
+            {/* Size Field - Only show for relevant categories */}
+            {(formData.category === 'fashion' || formData.category === 'sports') && (
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Size <span className="text-gray-400 text-sm">(Optional)</span>
+                </label>
+                {formData.category === 'fashion' ? (
+                  // Clothing sizes - buttons
+                  <div className="grid grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('size', '')}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        formData.size === ''
+                          ? 'bg-accent-500 text-white'
+                          : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                      }`}
+                    >
+                      Any
+                    </button>
+                    {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => handleInputChange('size', size)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          formData.size === size
+                            ? 'bg-accent-500 text-white'
+                            : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  // Sports/Shoes - number input with common sizes
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-4 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('size', '')}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          formData.size === ''
+                            ? 'bg-accent-500 text-white'
+                            : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                        }`}
+                      >
+                        Any
+                      </button>
+                      {['6', '7', '8', '9', '10', '11', '12', '13'].map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => handleInputChange('size', size)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            formData.size === size
+                              ? 'bg-accent-500 text-white'
+                              : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm">Custom size:</span>
+                      <input
+                        type="number"
+                        value={formData.size && !['6', '7', '8', '9', '10', '11', '12', '13'].includes(formData.size) ? formData.size : ''}
+                        onChange={(e) => handleInputChange('size', e.target.value)}
+                        placeholder="e.g., 8.5, 9.5"
+                        step="0.5"
+                        min="4"
+                        max="16"
+                        className="input w-24 text-center"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Price Field */}
             <div>
               <label className="block text-sm font-medium text-white mb-2">
                 Price
@@ -458,19 +568,29 @@ export default function SellPage() {
                       return;
                     }
                     
+                    setPriceSuggesting(true);
+                    
                     try {
-                      console.log('💰 Getting price suggestion for photos:', formData.photos);
+                      console.log('💰 Getting price suggestion with parameters:', {
+                        title: formData.title,
+                        description: formData.description,
+                        category: formData.category,
+                        condition: formData.condition,
+                        size: formData.size
+                      });
                       
-                      const response = await fetch('/api/ai/analyze-product', {
+                      const response = await fetch('/api/prices/suggest', {
                         method: 'POST',
-                        headers: { 
+                        headers: {
                           'Content-Type': 'application/json',
-                          'x-user-id': currentUser.uid
                         },
                         body: JSON.stringify({
-                          imageUrls: formData.photos,
-                          listingId: 'price-suggestion'
-                        })
+                          title: formData.title,
+                          description: formData.description,
+                          category: formData.category,
+                          condition: formData.condition,
+                          size: formData.size || null
+                        }),
                       });
                       
                       if (!response.ok) {
@@ -481,15 +601,14 @@ export default function SellPage() {
                       const result = await response.json();
                       console.log('💰 Price suggestion result:', result);
                       
-                      if (result.success && result.analysis?.suggestedPrice) {
-                        handleInputChange('price', result.analysis.suggestedPrice);
-                        
-                        // Update AI analysis data if available
-                        if (result.analysis.priceAnalysis) {
-                          setAiAnalysis(result.analysis.priceAnalysis);
+                      if (result.success && result.suggestion) {
+                        // Extract price from suggestion text
+                        const priceMatch = result.suggestion.match(/\$(\d+(?:\.\d{2})?)/);
+                        if (priceMatch) {
+                          const suggestedPrice = parseFloat(priceMatch[1]);
+                          handleInputChange('price', suggestedPrice);
+                          console.log('✅ Price suggestion updated:', suggestedPrice);
                         }
-                        
-                        console.log('✅ Price suggestion updated:', result.analysis.suggestedPrice);
                       } else {
                         console.error('❌ No price suggestion in response:', result);
                         alert('Unable to get price suggestion. Please try again.');
@@ -497,12 +616,25 @@ export default function SellPage() {
                     } catch (error) {
                       console.error('❌ Error getting price suggestion:', error);
                       alert(`Error getting price suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    } finally {
+                      setPriceSuggesting(false);
                     }
                   }}
-                  className="btn btn-outline whitespace-nowrap"
-                  disabled={!currentUser || formData.photos.length === 0}
+                  className={`btn btn-outline whitespace-nowrap flex items-center gap-2 ${
+                    priceSuggesting ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={!currentUser || formData.photos.length === 0 || priceSuggesting}
                 >
-                  Suggest Price
+                  {priceSuggesting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <span>Suggest Price</span>
+                    </>
+                  )}
                 </button>
               </div>
               {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}

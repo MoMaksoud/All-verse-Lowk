@@ -89,3 +89,34 @@ export const PUT = withApi(async (
     return error(badRequest("Failed to update listing"));
   }
 });
+
+export const DELETE = withApi(async (
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) => {
+  try {
+    const userId = req.headers.get('x-user-id');
+    if (!userId) {
+      return error(badRequest("User ID is required"));
+    }
+
+    // Get the existing listing to check ownership
+    const existingListing = await firestoreServices.listings.getListing(params.id);
+    if (!existingListing) {
+      return error(notFound("Listing not found"));
+    }
+
+    // Check if user owns this listing
+    if (existingListing.sellerId !== userId) {
+      return error(badRequest("You can only delete your own listings"));
+    }
+
+    // Delete the listing
+    await firestoreServices.listings.deleteListing(params.id);
+    
+    return success({ message: "Listing deleted successfully" });
+  } catch (err) {
+    console.error('Error deleting listing:', err);
+    return error(badRequest("Failed to delete listing"));
+  }
+});

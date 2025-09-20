@@ -217,11 +217,14 @@ export default function ListingDetailPage() {
   }, []);
 
   const handleDeleteListing = useCallback(async () => {
-    if (!listing) return;
+    if (!listing || !currentUser) return;
     
     try {
       const response = await fetch(`/api/listings/${listing.id}`, {
         method: 'DELETE',
+        headers: {
+          'x-user-id': currentUser.uid,
+        },
       });
       
       if (response.ok) {
@@ -234,7 +237,7 @@ export default function ListingDetailPage() {
       console.error('Error deleting listing:', error);
       showError('Failed to delete listing');
     }
-  }, [listing, router]);
+  }, [listing, currentUser, router]);
 
 
   if (loading) {

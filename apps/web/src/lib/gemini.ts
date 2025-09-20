@@ -502,15 +502,34 @@ export class GeminiService {
     }
   }
 
-  static async generatePriceSuggestion(productTitle: string, productDescription: string, category: string): Promise<ChatResponse> {
+  static async generatePriceSuggestion(
+    productTitle: string, 
+    productDescription: string, 
+    category: string, 
+    condition: string = 'Good',
+    size: string | null = null
+  ): Promise<ChatResponse> {
+    const sizeContext = size ? `Size: ${size}` : '';
+    const conditionContext = condition ? `Condition: ${condition}` : '';
+    
     const pricePrompt = `
-      You are a friendly pricing expert for ALL VERSE GPT marketplace! 💰
+      You are a professional pricing expert for ALL VERSE GPT marketplace! 💰
 
       Help suggest a fair and competitive price for this product:
 
       Title: "${productTitle}"
       Description: "${productDescription}"
       Category: "${category}"
+      ${conditionContext}
+      ${sizeContext}
+
+      IMPORTANT SIZE PRICING CONSIDERATIONS:
+      - S, M, L sizes have the HIGHEST demand and should be priced at premium
+      - XS and XL+ sizes have slightly lower demand - reduce price by 5-15%
+      - For shoes: sizes 8, 9, 10 have highest demand (premium pricing)
+      - Shoe sizes 6-7 and 12+ have lower demand (reduce by 5-15%)
+      - Half sizes (8.5, 9.5) often have premium pricing
+      - Size pricing adjustments should be subtle, not dramatic
 
       Respond as an encouraging mentor who wants to help sellers succeed. Be supportive and make pricing feel manageable!
 

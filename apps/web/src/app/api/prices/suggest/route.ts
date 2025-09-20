@@ -3,7 +3,7 @@ import { GeminiService } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, description, category } = await request.json();
+    const { title, description, category, condition, size } = await request.json();
 
     if (!title || !description || !category) {
       return NextResponse.json(
@@ -12,8 +12,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use Gemini AI to generate price suggestions
-    const priceResponse = await GeminiService.generatePriceSuggestion(title, description, category);
+    // Use Gemini AI to generate price suggestions with enhanced parameters
+    const priceResponse = await GeminiService.generatePriceSuggestion(
+      title, 
+      description, 
+      category, 
+      condition || 'Good', // Default to 'Good' if not provided
+      size || null // Optional size parameter
+    );
 
     if (!priceResponse.success) {
       return NextResponse.json(
