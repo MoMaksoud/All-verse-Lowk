@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StorageService } from '@/lib/storage';
+import StorageService from '@/lib/storage';
 import { firestoreServices } from '@/lib/services/firestore';
 import { ProfilePhotoUpload } from '@/lib/types/firestore';
 
@@ -21,13 +21,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate file
-    const validation = StorageService.validateImageFile(file);
-    if (!validation.valid) {
+    const validation = StorageService.validateFile(file, {
+      maxSize: 5 * 1024 * 1024, // 5MB
+      allowedTypes: ['image/'],
+      required: true
+    });
+    if (!validation.isValid) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Upload photo to Firebase Storage
-    const photoUrl = await StorageService.uploadProfilePicture(userId, file);
+    const userEmail = req.headers.get('x-user-email') || 'unknown@example.com';
+    const result = await StorageService.uploadProfilePicture(file, userId, userEmail);
+    const photoUrl = result.url;
     
     // Extract file path from URL for tracking
     const url = new URL(photoUrl);
@@ -73,7 +79,7 @@ export async function DELETE(req: NextRequest) {
     
     if (photoData) {
       // Delete from Firebase Storage
-      await StorageService.deleteProfilePicture(photoData.photoUrl);
+      await StorageService.deleteFile(photoData.photoUrl);
       
       // Delete from Firestore
       await firestoreServices.profilePhotos.deleteProfilePhoto(userId);

@@ -21,20 +21,33 @@ export async function POST(req: NextRequest) {
     console.log('🤖 Starting AI analysis for listing:', listingId);
     console.log('🤖 Image URLs received:', imageUrls.length);
 
-    // Analyze product photos
-    const analysis = await AIAnalysisService.analyzeProductPhotos(imageUrls);
-    console.log('🤖 Analysis result:', analysis);
+    let analysis;
+    let priceAnalysis;
     
-    // Generate price analysis
-    const priceAnalysis = await AIAnalysisService.analyzePrice(
-      analysis.title,
-      analysis.description,
-      analysis.category,
-      analysis.condition,
-      analysis.suggestedPrice
-    );
-
-    console.log('🤖 AI analysis completed successfully');
+    try {
+      // Try AI analysis first
+      analysis = await AIAnalysisService.analyzeProductPhotos(imageUrls);
+      console.log('🤖 AI analysis result:', analysis);
+      
+      // Generate price analysis
+      priceAnalysis = await AIAnalysisService.analyzePrice(
+        analysis.title,
+        analysis.description,
+        analysis.category,
+        analysis.condition,
+        analysis.suggestedPrice
+      );
+      
+      console.log('🤖 AI analysis completed successfully');
+    } catch (aiError) {
+      console.error('🤖 AI analysis failed, using fallback:', aiError);
+      
+      // Use fallback analysis
+      analysis = AIAnalysisService.getFallbackAnalysis(imageUrls);
+      priceAnalysis = AIAnalysisService.getFallbackPriceAnalysis(analysis.suggestedPrice);
+      
+      console.log('🤖 Using fallback analysis:', analysis);
+    }
 
     return NextResponse.json({
       success: true,
@@ -47,9 +60,18 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('🤖 AI analysis error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to analyze product photos',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    
+    // Even if everything fails, return a basic fallback
+    const fallbackAnalysis = AIAnalysisService.getFallbackAnalysis();
+    const fallbackPriceAnalysis = AIAnalysisService.getFallbackPriceAnalysis(fallbackAnalysis.suggestedPrice);
+    
+    return NextResponse.json({
+      success: true,
+      analysis: {
+        ...fallbackAnalysis,
+        priceAnalysis: fallbackPriceAnalysis
+      },
+      message: 'Product analysis completed with fallback data'
+    });
   }
 }

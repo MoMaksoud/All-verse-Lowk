@@ -2,8 +2,7 @@
 const nextConfig = {
   // Performance optimizations
   experimental: {
-    optimizeCss: true,
-    optimizePackageImports: ['lucide-react', '@marketplace/ui'],
+    optimizePackageImports: ['lucide-react', '@marketplace/ui', 'firebase'],
     turbo: {
       rules: {
         '*.svg': {
@@ -20,6 +19,7 @@ const nextConfig = {
   },
   
   webpack: (config, { dev, isServer }) => {
+    // Exclude react-native from webpack processing
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       'react-native$': 'react-native-web',

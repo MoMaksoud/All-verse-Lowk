@@ -123,12 +123,12 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   // Debounced search for suggestions
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (query.length >= 1) {
+      if (query.length >= 2) { // Increased from 1 to 2 for better performance
         fetchSuggestions(query);
       } else {
         setAutocompleteSuggestions([]);
       }
-    }, 200); // 200ms delay for faster response
+    }, 300); // Increased delay for better performance
 
     return () => clearTimeout(timeoutId);
   }, [query]);

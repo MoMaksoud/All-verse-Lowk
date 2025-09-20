@@ -9,6 +9,8 @@ import { Logo } from '@/components/Logo';
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
+import { Toast, ToastType } from '@/components/Toast';
+import { AIStatusIndicator } from '@/components/AIStatusIndicator';
 
 const steps = [
   { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
@@ -20,10 +22,22 @@ const steps = [
 export default function SellPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
+
+  // Toast helper functions
+  const addToast = (type: ToastType, title: string, message?: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, type, title, message }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [priceSuggesting, setPriceSuggesting] = useState(false);
+  const [lastPriceSuggestionTime, setLastPriceSuggestionTime] = useState(0);
+  const [toasts, setToasts] = useState<Array<{ id: string; type: ToastType; title: string; message?: string }>>([]);
   const [listingId, setListingId] = useState<string | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [formData, setFormData] = useState<SimpleListingCreate & {
@@ -158,6 +172,85 @@ export default function SellPage() {
   };
 
 
+  const testFallbackAnalysis = async (listingId: string) => {
+    if (!currentUser || !formData.photos.length) return;
+
+    try {
+      setAiAnalyzing(true);
+      
+      console.log('🧪 Testing fallback analysis...');
+      
+      // Call fallback test API
+      const response = await fetch('/api/ai/test-fallback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify({
+          imageUrls: formData.photos,
+          listingId: listingId
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Fallback test failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      const analysis = result.analysis;
+      
+      console.log('🧪 Fallback analysis result:', analysis);
+      
+      // Update listing with fallback data
+      const aiData = {
+        title: analysis.title,
+        description: analysis.description,
+        category: analysis.category,
+        price: analysis.suggestedPrice,
+        condition: analysis.condition,
+        marketResearch: analysis.marketResearch,
+      };
+      
+      const updateResponse = await fetch(`/api/listings/${listingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
+        },
+        body: JSON.stringify(aiData),
+      });
+      
+      if (updateResponse.ok) {
+        // Immediately update form data to show fallback results
+        setFormData(prev => ({ ...prev, ...aiData }));
+        setCurrentStep(3);
+        console.log('🧪 Listing updated with fallback analysis');
+        
+        // Show success toast
+        addToast('success', 'Fallback Analysis Complete', 'Product details generated using fallback analysis!');
+      } else {
+        // Even if database update fails, still update the form
+        setFormData(prev => ({ ...prev, ...aiData }));
+        setCurrentStep(3);
+        console.log('🧪 Form updated with fallback analysis (database update failed)');
+        
+        // Show warning toast
+        addToast('warning', 'Fallback Analysis Complete', 'Details generated but database update failed. You can still proceed.');
+      }
+      
+    } catch (error) {
+      console.error('🧪 Fallback analysis error:', error);
+      setErrors({ submit: 'Fallback analysis failed. You can still edit manually.' });
+      setCurrentStep(3);
+      
+      // Show error toast
+      addToast('error', 'Fallback Analysis Failed', 'Unable to generate fallback analysis. Please edit manually.');
+    } finally {
+      setAiAnalyzing(false);
+    }
+  };
+
   const performAIAnalysis = async (listingId: string) => {
     if (!currentUser || !formData.photos.length) return;
 
@@ -213,17 +306,26 @@ export default function SellPage() {
         setCurrentStep(3);
         console.log('🤖 Listing updated with AI analysis');
         console.log('🤖 Form data updated:', aiData);
+        
+        // Show success toast
+        addToast('success', 'AI Analysis Complete', 'Product details have been generated successfully!');
       } else {
         // Even if database update fails, still update the form
         setFormData(prev => ({ ...prev, ...aiData }));
         setCurrentStep(3);
         console.log('🤖 Form updated with AI analysis (database update failed)');
+        
+        // Show warning toast
+        addToast('warning', 'AI Analysis Complete', 'Details generated but database update failed. You can still proceed.');
       }
       
     } catch (error) {
       console.error('Error in AI analysis:', error);
       setErrors({ submit: 'AI analysis failed. You can still edit manually.' });
       setCurrentStep(3);
+      
+      // Show error toast
+      addToast('error', 'AI Analysis Failed', 'Using fallback analysis. You can edit the details manually.');
     } finally {
       setAiAnalyzing(false);
     }
@@ -319,47 +421,66 @@ export default function SellPage() {
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <div className="animate-pulse">
-                <Brain className="mx-auto h-16 w-16 text-accent-500 mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">AI Analysis in Progress</h3>
-                <p className="text-gray-400 mb-6">Our AI is analyzing your photos and generating details...</p>
-              </div>
+              <Brain className="mx-auto h-16 w-16 text-accent-500 mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">AI Analysis</h3>
+              <p className="text-gray-400 mb-6">Let our AI analyze your photos and generate product details</p>
               
-              <div className="space-y-4 max-w-md mx-auto">
-                <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                  <span className="text-gray-400">Title</span>
-                  <span className="text-white animate-pulse">
-                    {aiAnalyzing ? 'Analyzing photos...' : 'Complete'}
-                  </span>
+              {formData.photos.length === 0 ? (
+                <div className="p-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                  <p className="text-yellow-400">Please upload photos first to enable AI analysis</p>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                  <span className="text-gray-400">Category</span>
-                  <span className="text-white animate-pulse">
-                    {aiAnalyzing ? 'Identifying product...' : 'Complete'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                  <span className="text-gray-400">Price</span>
-                  <span className="text-white animate-pulse">
-                    {aiAnalyzing ? 'Calculating market value...' : 'Complete'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                  <span className="text-gray-400">Description</span>
-                  <span className="text-white animate-pulse">
-                    {aiAnalyzing ? 'Generating details...' : 'Complete'}
-                  </span>
-                </div>
-              </div>
-              
-              {!aiAnalyzing && (
-                <div className="mt-6">
-                  <button
-                    onClick={() => setCurrentStep(3)}
-                    className="btn btn-primary"
-                  >
-                    Review & Edit
-                  </button>
+              ) : (
+                <div className="space-y-4">
+                  {aiAnalyzing ? (
+                    <div className="space-y-4 max-w-md mx-auto">
+                      <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                        <span className="text-gray-400">Title</span>
+                        <span className="text-white animate-pulse">Analyzing photos...</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                        <span className="text-gray-400">Category</span>
+                        <span className="text-white animate-pulse">Identifying product...</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                        <span className="text-gray-400">Price</span>
+                        <span className="text-white animate-pulse">Calculating market value...</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                        <span className="text-gray-400">Description</span>
+                        <span className="text-white animate-pulse">Generating details...</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-dark-700 rounded-lg">
+                        <p className="text-gray-400 text-sm mb-2">Photos uploaded: {formData.photos.length}</p>
+                        <p className="text-white text-sm">Ready for AI analysis</p>
+                      </div>
+                      
+                      <button
+                        onClick={() => listingId && performAIAnalysis(listingId)}
+                        disabled={aiAnalyzing || !listingId}
+                        className="btn btn-primary w-full"
+                      >
+                        {aiAnalyzing ? 'Analyzing...' : '🤖 Analyze with AI'}
+                      </button>
+                      
+                      <button
+                        onClick={() => listingId && testFallbackAnalysis(listingId)}
+                        disabled={aiAnalyzing || !listingId}
+                        className="btn btn-secondary w-full"
+                      >
+                        🧪 Test Fallback Analysis
+                      </button>
+                      
+                      <button
+                        onClick={() => setCurrentStep(3)}
+                        className="btn btn-outline w-full"
+                      >
+                        Skip AI Analysis
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -559,16 +680,25 @@ export default function SellPage() {
                   type="button"
                   onClick={async () => {
                     if (!currentUser) {
-                      alert('Please sign in to get price suggestions');
+                      addToast('warning', 'Sign In Required', 'Please sign in to get price suggestions');
                       return;
                     }
                     
                     if (formData.photos.length === 0) {
-                      alert('Please upload photos first to get accurate price suggestions');
+                      addToast('warning', 'Photos Required', 'Please upload photos first to get accurate price suggestions');
+                      return;
+                    }
+
+                    // Client-side rate limiting (5 seconds between requests)
+                    const now = Date.now();
+                    if (now - lastPriceSuggestionTime < 5000) {
+                      const remainingTime = Math.ceil((5000 - (now - lastPriceSuggestionTime)) / 1000);
+                      addToast('warning', 'Please Wait', `Please wait ${remainingTime} seconds before requesting another price suggestion.`);
                       return;
                     }
                     
                     setPriceSuggesting(true);
+                    setLastPriceSuggestionTime(now);
                     
                     try {
                       console.log('💰 Getting price suggestion with parameters:', {
@@ -593,11 +723,6 @@ export default function SellPage() {
                         }),
                       });
                       
-                      if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Failed to get price suggestion');
-                      }
-                      
                       const result = await response.json();
                       console.log('💰 Price suggestion result:', result);
                       
@@ -608,14 +733,26 @@ export default function SellPage() {
                           const suggestedPrice = parseFloat(priceMatch[1]);
                           handleInputChange('price', suggestedPrice);
                           console.log('✅ Price suggestion updated:', suggestedPrice);
+                          
+                          // Show warning if using fallback
+                          if (result.source === 'fallback' && result.warning) {
+                            console.log('⚠️ Using fallback pricing:', result.warning);
+                            addToast('info', 'Using Fallback Pricing', result.warning);
+                          } else {
+                            addToast('success', 'Price Suggestion Updated', 'AI has suggested a new price for your item');
+                          }
                         }
+                      } else if (response.status === 429) {
+                        // Rate limit exceeded
+                        const retryAfter = result.retryAfter || 60;
+                        addToast('warning', 'Rate Limit Exceeded', `Too many requests. Please wait ${retryAfter} seconds before trying again.`);
                       } else {
                         console.error('❌ No price suggestion in response:', result);
-                        alert('Unable to get price suggestion. Please try again.');
+                        addToast('error', 'Price Suggestion Failed', result.error || 'Unable to get price suggestion. Please try again.');
                       }
                     } catch (error) {
                       console.error('❌ Error getting price suggestion:', error);
-                      alert(`Error getting price suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                      addToast('error', 'Price Suggestion Error', error instanceof Error ? error.message : 'Unknown error');
                     } finally {
                       setPriceSuggesting(false);
                     }
@@ -638,6 +775,11 @@ export default function SellPage() {
                 </button>
               </div>
               {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
+            </div>
+
+            {/* AI Status Indicator */}
+            <div className="mb-4">
+              <AIStatusIndicator />
             </div>
 
             {/* AI Market Research Display */}
@@ -865,6 +1007,20 @@ export default function SellPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Toast Container */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            id={toast.id}
+            type={toast.type}
+            title={toast.title}
+            message={toast.message}
+            onClose={removeToast}
+          />
+        ))}
       </div>
     </div>
   );

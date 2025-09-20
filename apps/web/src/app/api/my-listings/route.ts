@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: listing.sellerId,
       status: listing.status || 'active',
-      location: listing.location,
+      location: undefined,
     }));
 
     return NextResponse.json({

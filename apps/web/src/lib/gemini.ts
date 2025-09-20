@@ -39,8 +39,14 @@ export class GeminiService {
         message: text,
         success: true
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gemini AI Error:', error);
+      
+      // Check for quota/rate limit errors
+      if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+        throw new Error('AI service quota exceeded. Please try again later.');
+      }
+      
       return {
         message: 'Let me help you with that! 🛍️\n\nFind Deals\nTrending Items\nBrowse Categories\nPopular Items\n\nWhat interests you?',
         success: false,
@@ -565,31 +571,32 @@ export class GeminiService {
 
       User query: "${query}"
 
-      Generate 3-4 realistic product listings that would match this search. Each listing should be a JSON object with these exact fields:
+      Generate 4-6 realistic product listings that would match this search. Each listing should be a JSON object with these exact fields:
 
       {
         "id": "unique-id",
-        "title": "Product Name",
+        "title": "Specific Product Name with Details",
         "price": {"value": number, "currency": "USD"},
         "condition": "New|Like New|Excellent|Good|Fair",
         "seller": {"id": "seller-id", "name": "Seller Name"},
         "imageUrl": "https://images.unsplash.com/photo-[relevant-photo-id]?w=400&h=300&fit=crop",
         "url": "/listings/unique-id",
-        "category": "electronics|fashion|home|sports|other",
-        "badges": ["Trending"|"New"|"Hot"|"Popular"|"Deal"],
+        "category": "electronics|fashion|home|sports|automotive|books|other",
+        "badges": ["Trending"|"New"|"Hot"|"Popular"|"Deal"|"Best Seller"],
         "location": "City, State",
         "createdAt": "2025-01-XXTXX:XX:XX.000Z",
         "score": 0.XX
       }
 
-      Guidelines:
-      - Make titles realistic and specific (e.g., "iPhone 13 Pro 128GB" not just "iPhone")
-      - Price ranges: Electronics $50-2000, Fashion $20-500, Home $30-800, Sports $25-400
-      - Use realistic seller names like "TechDeals", "FashionForward", "HomeDecor"
+      ENHANCED GUIDELINES:
+      - Make titles VERY specific: "iPhone 13 Pro 128GB Space Gray" not "iPhone"
+      - Include model numbers, sizes, colors when relevant
+      - Price ranges: Electronics $50-2000, Fashion $15-500, Home $25-800, Sports $20-400, Books $5-50
+      - Use realistic seller names: "TechDeals", "FashionForward", "HomeDecor", "SportsGear", "BookLover"
       - Choose appropriate Unsplash photo IDs for each product type
-      - Use Florida cities for locations
-      - Score should be 0.80-0.98 for relevance
-      - Make badges contextually relevant
+      - Use Florida cities: Miami, Tampa, Orlando, Jacksonville, Fort Lauderdale
+      - Score should be 0.85-0.98 for relevance
+      - Make badges contextually relevant to the product and query
 
       Return ONLY a valid JSON array of listings, no other text.
 
@@ -606,23 +613,49 @@ export class GeminiService {
       const response = await result.response;
       const text = response.text();
 
-      // Try to parse the JSON response
+      // Clean and parse JSON response
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
       const listings = JSON.parse(cleanText);
 
-      if (Array.isArray(listings) && listings.length > 0) {
-        return {
-          message: 'AI-generated listings created successfully',
-          success: true,
-          listings: listings
-        };
-      } else {
-        throw new Error('Invalid listings format');
-      }
-    } catch (error) {
-      console.error('Gemini listings generation error:', error);
+      // Validate and enhance listings
+      const validatedListings = listings.map((listing: any, index: number) => ({
+        id: listing.id || `ai-listing-${index + 1}`,
+        title: listing.title || 'Product Item',
+        price: {
+          value: Math.max(10, Math.min(2000, listing.price?.value || 100)),
+          currency: 'USD'
+        },
+        condition: ['New', 'Like New', 'Excellent', 'Good', 'Fair'].includes(listing.condition) 
+          ? listing.condition : 'Good',
+        seller: {
+          id: listing.seller?.id || `seller-${index + 1}`,
+          name: listing.seller?.name || 'Local Seller'
+        },
+        imageUrl: listing.imageUrl || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop',
+        url: listing.url || `/listings/ai-listing-${index + 1}`,
+        category: ['electronics', 'fashion', 'home', 'sports', 'automotive', 'books', 'other'].includes(listing.category)
+          ? listing.category : 'other',
+        badges: Array.isArray(listing.badges) ? listing.badges.slice(0, 2) : ['Popular'],
+        location: listing.location || 'Miami, FL',
+        createdAt: listing.createdAt || new Date().toISOString(),
+        score: Math.max(0.8, Math.min(0.98, listing.score || 0.9))
+      }));
+
       return {
-        message: 'Failed to generate AI listings',
+        message: `Found ${validatedListings.length} relevant listings!`,
+        success: true,
+        listings: validatedListings
+      };
+    } catch (error: any) {
+      console.error('Gemini listings generation error:', error);
+      
+      // Check for quota errors
+      if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+        throw new Error('AI service quota exceeded. Please try again later.');
+      }
+      
+      return {
+        message: 'Unable to generate listings at this time.',
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };

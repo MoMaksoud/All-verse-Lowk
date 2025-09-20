@@ -103,10 +103,10 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
       
       if (isFavorited) {
         updatedFavorites = favorites.filter((id: string) => id !== listing.id);
-        showToast('Removed from favorites', 'success');
+        showSuccess('Removed from favorites');
       } else {
         updatedFavorites = [...favorites, listing.id];
-        showToast('Added to favorites', 'success');
+        showSuccess('Added to favorites');
       }
       
       localStorage.setItem('favorites', JSON.stringify(updatedFavorites));

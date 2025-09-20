@@ -402,7 +402,7 @@ export class MessagesService {
           // Get listing data
           const listingRef = doc(db, 'listings', conv.listingId);
           const listingSnap = await getDoc(listingRef);
-          const listing = listingSnap.exists() ? { id: listingSnap.id, ...listingSnap.data() } : null;
+          const listing = listingSnap.exists() ? { id: listingSnap.id, ...listingSnap.data() } as any : null;
 
           // Get other user data
           const otherUserId = conv.buyerId === userId ? conv.sellerId : conv.buyerId;

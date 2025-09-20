@@ -69,6 +69,10 @@ export const PUT = withApi(async (
     // Get the updated listing
     const updatedListing = await firestoreServices.listings.getListing(params.id);
     
+    if (!updatedListing) {
+      return error(notFound("Listing not found"));
+    }
+    
     // Transform to SimpleListing format
     const simpleListing = {
       id: (updatedListing as any).id,

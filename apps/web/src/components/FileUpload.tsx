@@ -81,23 +81,23 @@ export function FileUpload({
         switch (uploadType) {
           case 'profile-picture':
             if (!userId) throw new Error('User ID is required for profile picture upload');
-            result = await uploadProfilePicture(file, userId);
+            result = await uploadProfilePicture(file, userId, 'user@example.com'); // TODO: Get actual user email
             break;
           case 'listing-photo':
             if (!listingId) throw new Error('Listing ID is required for listing photo upload');
-            result = await uploadListingPhoto(file, listingId, i);
+            result = await uploadListingPhoto(file, userId || 'unknown', 'user@example.com', listingId, i);
             break;
           case 'listing-video':
             if (!listingId) throw new Error('Listing ID is required for listing video upload');
-            result = await uploadListingVideo(file, listingId, i);
+            result = await uploadListingVideo(file, userId || 'unknown', 'user@example.com', listingId, i);
             break;
           case 'chat-attachment':
             if (!conversationId || !messageId) throw new Error('Conversation ID and Message ID are required for chat attachment upload');
-            result = await uploadChatAttachment(file, conversationId, messageId);
+            result = await uploadChatAttachment(file, userId || 'unknown', 'user@example.com', conversationId, messageId);
             break;
           case 'custom':
             if (!customPath) throw new Error('Custom path is required for custom upload');
-            result = await uploadFile(file, customPath);
+            result = await uploadFile(file, customPath, userId || 'unknown', 'user@example.com');
             break;
           default:
             throw new Error('Invalid upload type');

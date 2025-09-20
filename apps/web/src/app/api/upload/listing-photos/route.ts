@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StorageService } from '@/lib/storage';
+import StorageService from '@/lib/storage';
 import { firestoreServices } from '@/lib/services/firestore';
 import { ListingPhotoUpload } from '@/lib/types/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     console.log('📸 Listing photos upload request received');
     
     const userId = req.headers.get('x-user-id');
+    const userEmail = req.headers.get('x-user-email') || 'unknown@example.com';
     if (!userId) {
       console.log('❌ No user ID provided');
       return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
@@ -40,15 +41,36 @@ export async function POST(req: NextRequest) {
 
     // Validate all files
     for (const file of files) {
-      const validation = StorageService.validateImageFile(file);
-      if (!validation.valid) {
+      const validation = StorageService.validateFile(file, {
+        maxSize: 10 * 1024 * 1024, // 10MB
+        allowedTypes: ['image/'],
+        required: true
+      });
+      if (!validation.isValid) {
         return NextResponse.json({ error: validation.error }, { status: 400 });
       }
     }
 
     // Upload photos to Firebase Storage (or fallback to data URLs)
     console.log('📸 Starting photo upload...');
-    const photoUrls = await StorageService.uploadListingImages(listingId, files);
+    const photoUrls: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const result = await StorageService.uploadListingPhoto(
+          file,
+          userId,
+          userEmail,
+          listingId,
+          i
+        );
+        photoUrls.push(result.url);
+      } catch (error) {
+        console.error(`Failed to upload photo ${i}:`, error);
+        // Continue with other photos
+      }
+    }
     console.log('📸 Photos uploaded:', photoUrls.length);
     
     // Extract file paths from URLs for tracking (only for Firebase Storage URLs)
@@ -126,7 +148,7 @@ export async function DELETE(req: NextRequest) {
     if (photoData) {
       // Delete from Firebase Storage
       for (const photoUrl of photoData.photoUrls) {
-        await StorageService.deleteProfilePicture(photoUrl); // Reuse delete function
+        await StorageService.deleteFile(photoUrl);
       }
       
       // Delete from Firestore

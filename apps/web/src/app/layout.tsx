@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import './performance.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 
@@ -13,7 +14,6 @@ export const metadata: Metadata = {
   authors: [{ name: 'All-Verse Team' }],
   viewport: 'width=device-width, initial-scale=1',
   other: {
-    'preload': '/icons/electronics.svg',
     'prefetch': '/api/listings?limit=6',
   },
 };
@@ -26,20 +26,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full dark">
       <body className={`${inter.className} h-full dark`}>
-        {/* Dynamic Background Elements */}
-        <div className="floating-particles">
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-        </div>
-        <div className="grid-overlay"></div>
-        
         <div className="min-h-screen">
         <AuthProvider>
           <ToastProvider>

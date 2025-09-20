@@ -35,7 +35,7 @@ export function StorageTest() {
     const testFile = new File([testContent], 'test.txt', { type: 'text/plain' });
 
     try {
-      await uploadProfilePicture(testFile, currentUser.uid);
+      await uploadProfilePicture(testFile, currentUser.uid, currentUser.email || 'test@example.com');
     } catch (err) {
       setTestResult(`❌ ERROR: ${err}`);
       setIsTesting(false);
