@@ -31,7 +31,6 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   const { uploading, error, uploadProfilePhoto, uploadListingPhotos, clearError } = usePhotoUpload();
   const { uploadListingPhoto, isUploading, progress, error: uploadError } = useFileUpload({
     onSuccess: (result) => {
-      console.log('✅ Photo uploaded to Firebase:', result.url);
     },
     onError: (error) => {
       console.error('❌ Photo upload failed:', error);
@@ -60,7 +59,6 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
         }
       } else if (type === 'listing') {
         // For listing photos, upload to Firebase Storage
-        console.log('📸 Uploading listing photos to Firebase:', validFiles.length);
         
         if (!currentUser?.uid || !listingId) {
           console.error('❌ Missing user ID or listing ID for photo upload');
@@ -79,7 +77,6 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
         const uploadedUrls = await Promise.all(uploadPromises);
         urls = uploadedUrls.filter(url => url !== '');
-        console.log('✅ Photos uploaded to Firebase:', urls.length);
       }
 
       if (urls.length > 0) {

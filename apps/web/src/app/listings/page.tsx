@@ -12,6 +12,7 @@ import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
 
 function ListingsContent() {
   const searchParams = useSearchParams();

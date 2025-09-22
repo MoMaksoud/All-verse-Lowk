@@ -1,29 +1,33 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { LoadingSpinner } from './LoadingSpinner';
 
-interface RouteTransitionProps {
-  children: React.ReactNode;
-}
-
-export function RouteTransition({ children }: RouteTransitionProps) {
+export function RouteTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [displayChildren, setDisplayChildren] = useState(children);
 
   useEffect(() => {
     setIsTransitioning(true);
     
+    // Show loading for a very short time to indicate transition
     const timer = setTimeout(() => {
+      setDisplayChildren(children);
       setIsTransitioning(false);
-    }, 150);
+    }, 150); // Very short transition
 
     return () => clearTimeout(timer);
-  }, [pathname]);
+  }, [pathname, children]);
 
-  return (
-    <div className={`transition-opacity duration-150 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-      {children}
-    </div>
-  );
+  if (isTransitioning) {
+    return (
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  return <>{displayChildren}</>;
 }

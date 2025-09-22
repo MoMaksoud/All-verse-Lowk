@@ -11,6 +11,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { SkeletonCard, SkeletonSearchBar, SkeletonAIWidget, SkeletonStats, SkeletonHero } from '@/components/SkeletonLoader';
 import { ResourcePreloader } from '@/components/ResourcePreloader';
 import { useRouteGuard } from '@/hooks/useRouteGuard';
+import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
 
 // Lazy load heavy components
 const ListingCard = lazy(() => import('@/components/ListingCard').then(module => ({ default: module.ListingCard })));
@@ -19,37 +20,45 @@ const AIWidget = lazy(() => import('@/components/AIWidget').then(module => ({ de
 const DynamicBackground = lazy(() => import('@/components/DynamicBackground').then(module => ({ default: module.DynamicBackground })));
 
 export default function HomePage() {
-  const [featuredListings, setFeaturedListings] = useState<SimpleListing[]>([]);
-  const [loading, setLoading] = useState(true);
   const isHomeRoute = useRouteGuard();
   const router = useRouter();
 
-  const fetchData = useCallback(async () => {
+  const fetchFeaturedListings = useCallback(async () => {
     try {
-      // Use a smaller limit for faster loading and add caching
       const response = await fetch('/api/listings?limit=4', {
         headers: {
-          'Cache-Control': 'max-age=300', // 5 minutes cache
+          'Cache-Control': 'max-age=300',
         },
       });
-      const data = await response.json();
-
-      if (response.ok) {
-        setFeaturedListings(data.data || []);
-      } else {
-        setFeaturedListings([]);
+      
+      if (!response.ok) {
+        console.error(`Failed to fetch listings: ${response.status} ${response.statusText}`);
+        // If it's a 401, that's expected for non-authenticated users browsing public listings
+        if (response.status === 401) {
+          console.log('User not authenticated, but that should be OK for public listings');
+        }
+        return []; // Return empty array for any error
       }
+      
+      const data = await response.json();
+      
+      // Ensure we always return an array
+      return Array.isArray(data.data) ? data.data : [];
     } catch (error) {
-      console.error('Error fetching data:', error);
-      setFeaturedListings([]);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching featured listings:', error);
+      return []; // Return empty array on error
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { 
+    data: featuredListings = [], 
+    loading, 
+    error 
+  } = useOptimizedFetch<SimpleListing[]>(
+    'featured-listings', 
+    fetchFeaturedListings,
+    { ttl: 300000 } // 5 minutes cache
+  );
 
   // Show skeleton loading instead of spinner for better perceived performance
   if (loading) {
@@ -59,12 +68,11 @@ export default function HomePage() {
         <div className="py-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white">
-                Loading...
-              </h1>
-              <p className="text-xl md:text-2xl mb-8 text-gray-300">
-                Please wait while we load the content
-              </p>
+              <div className="animate-pulse">
+                <div className="h-20 bg-gray-700 rounded-lg mb-6 mx-auto max-w-2xl"></div>
+                <div className="h-8 bg-gray-700 rounded-lg mb-8 mx-auto max-w-lg"></div>
+                <div className="h-12 bg-gray-700 rounded-lg mb-8 mx-auto max-w-md"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -214,11 +222,17 @@ export default function HomePage() {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {featuredListings.map((listing) => (
-              <Suspense key={listing.id} fallback={<SkeletonCard />}>
-                <ListingCard listing={listing} />
-              </Suspense>
-            ))}
+            {featuredListings && featuredListings.length > 0 ? (
+              featuredListings.map((listing) => (
+                <Suspense key={listing.id} fallback={<SkeletonCard />}>
+                  <ListingCard listing={listing} />
+                </Suspense>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-gray-400">No featured listings available</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

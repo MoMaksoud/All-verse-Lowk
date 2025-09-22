@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, HelpCircle, ShoppingCart, Package, List } from 'lucide-react';
+import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, ShoppingCart, Package, List, HelpCircle } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Profile } from '@marketplace/types';
@@ -146,6 +146,7 @@ const Navigation = memo(function Navigation() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  prefetch={true}
                   className={`flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 ${
                     pathname === item.href
                       ? 'text-accent-400 bg-dark-700/50'
@@ -450,6 +451,7 @@ const Navigation = memo(function Navigation() {
                   <Link
                     key={item.name}
                     href={item.href}
+                    prefetch={true}
                     className={`flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
                       pathname === item.href
                         ? 'text-accent-400 bg-dark-700/50'

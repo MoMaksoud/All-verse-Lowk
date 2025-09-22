@@ -18,16 +18,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Image URLs are required' }, { status: 400 });
     }
 
-    console.log('🤖 Starting AI analysis for listing:', listingId);
-    console.log('🤖 Image URLs received:', imageUrls.length);
-
     let analysis;
     let priceAnalysis;
     
     try {
       // Try AI analysis first
       analysis = await AIAnalysisService.analyzeProductPhotos(imageUrls);
-      console.log('🤖 AI analysis result:', analysis);
       
       // Generate price analysis
       priceAnalysis = await AIAnalysisService.analyzePrice(
@@ -37,16 +33,12 @@ export async function POST(req: NextRequest) {
         analysis.condition,
         analysis.suggestedPrice
       );
-      
-      console.log('🤖 AI analysis completed successfully');
     } catch (aiError) {
-      console.error('🤖 AI analysis failed, using fallback:', aiError);
+      console.error('AI analysis failed, using fallback:', aiError);
       
       // Use fallback analysis
       analysis = AIAnalysisService.getFallbackAnalysis(imageUrls);
       priceAnalysis = AIAnalysisService.getFallbackPriceAnalysis(analysis.suggestedPrice);
-      
-      console.log('🤖 Using fallback analysis:', analysis);
     }
 
     return NextResponse.json({
@@ -59,7 +51,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('🤖 AI analysis error:', error);
+    console.error('AI analysis error:', error);
     
     // Even if everything fails, return a basic fallback
     const fallbackAnalysis = AIAnalysisService.getFallbackAnalysis();

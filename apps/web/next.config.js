@@ -3,6 +3,8 @@ const nextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', '@marketplace/ui', 'firebase'],
+    optimisticClientCache: true,
+    serverComponentsExternalPackages: ['firebase-admin'],
     turbo: {
       rules: {
         '*.svg': {
@@ -15,8 +17,14 @@ const nextConfig = {
   
   // Compiler optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error']
+    } : false,
+    styledComponents: true,
   },
+  
+  // Enable SWC minification for faster builds
+  swcMinify: true,
   
   webpack: (config, { dev, isServer }) => {
     // Exclude react-native from webpack processing

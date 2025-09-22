@@ -63,35 +63,26 @@ export const PUT = withApi(async (
 
     const body = await req.json() as UpdateListingInput;
     
-    console.log('🔄 Updating listing:', params.id, 'for user:', userId);
-    
     const firestoreServices = await getFirestoreServices();
     
     // Get the existing listing to check ownership
     const existingListing = await firestoreServices.listings.getListing(params.id);
     if (!existingListing) {
-      console.log('❌ Listing not found:', params.id);
       return error(notFound("Listing not found"));
     }
 
     // Check if user owns this listing
     if (existingListing.sellerId !== userId) {
-      console.log('❌ User does not own listing:', userId, 'vs', existingListing.sellerId);
       return error(badRequest("You can only update your own listings"));
     }
-
-    console.log('✅ User owns listing, proceeding with update...');
     
     // Update the listing
     await firestoreServices.listings.updateListing(params.id, body);
-    
-    console.log('✅ Listing updated successfully');
     
     // Get the updated listing
     const updatedListing = await firestoreServices.listings.getListing(params.id);
     
     if (!updatedListing) {
-      console.log('❌ Updated listing not found after update');
       return error(notFound("Listing not found after update"));
     }
     
@@ -109,15 +100,9 @@ export const PUT = withApi(async (
       location: undefined,
     };
 
-    console.log('✅ Returning updated listing:', simpleListing.id);
     return success(simpleListing);
   } catch (err) {
-    console.error('❌ Error updating listing:', err);
-    console.error('Error details:', {
-      message: err instanceof Error ? err.message : 'Unknown error',
-      stack: err instanceof Error ? err.stack : undefined,
-      name: err instanceof Error ? err.name : undefined
-    });
+    console.error('Error updating listing:', err);
     return error(badRequest(`Failed to update listing: ${err instanceof Error ? err.message : 'Unknown error'}`));
   }
 });

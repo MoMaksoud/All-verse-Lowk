@@ -238,7 +238,10 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
   ): Promise<PaginatedResult<FirestoreListing>> {
     let q = query(this.getCollection());
 
-    // Apply filters
+    // Always filter for active listings first for better performance
+    q = query(q, where('isActive', '==', filters.isActive !== false));
+
+    // Apply other filters
     if (filters.category) {
       q = query(q, where('category', '==', filters.category));
     }
@@ -253,9 +256,6 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
     }
     if (filters.sellerId) {
       q = query(q, where('sellerId', '==', filters.sellerId));
-    }
-    if (filters.isActive !== undefined) {
-      q = query(q, where('isActive', '==', filters.isActive));
     }
 
     // Apply sorting

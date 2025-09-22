@@ -64,7 +64,9 @@ export default function SellPage() {
 
   // Redirect if not authenticated
   useEffect(() => {
+    console.log('Sell page auth check:', { currentUser: !!currentUser, uid: currentUser?.uid });
     if (!currentUser) {
+      console.log('No user found, redirecting to signin');
       router.push('/signin');
     }
   }, [currentUser, router]);
@@ -139,7 +141,18 @@ export default function SellPage() {
   };
 
   const createListingAndUploadPhotos = async () => {
-    if (!currentUser || !formData.photos.length) return;
+    if (!currentUser) {
+      console.error('User not authenticated');
+      addToast('error', 'Authentication Required', 'Please sign in to create a listing');
+      router.push('/signin');
+      return;
+    }
+    
+    if (!formData.photos.length) {
+      console.error('No photos uploaded');
+      addToast('error', 'Photos Required', 'Please upload at least one photo');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -166,7 +179,9 @@ export default function SellPage() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create listing');
+        const errorData = await response.text();
+        console.error('Failed to create listing:', response.status, errorData);
+        throw new Error(`Failed to create listing: ${response.status} - ${errorData}`);
       }
       
       const result = await response.json();
@@ -270,8 +285,6 @@ export default function SellPage() {
     try {
       setAiAnalyzing(true);
       
-      console.log('🤖 Starting real AI analysis...');
-      
       // Call real AI analysis API
       const response = await fetch('/api/ai/analyze-product', {
         method: 'POST',
@@ -291,8 +304,6 @@ export default function SellPage() {
       
       const result = await response.json();
       const analysis = result.analysis;
-      
-      console.log('🤖 AI analysis result:', analysis);
       
       // Update listing with AI-generated data
       const aiData = {
@@ -317,8 +328,6 @@ export default function SellPage() {
         // Immediately update form data to show AI results
         setFormData(prev => ({ ...prev, ...aiData }));
         setCurrentStep(3);
-        console.log('🤖 Listing updated with AI analysis');
-        console.log('🤖 Form data updated:', aiData);
         
         // Show success toast
         addToast('success', 'AI Analysis Complete', 'Product details have been generated successfully!');
@@ -326,7 +335,6 @@ export default function SellPage() {
         // Even if database update fails, still update the form
         setFormData(prev => ({ ...prev, ...aiData }));
         setCurrentStep(3);
-        console.log('🤖 Form updated with AI analysis (database update failed)');
         
         // Show warning toast
         addToast('warning', 'AI Analysis Complete', 'Details generated but database update failed. You can still proceed.');
@@ -837,7 +845,6 @@ export default function SellPage() {
                         if (priceMatch) {
                           const suggestedPrice = parseFloat(priceMatch[1]);
                           handleInputChange('price', suggestedPrice);
-                          console.log('✅ Price suggestion updated:', suggestedPrice);
                           
                           // Show warning if using fallback
                           if (result.source === 'fallback' && result.warning) {

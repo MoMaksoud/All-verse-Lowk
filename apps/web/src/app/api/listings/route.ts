@@ -14,8 +14,8 @@ async function getFirestoreServices() {
 }
 
 export const runtime = "nodejs";
-export const dynamic = "auto";
-export const revalidate = 300; // Cache for 5 minutes
+export const dynamic = "force-dynamic";
+export const revalidate = 60; // Cache for 1 minute for better performance
 
 export async function GET(req: NextRequest) {
   try {
@@ -132,8 +132,10 @@ export async function GET(req: NextRequest) {
       },
     });
     
-    // Add caching headers
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    // Add aggressive caching headers for better performance
+    response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    response.headers.set('CDN-Cache-Control', 'public, max-age=60');
+    response.headers.set('Vercel-CDN-Cache-Control', 'public, max-age=60');
     return response;
   } catch (error) {
     console.error('Error fetching listings:', error);
@@ -150,12 +152,8 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json() as CreateListingInput;
     
-    console.log('🔄 Creating listing for user:', userId);
-    console.log('📝 Listing data:', body);
-    
     // Basic validation
     if (!body.title || !body.description || typeof body.price !== 'number' || !body.category) {
-      console.log('❌ Missing required fields:', { title: !!body.title, description: !!body.description, price: typeof body.price, category: !!body.category });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -168,14 +166,9 @@ export async function POST(req: NextRequest) {
       currency: body.currency || 'USD',
       condition: body.condition || 'good',
     };
-
-    console.log('✅ Creating listing with data:', listingData);
     
     const listingId = await firestoreServices.listings.createListing(listingData);
-    console.log('✅ Listing created with ID:', listingId);
-    
     const listing = await firestoreServices.listings.getListing(listingId);
-    console.log('✅ Retrieved listing:', listing?.id);
     
     return NextResponse.json({ id: listingId, ...listing }, { status: 201 });
   } catch (error) {

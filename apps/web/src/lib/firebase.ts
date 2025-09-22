@@ -25,13 +25,15 @@ const isFirebaseConfigured = () => {
          !firebaseConfig.apiKey.includes('your_') &&
          firebaseConfig.apiKey.startsWith('AIza');
   
-  // Log configuration status for debugging
-  console.log('🔍 Firebase Configuration Check:');
-  console.log('API Key:', firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'Missing');
-  console.log('Auth Domain:', firebaseConfig.authDomain);
-  console.log('Project ID:', firebaseConfig.projectId);
-  console.log('App ID:', firebaseConfig.appId);
-  console.log('Is Configured:', isConfigured);
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Firebase Configuration Check:');
+    console.log('API Key:', firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'Missing');
+    console.log('Auth Domain:', firebaseConfig.authDomain);
+    console.log('Project ID:', firebaseConfig.projectId);
+    console.log('App ID:', firebaseConfig.appId);
+    console.log('Is Configured:', isConfigured);
+  }
   
   return isConfigured;
 };
