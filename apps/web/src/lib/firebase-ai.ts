@@ -6,9 +6,9 @@ export class FirebaseAIService {
   private static model: any;
 
   static initialize() {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY environment variable is required');
+      throw new Error('GEMINI_API_KEY or NEXT_PUBLIC_GEMINI_API_KEY environment variable is required');
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);

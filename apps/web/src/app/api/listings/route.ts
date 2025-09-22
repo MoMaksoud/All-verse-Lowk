@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { firestoreServices } from "@/lib/services/firestore";
 import { CreateListingInput } from "@/lib/types/firestore";
 import { calculateDistance } from "@/lib/location";
+
+// Import firestore services dynamically to avoid webpack issues
+async function getFirestoreServices() {
+  try {
+    const { firestoreServices } = await import("@/lib/services/firestore");
+    return firestoreServices;
+  } catch (err) {
+    console.error('Failed to import firestore services:', err);
+    throw new Error('Database services not available');
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "auto";
@@ -9,6 +19,8 @@ export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(req: NextRequest) {
   try {
+    const firestoreServices = await getFirestoreServices();
+    
     const url = new URL(req.url);
     const q = url.searchParams.get('q') || undefined;
     const category = url.searchParams.get('category') || undefined;
@@ -138,10 +150,16 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json() as CreateListingInput;
     
+    console.log('🔄 Creating listing for user:', userId);
+    console.log('📝 Listing data:', body);
+    
     // Basic validation
     if (!body.title || !body.description || typeof body.price !== 'number' || !body.category) {
+      console.log('❌ Missing required fields:', { title: !!body.title, description: !!body.description, price: typeof body.price, category: !!body.category });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    const firestoreServices = await getFirestoreServices();
 
     const listingData = {
       ...body,
@@ -151,12 +169,22 @@ export async function POST(req: NextRequest) {
       condition: body.condition || 'good',
     };
 
-    const listingId = await firestoreServices.listings.createListing(listingData);
-    const listing = await firestoreServices.listings.getListing(listingId);
+    console.log('✅ Creating listing with data:', listingData);
     
-    return NextResponse.json(listing, { status: 201 });
+    const listingId = await firestoreServices.listings.createListing(listingData);
+    console.log('✅ Listing created with ID:', listingId);
+    
+    const listing = await firestoreServices.listings.getListing(listingId);
+    console.log('✅ Retrieved listing:', listing?.id);
+    
+    return NextResponse.json({ id: listingId, ...listing }, { status: 201 });
   } catch (error) {
-    console.error('Error creating listing:', error);
-    return NextResponse.json({ error: 'Failed to create listing' }, { status: 500 });
+    console.error('❌ Error creating listing:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
+    return NextResponse.json({ error: `Failed to create listing: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 });
   }
 }

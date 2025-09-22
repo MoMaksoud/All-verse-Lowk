@@ -1,9 +1,19 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { withApi } from "@/lib/withApi";
-import { firestoreServices } from "@/lib/services/firestore";
 import { success, error } from "@/lib/response";
 import { badRequest, notFound } from "@/lib/errors";
 import { UpdateListingInput } from "@/lib/types/firestore";
+
+// Import firestore services dynamically to avoid webpack issues
+async function getFirestoreServices() {
+  try {
+    const { firestoreServices } = await import("@/lib/services/firestore");
+    return firestoreServices;
+  } catch (err) {
+    console.error('Failed to import firestore services:', err);
+    throw new Error('Database services not available');
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +23,7 @@ export const GET = withApi(async (
   { params }: { params: { id: string } }
 ) => {
   try {
+    const firestoreServices = await getFirestoreServices();
     const listing = await firestoreServices.listings.getListing(params.id);
     
     if (!listing) {
@@ -52,25 +63,36 @@ export const PUT = withApi(async (
 
     const body = await req.json() as UpdateListingInput;
     
+    console.log('🔄 Updating listing:', params.id, 'for user:', userId);
+    
+    const firestoreServices = await getFirestoreServices();
+    
     // Get the existing listing to check ownership
     const existingListing = await firestoreServices.listings.getListing(params.id);
     if (!existingListing) {
+      console.log('❌ Listing not found:', params.id);
       return error(notFound("Listing not found"));
     }
 
     // Check if user owns this listing
     if (existingListing.sellerId !== userId) {
+      console.log('❌ User does not own listing:', userId, 'vs', existingListing.sellerId);
       return error(badRequest("You can only update your own listings"));
     }
 
+    console.log('✅ User owns listing, proceeding with update...');
+    
     // Update the listing
     await firestoreServices.listings.updateListing(params.id, body);
+    
+    console.log('✅ Listing updated successfully');
     
     // Get the updated listing
     const updatedListing = await firestoreServices.listings.getListing(params.id);
     
     if (!updatedListing) {
-      return error(notFound("Listing not found"));
+      console.log('❌ Updated listing not found after update');
+      return error(notFound("Listing not found after update"));
     }
     
     // Transform to SimpleListing format
@@ -87,10 +109,16 @@ export const PUT = withApi(async (
       location: undefined,
     };
 
+    console.log('✅ Returning updated listing:', simpleListing.id);
     return success(simpleListing);
   } catch (err) {
-    console.error('Error updating listing:', err);
-    return error(badRequest("Failed to update listing"));
+    console.error('❌ Error updating listing:', err);
+    console.error('Error details:', {
+      message: err instanceof Error ? err.message : 'Unknown error',
+      stack: err instanceof Error ? err.stack : undefined,
+      name: err instanceof Error ? err.name : undefined
+    });
+    return error(badRequest(`Failed to update listing: ${err instanceof Error ? err.message : 'Unknown error'}`));
   }
 });
 
@@ -103,6 +131,8 @@ export const DELETE = withApi(async (
     if (!userId) {
       return error(badRequest("User ID is required"));
     }
+
+    const firestoreServices = await getFirestoreServices();
 
     // Get the existing listing to check ownership
     const existingListing = await firestoreServices.listings.getListing(params.id);

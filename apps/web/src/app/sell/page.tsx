@@ -49,6 +49,7 @@ export default function SellPage() {
     };
     condition?: string;
     size?: string;
+    sizeCategory?: 'clothing' | 'footwear';
   }>({
     title: '',
     description: '',
@@ -56,7 +57,8 @@ export default function SellPage() {
     category: '',
     photos: [],
     condition: 'Good',
-    size: ''
+    size: '',
+    sizeCategory: undefined
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -70,7 +72,18 @@ export default function SellPage() {
   // Remove categories fetch since we'll use hardcoded categories
 
   const handleInputChange = (field: keyof typeof formData, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      
+      // Reset size category and size when changing main category
+      if (field === 'category') {
+        newData.sizeCategory = undefined;
+        newData.size = '';
+      }
+      
+      return newData;
+    });
+    
     if (errors[field as string]) {
       setErrors((prev: Record<string, string>) => ({ ...prev, [field]: '' }));
     }
@@ -581,37 +594,132 @@ export default function SellPage() {
                 <label className="block text-sm font-medium text-white mb-2">
                   Size <span className="text-gray-400 text-sm">(Optional)</span>
                 </label>
+                
                 {formData.category === 'fashion' ? (
-                  // Clothing sizes - buttons
-                  <div className="grid grid-cols-4 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleInputChange('size', '')}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        formData.size === ''
-                          ? 'bg-accent-500 text-white'
-                          : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                      }`}
-                    >
-                      Any
-                    </button>
-                    {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => handleInputChange('size', size)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          formData.size === size
-                            ? 'bg-accent-500 text-white'
-                            : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
+                  // Fashion items - show size category selector
+                  <div className="space-y-4">
+                    {/* Size Category Selector */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-2">
+                        Item Type
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleInputChange('sizeCategory', 'clothing');
+                            handleInputChange('size', ''); // Reset size when changing category
+                          }}
+                          className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            formData.sizeCategory === 'clothing'
+                              ? 'bg-accent-500 text-white'
+                              : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                          }`}
+                        >
+                          👕 Top/Bottom
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleInputChange('sizeCategory', 'footwear');
+                            handleInputChange('size', ''); // Reset size when changing category
+                          }}
+                          className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            formData.sizeCategory === 'footwear'
+                              ? 'bg-accent-500 text-white'
+                              : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                          }`}
+                        >
+                          👟 Footwear
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Size Options based on category */}
+                    {formData.sizeCategory && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-2">
+                          {formData.sizeCategory === 'clothing' ? 'Clothing Size' : 'Shoe Size'}
+                        </label>
+                        {formData.sizeCategory === 'clothing' ? (
+                          // Clothing sizes - buttons
+                          <div className="grid grid-cols-4 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleInputChange('size', '')}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                formData.size === ''
+                                  ? 'bg-accent-500 text-white'
+                                  : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                              }`}
+                            >
+                              Any
+                            </button>
+                            {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map((size) => (
+                              <button
+                                key={size}
+                                type="button"
+                                onClick={() => handleInputChange('size', size)}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                  formData.size === size
+                                    ? 'bg-accent-500 text-white'
+                                    : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                                }`}
+                              >
+                                {size}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          // Footwear sizes - buttons with common shoe sizes
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-4 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleInputChange('size', '')}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                  formData.size === ''
+                                    ? 'bg-accent-500 text-white'
+                                    : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                                }`}
+                              >
+                                Any
+                              </button>
+                              {['6', '7', '8', '9', '10', '11', '12', '13'].map((size) => (
+                                <button
+                                  key={size}
+                                  type="button"
+                                  onClick={() => handleInputChange('size', size)}
+                                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    formData.size === size
+                                      ? 'bg-accent-500 text-white'
+                                      : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                                  }`}
+                                >
+                                  {size}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 text-sm">Custom size:</span>
+                              <input
+                                type="number"
+                                value={formData.size && !['6', '7', '8', '9', '10', '11', '12', '13'].includes(formData.size) ? formData.size : ''}
+                                onChange={(e) => handleInputChange('size', e.target.value)}
+                                placeholder="e.g., 8.5, 9.5"
+                                step="0.5"
+                                min="4"
+                                max="16"
+                                className="w-24 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-center focus:outline-none focus:ring-2 focus:ring-accent-500"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  // Sports/Shoes - number input with common sizes
+                  // Sports items - show general size options
                   <div className="space-y-3">
                     <div className="grid grid-cols-4 gap-2">
                       <button
@@ -625,7 +733,7 @@ export default function SellPage() {
                       >
                         Any
                       </button>
-                      {['6', '7', '8', '9', '10', '11', '12', '13'].map((size) => (
+                      {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
                         <button
                           key={size}
                           type="button"
@@ -643,14 +751,11 @@ export default function SellPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-gray-400 text-sm">Custom size:</span>
                       <input
-                        type="number"
-                        value={formData.size && !['6', '7', '8', '9', '10', '11', '12', '13'].includes(formData.size) ? formData.size : ''}
+                        type="text"
+                        value={formData.size && !['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(formData.size) ? formData.size : ''}
                         onChange={(e) => handleInputChange('size', e.target.value)}
-                        placeholder="e.g., 8.5, 9.5"
-                        step="0.5"
-                        min="4"
-                        max="16"
-                        className="input w-24 text-center"
+                        placeholder="e.g., 28, 30, 32"
+                        className="w-24 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-center focus:outline-none focus:ring-2 focus:ring-accent-500"
                       />
                     </div>
                   </div>

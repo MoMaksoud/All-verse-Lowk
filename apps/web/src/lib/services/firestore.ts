@@ -18,7 +18,7 @@ import {
   addDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, isFirebaseConfigured } from '../firebase';
 import {
   FirestoreUser,
   CreateUserInput,
@@ -60,10 +60,16 @@ abstract class BaseFirestoreService<T> {
   }
 
   protected getCollection() {
+    if (!db || !isFirebaseConfigured()) {
+      throw new Error('Database not initialized or Firebase not configured');
+    }
     return collection(db, this.collectionName);
   }
 
   protected getDocRef(id: string) {
+    if (!db || !isFirebaseConfigured()) {
+      throw new Error('Database not initialized or Firebase not configured');
+    }
     return doc(db, this.collectionName, id);
   }
 
