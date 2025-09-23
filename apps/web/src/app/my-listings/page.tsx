@@ -18,6 +18,8 @@ import {
   MapPin,
   AlertCircle
 } from 'lucide-react';
+import { ConfirmationModal } from '@/components/ConfirmationModal';
+import { useToast } from '@/contexts/ToastContext';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -69,7 +71,18 @@ export default function MyListingsPage() {
   const [listings, setListings] = useState<MyListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    listingId: string | null;
+    listingTitle: string;
+  }>({
+    isOpen: false,
+    listingId: null,
+    listingTitle: ''
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
   const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     if (currentUser?.uid) {
@@ -102,12 +115,22 @@ export default function MyListingsPage() {
   };
 
   const handleDeleteListing = async (listingId: string) => {
-    if (!confirm('Are you sure you want to delete this listing?')) {
-      return;
-    }
+    const listing = listings.find(l => l.id === listingId);
+    if (!listing) return;
 
+    setDeleteModal({
+      isOpen: true,
+      listingId,
+      listingTitle: listing.title
+    });
+  };
+
+  const confirmDeleteListing = async () => {
+    if (!deleteModal.listingId) return;
+
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/listings/${listingId}`, {
+      const response = await fetch(`/api/listings/${deleteModal.listingId}`, {
         method: 'DELETE',
         headers: {
           'x-user-id': currentUser?.uid || '',
@@ -115,14 +138,22 @@ export default function MyListingsPage() {
       });
 
       if (response.ok) {
-        setListings(prev => prev.filter(listing => listing.id !== listingId));
+        setListings(prev => prev.filter(listing => listing.id !== deleteModal.listingId));
+        setDeleteModal({ isOpen: false, listingId: null, listingTitle: '' });
+        showSuccess('Listing Deleted', 'Your listing has been successfully deleted');
       } else {
-        alert('Failed to delete listing');
+        showError('Delete Failed', 'Unable to delete listing. Please try again.');
       }
     } catch (error) {
       console.error('Error deleting listing:', error);
-      alert('Failed to delete listing');
+      showError('Delete Failed', 'An error occurred while deleting the listing');
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const cancelDeleteListing = () => {
+    setDeleteModal({ isOpen: false, listingId: null, listingTitle: '' });
   };
 
   if (!currentUser) {
@@ -301,6 +332,19 @@ export default function MyListingsPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={cancelDeleteListing}
+        onConfirm={confirmDeleteListing}
+        title="Delete Listing"
+        message={`Are you sure you want to delete "${deleteModal.listingTitle}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

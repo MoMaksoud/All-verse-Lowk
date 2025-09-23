@@ -38,7 +38,6 @@ export default function SellPage() {
   const [priceSuggesting, setPriceSuggesting] = useState(false);
   const [lastPriceSuggestionTime, setLastPriceSuggestionTime] = useState(0);
   const [toasts, setToasts] = useState<Array<{ id: string; type: ToastType; title: string; message?: string }>>([]);
-  const [listingId, setListingId] = useState<string | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [formData, setFormData] = useState<SimpleListingCreate & {
     marketResearch?: {
@@ -132,75 +131,19 @@ export default function SellPage() {
   const nextStep = async () => {
     if (validateStep(currentStep)) {
       if (currentStep === 1) {
-        // Create listing first, then upload photos
-        await createListingAndUploadPhotos();
+        // Just move to AI analysis step - no listing creation yet
+        setCurrentStep(2);
+        // Start AI analysis with uploaded photos
+        await performAIAnalysis();
       } else {
         setCurrentStep(prev => Math.min(prev + 1, steps.length));
       }
     }
   };
 
-  const createListingAndUploadPhotos = async () => {
-    if (!currentUser) {
-      console.error('User not authenticated');
-      addToast('error', 'Authentication Required', 'Please sign in to create a listing');
-      router.push('/signin');
-      return;
-    }
-    
-    if (!formData.photos.length) {
-      console.error('No photos uploaded');
-      addToast('error', 'Photos Required', 'Please upload at least one photo');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Create listing first with empty photos array
-      const listingData = {
-        title: 'AI Analyzing...',
-        description: 'AI is analyzing your photos...',
-        price: 0,
-        category: 'other',
-        photos: [], // Start with empty array, photos will be uploaded separately
-        condition: 'good' as const,
-        inventory: 1,
-        sellerId: currentUser.uid,
-      };
-      
-      const response = await fetch('/api/listings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify(listingData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Failed to create listing:', response.status, errorData);
-        throw new Error(`Failed to create listing: ${response.status} - ${errorData}`);
-      }
-      
-      const result = await response.json();
-      setListingId(result.id);
-      setCurrentStep(2);
-      
-      // Start AI analysis
-      await performAIAnalysis(result.id);
-      
-    } catch (error) {
-      console.error('Error creating listing:', error);
-      setErrors({ submit: 'Failed to create listing. Please try again.' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
 
-  const testFallbackAnalysis = async (listingId: string) => {
+  const testFallbackAnalysis = async () => {
     if (!currentUser || !formData.photos.length) return;
 
     try {
@@ -217,7 +160,7 @@ export default function SellPage() {
         },
         body: JSON.stringify({
           imageUrls: formData.photos,
-          listingId: listingId
+          listingId: null // No listing ID since we haven't created one yet
         }),
       });
       
@@ -230,7 +173,7 @@ export default function SellPage() {
       
       console.log('🧪 Fallback analysis result:', analysis);
       
-      // Update listing with fallback data
+      // Update form data with fallback data (no database save yet)
       const aiData = {
         title: analysis.title,
         description: analysis.description,
@@ -240,32 +183,13 @@ export default function SellPage() {
         marketResearch: analysis.marketResearch,
       };
       
-      const updateResponse = await fetch(`/api/listings/${listingId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify(aiData),
-      });
+      // Update form data to show fallback results
+      setFormData(prev => ({ ...prev, ...aiData }));
+      setCurrentStep(3);
+      console.log('🧪 Form updated with fallback analysis');
       
-      if (updateResponse.ok) {
-        // Immediately update form data to show fallback results
-        setFormData(prev => ({ ...prev, ...aiData }));
-        setCurrentStep(3);
-        console.log('🧪 Listing updated with fallback analysis');
-        
-        // Show success toast
-        addToast('success', 'Fallback Analysis Complete', 'Product details generated using fallback analysis!');
-      } else {
-        // Even if database update fails, still update the form
-        setFormData(prev => ({ ...prev, ...aiData }));
-        setCurrentStep(3);
-        console.log('🧪 Form updated with fallback analysis (database update failed)');
-        
-        // Show warning toast
-        addToast('warning', 'Fallback Analysis Complete', 'Details generated but database update failed. You can still proceed.');
-      }
+      // Show success toast
+      addToast('success', 'Fallback Analysis Complete', 'Product details generated using fallback analysis!');
       
     } catch (error) {
       console.error('🧪 Fallback analysis error:', error);
@@ -279,11 +203,28 @@ export default function SellPage() {
     }
   };
 
-  const performAIAnalysis = async (listingId: string) => {
-    if (!currentUser || !formData.photos.length) return;
+  const performAIAnalysis = async () => {
+    if (!currentUser || !formData.photos.length) {
+      console.error('❌ AI Analysis aborted: missing user or photos');
+      return;
+    }
 
     try {
       setAiAnalyzing(true);
+      console.log('🤖 Starting AI analysis for uploaded photos');
+      console.log('🤖 Photos to analyze:', formData.photos);
+      
+      // Verify photos are accessible URLs
+      const validPhotos = formData.photos.filter(url => 
+        url && (url.startsWith('http') || url.startsWith('https'))
+      );
+      
+      if (validPhotos.length === 0) {
+        console.error('❌ No valid HTTP/HTTPS photo URLs found:', formData.photos);
+        throw new Error('Photos must be uploaded to cloud storage before AI analysis');
+      }
+      
+      console.log('🤖 Valid photos for AI analysis:', validPhotos);
       
       // Call real AI analysis API
       const response = await fetch('/api/ai/analyze-product', {
@@ -293,8 +234,8 @@ export default function SellPage() {
           'x-user-id': currentUser.uid,
         },
         body: JSON.stringify({
-          imageUrls: formData.photos,
-          listingId: listingId
+          imageUrls: validPhotos, // Use only valid URLs
+          listingId: null // No listing ID since we haven't created one yet
         }),
       });
       
@@ -305,7 +246,7 @@ export default function SellPage() {
       const result = await response.json();
       const analysis = result.analysis;
       
-      // Update listing with AI-generated data
+      // Update form data with AI-generated data (no database save yet)
       const aiData = {
         title: analysis.title,
         description: analysis.description,
@@ -315,38 +256,30 @@ export default function SellPage() {
         marketResearch: analysis.marketResearch,
       };
       
-      const updateResponse = await fetch(`/api/listings/${listingId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify(aiData),
-      });
-      
-      if (updateResponse.ok) {
-        // Immediately update form data to show AI results
-        setFormData(prev => ({ ...prev, ...aiData }));
-        setCurrentStep(3);
-        
-        // Show success toast
-        addToast('success', 'AI Analysis Complete', 'Product details have been generated successfully!');
-      } else {
-        // Even if database update fails, still update the form
-        setFormData(prev => ({ ...prev, ...aiData }));
-        setCurrentStep(3);
-        
-        // Show warning toast
-        addToast('warning', 'AI Analysis Complete', 'Details generated but database update failed. You can still proceed.');
-      }
-      
-    } catch (error) {
-      console.error('Error in AI analysis:', error);
-      setErrors({ submit: 'AI analysis failed. You can still edit manually.' });
+      // Update form data to show AI results
+      setFormData(prev => ({ ...prev, ...aiData }));
       setCurrentStep(3);
       
-      // Show error toast
-      addToast('error', 'AI Analysis Failed', 'Using fallback analysis. You can edit the details manually.');
+      // Show success toast
+      addToast('success', 'AI Analysis Complete', 'Product details have been generated successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error in AI analysis:', error);
+      
+      // Provide more specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('❌ AI Analysis error details:', errorMessage);
+      
+      if (errorMessage.includes('cloud storage')) {
+        // Photo upload issue
+        addToast('error', 'Photo Upload Issue', 'Photos need to be properly uploaded before AI analysis. Please try uploading again.');
+        setCurrentStep(1); // Go back to photo upload step
+      } else {
+        // General AI analysis failure
+        setErrors({ submit: 'AI analysis failed. You can still edit manually.' });
+        setCurrentStep(3);
+        addToast('error', 'AI Analysis Failed', 'Using fallback analysis. You can edit the details manually.');
+      }
     } finally {
       setAiAnalyzing(false);
     }
@@ -359,8 +292,8 @@ export default function SellPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
-    if (!currentUser || !listingId) {
-      setErrors({ submit: 'No listing found to update' });
+    if (!currentUser) {
+      setErrors({ submit: 'User not authenticated' });
       return;
     }
     
@@ -370,6 +303,7 @@ export default function SellPage() {
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (formData.price <= 0) newErrors.price = 'Price must be greater than 0';
     if (!formData.category) newErrors.category = 'Category is required';
+    if (!formData.photos.length) newErrors.photos = 'At least one photo is required';
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -379,19 +313,21 @@ export default function SellPage() {
     try {
       setLoading(true);
       
-      // Update listing with final data
+      // Create listing with final data (this is when it actually gets saved)
       const listingData = {
         title: formData.title,
         description: formData.description,
         price: formData.price,
         category: formData.category,
-        condition: 'good' as const,
+        photos: formData.photos,
+        condition: formData.condition || 'good',
         inventory: 1,
         isActive: true,
+        sellerId: currentUser.uid,
       };
       
-      const response = await fetch(`/api/listings/${listingId}`, {
-        method: 'PUT',
+      const response = await fetch('/api/listings', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': currentUser.uid,
@@ -400,12 +336,15 @@ export default function SellPage() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to update listing');
+        const errorData = await response.text();
+        throw new Error(`Failed to create listing: ${response.status} - ${errorData}`);
       }
       
+      const result = await response.json();
+      
       // Show success message
-      alert('Listing published successfully!');
-      router.push(`/listings/${listingId}`);
+      addToast('success', 'Listing Published!', 'Your listing has been successfully created and published.');
+      router.push(`/listings/${result.id}`);
       
     } catch (error) {
       console.error('Error updating listing:', error);
@@ -426,7 +365,7 @@ export default function SellPage() {
               </label>
               <PhotoUpload
                 type="listing"
-                listingId={listingId || `temp-${Date.now()}`}
+                listingId={`temp-${Date.now()}`}
                 maxPhotos={10}
                 existingPhotos={formData.photos}
                 onUpload={handlePhotoUpload}
@@ -479,16 +418,16 @@ export default function SellPage() {
                       </div>
                       
                       <button
-                        onClick={() => listingId && performAIAnalysis(listingId)}
-                        disabled={aiAnalyzing || !listingId}
+                        onClick={() => performAIAnalysis()}
+                        disabled={aiAnalyzing}
                         className="btn btn-primary w-full"
                       >
                         {aiAnalyzing ? 'Analyzing...' : '🤖 Analyze with AI'}
                       </button>
                       
                       <button
-                        onClick={() => listingId && testFallbackAnalysis(listingId)}
-                        disabled={aiAnalyzing || !listingId}
+                        onClick={() => testFallbackAnalysis()}
+                        disabled={aiAnalyzing}
                         className="btn btn-secondary w-full"
                       >
                         🧪 Test Fallback Analysis

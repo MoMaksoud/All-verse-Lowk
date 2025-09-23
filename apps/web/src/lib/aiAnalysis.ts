@@ -7,17 +7,18 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 const model = genAI ? genAI.getGenerativeModel({ 
   model: 'gemini-1.5-flash',
   generationConfig: {
-    temperature: 0.7,
-    topK: 40,
-    topP: 0.95,
-    maxOutputTokens: 2048,
+    temperature: 0,
+    topK: 1,
+    topP: 0.1,
+    responseMimeType: "application/json"
   }
+  
 }) : null;
 
 export interface ProductAnalysis {
   title: string;
   description: string;
-  category: 'electronics' | 'fashion' | 'home' | 'sports' | 'automotive' | 'books' | 'other';
+  category: 'electronics' | 'fashion' | 'home' | 'sports' | 'automotive' | 'toys' | 'beauty' | 'appliances' | 'books' | 'tools' | 'other';
   condition: 'new' | 'like-new' | 'good' | 'fair' | 'poor';
   suggestedPrice: number;
   confidence: number;
@@ -95,41 +96,75 @@ export class AIAnalysisService {
       }
 
       const prompt = `
-        You are an expert product analyst for ALL VERSE GPT marketplace! 🛍️
+      You are a VISUAL PRODUCT LISTER for ALL VERSE GPT. Your job is to (A) extract only what is visibly true from the image(s), then (B) craft a concise, buyer-ready listing that a human can post immediately, with clearly marked placeholders for any info not visible (e.g., storage, battery %, carrier).
 
-        Analyze the uploaded product images and provide detailed information based on what you can actually see in the images.
+      Rules:
+      - Use ONLY visible evidence (logos, model text, ports, buttons, materials, labels, barcodes, regulatory marks). Include OCR of readable text exactly as seen.
+      - You MUST output a single, seller-ready listing even if some attributes are unknown. For unknowns, insert a bracketed placeholder like "[enter storage]" instead of guessing.
+      - If model cannot be proven, name the closest accurate level (e.g., "Apple iPhone Pro series (likely 15/16)") AND include 2–3 visible cues that led you there in the evidence section.
+      - Never invent condition, price, storage, battery %, carrier, or accessories if not visible. Use placeholders.
+      - Tone: clear, trustworthy, concise. No emojis. No hype words. No promises about warranties unless visible.
 
-        Return a JSON response with this exact structure:
-        {
-          "title": "Specific Product Name with Brand and Model",
-          "description": "Detailed description highlighting key features and condition based on what you see",
-          "category": "electronics|fashion|home|sports|automotive|books|other",
-          "condition": "new|like-new|good|fair|poor",
-          "suggestedPrice": 299.99,
-          "confidence": 0.95,
-          "features": ["Feature 1", "Feature 2", "Feature 3"],
-          "brand": "Brand Name",
-          "model": "Model Number/Name",
-          "marketResearch": {
-            "averagePrice": 299.99,
-            "priceRange": {"min": 250, "max": 350},
-            "marketDemand": "high|medium|low",
-            "competitorCount": 15
+      Return ONLY valid JSON with this exact structure:
+
+      {
+        "evidence": {
+          "brand": "string|null",
+          "product_type": "string|null",
+          "model_exact": "string|null",
+          "model_range": "string|null", 
+          "variant_or_colorway": "string|null",
+          "visible_features": ["USB-C port", "triple camera", "LiDAR", "matte frame"],
+          "ocr_text": ["raw", "tokens", "exactly", "as", "seen"],
+          "regulatory_marks": ["CE", "FCC ID ..."],
+          "decisive_cues": ["what cues distinguish this from close models"],
+          "confidence": 0.0
+        },
+
+        "listing_ready": {
+          "platform_style": "facebook_marketplace", 
+          "title": "Short, specific. Include brand + model or best precise range",
+          "description": "2–5 short lines, seller perspective. Only visible facts + placeholders for unknowns.",
+          "bullets": [
+            "• Visible feature 1",
+            "• Visible feature 2",
+            "• [enter storage] GB",
+            "• Battery health: [enter battery%]",
+            "• Carrier/lock: [enter carrier or 'unlocked']",
+            "• Color/variant: <from evidence or [enter color]>"
+          ],
+          "condition": "new|like-new|good|fair|poor|unknown",
+          "suggested_price": null,
+          "placeholders_needed": [
+            "storage_gb",
+            "battery_health_percent",
+            "carrier_or_lock_status",
+            "accessories_included",
+            "original_box_yes_no",
+            "purchase_year_or_receipt",
+            "scratches_or_damage_notes"
+          ],
+          "optional_sections": {
+            "included_items_line": "Includes: [enter items, e.g., cable/case/box]",
+            "meetup_location_line": "Pickup/meetup: [enter area]",
+            "pricing_policy_line": "Price: [enter price] (firm/obo)"
           }
         }
+      }
 
-        Guidelines:
-        - Look carefully at the actual images provided
-        - Identify the specific product, brand, and model from what you see
-        - Assess the condition based on visible wear, damage, or newness
-        - Describe what you actually observe in the images
-        - Use realistic pricing based on the identified product and condition
-        - Choose appropriate category based on what the product actually is
-        - Include features you can identify from the images
-        - Set confidence based on how clearly you can identify the product
+      Process to follow BEFORE writing listing:
+      1) Extract evidence from the image(s).
+      2) Decide the strongest support level:
+        - If an exact model is visible → set evidence.model_exact.
+        - If not exact but clearly within a narrow family (e.g., iPhone 16 Pro vs 15 Pro) → set evidence.model_range and include decisive_cues.
+      3) Compose the listing:
+        - Title: "Brand Model (Variant) — [enter storage]GB — [enter carrier/unlocked]"
+        - Description (2–5 lines): What it is, visible highlights, honest condition placeholder, ownership/use placeholders, transaction lines (meetup/cash).
+        - Bullets: Short, scannable, with placeholders for unknowns.
+      4) Never invent numbers or claims. Use placeholders instead.
 
-        Return ONLY valid JSON, no additional text.
-      `;
+      Return ONLY the JSON.
+`;
 
       console.log(`🤖 Sending ${validImages.length} images to AI for analysis...`);
       const result = await model.generateContent([prompt, ...validImages]);
@@ -142,25 +177,76 @@ export class AIAnalysisService {
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
       console.log('🤖 Cleaned AI response:', cleanText);
       
-      const analysis = JSON.parse(cleanText);
-      console.log('🤖 Parsed AI analysis:', analysis);
+      let analysis;
+      try {
+        analysis = JSON.parse(cleanText);
+        console.log('🤖 Parsed AI analysis:', analysis);
+      } catch (parseError) {
+        console.error('🤖 JSON parsing failed:', parseError);
+        console.error('🤖 Raw text that failed to parse:', cleanText);
+        throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`);
+      }
 
-      // Validate and enhance the analysis
+      // Validate and enhance the analysis - handle new format
+      const validCategories = ['electronics', 'fashion', 'home', 'sports', 'automotive', 'toys', 'beauty', 'appliances', 'books', 'tools', 'other'];
+      const validConditions = ['new', 'like-new', 'good', 'fair', 'poor', 'unknown'];
+      
+      // Handle new listing-ready format
+      if (analysis.listing_ready) {
+        const listing = analysis.listing_ready;
+        const evidence = analysis.evidence || {};
+        
+        return {
+          title: listing.title || 'Product Item',
+          description: listing.description || 'Product in good condition',
+          category: validCategories.includes(listing.category) ? listing.category : 'other',
+          condition: validConditions.includes(listing.condition) ? listing.condition : 'good',
+          suggestedPrice: listing.suggested_price || 100,
+          confidence: Math.max(0.1, Math.min(1.0, evidence.confidence || 0.8)),
+          features: evidence.visible_features || ['Quality item'],
+          brand: evidence.brand || 'Various',
+          model: evidence.model_exact || evidence.model_range || 'Standard',
+          marketResearch: {
+            averagePrice: listing.suggested_price || 100,
+            priceRange: { min: Math.round((listing.suggested_price || 100) * 0.8), max: Math.round((listing.suggested_price || 100) * 1.2) },
+            marketDemand: 'medium' as const,
+            competitorCount: 10
+          }
+        };
+      }
+      
+      // Handle legacy format
+      const suggestedPrice = analysis.pricing?.suggestedPrice || analysis.suggestedPrice || 100;
+      const hasPricing = analysis.pricing?.suggestedPrice !== null && analysis.pricing?.suggestedPrice !== undefined;
+      
+      // Build features from visible attributes if available
+      const features = [];
+      if (analysis.visible_attributes?.features) {
+        features.push(...analysis.visible_attributes.features);
+      }
+      if (analysis.visible_attributes?.materials) {
+        features.push(...analysis.visible_attributes.materials);
+      }
+      if (Array.isArray(analysis.features)) {
+        features.push(...analysis.features);
+      }
+      if (features.length === 0) {
+        features.push('Quality item');
+      }
+
       return {
         title: analysis.title || 'Product Item',
         description: analysis.description || 'Product in good condition',
-        category: ['electronics', 'fashion', 'home', 'sports', 'automotive', 'books', 'other'].includes(analysis.category) 
-          ? analysis.category : 'other',
-        condition: ['new', 'like-new', 'good', 'fair', 'poor'].includes(analysis.condition) 
-          ? analysis.condition : 'good',
-        suggestedPrice: Math.max(10, analysis.suggestedPrice || 100),
+        category: validCategories.includes(analysis.category) ? analysis.category : 'other',
+        condition: validConditions.includes(analysis.condition) ? analysis.condition : 'good',
+        suggestedPrice: Math.max(10, suggestedPrice),
         confidence: Math.max(0.1, Math.min(1.0, analysis.confidence || 0.8)),
-        features: Array.isArray(analysis.features) ? analysis.features : ['Good condition', 'Quality item'],
+        features: features.slice(0, 5), // Limit to 5 features
         brand: analysis.brand || 'Various',
         model: analysis.model || 'Standard',
         marketResearch: {
-          averagePrice: analysis.marketResearch?.averagePrice || analysis.suggestedPrice || 100,
-          priceRange: analysis.marketResearch?.priceRange || { min: 50, max: 150 },
+          averagePrice: analysis.marketResearch?.averagePrice || suggestedPrice,
+          priceRange: analysis.marketResearch?.priceRange || { min: Math.round(suggestedPrice * 0.8), max: Math.round(suggestedPrice * 1.2) },
           marketDemand: ['high', 'medium', 'low'].includes(analysis.marketResearch?.marketDemand) 
             ? analysis.marketResearch.marketDemand : 'medium',
           competitorCount: analysis.marketResearch?.competitorCount || 10

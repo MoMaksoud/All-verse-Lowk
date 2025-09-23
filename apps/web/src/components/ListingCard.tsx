@@ -60,7 +60,7 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
     e.stopPropagation();
     
     if (!currentUser) {
-      alert('Please sign in to add items to cart');
+      showError('Sign In Required', 'Please sign in to add items to cart');
       return;
     }
 
@@ -81,13 +81,13 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
       });
 
       if (response.ok) {
-        alert('Added to cart!');
+        showSuccess('Added to Cart!', 'Item has been added to your cart');
       } else {
-        alert('Failed to add to cart');
+        showError('Failed to Add', 'Unable to add item to cart');
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('Error adding to cart');
+      showError('Error', 'Failed to add item to cart');
     } finally {
       setAddingToCart(false);
     }

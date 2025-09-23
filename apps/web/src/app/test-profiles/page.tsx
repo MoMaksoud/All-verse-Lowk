@@ -5,9 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Navigation } from '@/components/Navigation';
 import { DefaultAvatar } from '@/components/DefaultAvatar';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function TestProfilesPage() {
   const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,13 +55,13 @@ export default function TestProfilesPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert('Test profile created successfully!');
+        showSuccess('Profile Created!', 'Test profile created successfully!');
         // Refresh the page to show updated data
         window.location.reload();
       }
     } catch (error) {
       console.error('Error creating test profile:', error);
-      alert('Error creating test profile');
+      showError('Creation Failed', 'Error creating test profile');
     }
   };
 
