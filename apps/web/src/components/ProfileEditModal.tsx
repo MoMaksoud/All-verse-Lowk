@@ -256,7 +256,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 />
                 {showAgeValidation && isAgeInvalid() && (
                   <p className="text-xs text-red-400 mt-1">
-                    Age must be 18+
+                    Age must be between 13-120
                   </p>
                 )}
               </div>
