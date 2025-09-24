@@ -430,7 +430,7 @@ select:focus {
   }
   
   .text-gradient {
-    @apply text-accent-500;
+    @apply text-white;
   }
 
   /* Dynamic Background Elements - Optimized */
