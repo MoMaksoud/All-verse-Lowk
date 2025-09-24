@@ -139,7 +139,27 @@ export async function GET(req: NextRequest) {
     return response;
   } catch (error) {
     console.error('Error fetching listings:', error);
-    return NextResponse.json({ error: 'Failed to fetch listings' }, { status: 500 });
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('index')) {
+        return NextResponse.json({ 
+          error: 'Database configuration in progress. Please try again in a moment.',
+          code: 'INDEX_REQUIRED'
+        }, { status: 503 });
+      }
+      if (error.message.includes('permission')) {
+        return NextResponse.json({ 
+          error: 'Access denied. Please check your permissions.',
+          code: 'PERMISSION_DENIED'
+        }, { status: 403 });
+      }
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to fetch listings. Please try again later.',
+      code: 'UNKNOWN_ERROR'
+    }, { status: 500 });
   }
 }
 

@@ -11,7 +11,9 @@
     "clean": "rm -rf .next",
     "test": "jest",
     "test:watch": "jest --watch",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "analyze": "ANALYZE=true npm run build",
+    "lighthouse": "node scripts/lighthouse.js"
   },
   "dependencies": {
     "@google-cloud/aiplatform": "^5.7.0",
@@ -19,7 +21,6 @@
     "@google/generative-ai": "^0.24.1",
     "@marketplace/lib": "file:../../packages/lib",
     "@marketplace/types": "file:../../packages/types",
-    "@marketplace/ui": "file:../../packages/ui",
     "@stripe/react-stripe-js": "^4.0.2",
     "@stripe/stripe-js": "^7.9.0",
     "autoprefixer": "^10.4.0",
@@ -34,7 +35,6 @@
     "postcss": "^8.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-native-web": "^0.21.1",
     "stripe": "^18.5.0",
     "tailwindcss": "^3.3.0",
     "uuid": "^9.0.1",
@@ -42,6 +42,7 @@
     "zustand": "^4.4.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.5.4",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@types/cors": "^2.8.17",
@@ -51,6 +52,7 @@
     "@types/react-dom": "^18.2.0",
     "@types/supertest": "^2.0.16",
     "@types/uuid": "^9.0.7",
+    "chrome-launcher": "^1.2.0",
     "eslint": "^8.55.0",
     "eslint-config-next": "^14.0.0",
     "jest": "^29.7.0",

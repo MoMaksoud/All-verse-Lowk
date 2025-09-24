@@ -6,12 +6,11 @@ import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap, Edit, Send } from 'lu
 import { SimpleListingCreate } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
-import { PhotoUpload } from '@/components/PhotoUpload';
+import { PhotoUpload, AIListingAssistant } from '@/components/DynamicImports';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
 import { AIStatusIndicator } from '@/components/AIStatusIndicator';
-import { AIListingAssistant } from '@/components/AIListingAssistant';
 
 const steps = [
   { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },

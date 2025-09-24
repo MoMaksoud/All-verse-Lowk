@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -13,19 +14,24 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
   };
 
   const iconSizes = {
-    sm: 'w-6 h-6',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12'
+    sm: { width: 24, height: 24 },
+    md: { width: 32, height: 32 },
+    lg: { width: 48, height: 48 }
   };
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {/* Logo Image */}
-      <div className={`${iconSizes[size]} relative`}>
-        <img
+      <div className={`relative`}>
+        <Image
           src="/logo.jpg"
           alt="ALL VERSE GPT"
-          className="w-full h-full object-cover rounded-lg"
+          width={iconSizes[size].width}
+          height={iconSizes[size].height}
+          className="object-cover rounded-lg"
+          priority={size === 'lg'} // Priority for large logos
+          placeholder="blur"
+          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
         />
       </div>
       

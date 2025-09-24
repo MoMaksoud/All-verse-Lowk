@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, Suspense, lazy } from 'react';
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain, Bot, Sparkles, ArrowRight } from 'lucide-react';
@@ -13,11 +13,7 @@ import { ResourcePreloader } from '@/components/ResourcePreloader';
 import { useRouteGuard } from '@/hooks/useRouteGuard';
 import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
 
-// Lazy load heavy components
-const ListingCard = lazy(() => import('@/components/ListingCard').then(module => ({ default: module.ListingCard })));
-const SearchBar = lazy(() => import('@/components/SearchBar').then(module => ({ default: module.SearchBar })));
-const AIWidget = lazy(() => import('@/components/AIWidget').then(module => ({ default: module.AIWidget })));
-const DynamicBackground = lazy(() => import('@/components/DynamicBackground').then(module => ({ default: module.DynamicBackground })));
+import { ListingCard, SearchBar, AIWidget, DynamicBackground } from '@/components/DynamicImports';
 
 export default function HomePage() {
   const isHomeRoute = useRouteGuard();

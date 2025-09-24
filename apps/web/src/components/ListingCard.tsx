@@ -150,25 +150,16 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
           {/* Image Section with Overlay */}
           <div className="image-section relative overflow-hidden rounded-t-2xl">
             {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
-              <img
+              <Image
                 src={listing.photos[0]}
                 alt={listing.title}
+                width={400}
+                height={300}
                 className="w-full h-full object-cover bg-slate-900"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.innerHTML = `
-                      <div class="w-full h-full bg-dark-700 flex items-center justify-center">
-                        <div class="text-center text-gray-400">
-                          <div class="text-4xl mb-2">📦</div>
-                          <div class="text-sm">No Image</div>
-                        </div>
-                      </div>
-                    `;
-                  }
-                }}
+                priority={false}
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
             ) : (
               <div className="w-full h-full bg-dark-700 flex items-center justify-center">

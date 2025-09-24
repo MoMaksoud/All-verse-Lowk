@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProfileService } from '@/lib/firestore';
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 300; // Cache for 5 minutes
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -26,10 +30,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: profile
     });
+
+    // Add caching headers for public profiles
+    if (requestedUserId) {
+      response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    } else {
+      response.headers.set('Cache-Control', 'private, max-age=60');
+    }
+
+    return response;
 
   } catch (error) {
     console.error('Error fetching profile:', error);

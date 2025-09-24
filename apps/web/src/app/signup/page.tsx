@@ -10,9 +10,6 @@ import { DynamicBackground } from '@/components/DynamicBackground';
 import { ProfileSetupForm } from '@/components/ProfileSetupForm';
 import { CreateProfileInput } from '@marketplace/types';
 import { FirebaseStatus } from '@/components/FirebaseStatus';
-import { EnvChecker } from '@/components/EnvChecker';
-import { FirebaseTest } from '@/components/FirebaseTest';
-import { StorageTest } from '@/components/StorageTest';
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -379,15 +376,6 @@ export default function SignUp() {
       
       {/* Temporary Firebase status component */}
       <FirebaseStatus />
-      
-      {/* Temporary environment checker */}
-      <EnvChecker />
-      
-      {/* Temporary Firebase test */}
-      <FirebaseTest />
-      
-      {/* Temporary Storage test */}
-      <StorageTest />
     </div>
   );
 }

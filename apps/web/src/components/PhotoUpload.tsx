@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { Upload, X, Image as ImageIcon, Camera } from 'lucide-react';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -179,10 +180,15 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {existingPhotos.map((photo, index) => (
             <div key={index} className="relative group">
-              <img
+              <Image
                 src={photo}
                 alt={`Upload ${index + 1}`}
+                width={200}
+                height={128}
                 className="w-full h-32 object-cover rounded-lg border border-gray-600"
+                priority={false}
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
               />
               <button
                 onClick={() => handleRemovePhoto(index)}

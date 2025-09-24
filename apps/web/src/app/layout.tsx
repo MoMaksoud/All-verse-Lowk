@@ -1,21 +1,32 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import './performance.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { RouteTransitionMonitor } from '@/lib/performance';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-inter'
+});
 
 export const metadata: Metadata = {
   title: 'All-Verse GPT - AI Marketplace',
   description: 'A modern AI-powered marketplace for buying and selling with intelligent assistance.',
   keywords: ['AI', 'marketplace', 'GPT', 'buy', 'sell', 'intelligent'],
   authors: [{ name: 'All-Verse Team' }],
-  viewport: 'width=device-width, initial-scale=1',
   other: {
     'prefetch': '/api/listings?limit=6',
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -25,13 +36,28 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full dark">
-      <body className={`${inter.className} h-full dark`}>
+      <body className={`${inter.variable} font-sans h-full dark`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+                // Initialize performance monitoring in development
+                window.addEventListener('load', () => {
+                  console.log('🚀 Performance monitoring initialized');
+                });
+              }
+            `,
+          }}
+        />
         <div className="min-h-screen">
-          <AuthProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </AuthProvider>
+          <ErrorBoundary>
+            <AuthProvider>
+              <ToastProvider>
+                <RouteTransitionMonitor />
+                {children}
+              </ToastProvider>
+            </AuthProvider>
+          </ErrorBoundary>
         </div>
       </body>
     </html>

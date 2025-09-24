@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Profile } from '@marketplace/types';
 
 // Lazy load heavy components
-const Avatar = lazy(() => import('@marketplace/ui').then(module => ({ default: module.Avatar })));
+import { Avatar } from './Avatar';
 const DefaultAvatar = lazy(() => import('./DefaultAvatar').then(module => ({ default: module.DefaultAvatar })));
 
 const navigation = [
