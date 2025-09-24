@@ -150,7 +150,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             
             <div className="text-sm text-gray-400">
               {isUploadingPhotos ? (
-                <span className="text-accent-500">Uploading to Firebase...</span>
+                <span className="text-accent-500">Processing your photos...</span>
               ) : (
                 <>
                   <span className="text-accent-500 hover:text-accent-400">Click to upload</span>
@@ -199,7 +199,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       {isUploadingPhotos && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-gray-300">
-            <span>Uploading to Firebase...</span>
+            <span>Processing your photos...</span>
             {progress && <span>{progress.percentage.toFixed(0)}%</span>}
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">

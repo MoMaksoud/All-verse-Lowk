@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { imageUrls, listingId } = body;
+    const { imageUrls, listingId, location } = body;
 
     if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
       return NextResponse.json({ error: 'Image URLs are required' }, { status: 400 });
@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
     let priceAnalysis;
     
     try {
-      // Try AI analysis first
-      analysis = await AIAnalysisService.analyzeProductPhotos(imageUrls);
+      // Try AI analysis first with location context
+      analysis = await AIAnalysisService.analyzeProductPhotos(imageUrls, location);
       
       // Generate price analysis
       priceAnalysis = await AIAnalysisService.analyzePrice(

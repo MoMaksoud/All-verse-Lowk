@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import StorageService from '@/lib/storage';
 import { firestoreServices } from '@/lib/services/firestore';
 import { ProfilePhotoUpload } from '@/lib/types/firestore';
+import { FirebaseCleanupService } from '@/lib/firebaseCleanup';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -74,26 +75,20 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
     }
 
-    // Get current profile photo
-    const photoData = await firestoreServices.profilePhotos.getProfilePhoto(userId);
+    // Use the comprehensive cleanup service
+    const cleanupResult = await FirebaseCleanupService.deleteProfilePhotoCompletely(userId);
     
-    if (photoData) {
-      // Delete from Firebase Storage
-      await StorageService.deleteFile(photoData.photoUrl);
-      
-      // Delete from Firestore
-      await firestoreServices.profilePhotos.deleteProfilePhoto(userId);
-      
-      // Update user profile to remove photo URL
-      await firestoreServices.users.updateUser(userId, {
-        photoURL: undefined,
+    if (cleanupResult.success) {
+      return NextResponse.json({
+        success: true,
+        message: 'Profile photo deleted successfully',
+        warnings: cleanupResult.errors.length > 0 ? cleanupResult.errors : undefined
       });
+    } else {
+      return NextResponse.json({ 
+        error: `Failed to delete profile photo: ${cleanupResult.errors.join(', ')}` 
+      }, { status: 500 });
     }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Profile photo deleted successfully',
-    });
   } catch (error) {
     console.error('Error deleting profile photo:', error);
     return NextResponse.json({ error: 'Failed to delete profile photo' }, { status: 500 });

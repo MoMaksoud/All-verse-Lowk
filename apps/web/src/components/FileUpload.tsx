@@ -199,7 +199,7 @@ export function FileUpload({
       {isUploading && progress && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-gray-300">
-            <span>Uploading...</span>
+            <span>Processing files...</span>
             <span>{progress.percentage.toFixed(0)}%</span>
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">

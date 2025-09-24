@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Navigation } from '@/components/Navigation';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import { Card } from '@/components/ui/Card';
@@ -18,8 +20,7 @@ import {
   MapPin,
   AlertCircle
 } from 'lucide-react';
-import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { useToast } from '@/contexts/ToastContext';
+import { useFirebaseCleanup } from '@/hooks/useFirebaseCleanup';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -80,9 +81,9 @@ export default function MyListingsPage() {
     listingId: null,
     listingTitle: ''
   });
-  const [isDeleting, setIsDeleting] = useState(false);
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { isDeleting, deleteListing } = useFirebaseCleanup();
 
   useEffect(() => {
     if (currentUser?.uid) {
@@ -128,28 +129,18 @@ export default function MyListingsPage() {
   const confirmDeleteListing = async () => {
     if (!deleteModal.listingId) return;
 
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/listings/${deleteModal.listingId}`, {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': currentUser?.uid || '',
-        },
-      });
-
-      if (response.ok) {
+    await deleteListing(
+      deleteModal.listingId,
+      () => {
+        // Success callback
         setListings(prev => prev.filter(listing => listing.id !== deleteModal.listingId));
         setDeleteModal({ isOpen: false, listingId: null, listingTitle: '' });
-        showSuccess('Listing Deleted', 'Your listing has been successfully deleted');
-      } else {
-        showError('Delete Failed', 'Unable to delete listing. Please try again.');
+      },
+      (error) => {
+        // Error callback - error is already handled by the hook
+        console.error('Delete failed:', error);
       }
-    } catch (error) {
-      console.error('Error deleting listing:', error);
-      showError('Delete Failed', 'An error occurred while deleting the listing');
-    } finally {
-      setIsDeleting(false);
-    }
+    );
   };
 
   const cancelDeleteListing = () => {

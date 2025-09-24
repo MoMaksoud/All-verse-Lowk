@@ -27,11 +27,11 @@ export default function RootLayout({
     <html lang="en" className="h-full dark">
       <body className={`${inter.className} h-full dark`}>
         <div className="min-h-screen">
-        <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </AuthProvider>
+          <AuthProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </AuthProvider>
         </div>
       </body>
     </html>

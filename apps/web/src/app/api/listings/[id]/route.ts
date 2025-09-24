@@ -3,6 +3,7 @@ import { withApi } from "@/lib/withApi";
 import { success, error } from "@/lib/response";
 import { badRequest, notFound } from "@/lib/errors";
 import { UpdateListingInput } from "@/lib/types/firestore";
+import { FirebaseCleanupService } from "@/lib/firebaseCleanup";
 
 // Import firestore services dynamically to avoid webpack issues
 async function getFirestoreServices() {
@@ -114,28 +115,30 @@ export const DELETE = withApi(async (
   try {
     const userId = req.headers.get('x-user-id');
     if (!userId) {
+      console.error('❌ No user ID provided');
       return error(badRequest("User ID is required"));
     }
 
-    const firestoreServices = await getFirestoreServices();
+    console.log('🗑️ Starting deletion for listing:', params.id, 'by user:', userId);
 
-    // Get the existing listing to check ownership
-    const existingListing = await firestoreServices.listings.getListing(params.id);
-    if (!existingListing) {
-      return error(notFound("Listing not found"));
-    }
-
-    // Check if user owns this listing
-    if (existingListing.sellerId !== userId) {
-      return error(badRequest("You can only delete your own listings"));
-    }
-
-    // Delete the listing
-    await firestoreServices.listings.deleteListing(params.id);
+    // Use the comprehensive cleanup service
+    const cleanupResult = await FirebaseCleanupService.deleteListingCompletely(params.id, userId);
     
-    return success({ message: "Listing deleted successfully" });
+    console.log('🧹 Cleanup result:', cleanupResult);
+    
+    if (cleanupResult.success) {
+      return success({ 
+        message: "Listing and all associated data deleted successfully",
+        deletedPhotos: cleanupResult.deletedPhotos,
+        warnings: cleanupResult.errors.length > 0 ? cleanupResult.errors : undefined
+      });
+    } else {
+      console.error('❌ Cleanup failed:', cleanupResult.errors);
+      return error(badRequest(`Failed to delete listing: ${cleanupResult.errors.join(', ')}`));
+    }
   } catch (err) {
-    console.error('Error deleting listing:', err);
-    return error(badRequest("Failed to delete listing"));
+    console.error('❌ Error deleting listing:', err);
+    console.error('❌ Full error object:', err);
+    return error(badRequest(`Failed to delete listing: ${err instanceof Error ? err.message : 'Unknown error'}`));
   }
 });
