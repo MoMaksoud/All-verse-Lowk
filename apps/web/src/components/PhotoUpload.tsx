@@ -122,8 +122,8 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       {remainingSlots > 0 && (
         <div
           className={`
-            relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-            ${dragOver ? 'border-accent-500 bg-accent-500/10' : 'border-gray-600 hover:border-gray-500'}
+            relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
+            ${dragOver ? 'border-accent-500 bg-accent-500/10' : 'border-gray-600'}
             ${isUploadingPhotos ? 'opacity-50 cursor-not-allowed' : ''}
           `}
           onDrop={handleDrop}
@@ -153,7 +153,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                 <span className="text-accent-500">Processing your photos...</span>
               ) : (
                 <>
-                  <span className="text-accent-500 hover:text-accent-400">Click to upload</span>
+                  <span className="text-accent-500">Click to upload</span>
                   {' '}or drag and drop
                 </>
               )}
@@ -186,7 +186,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
               />
               <button
                 onClick={() => handleRemovePhoto(index)}
-                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X className="w-4 h-4" />
               </button>

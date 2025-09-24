@@ -287,7 +287,7 @@ export default function HomePage() {
               className="btn btn-primary inline-flex items-center gap-2 text-lg px-8 py-4"
             >
               Start Selling
-              <Star className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>

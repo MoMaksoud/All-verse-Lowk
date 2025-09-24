@@ -1491,7 +1491,7 @@ export default function SellPage() {
         </div>
 
         {/* Form Content */}
-        <div className="card p-8">
+        <div className="card p-8 no-hover">
           {renderStepContent()}
 
           {/* Navigation */}
