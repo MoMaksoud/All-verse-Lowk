@@ -85,6 +85,24 @@ body {
   overflow-x: hidden;
 }
 
+/* AI Page specific styles - prevent page scrolling */
+.ai-page {
+  overflow: hidden;
+}
+
+/* When AI page is active, prevent all scrolling */
+body.ai-page-active {
+  overflow: hidden !important;
+  height: 100vh !important;
+  width: 100vw !important;
+}
+
+html.ai-page-active {
+  overflow: hidden !important;
+  height: 100vh !important;
+  width: 100vw !important;
+}
+
 
 
 /* Ensure select elements maintain normal behavior */
