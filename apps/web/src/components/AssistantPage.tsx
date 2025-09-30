@@ -261,10 +261,10 @@ export default function AssistantPage() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <main className="flex h-[calc(100vh-64px)]">
+    <div className="bg-zinc-950 h-[calc(100vh-64px)] overflow-hidden">
+      <main className="flex h-full overflow-hidden">
         {/* Left Sidebar - Chat History */}
-        <div className="hidden md:flex md:w-80 bg-zinc-900 border-r border-zinc-800 flex-col">
+        <div className="hidden md:flex md:w-80 bg-zinc-900 border-r border-zinc-800 flex-col min-h-0">
           {/* Sidebar Header */}
           <div className="p-4 border-b border-zinc-800">
             <div className="flex items-center gap-3 mb-4">
@@ -335,86 +335,84 @@ export default function AssistantPage() {
             )}
           </div>
           
-          {/* Mode Toggle at bottom of sidebar */}
-          <div className="p-4 border-t border-zinc-800">
-            <div className="flex bg-zinc-800 rounded-lg p-1">
-              <button
-                onClick={() => handleModeSwitch('buyer')}
-                className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2
-                  ${userMode === 'buyer' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`}
-              >
-                <ShoppingCart className="w-4 h-4" /> Buyer
-              </button>
-              <button
-                onClick={() => handleModeSwitch('seller')}
-                className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2
-                  ${userMode === 'seller' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`}
-              >
-                <Store className="w-4 h-4" /> Seller
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
-          <Container>
-            {/* Header */}
-            <div className="text-center space-y-4">
-              <div className="flex items-center justify-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-white" />
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Sticky Header with mode toggle */}
+          <div className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
+            <div className="px-4 py-3 flex items-center gap-3 max-w-6xl mx-auto">
+              <div className="h-9 w-9 rounded-xl bg-blue-600 grid place-items-center">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-lg font-semibold text-white">AI Assistant</h1>
+              <div className="ml-auto">
+                <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800">
+                  <button
+                    onClick={() => handleModeSwitch('buyer')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-colors ${
+                      userMode === 'buyer' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5" /> Buyer
+                  </button>
+                  <button
+                    onClick={() => handleModeSwitch('seller')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-colors ${
+                      userMode === 'seller' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <Store className="w-3.5 h-3.5" /> Seller
+                  </button>
                 </div>
-                <h1 className="text-3xl font-bold text-white">AI Assistant</h1>
               </div>
             </div>
+          </div>
 
-            {/* Chat card (no categories) */}
-            <Card className="overflow-hidden flex flex-col min-h-[calc(100vh-220px)]">
-              <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500">
-                    <MessageCircle className="w-12 h-12 mb-4" />
-                    <p className="text-lg font-medium">Start a conversation</p>
-                    <p className="text-sm">Your AI assistant is ready to help!</p>
+          {/* Messages Area */}
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500">
+                <MessageCircle className="w-12 h-12 mb-4" />
+                <p className="text-lg font-medium">Start a conversation</p>
+                <p className="text-sm">Your AI assistant is ready to help!</p>
+              </div>
+            ) : (
+              messages.map((m) => (
+                <div key={m.id} className="space-y-1">
+                  <Bubble ai={m.role === "ai"}>{m.text}</Bubble>
+                  <div className={"text-[10px] text-zinc-500 " + (m.role === "ai" ? "pl-3" : "text-right pr-3")}>
+                    {formatTime(m.ts)}
                   </div>
-                ) : (
-                  messages.map((m) => (
-                    <div key={m.id} className="space-y-1">
-                      <Bubble ai={m.role === "ai"}>{m.text}</Bubble>
-                      <div className={"text-[10px] text-zinc-500 " + (m.role === "ai" ? "pl-3" : "text-right pr-3")}>
-                        {formatTime(m.ts)}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                </div>
+              ))
+            )}
+          </div>
 
-              <div className="border-t border-zinc-900/80 p-3">
-                <form
-                  onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                  className="flex items-end gap-2"
-                >
-                  <textarea
-                    ref={taRef}
-                    value={input}
-                    onChange={(e) => { setInput(e.target.value); autoGrow(e.currentTarget); }}
-                    placeholder="Ask about pricing, comps, or optimization…"
-                    rows={1}
-                    className="flex-1 resize-none rounded-xl bg-zinc-900 text-sm px-4 py-3 md:py-4 outline-none border border-zinc-800 focus:border-zinc-600 min-h-[48px] max-h-[200px] text-zinc-100 placeholder:text-zinc-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={sending}
-                    className="h-[48px] md:h-[52px] inline-flex items-center gap-2 rounded-xl bg-white text-black text-sm font-medium px-5 hover:bg-zinc-100 disabled:opacity-70"
-                  >
-                    <Send size={16}/> Send
-                  </button>
-                </form>
-                <p className="text-center text-[11px] text-zinc-500 mt-3">Tip: Press Enter to send • Shift+Enter for a new line</p>
-              </div>
-            </Card>
-          </Container>
+          {/* Composer */}
+          <div className="border-t border-zinc-800 bg-zinc-950 p-3 flex-shrink-0">
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+              className="flex items-end gap-2"
+            >
+              <textarea
+                ref={taRef}
+                value={input}
+                onChange={(e) => { setInput(e.target.value); autoGrow(e.currentTarget); }}
+                placeholder={userMode === 'buyer' ? 'Ask about products, pricing, or recommendations…' : 'Ask about selling, optimization, or market insights…'}
+                rows={1}
+                className="flex-1 resize-none rounded-xl bg-zinc-900 text-sm px-4 py-3 md:py-4 outline-none border border-zinc-800 focus:border-zinc-600 min-h-[48px] max-h-[200px] text-zinc-100 placeholder:text-zinc-500"
+              />
+              <button
+                type="submit"
+                disabled={sending}
+                className="h-[48px] md:h-[52px] inline-flex items-center gap-2 rounded-xl bg-white text-black text-sm font-medium px-5 hover:bg-zinc-100 disabled:opacity-70"
+              >
+                <Send size={16}/> Send
+              </button>
+            </form>
+            <p className="text-center text-[11px] text-zinc-500 mt-3">Tip: Press Enter to send • Shift+Enter for a new line</p>
+          </div>
         </div>
       </main>
     </div>
