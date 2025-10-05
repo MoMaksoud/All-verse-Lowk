@@ -13,11 +13,13 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
+import { useStartChatFromListing } from '@/lib/messaging';
 
 function ListingsContent() {
   const searchParams = useSearchParams();
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { startChat } = useStartChatFromListing();
   const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -121,6 +123,31 @@ function ListingsContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+
+  const handleMessageClick = useCallback(async (listing: SimpleListing) => {
+    if (!currentUser) {
+      showError('Sign In Required', 'Please sign in to message sellers.');
+      return;
+    }
+
+    if (!listing.sellerId) {
+      showError('Error', 'Unable to find seller information.');
+      return;
+    }
+
+    try {
+      await startChat({
+        listingId: listing.id,
+        sellerId: listing.sellerId,
+        listingTitle: listing.title,
+        listingPrice: listing.price,
+        initialMessage: `Hi! I'm interested in your ${listing.title}. Is it still available?`,
+      });
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      showError('Failed to start chat', 'Please try again later.');
+    }
+  }, [currentUser, startChat, showError]);
 
   const addToCart = useCallback(async (listing: SimpleListing) => {
     if (!currentUser) {
@@ -329,7 +356,7 @@ function ListingsContent() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              // Add message functionality here
+                              handleMessageClick(listing);
                             }}
                             className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
                           >

@@ -57,9 +57,8 @@ const Navigation = memo(function Navigation() {
     try {
       const response = await fetch('/api/carts', {
         headers: {
-          'x-user-id': currentUser.uid,
-          'Cache-Control': 'max-age=60', // Cache for 1 minute
-        },
+          'x-user-id': currentUser.uid, 'Cache-Control': 'max-age=60' },
+          cache: 'no-store',  
       });
       
       if (response.ok) {
@@ -72,13 +71,6 @@ const Navigation = memo(function Navigation() {
     }
   }, [currentUser?.uid]);
 
-  useEffect(() => {
-    fetchCartCount();
-    
-    // Only refetch cart count every 30 seconds to reduce API calls
-    const interval = setInterval(fetchCartCount, 30000);
-    return () => clearInterval(interval);
-  }, [fetchCartCount]);
 
   const handleLogout = async () => {
     try {

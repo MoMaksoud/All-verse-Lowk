@@ -13,6 +13,7 @@ import { PriceSuggestionModal } from '@/components/PriceSuggestionModal';
 import { Card } from '@/components/ui/Card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useStartChatFromListing } from '@/lib/messaging';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -38,6 +39,7 @@ export default function ListingDetailPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { startChat } = useStartChatFromListing();
   const [listing, setListing] = useState<SimpleListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -124,16 +126,32 @@ export default function ListingDetailPage() {
   const handleSendMessage = useCallback(async () => {
     if (!message.trim()) return;
     
+    if (!listing) {
+      showError('Error', 'Listing information not available.');
+      return;
+    }
+
+    if (!listing.sellerId) {
+      showError('Error', 'Unable to find seller information.');
+      return;
+    }
+
     try {
-      // Simulate sending message
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      showSuccess('Message sent successfully!');
+      await startChat({
+        listingId: listing.id,
+        sellerId: listing.sellerId,
+        listingTitle: listing.title,
+        listingPrice: listing.price,
+        initialMessage: message.trim(),
+      });
+      
       setMessage('');
       setShowMessageModal(false);
     } catch (error) {
-      showError('Failed to send message');
+      console.error('Error sending message:', error);
+      showError('Failed to send message', 'Please try again later.');
     }
-  }, [message]);
+  }, [message, listing, startChat, showError]);
 
   const handleSuggestPrice = useCallback(async () => {
     if (!listing) return;

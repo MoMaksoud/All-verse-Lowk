@@ -9,6 +9,7 @@ import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButto
 import { formatLocation } from '@/lib/location';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useStartChatFromListing } from '@/lib/messaging';
 
 interface ListingCardProps {
   listing: SimpleListing;
@@ -17,6 +18,7 @@ interface ListingCardProps {
 export const ListingCard = memo(function ListingCard({ listing }: ListingCardProps) {
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { startChat } = useStartChatFromListing();
   const [isFavorited, setIsFavorited] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -123,13 +125,35 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
     setShowMessageModal(true);
   }, []);
 
-  const handleSendMessage = useCallback(() => {
-    if (message.trim()) {
-      showSuccess('Message sent!');
+  const handleSendMessage = useCallback(async () => {
+    if (!message.trim()) return;
+    
+    if (!currentUser) {
+      showError('Sign In Required', 'Please sign in to message sellers.');
+      return;
+    }
+
+    if (!listing.sellerId) {
+      showError('Error', 'Unable to find seller information.');
+      return;
+    }
+
+    try {
+      await startChat({
+        listingId: listing.id,
+        sellerId: listing.sellerId,
+        listingTitle: listing.title,
+        listingPrice: listing.price,
+        initialMessage: message.trim(),
+      });
+      
       setMessage('');
       setShowMessageModal(false);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      showError('Failed to send message', 'Please try again later.');
     }
-  }, [message]);
+  }, [message, currentUser, listing, startChat, showError]);
 
   const handleVoiceResult = (text: string) => {
     setMessage(text);

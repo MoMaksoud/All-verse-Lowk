@@ -5,6 +5,8 @@ import { Timestamp } from 'firebase/firestore';
 // ============================================================================
 export interface FirestoreUser {
   displayName: string;
+  username?: string;
+  email?: string;
   photoURL?: string;
   phone?: string;
   role: 'buyer' | 'seller' | 'admin';
@@ -14,6 +16,8 @@ export interface FirestoreUser {
 
 export interface CreateUserInput {
   displayName: string;
+  username?: string;
+  email?: string;
   photoURL?: string;
   phone?: string;
   role?: 'buyer' | 'seller' | 'admin';
@@ -21,6 +25,8 @@ export interface CreateUserInput {
 
 export interface UpdateUserInput {
   displayName?: string;
+  username?: string;
+  email?: string;
   photoURL?: string;
   phone?: string;
   role?: 'buyer' | 'seller' | 'admin';

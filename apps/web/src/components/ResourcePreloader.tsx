@@ -4,22 +4,6 @@ import { useEffect } from 'react';
 
 export function ResourcePreloader() {
   useEffect(() => {
-    // Preload critical images
-    const criticalImages = [
-      '/icons/electronics.svg',
-      '/icons/fashion.svg',
-      '/icons/home.svg',
-      '/icons/sports.svg',
-    ];
-
-    criticalImages.forEach((src) => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'image';
-      link.href = src;
-      document.head.appendChild(link);
-    });
-
     // Prefetch API data - reduced to essential data only
     const prefetchData = async () => {
       try {

@@ -1,0 +1,67 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own profile
+    match /profiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow public read access for other users' profiles (for public profile pages)
+      allow read: if request.auth != null;
+    }
+
+    // Users can read all active listings
+    match /listings/{listingId} {
+      allow read: if resource.data.status == 'active';
+      // Users can create listings
+      allow create: if request.auth != null && 
+                      request.auth.uid == resource.data.sellerId;
+      // Users can update their own listings
+      allow update: if request.auth != null && 
+                       request.auth.uid == resource.data.sellerId;
+      // Users can delete their own listings
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.sellerId;
+    }
+
+    // Chats (new messaging) - only participants can access chat
+    match /chats/{chatId} {
+      function isParticipant() {
+        return request.auth != null && request.auth.uid in resource.data.participants;
+      }
+
+      // Read/update/delete only if participant
+      allow read, update, delete: if isParticipant();
+
+      // Create only if creator is included in participants array
+      allow create: if request.auth != null &&
+                    request.resource.data.participants is list &&
+                    request.auth.uid in request.resource.data.participants;
+
+      // Messages subcollection - only participants may read; create validates sender
+      match /messages/{messageId} {
+        allow read: if request.auth != null &&
+                     request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+
+        allow create: if request.auth != null &&
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants &&
+                       request.resource.data.senderId == request.auth.uid;
+
+        // Disallow updates/deletes to messages by default (tighten as needed)
+        allow update, delete: if false;
+      }
+    }
+
+    // Profile photos - users can manage their own photos
+    match /profilePhotos/{photoId} {
+      allow read, write: if request.auth != null && 
+                           request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && 
+                        request.auth.uid == resource.data.userId;
+    }
+
+    // Default deny rule for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
