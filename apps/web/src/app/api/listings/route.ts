@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const q = url.searchParams.get('q') || undefined;
     const category = url.searchParams.get('category') || undefined;
+    const condition = url.searchParams.get('condition') || undefined;
     const min = url.searchParams.get('min') ? Number(url.searchParams.get('min')) : undefined;
     const max = url.searchParams.get('max') ? Number(url.searchParams.get('max')) : undefined;
     const location = url.searchParams.get('location') || undefined;
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
     const filters = {
       keyword: q,
       category: category,
+      condition: condition,
       minPrice: min,
       maxPrice: max,
       location: location,
@@ -46,19 +48,33 @@ export async function GET(req: NextRequest) {
 
 
     const sortOptions = {
-      field: sort === 'priceAsc' ? 'price' : sort === 'priceDesc' ? 'price' : 'createdAt',
+      field: sort === 'priceAsc' || sort === 'priceDesc' ? 'price' : 'createdAt',
       direction: sort === 'priceAsc' ? 'asc' as const : 'desc' as const,
     };
 
+    // Increase limit for keyword searches to ensure we have enough data to search through
+    const effectiveLimit = filters.keyword ? Math.max(limit * 3, 50) : limit;
+    
     const paginationOptions = {
       page,
-      limit,
+      limit: effectiveLimit,
     };
 
     const result = await firestoreServices.listings.searchListings(filters, sortOptions, paginationOptions);
       
-    // Apply location filtering if user coordinates are provided
+    // Apply client-side filtering for features not supported by Firestore
     let filteredData = [...result.items];
+    
+    // Apply keyword search (client-side filtering)
+    if (filters.keyword) {
+      const keyword = filters.keyword.toLowerCase();
+      filteredData = filteredData.filter(listing => 
+        listing.title.toLowerCase().includes(keyword) ||
+        listing.description.toLowerCase().includes(keyword)
+      );
+    }
+    
+    // Apply location filtering if user coordinates are provided (still needed as this can't be done at DB level)
     if (filters.userCoordinates && filters.maxDistance) {
       filteredData = filteredData.filter(listing => {
         if (!(listing as any).location?.coordinates) return false;
@@ -73,36 +89,9 @@ export async function GET(req: NextRequest) {
         return distance <= filters.maxDistance!;
       });
     }
-      
-    // Apply sorting
-    let sortedData = [...filteredData];
-    switch (sort) {
-      case 'priceAsc':
-        sortedData.sort((a, b) => a.price - b.price);
-        break;
-      case 'priceDesc':
-        sortedData.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        // For now, sort by newest since we don't have ratings in SimpleListing
-        sortedData.sort((a, b) => {
-          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
-          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
-          return bTime - aTime;
-        });
-        break;
-      case 'recent':
-      default:
-        sortedData.sort((a, b) => {
-          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
-          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
-          return bTime - aTime;
-        });
-        break;
-    }
     
     // Transform FirestoreListing to SimpleListing format and filter out placeholder listings
-    const transformedItems = result.items
+    const transformedItems = filteredData
       .filter(listing => {
         // Filter out placeholder listings
         return listing.title !== 'AI Analyzing...' && 
@@ -122,13 +111,18 @@ export async function GET(req: NextRequest) {
         location: undefined, // Add location if available
       }));
 
+    // Apply final pagination to return the correct number of results
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedItems = transformedItems.slice(startIndex, endIndex);
+
     const response = NextResponse.json({
-      data: transformedItems,
+      data: paginatedItems,
       pagination: {
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-        hasMore: result.hasMore,
+        page: page,
+        limit: limit,
+        total: transformedItems.length,
+        hasMore: endIndex < transformedItems.length,
       },
     });
     

@@ -238,12 +238,30 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
   ): Promise<PaginatedResult<FirestoreListing>> {
     let q = query(this.getCollection());
 
-    // Simplified query to avoid composite index requirements
-    // Only use isActive filter for now, other filters will be applied in memory
+    // Apply database-level filters for better performance
     q = query(q, where('isActive', '==', filters.isActive !== false));
+    
+    // Add database-level filters (requires composite indexes)
+    if (filters.category) {
+      q = query(q, where('category', '==', filters.category));
+    }
+    if (filters.condition) {
+      q = query(q, where('condition', '==', filters.condition));
+    }
+    if (filters.sellerId) {
+      q = query(q, where('sellerId', '==', filters.sellerId));
+    }
+    if (filters.minPrice !== undefined) {
+      q = query(q, where('price', '>=', filters.minPrice));
+    }
+    if (filters.maxPrice !== undefined) {
+      q = query(q, where('price', '<=', filters.maxPrice));
+    }
 
-    // Apply sorting - use createdAt as default to avoid index issues
-    q = query(q, orderBy('createdAt', 'desc'));
+    // Apply sorting at database level
+    const sortField = sortOptions?.field || 'createdAt';
+    const sortDirection = sortOptions?.direction || 'desc';
+    q = query(q, orderBy(sortField, sortDirection));
 
     // Apply pagination
     if (paginationOptions) {
@@ -251,47 +269,9 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
     }
 
     const docs = await this.getDocs(q);
-    let results = this.createPaginatedResult<FirestoreListing>(docs, paginationOptions || { page: 1, limit: 20 });
-    
-    // Apply additional filters in memory to avoid composite index requirements
-    let filteredItems = results.items;
-    
-    if (filters.category) {
-      filteredItems = filteredItems.filter(item => item.category === filters.category);
-    }
-    if (filters.minPrice !== undefined) {
-      filteredItems = filteredItems.filter(item => item.price >= filters.minPrice!);
-    }
-    if (filters.maxPrice !== undefined) {
-      filteredItems = filteredItems.filter(item => item.price <= filters.maxPrice!);
-    }
-    if (filters.condition) {
-      filteredItems = filteredItems.filter(item => item.condition === filters.condition);
-    }
-    if (filters.sellerId) {
-      filteredItems = filteredItems.filter(item => item.sellerId === filters.sellerId);
-    }
+    const results = this.createPaginatedResult<FirestoreListing>(docs, paginationOptions || { page: 1, limit: 20 });
 
-    // Apply custom sorting in memory
-    if (sortOptions && sortOptions.field !== 'createdAt') {
-      filteredItems.sort((a, b) => {
-        const aVal = (a as any)[sortOptions.field];
-        const bVal = (b as any)[sortOptions.field];
-        
-        if (sortOptions.direction === 'asc') {
-          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-        } else {
-          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
-        }
-      });
-    }
-
-    return {
-      ...results,
-      items: filteredItems,
-      total: filteredItems.length,
-      hasMore: false // Simplified for now
-    };
+    return results;
   }
 
   async updateInventory(id: string, quantitySold: number): Promise<void> {

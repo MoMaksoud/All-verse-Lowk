@@ -36,6 +36,7 @@ function ListingsContent() {
       const params = new URLSearchParams();
       if (appliedFilters.keyword) params.set('q', appliedFilters.keyword);
       if (appliedFilters.category) params.set('category', appliedFilters.category);
+      if (appliedFilters.condition) params.set('condition', appliedFilters.condition);
       if (appliedFilters.minPrice !== undefined) params.set('min', appliedFilters.minPrice.toString());
       if (appliedFilters.maxPrice !== undefined) params.set('max', appliedFilters.maxPrice.toString());
       if (appliedFilters.location) params.set('location', appliedFilters.location);

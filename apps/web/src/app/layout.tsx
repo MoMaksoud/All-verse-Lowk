@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   description: 'A modern AI-powered marketplace for buying and selling with intelligent assistance.',
   keywords: ['AI', 'marketplace', 'GPT', 'buy', 'sell', 'intelligent'],
   authors: [{ name: 'All-Verse Team' }],
+  icons: {
+    icon: '/logo.jpg',
+    shortcut: '/logo.jpg',
+    apple: '/logo.jpg',
+  },
   other: {
     'prefetch': '/api/listings?limit=6',
   },
@@ -37,18 +42,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full dark">
       <body className={`${inter.variable} font-sans h-full dark`}>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-                // Initialize performance monitoring in development
-                window.addEventListener('load', () => {
-                  console.log('🚀 Performance monitoring initialized');
-                });
-              }
-            `,
-          }}
-        />
         <div className="min-h-screen">
           <ErrorBoundary>
             <AuthProvider>
