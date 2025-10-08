@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { X, DollarSign } from 'lucide-react';
-import { mockApi } from '@marketplace/lib';
 import { ListingWithSeller } from '@marketplace/types';
 import { formatCurrency } from '@marketplace/lib';
 

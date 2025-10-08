@@ -9,7 +9,6 @@ import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import { ProfileSetupForm } from '@/components/ProfileSetupForm';
 import { CreateProfileInput } from '@marketplace/types';
-import { FirebaseStatus } from '@/components/FirebaseStatus';
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -375,7 +374,6 @@ export default function SignUp() {
       </div>
       
       {/* Temporary Firebase status component */}
-      <FirebaseStatus />
     </div>
   );
 }

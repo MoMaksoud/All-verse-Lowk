@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { withApi } from '@/lib/withApi';
-import { dbChat } from '@/lib/mockDb';
 import { success, error } from '@/lib/response';
 import { readJson } from '@/lib/response';
 import { internal, badRequest } from '@/lib/errors';
@@ -12,7 +11,8 @@ export const GET = withApi(async (req: NextRequest) => {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
-    const conversations = await dbChat.getConversations(userId, page, limit);
+    // Mock conversations data - replace with actual database call
+    const conversations = { items: [], total: 0, hasMore: false }; // await dbChat.getConversations(userId, page, limit);
     
     return success({
       conversations: conversations.items,
@@ -38,7 +38,8 @@ export const POST = withApi(async (req: NextRequest) => {
     }
 
     const userId = req.headers.get('x-user-id') || 'currentUser';
-    const conversation = await dbChat.createConversation(userId, listingId, message);
+    // Mock conversation creation - replace with actual database call
+    const conversation = { id: 'mock-conversation', listingId, userId }; // await dbChat.createConversation(userId, listingId, message);
     
     return success({ conversation });
   } catch (err) {

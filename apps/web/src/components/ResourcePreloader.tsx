@@ -19,7 +19,7 @@ export function ResourcePreloader() {
     };
 
     // Prefetch after initial load - increased delay to reduce initial load impact
-    const timer = setTimeout(prefetchData, 3000);
+    const timer = setTimeout(prefetchData, 5000);
     
     return () => {
       clearTimeout(timer);

@@ -3,9 +3,14 @@
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain, Bot, Sparkles, ArrowRight } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
-import { Navigation } from '@/components/Navigation';
+// Lazy load Navigation component to reduce initial bundle size
+const Navigation = dynamic(() => import('@/components/Navigation').then(mod => ({ default: mod.Navigation })), {
+  loading: () => <div className="h-16 bg-dark-800 animate-pulse" />,
+  ssr: true
+});
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { SkeletonCard, SkeletonSearchBar, SkeletonAIWidget, SkeletonStats, SkeletonHero } from '@/components/SkeletonLoader';
@@ -13,6 +18,7 @@ import { ResourcePreloader } from '@/components/ResourcePreloader';
 import { useRouteGuard } from '@/hooks/useRouteGuard';
 import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
 
+// Optimized imports - use dynamic imports for heavy components
 import { ListingCard, SearchBar, AIWidget, DynamicBackground } from '@/components/DynamicImports';
 
 export default function HomePage() {

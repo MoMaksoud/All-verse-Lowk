@@ -3,7 +3,26 @@
 import React, { useState, useEffect, useRef, Suspense, lazy, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Bell, User, Plus, MessageCircle, ShoppingBag, Heart, Bot, LogOut, Settings, ChevronDown, UserCircle, ShoppingCart, Package, List, HelpCircle } from 'lucide-react';
+// Optimized lucide-react imports - only import what's actually used
+import { 
+  Menu, 
+  X, 
+  Bell, 
+  User, 
+  Plus, 
+  MessageCircle, 
+  ShoppingBag, 
+  Heart, 
+  Bot, 
+  LogOut, 
+  Settings, 
+  ChevronDown, 
+  UserCircle, 
+  ShoppingCart, 
+  Package, 
+  List, 
+  HelpCircle 
+} from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Profile } from '@marketplace/types';

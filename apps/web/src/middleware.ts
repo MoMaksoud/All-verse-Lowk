@@ -1,55 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Simple in-memory rate limiting store
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
-
-// Rate limiting configuration
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 100; // 100 requests per minute
-
-function getClientIP(request: NextRequest): string {
-  // Try to get the real IP from various headers
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  const cfConnectingIP = request.headers.get('cf-connecting-ip');
-  
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  if (realIP) {
-    return realIP;
-  }
-  if (cfConnectingIP) {
-    return cfConnectingIP;
-  }
-  
-  // Fallback to a default IP (for development) 
-  return '127.0.0.1';
-}
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const record = rateLimitStore.get(ip);
-  
-  if (!record) {
-    rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return false;
-  }
-  
-  if (now > record.resetTime) {
-    rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return false;
-  }
-  
-  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return true;
-  }
-  
-  record.count++;
-  return false;
-}
-
 function addSecurityHeaders(response: NextResponse): NextResponse {
   // Security headers
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -85,26 +36,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
   
-  // Rate limiting
-  const clientIP = getClientIP(request);
-  if (isRateLimited(clientIP)) {
-    return new NextResponse(
-      JSON.stringify({
-        error: {
-          code: 'RATE_LIMITED',
-          message: 'Too many requests. Please try again later.',
-        },
-      }),
-      {
-        status: 429,
-        headers: {
-          'Content-Type': 'application/json',
-          'Retry-After': '60',
-        },
-      }
-    );
-  }
-  
   // CORS headers for API routes
   const response = NextResponse.next();
   
@@ -127,12 +58,9 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
+     * Only match API routes to reduce middleware processing overhead
+     * This significantly reduces the number of requests processed by middleware
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/api/:path*',
   ],
 };

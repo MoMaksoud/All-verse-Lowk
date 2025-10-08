@@ -1,3 +1,7 @@
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Enable SWC minification
@@ -5,9 +9,15 @@ const nextConfig = {
   
   // Image optimization
   images: {
-    domains: [
-      'firebasestorage.googleapis.com',
-      'storage.googleapis.com',
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -21,10 +31,10 @@ const nextConfig = {
     },
   },
 
-  // Experimental features for performance - temporarily disabled
+  // Experimental features for performance
   experimental: {
-    // optimizeCss: true,
-    // optimizePackageImports: ['lucide-react'],
+    optimizeCss: true,
+    optimizePackageImports: ['lucide-react'],
   },
 
   // Headers for caching
@@ -59,10 +69,16 @@ const nextConfig = {
     ];
   },
 
-  // Webpack optimizations - temporarily disabled
-  // webpack: (config, { dev, isServer }) => {
-  //   return config;
-  // },
+  // Webpack optimizations
+  webpack: (config, { dev, isServer }) => {
+    // Enable tree shaking for better bundle size (only in production)
+    if (!dev) {
+      config.optimization.usedExports = true;
+      config.optimization.sideEffects = false;
+    }
+    
+    return config;
+  },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);

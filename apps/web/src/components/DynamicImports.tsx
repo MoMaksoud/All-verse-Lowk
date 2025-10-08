@@ -51,15 +51,15 @@ export const ChatWidget = dynamic(() => import('./ChatWidget').then(mod => ({ de
   ssr: false
 });
 
-// Dynamic import for SearchBar
+// Dynamic import for SearchBar - optimized with lighter loading state
 export const SearchBar = dynamic(() => import('./SearchBar').then(mod => ({ default: mod.SearchBar })), {
-  loading: () => <LoadingSpinner text="Loading search..." />,
+  loading: () => <div className="h-12 bg-gray-700 rounded-lg animate-pulse" />,
   ssr: false
 });
 
-// Dynamic import for ListingCard
+// Dynamic import for ListingCard - optimized with lighter loading state
 export const ListingCard = dynamic(() => import('./ListingCard').then(mod => ({ default: mod.ListingCard })), {
-  loading: () => <LoadingSpinner text="Loading listings..." />,
+  loading: () => <div className="h-64 bg-gray-700 rounded-lg animate-pulse" />,
   ssr: false
 });
 

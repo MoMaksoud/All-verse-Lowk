@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GeminiService } from '@/lib/gemini';
 import { FirebaseAIService } from '@/lib/firebase-ai';
-import { FallbackListingService } from '@/lib/fallbackListings';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     // Fallback to enhanced static data if AI fails
     console.log('🔄 AI services failed, using enhanced fallback listings');
-    const items = FallbackListingService.generateContextualListings(query);
+    const items = []; // Fallback to empty array when Firebase is not available
 
     const payload = {
       items,

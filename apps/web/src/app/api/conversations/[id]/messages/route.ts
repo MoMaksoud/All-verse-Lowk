@@ -10,6 +10,7 @@ import {
   limit, 
   getDocs,
   doc,
+  getDoc,
   updateDoc,
   serverTimestamp,
   DocumentSnapshot
