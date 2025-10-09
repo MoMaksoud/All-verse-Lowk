@@ -26,7 +26,8 @@ We’re not publishing full technical details here — our focus is on building 
 ## 📬 Get In Touch  
 We’d love to connect with collaborators, mentors, and anyone excited about the future of AI-powered commerce.  
 
-- ✉️ Email: allversegpt@gmail.com  
+- ✉️ Email: allversegpt@gmail.com
+- ✉️ Email: momaksoud1@gmail.com 
 - 🌍 LinkedIn: [Dustin Harrell](https://www.linkedin.com/in/dustin-harrell-43a540249/)
 ---
 
