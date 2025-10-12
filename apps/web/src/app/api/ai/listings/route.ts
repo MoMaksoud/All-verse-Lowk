@@ -66,22 +66,18 @@ export async function POST(request: NextRequest) {
 
     // Fallback to enhanced static data if AI fails
     console.log('🔄 AI services failed, using enhanced fallback listings');
-    const items = []; // Fallback to empty array when Firebase is not available
-
+    
     const payload = {
-      items,
       meta: {
         query: query,
-        total: items.length,
+        total: 0,
         limit: 12,
         intent: determineIntent(query),
         aiGenerated: false,
         fallback: true
       }
     };
-
-    console.log('🤖 Returning enhanced fallback payload:', payload);
-
+    
     return NextResponse.json({
       success: true,
       data: payload,

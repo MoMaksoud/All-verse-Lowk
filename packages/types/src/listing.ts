@@ -25,7 +25,7 @@ export type ListingCreate = {
   description: string;
   price: number;
   category: string;
-  photos: string[]; // allow data URLs (dev) or https URLs
+  photos: string[];
   location?: {
     city: string;
     state: string;

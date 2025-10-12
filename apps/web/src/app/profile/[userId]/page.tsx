@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MessageCircle, Phone, Mail, Star, MapPin, Calendar, Shield, Flag } from 'lucide-react';
-import { mockApi } from '@marketplace/lib';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 

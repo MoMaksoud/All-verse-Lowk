@@ -96,7 +96,7 @@ export const UpdateProfileInput = ProfileSchema.partial().omit({
 export type UpdateProfileInput = z.infer<typeof UpdateProfileInput>;
 
 /** LISTING */
-export const ListingCondition = z.enum(['New', 'Like New', 'Good', 'Fair', 'For Parts']);
+export const ListingCondition = z.enum(['New', 'Like New', 'Good', 'Fair']);
 export type ListingCondition = z.infer<typeof ListingCondition>;
 
 export const ListingSchema = z.object({
@@ -195,10 +195,6 @@ export type PaginatedListing = z.infer<ReturnType<typeof Paginated<typeof Listin
 export type Category = {
   id: string;
   name: string;
-  slug: string;
-  icon: string;
-  iconImage?: string;
-  parentId?: string;
   children?: Category[];
 };
 
