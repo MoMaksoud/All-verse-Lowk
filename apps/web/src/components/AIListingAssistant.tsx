@@ -339,28 +339,8 @@ export function AIListingAssistant({
     }
     `;
 
-    try {
-      const response = await fetch('/api/ai/analyze-product', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          isUpdate: true
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to process listing update');
-      }
-
-      const result = await response.json();
-      return result.data || result;
-    } catch (error) {
-      // Fallback to manual processing if AI fails
-      return processManually(inputs);
-    }
+    // For now we update locally to avoid server 401 errors and keep UI fast
+    return processManually(inputs);
   };
 
   const processManually = (inputs: Record<string, string>) => {

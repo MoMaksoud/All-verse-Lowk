@@ -125,17 +125,18 @@ body {
 }
 
 /* When AI page is active, prevent all scrolling */
-body.ai-page-active {
+ body.ai-page-active {
   overflow: hidden !important;
-  height: 100vh !important;
-  width: 100vw !important;
+    /* height: 100vh !important;
+    width: 100vw !important; */
 }
 
+/*
 html.ai-page-active {
   overflow: hidden !important;
   height: 100vh !important;
   width: 100vw !important;
-}
+} */
 
 
 

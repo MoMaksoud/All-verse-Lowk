@@ -110,6 +110,7 @@ export class AIAnalysisService {
       - Do NOT include usage duration placeholders like "Worn for [enter duration]" in descriptions.
       - Tone: clear, trustworthy, concise. No emojis. No hype words. No promises about warranties unless visible.
       - Consider US regional pricing: items in major US cities (NYC, LA, SF) typically command higher prices than rural areas or smaller cities.
+      - CONSISTENCY RULES: The value of listing_ready.condition must NEVER contradict the wording in title/description/evidence. If any condition words appear in the title (e.g., "good condition", "like new", "new"), REMOVE them from the title and set listing_ready.condition accordingly. When uncertain, set condition to "unknown" rather than guessing.
 
       Return ONLY valid JSON with this exact structure:
 
@@ -129,7 +130,7 @@ export class AIAnalysisService {
 
         "listing_ready": {
           "platform_style": "facebook_marketplace", 
-          "title": "Short, specific. Include brand + model or best precise range",
+          "title": "Short, specific. Include brand + model + key spec (capacity/size/color). DO NOT include condition or price in the title",
           "description": "2–5 short lines, seller perspective. Only visible facts + placeholders for unknowns.",
           "bullets": [
             "• Visible feature 1",

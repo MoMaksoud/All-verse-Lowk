@@ -34,7 +34,7 @@ function Bubble({ children, ai }: { children: React.ReactNode; ai: boolean }) {
 // Container component for consistent max-width
 function Container({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+    <div className="mx-auto max-w-5xl w-full px-4 py-4 flex-1 min-h-0 flex flex-col">
       {children}
     </div>
   );
@@ -274,8 +274,8 @@ export default function AssistantPage() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <main className="flex h-[calc(100vh-64px)]">
+    <div className="h-[calc(100vh-64px)] overflow-hidden bg-zinc-950">
+      <main className="grid grid-cols-[320px,1fr] h-full overflow-hidden">
         {/* Left Sidebar - Chat History */}
         <div className="hidden md:flex md:w-80 bg-zinc-900 border-r border-zinc-800 flex-col">
           {/* Sidebar Header */}
@@ -370,12 +370,12 @@ export default function AssistantPage() {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <Container>
             {/* Header */}
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center">
+                <div className="h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center mb-2">
                   <Bot className="w-6 h-6 text-white" />
                 </div>
                 <h1 className="text-3xl font-bold text-white">AI Assistant</h1>

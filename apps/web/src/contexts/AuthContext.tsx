@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { 
   getAuth, 
   User, 
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, [isConfigured]);
 
-  const value = {
+  const value = useMemo(() => ({
     currentUser,
     signup,
     signupWithPhone,
@@ -190,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isConfigured,
     userProfile,
     isEmailVerified: currentUser?.emailVerified || false,
-  };
+  }), [currentUser, loading, userProfile, isConfigured]);
 
   return (
     <AuthContext.Provider value={value}>
