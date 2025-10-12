@@ -69,15 +69,17 @@ const Navigation = memo(function Navigation() {
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
-  // Fetch cart item count with caching
+  // Fetch cart item count with caching - debounced to reduce API calls
   const fetchCartCount = useCallback(async () => {
     if (!currentUser?.uid) return;
     
     try {
       const response = await fetch('/api/carts', {
         headers: {
-          'x-user-id': currentUser.uid, 'Cache-Control': 'max-age=60' },
-          cache: 'no-store',  
+          'x-user-id': currentUser.uid,
+          'Cache-Control': 'max-age=60'
+        },
+        cache: 'no-store',  
       });
       
       if (response.ok) {
@@ -114,11 +116,11 @@ const Navigation = memo(function Navigation() {
     };
   }, []);
 
-  // Fetch profile data for avatar
+  // Fetch profile data for avatar - only when dropdown is opened
   useEffect(() => {
+    if (!showProfileDropdown || profile || !currentUser) return;
+    
     const fetchProfile = async () => {
-      if (!currentUser) return;
-      
       try {
         const response = await fetch('/api/profile', {
           headers: {
@@ -136,7 +138,7 @@ const Navigation = memo(function Navigation() {
     };
 
     fetchProfile();
-  }, [currentUser]);
+  }, [currentUser, showProfileDropdown, profile]);
 
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50">

@@ -6,6 +6,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   // Enable SWC minification
   swcMinify: true,
+  productionBrowserSourceMaps: false,
+  compiler: {
+    removeConsole: { exclude: ['error', 'warn'] },
+  },
   
   // Image optimization
   images: {
@@ -34,7 +38,15 @@ const nextConfig = {
   // Experimental features for performance
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: ['lucide-react', 'firebase', '@stripe/stripe-js', '@stripe/react-stripe-js'],
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
   },
 
   // Headers for caching

@@ -571,11 +571,11 @@ export class GeminiService {
 
       User query: "${query}"
 
-      Generate 4-6 realistic product listings that would match this search. Each listing should be a JSON object with these exact fields:
+      Generate 4-6 realistic product listings that would match this search. Each listing MUST be a JSON object with these exact fields (strict types/values):
 
       {
         "id": "unique-id",
-        "title": "Specific Product Name with Details",
+        "title": "Specific Product Name and key spec (size/capacity/color). DO NOT include price or condition words",
         "price": {"value": number, "currency": "USD"},
         "condition": "New|Like New|Excellent|Good|Fair",
         "seller": {"id": "seller-id", "name": "Seller Name"},
@@ -598,7 +598,14 @@ export class GeminiService {
       - Score should be 0.85-0.98 for relevance
       - Make badges contextually relevant to the product and query
 
-      Return ONLY a valid JSON array of listings, no other text.
+      VALIDATION RULES:
+      - Titles must not contain words like "new", "like new", "good condition", or prices.
+      - category MUST be lowercase and one of: electronics, fashion, home, sports, automotive, books, other
+      - price.value MUST be a number (no strings); currency MUST be "USD"
+      - badges MUST be an array with 0-2 values chosen from the allowed list
+      - location format: "City, ST" (two-letter US state code)
+
+      Return ONLY a raw JSON array with no prose and no markdown fences.
 
       Examples based on query context:
       - "iPhone" → iPhone 13 Pro, iPhone 14, iPhone SE, AirPods

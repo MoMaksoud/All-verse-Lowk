@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigation } from '@/components/Navigation';
 import { DynamicBackground } from '@/components/DynamicBackground';
-import CheckoutPage from '@/components/CheckoutForm';
+import dynamic from 'next/dynamic';
+const CheckoutPage = dynamic(() => import('@/components/CheckoutForm'), {
+  ssr: false,
+  loading: () => null,
+});
 import { 
   ShoppingBag, 
   Trash2, 
