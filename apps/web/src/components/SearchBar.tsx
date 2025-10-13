@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, TrendingUp, Clock, Bot, Sparkles, Trash2 } from 'lucide-react';
+import { Search, X, TrendingUp, Clock, Bot, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 
 interface SearchBarProps {
   className?: string;
@@ -13,9 +12,6 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
@@ -183,23 +179,6 @@ export function SearchBar({ className = '' }: SearchBarProps) {
   const clearSearch = () => {
     setQuery('');
     setShowSuggestions(false);
-    setVoiceError(null);
-    setVoiceTranscript('');
-  };
-
-  const handleVoiceResult = (text: string) => {
-    setQuery(text);
-    setVoiceTranscript(text);
-    setVoiceError(null);
-    // Auto-submit voice input after a short delay
-    setTimeout(() => {
-      handleSearch(text);
-    }, 1000);
-  };
-
-  const handleVoiceError = (error: string) => {
-    setVoiceError(error);
-    setIsVoiceListening(false);
   };
 
   return (
@@ -218,9 +197,6 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             placeholder={placeholderExamples[currentPlaceholder]}
             className="w-full pl-12 pr-12 py-4 glass-clear-dark border border-white/20 rounded-2xl text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50 transition-all duration-200 placeholder-transition"
           />
-          <div className="absolute right-16 top-1/2 transform -translate-y-1/2">
-            <Sparkles className="w-4 h-4 text-accent-400 animate-pulse" />
-          </div>
           {query && (
             <button
               type="button"
@@ -233,12 +209,6 @@ export function SearchBar({ className = '' }: SearchBarProps) {
         </div>
         
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-          <VoiceInputButton
-            onResult={handleVoiceResult}
-            onError={handleVoiceError}
-            size="sm"
-            className="glass-button-dark hover:bg-black/30"
-          />
           <button
             type="submit"
             disabled={isSearching}
@@ -255,13 +225,6 @@ export function SearchBar({ className = '' }: SearchBarProps) {
           </button>
         </div>
       </form>
-
-      {/* Voice Input Status */}
-      <VoiceInputStatus 
-        isListening={isVoiceListening}
-        transcript={voiceTranscript}
-        error={voiceError}
-      />
 
       {/* Natural Language Hint */}
       {!query && !showSuggestions && (

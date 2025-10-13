@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, MessageCircle, Star, Clock, X, MapPin, ShoppingCart } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
-import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 import { formatLocation } from '@/lib/location';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -32,10 +31,7 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
   });
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState('');
-  const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceTranscript, setVoiceTranscript] = useState('');
   const [addingToCart, setAddingToCart] = useState(false);
-  const [isVoiceListening, setIsVoiceListening] = useState(false);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -154,18 +150,6 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
       showError('Failed to send message', 'Please try again later.');
     }
   }, [message, currentUser, listing, startChat, showError]);
-
-  const handleVoiceResult = (text: string) => {
-    setMessage(text);
-    setVoiceTranscript(text);
-    setVoiceError(null);
-  };
-
-  const handleVoiceError = (error: string) => {
-    setVoiceError(error);
-    setIsVoiceListening(false);
-  };
-
 
   return (
     <>
@@ -305,29 +289,12 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Your Message
                 </label>
-                <div className="relative">
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Hi! I'm interested in your item..."
-                    rows={4}
-                    className="w-full px-3 py-2 pr-12 border border-dark-600 rounded-md text-sm bg-dark-700 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
-                  />
-                  <div className="absolute bottom-2 right-2">
-                    <VoiceInputButton
-                      onResult={handleVoiceResult}
-                      onError={handleVoiceError}
-                      size="sm"
-                      className="bg-gray-600 hover:bg-gray-500"
-                    />
-                  </div>
-                </div>
-                
-                {/* Voice Input Status */}
-                <VoiceInputStatus 
-                  isListening={isVoiceListening}
-                  transcript={voiceTranscript}
-                  error={voiceError}
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Hi! I'm interested in your item..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-dark-600 rounded-md text-sm bg-dark-700 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
                 />
               </div>
 

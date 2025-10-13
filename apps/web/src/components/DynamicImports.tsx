@@ -69,7 +69,3 @@ export const DynamicBackground = dynamic(() => import('./DynamicBackground').the
   ssr: false
 });
 
-export const DynamicBackgroundDemo = dynamic(() => import('./DynamicBackgroundDemo').then(mod => ({ default: mod.DynamicBackgroundDemo })), {
-  loading: () => <LoadingSpinner text="Loading demo..." />,
-  ssr: false
-});

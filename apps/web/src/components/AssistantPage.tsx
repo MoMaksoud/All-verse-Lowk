@@ -412,8 +412,7 @@ export default function AssistantPage() {
                     ref={taRef}
                     value={input}
                     onChange={(e) => { setInput(e.target.value); autoGrow(e.currentTarget); }}
-                    placeholder="Ask about pricing, comps, or optimization…"
-                    rows={1}
+                    placeholder="What item are you hunting for?"
                     className="flex-1 resize-none rounded-xl bg-zinc-900 text-sm px-4 py-3 md:py-4 outline-none border border-zinc-800 focus:border-zinc-600 min-h-[48px] max-h-[200px] text-zinc-100 placeholder:text-zinc-500"
                   />
                   <button

@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, X, Bot, User, Search, ShoppingBag } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
-import { VoiceInputButton, VoiceInputStatus } from '@/components/VoiceInputButton';
 
 interface Message {
   id: string;
@@ -40,9 +39,6 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [isVoiceListening, setIsVoiceListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -109,21 +105,6 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
     window.open(`/listings/${listing.id}`, '_blank');
   };
 
-  const handleVoiceResult = (text: string) => {
-    setInputValue(text);
-    setVoiceTranscript(text);
-    setVoiceError(null);
-    // Auto-send voice input after a short delay
-    setTimeout(() => {
-      handleSendMessage(text);
-    }, 1000);
-  };
-
-  const handleVoiceError = (error: string) => {
-    setVoiceError(error);
-    setIsVoiceListening(false);
-  };
-
   return (
     <>
       {/* Floating Chat Button */}
@@ -137,7 +118,6 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
             <span className="hidden group-hover:block whitespace-nowrap font-medium">
               Ask AI Anything
             </span>
-            <div className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
           </button>
         </div>
       )}
@@ -281,12 +261,6 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
                   placeholder="Try: 'Find laptops under $1000' or 'Show me sellers in Tampa'"
                   className="flex-1 bg-dark-700 border border-dark-600 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
                 />
-                <VoiceInputButton
-                  onResult={handleVoiceResult}
-                  onError={handleVoiceError}
-                  size="sm"
-                  className="bg-gray-600 hover:bg-gray-500"
-                />
                 <button
                   onClick={() => handleSendMessage(inputValue)}
                   disabled={!inputValue.trim() || isLoading}
@@ -295,13 +269,6 @@ export function AIChatbot({ className = '' }: AIChatbotProps) {
                   <Send className="w-4 h-4" />
                 </button>
               </div>
-              
-              {/* Voice Input Status */}
-              <VoiceInputStatus 
-                isListening={isVoiceListening}
-                transcript={voiceTranscript}
-                error={voiceError}
-              />
             </div>
           </div>
         </div>
