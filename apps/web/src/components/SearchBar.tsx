@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, TrendingUp, Clock, Bot, Trash2 } from 'lucide-react';
+import { Search, X, TrendingUp, Clock, Bot, Trash2, Mic } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SearchBarProps {
