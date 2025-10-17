@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, TrendingUp, Clock, Bot, Trash2, Mic } from 'lucide-react';
+import { Search, X, Clock, Bot, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface SearchBarProps {
@@ -11,39 +11,11 @@ interface SearchBarProps {
 export function SearchBar({ className = '' }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  // Natural language search examples
-  const placeholderExamples = [
-    "Ask our AI anything...",
-    "Search Nike shoes under $100",
-    "Find gaming laptops under $1500",
-    "Show me iPhone cases",
-    "What's trending in electronics?",
-    "Find MacBook Air deals",
-    "Search for running shoes",
-    "Show me home decor items",
-    "Find sports equipment",
-    "What's popular in fashion?",
-    "Find laptops near me",
-    "Show me sellers in Tampa",
-    "iPhone cases within 10 miles",
-    "Gaming laptops in Miami",
-    "Local electronics sellers"
-  ];
-
-  // Mock search suggestions
-  const suggestions = [
-    { id: 1, text: 'iPhone 14 Pro', type: 'trending' },
-    { id: 2, text: 'MacBook Air', type: 'trending' },
-    { id: 3, text: 'Gaming Laptop', type: 'trending' },
-  ];
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -129,15 +101,6 @@ export function SearchBar({ className = '' }: SearchBarProps) {
     return () => clearTimeout(timeoutId);
   }, [query]);
 
-  // Rotate placeholder examples
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPlaceholder((prev) => (prev + 1) % placeholderExamples.length);
-    }, 3000); // Change every 3 seconds
-
-    return () => clearInterval(interval);
-  }, [placeholderExamples.length]);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -156,12 +119,9 @@ export function SearchBar({ className = '' }: SearchBarProps) {
       // Add to recent searches
       addToRecentSearches(searchQuery);
       
-      setIsSearching(true);
-      
       // Navigate to AI page with query parameter
       router.push(`/ai?query=${encodeURIComponent(searchQuery)}`);
       
-      setIsSearching(false);
       setShowSuggestions(false);
     }
   };
@@ -194,7 +154,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
               setShowSuggestions(true);
             }}
             onFocus={() => setShowSuggestions(true)}
-            placeholder={placeholderExamples[currentPlaceholder]}
+            placeholder="Ask our AI anything..."
             className="w-full pl-12 pr-12 py-4 glass-clear-dark border border-white/20 rounded-2xl text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50 transition-all duration-200 placeholder-transition"
           />
           {query && (
@@ -211,17 +171,10 @@ export function SearchBar({ className = '' }: SearchBarProps) {
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
           <button
             type="submit"
-            disabled={isSearching}
-            className="bg-accent-500/80 hover:bg-accent-600/90 backdrop-blur-md text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 border border-accent-400/30"
+            className="bg-accent-500/80 hover:bg-accent-600/90 backdrop-blur-md text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 border border-accent-400/30"
           >
-            {isSearching ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            ) : (
-              <>
-                <Bot className="w-4 h-4" />
-                Ask AI
-              </>
-            )}
+            <Bot className="w-4 h-4" />
+            Ask AI
           </button>
         </div>
       </form>
@@ -280,29 +233,6 @@ export function SearchBar({ className = '' }: SearchBarProps) {
               </div>
             )}
 
-            {/* Trending Searches - show when no query or when query has no suggestions */}
-            {(!query || (query.length >= 1 && autocompleteSuggestions.length === 0 && !isLoadingSuggestions)) && (
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-4 h-4 text-accent-400" />
-                  <span className="text-sm font-medium text-gray-300">Trending</span>
-                </div>
-                <div className="space-y-1">
-                  {suggestions.filter(s => s.type === 'trending').map((suggestion) => (
-                    <button
-                      key={suggestion.id}
-                      onClick={() => handleSuggestionClick(suggestion.text)}
-                      className="w-full text-left px-3 py-2 rounded-lg bg-dark-700/50 hover:bg-dark-600 transition-all duration-200 group border border-transparent hover:border-dark-500"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Search className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
-                        <span className="text-gray-300 group-hover:text-white transition-colors">{suggestion.text}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Recent Searches */}
             {recentSearches.length > 0 && (

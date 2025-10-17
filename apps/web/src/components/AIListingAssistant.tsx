@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bot, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Bot, Send, CheckCircle } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
 interface MissingInfo {
@@ -38,35 +38,20 @@ export function AIListingAssistant({
 }: AIListingAssistantProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [userInputs, setUserInputs] = useState<Record<string, string>>({});
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const { showSuccess, showError } = useToast();
+  const { showSuccess } = useToast();
 
   // Convert missing info to interactive questions
   const missingInfoQuestions: MissingInfo[] = initialAnalysis.missingInfo.map((info, index): MissingInfo | null => {
-    // If the AI provided contextual questions directly, use them
-    if (typeof info === 'string' && info.includes('?')) {
-      // This is a contextual question from AI
-      const lowerInfo = info.toLowerCase();
-      
-      if (lowerInfo.includes('size') && lowerInfo.includes('shoe')) {
-        return {
-          field: 'size',
-          question: info,
-          placeholder: 'e.g., 8, 9, 10, 11, etc.',
-          type: 'text'
-        };
-      }
-      
-      if (lowerInfo.includes('size') && !lowerInfo.includes('shoe')) {
-        return {
-          field: 'size',
-          question: info,
-          placeholder: 'e.g., Small, Medium, Large, etc.',
-          type: 'text'
-        };
-      }
-      
+    const lowerInfo = info.toLowerCase();
+    
+    // Skip owner type and receipt questions
+    if (lowerInfo.includes('owner') || lowerInfo.includes('receipt') || lowerInfo.includes('purchase_year')) {
+      return null;
+    }
+    
+    // Use contextual question if it contains a question mark
+    if (info.includes('?')) {
       if (lowerInfo.includes('condition')) {
         return {
           field: 'condition',
@@ -74,33 +59,6 @@ export function AIListingAssistant({
           placeholder: 'e.g., Like new, Good, Fair, etc.',
           type: 'select',
           options: ['New', 'Like New', 'Good', 'Fair', 'Poor']
-        };
-      }
-      
-      if (lowerInfo.includes('color')) {
-        return {
-          field: 'color',
-          question: info,
-          placeholder: 'e.g., Black, White, Blue, etc.',
-          type: 'text'
-        };
-      }
-      
-      if (lowerInfo.includes('storage') || lowerInfo.includes('capacity')) {
-        return {
-          field: 'storage',
-          question: info,
-          placeholder: 'e.g., 128GB, 256GB, 1TB, etc.',
-          type: 'text'
-        };
-      }
-      
-      if (lowerInfo.includes('battery')) {
-        return {
-          field: 'battery',
-          question: info,
-          placeholder: 'e.g., 85%, 90%, etc.',
-          type: 'number'
         };
       }
       
@@ -114,15 +72,6 @@ export function AIListingAssistant({
         };
       }
       
-      if (lowerInfo.includes('worn') || lowerInfo.includes('used')) {
-        return {
-          field: 'usage',
-          question: info,
-          placeholder: 'e.g., 6 months, 1 year, lightly used, etc.',
-          type: 'text'
-        };
-      }
-      
       if (lowerInfo.includes('box')) {
         return {
           field: 'originalBox',
@@ -130,15 +79,6 @@ export function AIListingAssistant({
           placeholder: 'e.g., Yes, No, etc.',
           type: 'select',
           options: ['Yes', 'No', 'Not sure']
-        };
-      }
-      
-      if (lowerInfo.includes('material')) {
-        return {
-          field: 'material',
-          question: info,
-          placeholder: 'e.g., Cotton, Leather, Polyester, etc.',
-          type: 'text'
         };
       }
       
@@ -152,8 +92,6 @@ export function AIListingAssistant({
     }
     
     // Legacy mapping for non-contextual questions
-    const lowerInfo = info.toLowerCase();
-    
     if (lowerInfo.includes('size')) {
       return {
         field: 'size',
@@ -196,7 +134,7 @@ export function AIListingAssistant({
         field: 'battery',
         question: 'What is the battery health percentage?',
         placeholder: 'e.g., 85%, 90%, etc.',
-        type: 'number'
+        type: 'text'
       };
     }
     
@@ -247,11 +185,6 @@ export function AIListingAssistant({
       };
     }
     
-    // Skip owner type and receipt questions
-    if (lowerInfo.includes('owner') || lowerInfo.includes('receipt') || lowerInfo.includes('purchase_year')) {
-      return null; // This will be filtered out
-    }
-    
     // Default fallback
     return {
       field: `info_${index}`,
@@ -259,87 +192,47 @@ export function AIListingAssistant({
       placeholder: `Enter ${info.toLowerCase()}...`,
       type: 'text'
     };
-  }).filter((question): question is MissingInfo => question !== null); // Remove null questions
+  }).filter((question): question is MissingInfo => question !== null);
 
   const currentQuestion = missingInfoQuestions[currentStep];
   const [currentAnswer, setCurrentAnswer] = useState('');
 
-  const handleSubmitAnswer = async () => {
+  const handleSubmitAnswer = () => {
     if (!currentAnswer.trim()) return;
 
-    setIsProcessing(true);
-    
-    try {
-      // Update user inputs
-      const newInputs = { ...userInputs, [currentQuestion.field]: currentAnswer };
-      setUserInputs(newInputs);
+    // Update user inputs
+    const newInputs = { ...userInputs, [currentQuestion.field]: currentAnswer };
+    setUserInputs(newInputs);
 
-      // Process the answer and update the listing
-      const updatedData = await processUserInput(newInputs);
-      onUpdate(updatedData);
+    // Process the answer and update the listing
+    const updatedData = processUserInput(newInputs);
+    onUpdate(updatedData);
 
-      // Skip usage question if condition is "New"
-      let nextStep = currentStep + 1;
-      if (currentQuestion.field === 'condition' && currentAnswer === 'New') {
-        // Find and skip the usage question
-        const usageQuestionIndex = missingInfoQuestions.findIndex(q => q.field === 'usage');
-        if (usageQuestionIndex > currentStep) {
-          nextStep = usageQuestionIndex + 1;
-        }
+    // Skip usage question if condition is "New"
+    let nextStep = currentStep + 1;
+    if (currentQuestion.field === 'condition' && currentAnswer === 'New') {
+      // Find and skip the usage question
+      const usageQuestionIndex = missingInfoQuestions.findIndex(q => q.field === 'usage');
+      if (usageQuestionIndex > currentStep) {
+        nextStep = usageQuestionIndex + 1;
       }
+    }
 
-      // Move to next question or complete
-      if (nextStep < missingInfoQuestions.length) {
-        setCurrentStep(nextStep);
-        setCurrentAnswer('');
-      } else {
-        // All questions answered, complete the process
-        setIsComplete(true);
-        showSuccess('Listing Complete!', 'All information has been gathered and your listing is ready to post!');
-        setTimeout(() => {
-          onComplete();
-        }, 1500);
-      }
-    } catch (error) {
-      console.error('Error processing user input:', error);
-      showError('Processing Error', 'Failed to process your input. Please try again.');
-    } finally {
-      setIsProcessing(false);
+    // Move to next question or complete
+    if (nextStep < missingInfoQuestions.length) {
+      setCurrentStep(nextStep);
+      setCurrentAnswer('');
+    } else {
+      // All questions answered, complete the process
+      setIsComplete(true);
+      showSuccess('Listing Complete!', 'All information has been gathered and your listing is ready to post!');
+      setTimeout(() => {
+        onComplete();
+      }, 1500);
     }
   };
 
-  const processUserInput = async (inputs: Record<string, string>) => {
-    // Create a prompt to update the listing with user inputs
-    const prompt = `
-    Update this listing with the user-provided information:
-
-    Original Title: ${initialAnalysis.title}
-    Original Description: ${initialAnalysis.description}
-    Original Category: ${initialAnalysis.category}
-    Original Condition: ${initialAnalysis.condition}
-    Original Price: $${initialAnalysis.suggestedPrice}
-
-    User Inputs:
-    ${Object.entries(inputs).map(([key, value]) => `${key}: ${value}`).join('\n')}
-
-    Please update the listing to:
-    1. Replace all placeholders like [enter size], [enter condition], etc. with the actual user inputs
-    2. Determine the most appropriate category based on the complete information
-    3. Set the condition based on user input
-    4. Suggest an accurate price based on the complete information
-    5. Make the title and description natural and professional
-
-    Return ONLY valid JSON with this structure:
-    {
-      "title": "Updated title with actual information",
-      "description": "Updated description with actual information",
-      "category": "most_appropriate_category",
-      "condition": "user_provided_condition",
-      "suggestedPrice": estimated_price_number
-    }
-    `;
-
-    // For now we update locally to avoid server 401 errors and keep UI fast
+  const processUserInput = (inputs: Record<string, string>) => {
     return processManually(inputs);
   };
 
@@ -460,15 +353,11 @@ export function AIListingAssistant({
         
         <button
           onClick={handleSubmitAnswer}
-          disabled={!currentAnswer.trim() || isProcessing}
+          disabled={!currentAnswer.trim()}
           className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
         >
-          {isProcessing ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Send className="w-4 h-4" />
-          )}
-          {isProcessing ? 'Processing...' : 'Next'}
+          <Send className="w-4 h-4" />
+          Next
         </button>
       </div>
 

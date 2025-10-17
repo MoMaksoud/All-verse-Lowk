@@ -11,7 +11,6 @@ import { AIListingAssistant } from '@/components/AIListingAssistant';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
-import { AIStatusIndicator } from '@/components/AIStatusIndicator';
 
 const steps = [
   { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
@@ -1007,10 +1006,6 @@ export default function SellPage() {
               {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
             </div>
 
-            {/* AI Status Indicator */}
-            <div className="mb-4">
-              <AIStatusIndicator />
-            </div>
 
             {/* Price Validation Warning */}
             {(formData.marketResearch || aiAnalysis) && formData.price && parseFloat(formData.price) > 0 && (

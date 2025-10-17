@@ -19,11 +19,6 @@ export const AIListingAssistant = dynamic(() => import('./AIListingAssistant').t
   ssr: false
 });
 
-export const AIChatbot = dynamic(() => import('./AIChatbot').then(mod => ({ default: mod.AIChatbot })), {
-  loading: () => <LoadingSpinner text="Loading AI chatbot..." />,
-  ssr: false
-});
-
 export const AIWidget = dynamic(() => import('./AIWidget').then(mod => ({ default: mod.AIWidget })), {
   loading: () => <LoadingSpinner text="Loading AI widget..." />,
   ssr: false

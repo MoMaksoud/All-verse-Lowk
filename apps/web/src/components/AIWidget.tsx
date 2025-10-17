@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { Bot, MessageCircle, TrendingUp, BarChart3, ArrowRight, Sparkles } from 'lucide-react';
+import { Bot, MessageCircle, ArrowRight, Sparkles } from 'lucide-react';
 
 export function AIWidget() {
-  const [isHovered, setIsHovered] = useState(false);
-
   return (
     <div className="bg-gradient-to-br from-dark-800/90 to-dark-900/90 backdrop-blur-lg border border-white/20 rounded-2xl p-6 hover:border-accent-500/50 transition-all duration-300 group shadow-2xl">
       <div className="flex items-center justify-between mb-4">
@@ -45,35 +43,13 @@ export function AIWidget() {
         <div className="space-y-2">
           <Link
             href="/ai"
-            className="flex items-center justify-between p-3 bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 rounded-xl transition-all duration-200 group-chat"
+            className="flex items-center justify-between p-3 bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 rounded-xl transition-all duration-200"
           >
             <div className="flex items-center gap-3">
               <MessageCircle className="w-4 h-4 text-accent-400" />
               <span className="text-white text-sm font-medium">Chat with AI</span>
             </div>
-            <ArrowRight className="w-4 h-4 text-white group-chat-hover:text-accent-400 transition-colors" />
-          </Link>
-          
-          <Link
-            href="/ai"
-            className="flex items-center justify-between p-3 bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 rounded-xl transition-all duration-200 group-analytics"
-          >
-            <div className="flex items-center gap-3">
-              <BarChart3 className="w-4 h-4 text-accent-400" />
-              <span className="text-white text-sm font-medium">View Analytics</span>
-            </div>
-            <ArrowRight className="w-4 h-4 text-white group-analytics-hover:text-accent-400 transition-colors" />
-          </Link>
-          
-          <Link
-            href="/ai"
-            className="flex items-center justify-between p-3 bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 rounded-xl transition-all duration-200 group-insights"
-          >
-            <div className="flex items-center gap-3">
-              <TrendingUp className="w-4 h-4 text-accent-400" />
-              <span className="text-white text-sm font-medium">Market Insights</span>
-            </div>
-            <ArrowRight className="w-4 h-4 text-white group-insights-hover:text-accent-400 transition-colors" />
+            <ArrowRight className="w-4 h-4 text-white hover:text-accent-400 transition-colors" />
           </Link>
         </div>
 
@@ -84,7 +60,7 @@ export function AIWidget() {
             className="w-full bg-accent-500/90 hover:bg-accent-600 backdrop-blur-md text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 group border border-accent-400/30 shadow-lg"
           >
             <Bot className="w-4 h-4" />
-            Access AI Command Center
+            Start AI Chat
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
