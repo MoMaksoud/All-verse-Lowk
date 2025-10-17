@@ -147,8 +147,6 @@ export default function SellPage() {
     }
   };
 
-
-
   const testFallbackAnalysis = async () => {
     if (!currentUser || !formData.photos.length) return;
 
@@ -210,6 +208,10 @@ export default function SellPage() {
   };
 
   const performAIAnalysis = async () => {
+    console.log('🔥 PERFORM AI ANALYSIS FUNCTION CALLED!');
+    console.log('🔥 Current user:', currentUser);
+    console.log('🔥 Form data photos:', formData.photos);
+    
     if (!currentUser || !formData.photos.length) {
       console.error('❌ AI Analysis aborted: missing user or photos');
       return;
@@ -218,6 +220,7 @@ export default function SellPage() {
     try {
       setAiAnalyzing(true);
       console.log('🤖 Starting AI analysis for uploaded photos');
+      console.log('🤖 Current user:', currentUser.uid);
       console.log('🤖 Photos to analyze:', formData.photos);
       
       // Verify photos are accessible URLs
@@ -232,7 +235,6 @@ export default function SellPage() {
       
       console.log('🤖 Valid photos for AI analysis:', validPhotos);
       
-      // Call real AI analysis API
       const response = await fetch('/api/ai/analyze-product', {
         method: 'POST',
         headers: {
@@ -240,17 +242,18 @@ export default function SellPage() {
           'x-user-id': currentUser.uid,
         },
         body: JSON.stringify({
-          imageUrls: validPhotos, // Use only valid URLs
-          listingId: null, // No listing ID since we haven't created one yet
-          location: formData.location // Include location for regional pricing
+          imageUrls: validPhotos, // Use only valid photos
         }),
       });
       
       if (!response.ok) {
-        throw new Error('AI analysis failed');
+        const errorText = await response.text();
+        console.error('🤖 API error response:', errorText);
+        throw new Error(`AI analysis failed: ${response.status} - ${errorText}`);
       }
       
       const result = await response.json();
+      console.log('🤖 API response result:', result);
       const analysis = result.analysis;
       
       // Update form data with AI-generated data (no database save yet)
@@ -547,11 +550,13 @@ export default function SellPage() {
                       </div>
                       
                       <button
-                        onClick={() => performAIAnalysis()}
+                        onClick={() => {
+                          performAIAnalysis();
+                        }}
                         disabled={aiAnalyzing}
                         className="btn btn-primary w-full"
                       >
-                        {aiAnalyzing ? 'Analyzing...' : '🤖 Analyze with AI'}
+                        {aiAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
                       </button>
                       
                       <button

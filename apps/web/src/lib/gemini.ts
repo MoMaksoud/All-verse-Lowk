@@ -1,5 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
+import { GoogleGenAI } from '@google/genai';
 // Initialize Gemini AI
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
@@ -7,10 +6,7 @@ if (!apiKey) {
   throw new Error('GEMINI_API_KEY or NEXT_PUBLIC_GEMINI_API_KEY environment variable is required. Please add it to your .env.local file.');
 }
 
-const genAI = new GoogleGenerativeAI(apiKey);
-
-// Get the generative model
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const ai = new GoogleGenAI({apiKey: apiKey});
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -31,12 +27,13 @@ export class GeminiService {
    */
   static async generateResponse(prompt: string): Promise<ChatResponse> {
     try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const response = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: prompt,
+      });
 
       return {
-        message: text,
+        message: response.text ?? '',
         success: true
       };
     } catch (error: any) {
@@ -48,7 +45,7 @@ export class GeminiService {
       }
       
       return {
-        message: 'Let me help you with that! 🛍️\n\nFind Deals\nTrending Items\nBrowse Categories\nPopular Items\n\nWhat interests you?',
+        message: '',
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };

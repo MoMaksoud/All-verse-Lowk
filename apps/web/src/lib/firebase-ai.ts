@@ -12,8 +12,8 @@ export class FirebaseAIService {
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash',
+    this.model = this.genAI.getGenerativeModel({
+      model: 'gemini-1.5-pro',
       generationConfig: {
         temperature: 0.7,
         topK: 40,
