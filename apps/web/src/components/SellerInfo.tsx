@@ -22,10 +22,10 @@ export function SellerInfo({ seller, onContactClick }: SellerInfoProps) {
         </div>
         <div>
           <h3 className="text-zinc-100 font-medium">
-            {seller?.name ?? "Marketplace User"}
+            {seller?.name}
           </h3>
           <p className="text-sm text-zinc-400">
-            Member since {seller?.since ?? "2024"}
+            Member since {seller?.since}
           </p>
         </div>
       </div>
@@ -33,10 +33,10 @@ export function SellerInfo({ seller, onContactClick }: SellerInfoProps) {
       {/* Rating */}
       <div className="flex items-center gap-2 text-sm">
         <span className="flex items-center gap-1 text-yellow-400">
-          ⭐ {seller?.rating ?? 4.8}
+          ⭐ {seller?.rating}
         </span>
         <span className="text-zinc-400">
-          ({seller?.reviews ?? "127"} reviews)
+          ({seller?.reviews} reviews)
         </span>
       </div>
 

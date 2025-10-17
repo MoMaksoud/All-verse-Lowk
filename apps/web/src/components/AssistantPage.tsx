@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, Bot, Plus, Trash2, MessageCircle, ShoppingCart, Store } from 'lucide-react';
+import { Send, Bot, Plus, Trash2, ShoppingCart, Store } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -18,7 +18,6 @@ interface ChatSession {
   updatedAt: Date;
 }
 
-// Format time helper
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -61,24 +60,22 @@ export default function AssistantPage() {
 
         sessions.sort((a: ChatSession, b: ChatSession) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
-        // ✅ Keep at most one empty session (no messages). Keep the newest.
+        // Keep at most one empty session (no messages). Keep the newest.
         const seenEmpty = { kept: false };
         const deduped = sessions.filter(s => {
           const isEmpty = (s.messages?.length ?? 0) === 0;
           if (!isEmpty) return true;
           if (!seenEmpty.kept) {
-            seenEmpty.kept = true; // keep the first empty (list is newest → oldest)
+            seenEmpty.kept = true;
             return true;
           }
-          return false; // drop older empties
+          return false;
         });
 
-        const finalSessions = deduped;
+        setChatSessions(deduped);
 
-        setChatSessions(finalSessions);
-
-        if (finalSessions.length > 0) {
-          const latestSession = finalSessions[0];
+        if (deduped.length > 0) {
+          const latestSession = deduped[0];
           setCurrentSessionId(latestSession.id);
           setMessages(latestSession.messages || []);
         }
@@ -126,7 +123,7 @@ export default function AssistantPage() {
     if (existingEmpty) {
       setCurrentSessionId(existingEmpty.id);
       setMessages(existingEmpty.messages || []);
-      return; // ✅ do not create a new one
+      return;
     }
 
     // Otherwise create a new empty session and put it at the top
@@ -163,7 +160,7 @@ export default function AssistantPage() {
     }
 
     // We are deleting the active chat:
-    // 1) Reuse an existing empty session if present
+    // Reuse an existing empty session if present
     const existingEmpty = remaining.find(s => (s.messages?.length ?? 0) === 0);
 
     if (existingEmpty) {
@@ -173,7 +170,7 @@ export default function AssistantPage() {
       return;
     }
 
-    // 2) Otherwise create a brand-new empty session and select it
+    // Otherwise create a brand-new empty session and select it
     const newSession: ChatSession = {
       id: Date.now().toString(),
       title: 'New Chat',
@@ -182,7 +179,7 @@ export default function AssistantPage() {
       updatedAt: new Date()
     };
 
-    setChatSessions([newSession, ...remaining]); // put it at the top
+    setChatSessions([newSession, ...remaining]);
     setCurrentSessionId(newSession.id);
     setMessages([]);
   };
@@ -197,10 +194,9 @@ export default function AssistantPage() {
               ...session,
               messages: newMessages,
               updatedAt: new Date(),
-              title:
-                newMessages.length > 0 && newMessages[0]?.text
-                  ? newMessages[0].text.slice(0, 30) + '...'
-                  : 'New Chat'
+              title: newMessages.length > 0 && newMessages[0]?.text
+                ? newMessages[0].text.slice(0, 30) + '...'
+                : 'New Chat'
             }
           : session
       );
@@ -263,7 +259,6 @@ export default function AssistantPage() {
       updateCurrentSession(finalMessages);
     } catch (err) {
       console.error('Error sending message:', err);
-      // Add error message
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'ai',
@@ -379,7 +374,7 @@ export default function AssistantPage() {
               <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500">
-                    <MessageCircle className="w-12 h-12 mb-4" />
+                    <Bot className="w-12 h-12 mb-4" />
                     <p className="text-lg font-medium">Start a conversation</p>
                     <p className="text-sm">Your AI assistant is ready to help!</p>
                   </div>

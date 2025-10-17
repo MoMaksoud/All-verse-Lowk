@@ -5,12 +5,10 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface ErrorBoundaryState {
   hasError: boolean;
-  error?: Error;
 }
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
-  fallback?: React.ComponentType<{ error?: Error; resetError: () => void }>;
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -20,7 +18,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -28,16 +26,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   resetError = () => {
-    this.setState({ hasError: false, error: undefined });
+    this.setState({ hasError: false });
   };
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) {
-        const FallbackComponent = this.props.fallback;
-        return <FallbackComponent error={this.state.error} resetError={this.resetError} />;
-      }
-
       return (
         <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
           <div className="card p-8 max-w-md w-full text-center">
@@ -62,23 +55,4 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
     return this.props.children;
   }
-}
-
-// Simple error fallback component
-export function SimpleErrorFallback({ error, resetError }: { error?: Error; resetError: () => void }) {
-  return (
-    <div className="card p-6 text-center">
-      <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-3" />
-      <h3 className="text-lg font-semibold text-white mb-2">Error</h3>
-      <p className="text-gray-400 mb-4">
-        {error?.message || 'Something went wrong'}
-      </p>
-      <button
-        onClick={resetError}
-        className="btn btn-outline"
-      >
-        Try Again
-      </button>
-    </div>
-  );
 }

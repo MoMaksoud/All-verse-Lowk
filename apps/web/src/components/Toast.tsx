@@ -88,7 +88,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
     >
       <div
         className={`
-          ${styles.bg} ${styles.border} border backdrop-blur-sm
+          ${styles.bg} ${styles.border} backdrop-blur-sm
           rounded-2xl p-4 shadow-xl
           flex items-start gap-3
         `}

@@ -11,12 +11,8 @@ interface FileUploadProps {
   accept?: string;
   maxSize?: number;
   maxFiles?: number;
-  uploadType?: 'profile-picture' | 'listing-photo' | 'listing-video' | 'chat-attachment' | 'custom';
-  customPath?: string;
+  uploadType?: 'profile-picture';
   userId?: string;
-  listingId?: string;
-  conversationId?: string;
-  messageId?: string;
   className?: string;
   disabled?: boolean;
 }
@@ -27,12 +23,8 @@ export function FileUpload({
   accept = 'image/*,video/*',
   maxSize = 10 * 1024 * 1024, // 10MB default
   maxFiles = 1,
-  uploadType = 'custom',
-  customPath,
+  uploadType = 'profile-picture',
   userId,
-  listingId,
-  conversationId,
-  messageId,
   className = '',
   disabled = false,
 }: FileUploadProps) {
@@ -40,7 +32,7 @@ export function FileUpload({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
-  const { uploadFile, uploadProfilePicture, uploadListingPhoto, uploadListingVideo, uploadChatAttachment, isUploading, progress, error, clearError } = useFileUpload({
+  const { uploadProfilePicture, isUploading, progress, error, clearError } = useFileUpload({
     onSuccess: (result) => {
       onUploadComplete({ url: result.url, path: result.path });
       setSelectedFiles([]);
@@ -76,32 +68,8 @@ export function FileUpload({
       const file = fileArray[i];
       
       try {
-        let result;
-        
-        switch (uploadType) {
-          case 'profile-picture':
-            if (!userId) throw new Error('User ID is required for profile picture upload');
-            result = await uploadProfilePicture(file, userId, 'user@example.com'); // TODO: Get actual user email
-            break;
-          case 'listing-photo':
-            if (!listingId) throw new Error('Listing ID is required for listing photo upload');
-            result = await uploadListingPhoto(file, userId || 'unknown', 'user@example.com', listingId, i);
-            break;
-          case 'listing-video':
-            if (!listingId) throw new Error('Listing ID is required for listing video upload');
-            result = await uploadListingVideo(file, userId || 'unknown', 'user@example.com', listingId, i);
-            break;
-          case 'chat-attachment':
-            if (!conversationId || !messageId) throw new Error('Conversation ID and Message ID are required for chat attachment upload');
-            result = await uploadChatAttachment(file, userId || 'unknown', 'user@example.com', conversationId, messageId);
-            break;
-          case 'custom':
-            if (!customPath) throw new Error('Custom path is required for custom upload');
-            result = await uploadFile(file, customPath, userId || 'unknown', 'user@example.com');
-            break;
-          default:
-            throw new Error('Invalid upload type');
-        }
+        if (!userId) throw new Error('User ID is required for profile picture upload');
+        const result = await uploadProfilePicture(file, userId, 'user@example.com'); // TODO: Get actual user email
 
         if (result) {
           onUploadComplete({ url: result.url, path: result.path });
@@ -110,7 +78,7 @@ export function FileUpload({
         onUploadError?.(err.message || 'Upload failed');
       }
     }
-  }, [uploadFile, uploadProfilePicture, uploadListingPhoto, uploadListingVideo, uploadChatAttachment, maxSize, accept, uploadType, customPath, userId, listingId, conversationId, messageId, onUploadComplete, onUploadError, clearError]);
+  }, [uploadProfilePicture, maxSize, accept, userId, onUploadComplete, onUploadError, clearError]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();

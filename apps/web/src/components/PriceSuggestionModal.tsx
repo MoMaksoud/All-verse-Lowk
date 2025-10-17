@@ -76,23 +76,12 @@ export function PriceSuggestionModal({ isOpen, onClose, suggestion, loading = fa
 
         {/* Footer */}
         <div className="p-6 border-t border-zinc-800">
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2 px-4 rounded-xl text-sm font-medium transition-colors"
-            >
-              Close
-            </button>
-            <button
-              onClick={() => {
-                // Could add functionality to apply suggestion or navigate to edit page
-                onClose();
-              }}
-              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded-xl text-sm font-medium transition-colors"
-            >
-              Learn More
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2 px-4 rounded-xl text-sm font-medium transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

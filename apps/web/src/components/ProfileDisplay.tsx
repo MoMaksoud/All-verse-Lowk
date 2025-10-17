@@ -10,7 +10,6 @@ interface ProfileDisplayProps {
 }
 
 export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps) {
-  console.log('ProfileDisplay received profile:', JSON.stringify(profile, null, 2));
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

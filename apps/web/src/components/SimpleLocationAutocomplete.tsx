@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Search, X } from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
 
 interface LocationSuggestion {
   place_id: string;
@@ -43,15 +43,12 @@ export function SimpleLocationAutocomplete({
     setIsLoading(true);
     
     try {
-      console.log('🔍 Searching for:', query);
-      
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&countrycodes=us&extratags=1`
       );
       
       if (response.ok) {
         const data = await response.json();
-        console.log('📍 Nominatim results:', data.length, 'locations found');
         
         const formattedSuggestions = data.map((item: any, index: number) => ({
           place_id: item.place_id || `nominatim_${index}`,
@@ -65,8 +62,6 @@ export function SimpleLocationAutocomplete({
         setSuggestions(formattedSuggestions);
         setIsOpen(formattedSuggestions.length > 0);
         setSelectedIndex(-1);
-        
-        console.log('✅ Suggestions set:', formattedSuggestions.length);
       } else {
         console.error('❌ Nominatim API error:', response.status);
         setSuggestions([]);
@@ -99,8 +94,6 @@ export function SimpleLocationAutocomplete({
 
   // Handle suggestion selection
   const handleSuggestionSelect = (suggestion: LocationSuggestion) => {
-    console.log('📍 Location selected:', suggestion.description);
-    
     onChange(suggestion.description, {
       lat: suggestion.lat || 0,
       lng: suggestion.lng || 0,

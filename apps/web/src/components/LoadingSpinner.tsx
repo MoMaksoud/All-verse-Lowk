@@ -1,13 +1,12 @@
 import React from 'react';
 
 interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'md' | 'lg';
   text?: string;
 }
 
 export function LoadingSpinner({ size = 'md', text }: LoadingSpinnerProps) {
   const sizeClasses = {
-    sm: 'h-8 w-8',
     md: 'h-16 w-16',
     lg: 'h-32 w-32'
   };

@@ -3,7 +3,7 @@
 import React, { useState, useCallback, memo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MessageCircle, Star, Clock, X, MapPin, ShoppingCart } from 'lucide-react';
+import { Heart, MessageCircle, Clock, X, MapPin, ShoppingCart } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { formatLocation } from '@/lib/location';
 import { useAuth } from '@/contexts/AuthContext';
@@ -183,15 +183,9 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
 
             {/* Rating/Date chip with hover expansion */}
             <div className="absolute bottom-3 right-3 z-20 inline-flex items-center rounded-full bg-black/60 text-white px-2.5 py-1 backdrop-blur transition-all duration-500 ease-in-out shadow">
-              {/* Rating always visible */}
-              <span className="inline-flex items-center gap-1 text-sm font-medium">
-                <Star className="w-3 h-3 fill-current text-yellow-400" />
-                4.5
-              </span>
-
               {/* Date expands on hover */}
               {listing.createdAt && (
-                <span className="ml-2 overflow-hidden max-w-0 opacity-0 translate-x-2 group-hover/card:max-w-[160px] group-hover/card:opacity-100 group-hover/card:translate-x-0 transition-all duration-500 ease-in-out whitespace-nowrap text-sm">
+                <span className="overflow-hidden max-w-0 opacity-0 translate-x-2 group-hover/card:max-w-[160px] group-hover/card:opacity-100 group-hover/card:translate-x-0 transition-all duration-500 ease-in-out whitespace-nowrap text-sm">
                   <Clock className="w-3 h-3 mr-1 inline" />
                   {new Date(listing.createdAt).toLocaleDateString()}
                 </span>
@@ -213,7 +207,9 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
             <div className="price-category">
               <span className="price">${listing.price.toLocaleString()}</span>
               <span className="category">{listing.category}</span>
-              <span className="condition">Like New</span>
+              {listing.condition && (
+                <span className="condition">{listing.condition}</span>
+              )}
             </div>
             
             {/* Location */}

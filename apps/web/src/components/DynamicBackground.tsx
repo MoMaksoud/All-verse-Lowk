@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 
 interface DynamicBackgroundProps {
-  intensity?: 'low' | 'med' | 'high';
+  intensity?: 'low' | 'med';
   showParticles?: boolean;
   className?: string;
 }
@@ -33,11 +33,9 @@ export function DynamicBackground({
   const lastTimeRef = useRef(0);
   const [isVisible, setIsVisible] = useState(true);
 
-  // Intensity settings - optimized for better performance
   const intensitySettings = {
     low: { elementCount: 5, speed: 0.08, opacity: 0.08 },
-    med: { elementCount: 8, speed: 0.12, opacity: 0.12 },
-    high: { elementCount: 12, speed: 0.15, opacity: 0.15 }
+    med: { elementCount: 8, speed: 0.12, opacity: 0.12 }
   };
 
   const settings = intensitySettings[intensity];
@@ -247,7 +245,6 @@ export function DynamicBackground({
     return () => window.removeEventListener('resize', resizeCanvas);
   }, []);
 
-  // Initialize everything
   useEffect(() => {
     if (!showParticles) return;
     
@@ -285,7 +282,6 @@ export function DynamicBackground({
 
   return (
     <div className={`fixed inset-0 -z-10 ${className}`}>
-      {/* Animated Gradient Background */}
       <div className={`animated-gradient aurora-intensity-${intensity}`}></div>
       
       {/* Floating Elements Layer */}
@@ -306,9 +302,9 @@ export function DynamicBackground({
     </div>
   );
 }
-
 // Utility function for cleanup
 export const cleanupDynamicBackground = () => {
   // This would be called when unmounting or route changes
   // The useEffect cleanup handles most of this automatically
 };
+

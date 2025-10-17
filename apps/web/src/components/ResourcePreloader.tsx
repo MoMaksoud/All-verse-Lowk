@@ -40,6 +40,8 @@ export function ResourcePreloader() {
               if (!('requestIdleCallback' in window)) {
                 window.requestIdleCallback = function(cb){ return setTimeout(function(){ cb({ timeRemaining: function(){ return 1; } }); }, 1); };
               }
+              
+              // Reuse connection detection logic from above
               var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
               var slow = false;
               if (connection && connection.effectiveType) {

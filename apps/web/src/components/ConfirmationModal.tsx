@@ -64,25 +64,13 @@ export function ConfirmationModal({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={handleBackdropClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={-1}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      
-      {/* Modal */}
       <div className="relative bg-dark-800 border border-dark-700 rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-700">
           <div className="flex items-center space-x-3">
             {getIcon()}
@@ -99,14 +87,12 @@ export function ConfirmationModal({
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           <p className="text-gray-300 leading-relaxed">
             {message}
           </p>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center justify-end space-x-3 p-6 border-t border-dark-700">
           <button
             onClick={onClose}

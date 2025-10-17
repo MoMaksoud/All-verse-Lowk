@@ -13,7 +13,7 @@ const Navigation = dynamic(() => import('@/components/Navigation').then(mod => (
 });
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { SkeletonCard, SkeletonSearchBar, SkeletonAIWidget, SkeletonStats, SkeletonHero } from '@/components/SkeletonLoader';
+import { SkeletonCard, SkeletonSearchBar, SkeletonAIWidget } from '@/components/SkeletonLoader';
 import { ResourcePreloader } from '@/components/ResourcePreloader';
 import { useRouteGuard } from '@/hooks/useRouteGuard';
 import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';

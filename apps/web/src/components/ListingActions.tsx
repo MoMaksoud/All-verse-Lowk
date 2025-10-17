@@ -1,5 +1,6 @@
 import { DollarSign, MessageCircle, Edit, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { formatCurrency } from "@marketplace/lib";
 
 interface ListingActionsProps {
   price: number;
@@ -22,12 +23,6 @@ export function ListingActions({
   addingToCart = false,
   suggestingPrice = false
 }: ListingActionsProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
 
   return (
     <Card>

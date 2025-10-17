@@ -212,10 +212,6 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
             value={formData.location || ''}
             onChange={(location, coordinates) => {
               handleInputChange('location', location);
-              // Store coordinates if needed for future use
-              if (coordinates) {
-                console.log('Location coordinates:', coordinates);
-              }
             }}
             placeholder="City, State or ZIP code"
             className="w-full"

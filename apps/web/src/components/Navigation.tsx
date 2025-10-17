@@ -28,7 +28,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Profile } from '@marketplace/types';
 
 // Lazy load heavy components
-import { Avatar } from './Avatar';
 const DefaultAvatar = lazy(() => import('./DefaultAvatar').then(module => ({ default: module.DefaultAvatar })));
 
 const navigation = [
@@ -228,9 +227,9 @@ const Navigation = memo(function Navigation() {
                   >
                     {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
                       <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
-                        <Avatar
-                          src={profile?.profilePictureUrl || currentUser?.photoURL}
-                          alt={currentUser.displayName || "Profile"}
+                        <DefaultAvatar
+                          name={currentUser?.displayName || undefined}
+                          email={currentUser?.email || undefined}
                           size="sm"
                         />
                       </Suspense>
@@ -254,9 +253,9 @@ const Navigation = memo(function Navigation() {
                         <div className="flex items-center space-x-3">
                           {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
                             <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
-                              <Avatar
-                                src={profile?.profilePictureUrl || currentUser?.photoURL}
-                                alt={currentUser.displayName || "Profile"}
+                              <DefaultAvatar
+                                name={currentUser?.displayName || undefined}
+                                email={currentUser?.email || undefined}
                                 size="md"
                               />
                             </Suspense>
@@ -547,9 +546,9 @@ const Navigation = memo(function Navigation() {
                 <div className="pt-4 border-t border-dark-600">
                   <div className="flex items-center px-3 py-3">
                     {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
-                      <Avatar
-                        src={profile?.profilePictureUrl || currentUser?.photoURL}
-                        alt={currentUser.displayName || "Profile"}
+                      <DefaultAvatar
+                        name={currentUser?.displayName || undefined}
+                        email={currentUser?.email || undefined}
                         size="sm"
                       />
                     ) : (

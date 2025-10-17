@@ -81,32 +81,3 @@ export function SkeletonAIWidget() {
   );
 }
 
-export function SkeletonStats() {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="card">
-          <div className="p-6 text-center space-y-2">
-            <Skeleton height="2.5rem" width="4rem" className="mx-auto" />
-            <Skeleton height="1.125rem" width="8rem" className="mx-auto" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function SkeletonHero() {
-  return (
-    <section className="relative py-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center space-y-6">
-          <Skeleton height="1.5rem" width="12rem" className="mx-auto rounded-full" />
-          <Skeleton height="4rem" width="24rem" className="mx-auto" />
-          <Skeleton height="1.5rem" width="32rem" className="mx-auto" />
-          <Skeleton height="3rem" width="32rem" className="mx-auto rounded-2xl" />
-        </div>
-      </div>
-    </section>
-  );
-}

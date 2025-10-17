@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
-import { Upload, X, Image as ImageIcon, Camera } from 'lucide-react';
+import { X, Image as ImageIcon, Camera } from 'lucide-react';
 import { usePhotoUpload } from '@/hooks/usePhotoUpload';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAuth } from '@/contexts/AuthContext';

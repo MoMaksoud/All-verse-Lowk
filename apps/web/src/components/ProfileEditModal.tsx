@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Profile } from '@marketplace/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { SimpleLocationAutocomplete } from '@/components/SimpleLocationAutocomplete';
-import { User, Save, X, Heart, DollarSign, ShoppingBag, Star } from 'lucide-react';
+import { User, Save, X, Heart, DollarSign, ShoppingBag } from 'lucide-react';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -305,9 +305,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   value={formData.location}
                   onChange={(location, coordinates) => {
                     handleInputChange('location', location);
-                    if (coordinates) {
-                      console.log('Location coordinates:', coordinates);
-                    }
                   }}
                   placeholder="City, State or ZIP code"
                   className="w-full"

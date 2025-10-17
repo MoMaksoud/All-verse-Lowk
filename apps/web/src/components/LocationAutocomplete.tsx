@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Search, X } from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
 import { googleMapsService, GooglePlacePrediction } from '@/lib/googleMaps';
 
 interface LocationSuggestion {

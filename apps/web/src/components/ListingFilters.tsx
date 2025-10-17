@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, X, MapPin, Navigation } from 'lucide-react';
+import { Search, X, Navigation } from 'lucide-react';
 import { LocationAutocomplete } from './LocationAutocomplete';
 import type { ListingFilters, Category } from '@marketplace/types';
 
