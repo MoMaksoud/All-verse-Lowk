@@ -32,7 +32,7 @@ export default function AIResults({ data }: AIResultsProps) {
       
       {/* Grid of listing cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {data.items.map((item) => (
+        {data.items.map((item: AiListingsPayloadT['items'][0]) => (
           <AICard key={item.id} item={item} />
         ))}
       </div>
@@ -105,7 +105,7 @@ function AICard({ item }: AICardProps) {
           {/* Badges */}
           {item.badges && item.badges.length > 0 && (
             <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-              {item.badges.map((badge, index) => (
+              {item.badges.map((badge: string, index: number) => (
                 <span
                   key={index}
                   className={`px-2 py-1 text-xs font-medium rounded-full ${

@@ -6,7 +6,8 @@ import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap, Edit, Send } from 'lu
 import { SimpleListingCreate } from '@marketplace/types';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
-import { PhotoUpload, AIListingAssistant } from '@/components/DynamicImports';
+import { PhotoUpload } from '@/components/PhotoUpload';
+import { AIListingAssistant } from '@/components/AIListingAssistant';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
@@ -445,13 +446,42 @@ export default function SellPage() {
     try {
       setLoading(true);
       
+      // For now, use sample images for testing
+      // TODO: Implement proper photo upload to Firebase Storage
+      const sampleImages = [
+        '/images/iphone-14.jpg',
+        '/images/macbook-m2.jpg',
+        '/images/air-max-270.avif',
+        '/images/Alexa.jpeg',
+        '/images/basketball.avif',
+        '/images/coffeeetable.jpg',
+        '/images/tennis-racket.avif',
+        '/images/yoga-mat.avif'
+      ];
+      
+      // Use sample images based on category
+      let photoUrls = formData.photos;
+      if (photoUrls.length === 0 || photoUrls.some(photo => photo.startsWith('blob:'))) {
+        // Use a sample image based on category
+        const categoryImages: Record<string, string> = {
+          'electronics': '/images/iphone-14.jpg',
+          'fashion': '/images/air-max-270.avif',
+          'home': '/images/coffeeetable.jpg',
+          'sports': '/images/basketball.avif',
+          'other': '/images/Alexa.jpeg'
+        };
+        
+        photoUrls = [categoryImages[formData.category] || sampleImages[0]];
+        console.log('📸 Using sample image for category:', formData.category, photoUrls);
+      }
+      
       // Create listing with final data (this is when it actually gets saved)
       const listingData = {
         title: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),
         category: formData.category,
-        photos: formData.photos,
+        images: photoUrls, // Use processed photo URLs
         condition: formData.condition || 'good',
         inventory: 1,
         isActive: true,
@@ -479,7 +509,7 @@ export default function SellPage() {
       router.push(`/listings/${result.id}`);
       
     } catch (error) {
-      console.error('Error updating listing:', error);
+      console.error('Error creating listing:', error);
       setErrors({ submit: 'Failed to publish listing. Please try again.' });
     } finally {
       setLoading(false);

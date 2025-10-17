@@ -5,9 +5,8 @@ import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { useChats } from '@/hooks/useChats';
 import { useChatMessages } from '@/hooks/useChatMessages';
-import dynamic from 'next/dynamic';
-const ChatList = dynamic(() => import('@/components/chat/ChatList'));
-const ChatView = dynamic(() => import('@/components/chat/ChatView'));
+import { ChatList } from '@/components/chat/ChatList';
+import { ChatView } from '@/components/chat/ChatView';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function MessagesPage() {

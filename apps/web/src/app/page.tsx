@@ -19,7 +19,10 @@ import { useRouteGuard } from '@/hooks/useRouteGuard';
 import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
 
 // Optimized imports - use dynamic imports for heavy components
-import { ListingCard, SearchBar, AIWidget, DynamicBackground } from '@/components/DynamicImports';
+import { ListingCard } from '@/components/ListingCard';
+import { SearchBar } from '@/components/SearchBar';
+import { AIWidget } from '@/components/AIWidget';
+import { DynamicBackground } from '@/components/DynamicBackground';
 
 export default function HomePage() {
   const isHomeRoute = useRouteGuard();

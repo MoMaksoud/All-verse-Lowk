@@ -553,11 +553,13 @@ const Navigation = memo(function Navigation() {
                         size="sm"
                       />
                     ) : (
-                      <DefaultAvatar
-                        name={currentUser?.displayName || undefined}
-                        email={currentUser?.email || undefined}
-                        size="sm"
-                      />
+                      <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
+                        <DefaultAvatar
+                          name={currentUser?.displayName || undefined}
+                          email={currentUser?.email || undefined}
+                          size="sm"
+                        />
+                      </Suspense>
                     )}
                     <div className="ml-3">
                       <div className="text-base font-medium text-white">
