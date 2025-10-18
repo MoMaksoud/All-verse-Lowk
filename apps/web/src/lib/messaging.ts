@@ -27,8 +27,6 @@ export const startChatFromListing = async (
       await firestoreServices.chats.sendMessage(chatId, currentUserId, options.initialMessage);
     }
     
-    showSuccess('Chat started!', 'Your message has been sent to the seller.');
-    
     // Navigate to messages page if router is provided
     if (router) {
       router.push('/messages');

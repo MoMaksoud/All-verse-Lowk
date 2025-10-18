@@ -185,32 +185,33 @@ export interface UpdatePaymentInput {
 // MESSAGES COLLECTION
 // ============================================================================
 export interface FirestoreMessage {
+  chatId: string;
   senderId: string;
-  recipientId: string;
   text: string;
-  attachments: string[];
-  createdAt: Timestamp;
-  readAt: Timestamp | null;
+  timestamp: Timestamp;
 }
 
 export interface CreateMessageInput {
+  chatId: string;
   senderId: string;
-  recipientId: string;
   text: string;
-  attachments?: string[];
-}
-
-export interface UpdateMessageInput {
-  readAt?: Timestamp | null;
 }
 
 // ============================================================================
-// CONVERSATION COLLECTION (for organizing messages)
+// CHAT COLLECTION (for organizing messages)
 // ============================================================================
-export interface FirestoreConversation {
+export interface FirestoreChat {
   participants: string[];
-  lastMessage?: FirestoreMessage;
-  lastMessageAt: Timestamp;
+  lastMessage?: {
+    senderId: string;
+    text: string;
+    timestamp: Timestamp;
+  };
+  participantProfiles?: {
+    [userId: string]: {
+      username?: string;
+    };
+  };
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -301,7 +302,7 @@ export const COLLECTIONS = {
   ORDERS: 'orders',
   PAYMENTS: 'payments',
   MESSAGES: 'messages',
-  CONVERSATIONS: 'conversations',
+  CHATS: 'chats',
   PROFILE_PHOTOS: 'profile_photos',
   LISTING_PHOTOS: 'listing_photos',
 } as const;

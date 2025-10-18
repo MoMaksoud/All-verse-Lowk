@@ -29,10 +29,6 @@ export class AIAnalysisService {
    * Analyze product photos and generate product details
    */
   static async analyzeProductPhotos(imageUrls: string[], location?: string): Promise<ProductAnalysis | undefined> {
-    console.log('🤖 Starting analyzeProductPhotos with:', imageUrls.length, 'images');
-    console.log('🤖 Image URLs:', imageUrls);
-    console.log('🤖 Location:', location || 'Not specified');
-
 
   
     const prompt = `
@@ -213,7 +209,6 @@ export class AIAnalysisService {
         };
     
       } catch (error) {
-        console.error('🤖 AI analysis failed, using fallback:', error);
         return undefined;
       }
   }

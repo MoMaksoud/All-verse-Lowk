@@ -10,6 +10,7 @@ import {
   getDocs,
   serverTimestamp 
 } from 'firebase/firestore';
+
 import { db } from './firebase';
 
 // Profile interface - updated to match new comprehensive profile schema
@@ -259,14 +260,9 @@ export class ListingService {
 // Message and Conversation interfaces
 export interface FirestoreMessage {
   id?: string;
-  conversationId: string;
+  chatId: string;
   senderId: string;
   text: string;
-  type: 'text' | 'image' | 'offer' | 'question';
-  offer?: {
-    amount: number;
-    currency: string;
-  };
   timestamp?: any;
   deliveredAt?: any;
   readAt?: any;
@@ -381,7 +377,7 @@ export class MessagesService {
       await setDoc(newMessageRef, messageToSave);
 
       // Update conversation's last message and timestamp
-      const conversationRef = doc(db, this.conversationsCollection, messageData.conversationId);
+      const conversationRef = doc(db, this.conversationsCollection, messageData.chatId);
       await updateDoc(conversationRef, {
         lastMessageId: newMessageRef.id,
         updatedAt: serverTimestamp()

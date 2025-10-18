@@ -16,9 +16,9 @@ import {
   DocumentSnapshot,
   QueryDocumentSnapshot,
   addDoc,
-  writeBatch,
   onSnapshot,
 } from 'firebase/firestore';
+
 import { db, isFirebaseConfigured } from '../firebase';
 import {
   FirestoreUser,
@@ -38,8 +38,7 @@ import {
   UpdatePaymentInput,
   FirestoreMessage,
   CreateMessageInput,
-  UpdateMessageInput,
-  FirestoreConversation,
+  FirestoreChat,
   CreateConversationInput,
   ProfilePhotoUpload,
   ListingPhotoUpload,
@@ -493,56 +492,43 @@ export class MessagesService extends BaseFirestoreService<FirestoreMessage> {
     return { id: docSnapshot.id, ...docSnapshot.data() } as FirestoreMessage & { id: string };
   }
 
-  async createMessage(conversationId: string, messageData: CreateMessageInput): Promise<string> {
+  async createMessage(chatId: string, messageData: CreateMessageInput): Promise<string> {
     const messageDataWithDefaults = {
       ...messageData,
-      attachments: messageData.attachments || [],
-      createdAt: serverTimestamp(),
-      readAt: null,
     };
 
     const docRef = await addDoc(
-      collection(db, this.collectionName, conversationId, 'threads'),
+      collection(db, this.collectionName, chatId, 'messages'),
       messageDataWithDefaults
     );
     return docRef.id;
   }
 
-  async updateMessage(conversationId: string, messageId: string, updates: UpdateMessageInput): Promise<void> {
-    const docRef = doc(db, this.collectionName, conversationId, 'threads', messageId);
-    await updateDoc(docRef, updates as any);
-  }
-
-  async getMessages(conversationId: string, limitCount: number = 50): Promise<FirestoreMessage[]> {
+  async getMessages(chatId: string, limitCount: number = 50): Promise<FirestoreMessage[]> {
     const q = query(
-      collection(db, this.collectionName, conversationId, 'threads'),
-      orderBy('createdAt', 'desc'),
+      collection(db, this.collectionName, chatId, 'messages'),
+      orderBy('timestamp', 'desc'),
       limit(limitCount)
     );
     const docs = await this.getDocs(q);
     return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreMessage & { id: string }));
   }
 
-  async markAsRead(conversationId: string, messageId: string): Promise<void> {
-    await this.updateMessage(conversationId, messageId, {
-      readAt: serverTimestamp() as any,
-    });
-  }
 }
 
 // ============================================================================
-// CONVERSATIONS SERVICE
+// Chats SERVICE
 // ============================================================================
-export class ConversationsService extends BaseFirestoreService<FirestoreConversation> {
+export class ConversationsService extends BaseFirestoreService<FirestoreChat> {
   constructor() {
-    super(COLLECTIONS.CONVERSATIONS);
+    super(COLLECTIONS.CHATS);
   }
 
-  async getConversation(id: string): Promise<FirestoreConversation | null> {
+  async getConversation(id: string): Promise<FirestoreChat | null> {
     const doc = await this.getDoc(id);
     if (!doc.exists()) return null;
     
-    return { id: doc.id, ...doc.data() } as FirestoreConversation & { id: string };
+    return { id: doc.id, ...doc.data() } as FirestoreChat & { id: string };
   }
 
   async createConversation(conversationData: CreateConversationInput): Promise<string> {
@@ -555,19 +541,12 @@ export class ConversationsService extends BaseFirestoreService<FirestoreConversa
     return await this.addDoc(conversationDataWithDefaults);
   }
 
-  async getConversationsByUser(userId: string): Promise<FirestoreConversation[]> {
+  async getConversationsByUser(userId: string): Promise<FirestoreChat[]> {
     const q = query(this.getCollection(), where('participants', 'array-contains', userId));
     const docs = await this.getDocs(q);
-    return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreConversation & { id: string }));
+    return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreChat & { id: string }));
   }
 
-  async updateLastMessage(conversationId: string, message: FirestoreMessage): Promise<void> {
-    await this.updateDoc(conversationId, {
-      lastMessage: message,
-      lastMessageAt: message.createdAt,
-      updatedAt: serverTimestamp(),
-    });
-  }
 }
 
 // ============================================================================
@@ -637,35 +616,6 @@ class ListingPhotosService extends BaseFirestoreService<ListingPhotoUpload> {
 // ============================================================================
 // CHAT SERVICE
 // ============================================================================
-export interface FirestoreChat {
-  id?: string;
-  participants: string[];
-  lastMessage?: {
-    text: string;
-    timestamp: any;
-    senderId: string;
-  };
-  // Embedded lightweight profile cache to avoid extra reads at runtime
-  participantProfiles?: {
-    [userId: string]: {
-      username?: string;
-      displayName?: string;
-      email?: string;
-      photoURL?: string;
-    };
-  };
-  createdAt?: any;
-  updatedAt?: any;
-}
-
-export interface FirestoreMessage {
-  id?: string;
-  senderId: string;
-  text: string;
-  timestamp: any;
-  chatId: string;
-}
-
 export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   constructor() {
     super('chats');
@@ -683,35 +633,10 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       // Fetch minimal profile info for both users from profiles (preferred) or users fallback
       const buildProfile = async (uid: string) => {
         const profileDoc = await getDoc(doc(db, 'profiles', uid));
-        let username: string | undefined;
-        let displayName: string | undefined;
-        let email: string | undefined;
-        let photoURL: string | undefined;
-
-        if (profileDoc.exists()) {
-          const p: any = profileDoc.data();
-          username = p?.username;
-          displayName = p?.displayName || p?.username;
-          photoURL = p?.profilePicture;
-        }
-
-        // Fallback to users collection for additional fields if needed
-        if (!displayName || !photoURL || !email) {
-          const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, uid));
-          if (userDoc.exists()) {
-            const u: any = userDoc.data();
-            displayName = displayName || u?.displayName;
-            email = email || u?.email;
-            photoURL = photoURL || u?.photoURL;
-          }
-        }
-
-        const result: any = {};
-        if (username !== undefined) result.username = username;
-        if (displayName !== undefined) result.displayName = displayName;
-        if (email !== undefined) result.email = email;
-        if (photoURL !== undefined) result.photoURL = photoURL;
-        return result;
+        const p: any = profileDoc.data();
+        const username = p?.username;
+        const photoURL = p?.profilePicture;
+        return { username, photoURL };
       };
 
       const [p1, p2] = await Promise.all([buildProfile(userId1), buildProfile(userId2)]);
@@ -722,53 +647,10 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
           [userId1]: p1,
           [userId2]: p2,
         },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp() as Timestamp,
+        updatedAt: serverTimestamp() as Timestamp,
       };
       await setDoc(chatRef, newChat);
-    } else {
-      // Backfill participantProfiles if missing
-      const data = chatSnap.data() as any;
-      if (!data.participantProfiles) {
-        const buildProfile = async (uid: string) => {
-          const profileDoc = await getDoc(doc(db, 'profiles', uid));
-          let username: string | undefined;
-          let displayName: string | undefined;
-          let email: string | undefined;
-          let photoURL: string | undefined;
-
-          if (profileDoc.exists()) {
-            const p: any = profileDoc.data();
-            username = p?.username;
-            displayName = p?.displayName || p?.username;
-            photoURL = p?.profilePicture;
-          }
-
-          const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, uid));
-          if (userDoc.exists()) {
-            const u: any = userDoc.data();
-            displayName = displayName || u?.displayName;
-            email = email || u?.email;
-            photoURL = photoURL || u?.photoURL;
-          }
-
-          const result: any = {};
-          if (username !== undefined) result.username = username;
-          if (displayName !== undefined) result.displayName = displayName;
-          if (email !== undefined) result.email = email;
-          if (photoURL !== undefined) result.photoURL = photoURL;
-          return result;
-        };
-
-        const [p1, p2] = await Promise.all([buildProfile(userId1), buildProfile(userId2)]);
-        await updateDoc(chatRef, {
-          participantProfiles: {
-            [userId1]: p1,
-            [userId2]: p2,
-          },
-          updatedAt: serverTimestamp(),
-        });
-      }
     }
     
     return chatId;
@@ -787,7 +669,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   }
 
   // Update last message in chat
-  async updateLastMessage(chatId: string, message: { text: string; senderId: string; timestamp: any }): Promise<void> {
+  async updateLastMessage(chatId: string, message: { text: string; senderId: string; timestamp: Timestamp }): Promise<void> {
     const chatRef = doc(db, this.collectionName, chatId);
     await updateDoc(chatRef, {
       lastMessage: message,
@@ -799,10 +681,10 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   async sendMessage(chatId: string, senderId: string, text: string): Promise<string> {
     const messageRef = doc(collection(db, this.collectionName, chatId, 'messages'));
     const messageData: FirestoreMessage = {
+      chatId,
       senderId,
       text,
-      timestamp: serverTimestamp(),
-      chatId,
+      timestamp: serverTimestamp() as Timestamp,
     };
     
     await setDoc(messageRef, messageData);
@@ -811,7 +693,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     await this.updateLastMessage(chatId, {
       text,
       senderId,
-      timestamp: messageData.timestamp,
+      timestamp: serverTimestamp() as Timestamp,
     });
     
     return messageRef.id;
@@ -826,7 +708,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    })) as FirestoreMessage[];
+    })) as unknown as FirestoreMessage[];
   }
 
   // Subscribe to chat messages (real-time)
@@ -838,7 +720,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       const messages = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as FirestoreMessage[];
+      })) as unknown as FirestoreMessage[];
       callback(messages);
     });
   }
@@ -855,7 +737,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       const chats = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as FirestoreChat[];
+      })) as unknown as FirestoreChat[];
       callback(chats);
     });
   }
