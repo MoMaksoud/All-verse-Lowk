@@ -9,35 +9,34 @@ import { PhotoItem, UploadStatus, isCloudUrl } from '@/types/photos';
 import { v4 as uuidv4 } from 'uuid';
 
 interface PhotoUploadProps {
-  onUpload: (urls: string[]) => void;
-  onRemove?: (index: number) => void;
-  maxPhotos?: number;
-  existingPhotos?: string[];
+  uid: string;
+  listingId: string;
+  max?: number;
+  onChange?: (urls: string[]) => void;
+  initial?: string[];
   className?: string;
   type?: 'profile' | 'listing';
-  listingId?: string;
 }
 
 export const PhotoUpload: React.FC<PhotoUploadProps> = ({
-  onUpload,
-  onRemove,
-  maxPhotos = 1,
-  existingPhotos = [],
-  className = '',
-  type = 'profile',
+  uid,
   listingId,
+  max = 10,
+  onChange,
+  initial = [],
+  className = '',
+  type = 'listing',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
-  const { currentUser } = useAuth();
   const [items, setItems] = useState<PhotoItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const prevUrlsRef = useRef<string[]>([]);
 
   // Initialize items from existing photos
   useEffect(() => {
-    if (existingPhotos.length > 0) {
-      const existingItems: PhotoItem[] = existingPhotos.map((url, index) => ({
+    if (initial.length > 0) {
+      const existingItems: PhotoItem[] = initial.map((url, index) => ({
         id: `existing-${index}`,
         preview: url,
         url: url,
@@ -45,7 +44,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       }));
       setItems(existingItems);
     }
-  }, [existingPhotos]);
+  }, [initial]);
 
   // Memoize the URLs to prevent unnecessary re-renders
   const cloudUrls = useMemo(() => {
@@ -56,28 +55,28 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
   // Emit only HTTPS URLs upward when they actually change
   useEffect(() => {
-    if (!onUpload) return;
+    if (!onChange) return;
     
-    // Only call onUpload if URLs have actually changed
+    // Only call onChange if URLs have actually changed
     const currentUrls = cloudUrls;
     const prevUrls = prevUrlsRef.current;
     
     if (currentUrls.length !== prevUrls.length || 
         currentUrls.some((url, index) => url !== prevUrls[index])) {
       prevUrlsRef.current = currentUrls;
-      onUpload(currentUrls);
+      onChange(currentUrls);
     }
-  }, [cloudUrls, onUpload]);
+  }, [cloudUrls, onChange]);
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    if (!currentUser?.uid || !listingId) {
+    if (!uid || !listingId) {
       console.error('❌ Missing user ID or listing ID for photo upload');
       return;
     }
 
     const fileArray = Array.from(files);
-    const validFiles = fileArray.slice(0, Math.max(0, maxPhotos - items.length));
+    const validFiles = fileArray.slice(0, Math.max(0, max - items.length));
 
     if (validFiles.length === 0) {
       return;
@@ -98,7 +97,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     for (const item of newItems) {
       try {
         const { url, storagePath } = await uploadListingPhotoFile({
-          uid: currentUser.uid,
+          uid,
           listingId,
           file: item.file!,
         });
@@ -119,7 +118,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     }
 
     setIsUploading(false);
-  }, [currentUser?.uid, listingId, maxPhotos, items.length]);
+  }, [uid, listingId, max, items.length]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -145,12 +144,9 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
   const handleRemovePhoto = useCallback((index: number) => {
     setItems(prev => prev.filter((_, i) => i !== index));
-    if (onRemove) {
-      onRemove(index);
-    }
-  }, [onRemove]);
+  }, []);
 
-  const remainingSlots = maxPhotos - items.length;
+  const remainingSlots = max - items.length;
   const hasUploadingItems = items.some(i => i.status === 'uploading');
   const hasErrorItems = items.some(i => i.status === 'error');
 
@@ -172,7 +168,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp"
             multiple={type === 'listing'}
             onChange={(e) => handleFiles(e.target.files)}
             className="hidden"
@@ -199,7 +195,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             
             <div className="text-xs text-gray-500">
               {type === 'profile' ? 'Profile picture' : `Up to ${remainingSlots} photos`}
-              {' '}(PNG, JPG, WebP up to 5MB)
+              {' '}(PNG, JPG, WebP up to 5MB each)
             </div>
           </div>
         </div>

@@ -521,12 +521,11 @@ export default function SellPage() {
                 Upload Your Item Photos
               </label>
               <PhotoUpload
-                type="listing"
-                listingId={listingId} // Use the listing ID for uploads
-                maxPhotos={10}
-                existingPhotos={photoUrls}
-                onUpload={handlePhotoChange}
-                onRemove={handleRemovePhoto}
+                uid={currentUser.uid}
+                listingId={listingId || ''}
+                max={10}
+                initial={[]}
+                onChange={handlePhotoChange}
                 className="max-w-2xl mx-auto"
               />
               {errors.photos && <p className="text-red-400 text-sm mt-1">{errors.photos}</p>}

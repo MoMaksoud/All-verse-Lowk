@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, Suspense, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Filter, Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart } from 'lucide-react';
+import { Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart } from 'lucide-react';
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
@@ -12,7 +12,6 @@ import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
 import { useStartChatFromListing } from '@/lib/messaging';
 
 function ListingsContent() {
@@ -184,8 +183,6 @@ function ListingsContent() {
     }
   }, [currentUser, showSuccess, showError]);
 
-  const memoizedListings = useMemo(() => listings, [listings]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950">
@@ -274,11 +271,11 @@ function ListingsContent() {
             </div>
 
             {/* Listings Grid */}
-            {memoizedListings.length > 0 ? (
+            {listings.length > 0 ? (
               <>
                 {viewMode === 'grid' ? (
                   <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {memoizedListings.map((listing) => (
+                    {listings.map((listing) => (
                       <ListingCard
                         key={listing.id}
                         listing={listing}
@@ -287,7 +284,7 @@ function ListingsContent() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {memoizedListings.map((listing) => (
+                    {listings.map((listing) => (
                       <div key={listing.id} className="listing-container bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:bg-dark-700 transition-all duration-200 relative">
                         <Link href={`/listings/${listing.id}`} className="group">
                           <div className="flex">
@@ -331,7 +328,7 @@ function ListingsContent() {
                                   <span className="capitalize">{listing.category}</span>
                                   <span>•</span>
                                   <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">
-                                    Like New
+                                    {listing.condition || 'Good'}
                                   </span>
                                 </div>
                               </div>

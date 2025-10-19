@@ -343,4 +343,47 @@ class StorageService {
   }
 }
 
+// Crop and upload helpers for listing photos
+export async function uploadCroppedPhoto(params: {
+  uid: string;
+  listingId: string;
+  blob: Blob;
+  ext?: "jpg" | "jpeg" | "png" | "webp";
+}) {
+  const { uid, listingId, blob, ext = "jpg" } = params;
+  const filename = `${crypto.randomUUID()}.${ext}`;
+  const path = `listing-photos/${uid}/${listingId}/${filename}`;
+  const r = ref(storage, path);
+  await uploadBytes(r, blob, { contentType: `image/${ext}` });
+  const url = await getDownloadURL(r);
+  return { url, storagePath: path };
+}
+
+// Crop utility using canvas (no heavy deps)
+export async function cropImageToBlob(
+  imageSrc: string,
+  crop: { x: number; y: number; width: number; height: number },
+  opts?: { mime?: string; quality?: number }
+): Promise<Blob> {
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.crossOrigin = "anonymous";
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = imageSrc;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(crop.width));
+  canvas.height = Math.max(1, Math.round(crop.height));
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(
+    img,
+    crop.x, crop.y, crop.width, crop.height,
+    0, 0, canvas.width, canvas.height
+  );
+  const mime = opts?.mime ?? "image/jpeg";
+  const quality = opts?.quality ?? 0.92;
+  return await new Promise((resolve) => canvas.toBlob((b) => resolve(b!), mime, quality));
+}
+
 export default StorageService;

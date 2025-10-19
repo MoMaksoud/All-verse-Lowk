@@ -3,14 +3,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Heart, Share2, MapPin, Eye, Star, MessageCircle, DollarSign, X, Edit, Trash2, ArrowLeft, Clock, Tag } from 'lucide-react';
+import { Heart, MapPin, Star, MessageCircle, X, ArrowLeft, Clock, Tag } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Navigation } from '@/components/Navigation';
 import { SellerInfo } from '@/components/SellerInfo';
 import { ListingActions } from '@/components/ListingActions';
 import { PriceSuggestionModal } from '@/components/PriceSuggestionModal';
+import ShareMenu from '@/components/ShareMenu';
 import { Card } from '@/components/ui/Card';
+import { ListingGallery } from '@/components/ListingGallery';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
@@ -42,8 +44,9 @@ export default function ListingDetailPage() {
   const { startChat } = useStartChatFromListing();
   const [listing, setListing] = useState<SimpleListing | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [showPricePanel, setShowPricePanel] = useState(false);
+  
+  // Owner check
+  const isOwner = currentUser?.uid && listing?.sellerId && currentUser.uid === listing.sellerId;
   const [isFavorited, setIsFavorited] = useState(() => {
     if (typeof window !== 'undefined' && params.id) {
       try {
@@ -57,8 +60,6 @@ export default function ListingDetailPage() {
   });
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState('');
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPriceSuggestionModal, setShowPriceSuggestionModal] = useState(false);
   const [priceSuggestion, setPriceSuggestion] = useState('');
@@ -113,13 +114,8 @@ export default function ListingDetailPage() {
     }
   }, [isFavorited, listing]);
 
-  const handleShareClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setShowShareModal(true);
-  }, []);
-
-  const handleMessageClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleMessageClick = useCallback((e?: React.MouseEvent) => {
+    e?.preventDefault();
     setShowMessageModal(true);
   }, []);
 
@@ -229,11 +225,6 @@ export default function ListingDetailPage() {
     }
   }, [listing, currentUser]);
 
-  const copyToClipboard = useCallback((text: string) => {
-    navigator.clipboard.writeText(text);
-    showSuccess('Link copied to clipboard!');
-  }, []);
-
   const handleDeleteListing = useCallback(async () => {
     if (!listing || !currentUser) return;
     
@@ -303,12 +294,10 @@ export default function ListingDetailPage() {
               Back
             </button>
             <div className="flex items-center gap-4">
-              <button
-                onClick={handleShareClick}
-                className="p-2 bg-dark-800 rounded-lg hover:bg-dark-700 transition-colors"
-              >
-                <Share2 className="w-5 h-5 text-gray-300" />
-              </button>
+              <ShareMenu
+                listing={listing}
+                align="right"
+              />
               <button
                 onClick={handleFavoriteClick}
                 className={`p-2 rounded-lg transition-colors ${
@@ -328,52 +317,7 @@ export default function ListingDetailPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Photo Gallery */}
             <Card>
-              <div className="relative aspect-[4/3] bg-zinc-800 max-w-2xl mx-auto rounded-xl overflow-hidden">
-                {listing.photos && listing.photos.length > 0 && listing.photos[selectedImage] ? (
-                  <Image
-                    src={listing.photos[selectedImage]}
-                    alt={listing.title}
-                    fill
-                    className="object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'https://via.placeholder.com/600x450/1e293b/64748b?text=No+Image';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-zinc-800">
-                    <div className="text-center text-zinc-400">
-                      <div className="text-5xl mb-3">📦</div>
-                      <div className="text-base">No Image Available</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Thumbnail Navigation */}
-              {listing.photos && listing.photos.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto justify-center">
-                  {listing.photos.map((image: string, index: number) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImage(index)}
-                      className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 ${
-                        selectedImage === index ? 'border-blue-500' : 'border-zinc-700'
-                      }`}
-                    >
-                      <img
-                        src={image}
-                        alt={`${listing.title} - Image ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = 'https://via.placeholder.com/64x64/1e293b/64748b?text=?';
-                        }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
+              <ListingGallery photos={listing.photos || []} title={listing.title} />
             </Card>
 
             {/* Listing Details */}
@@ -391,43 +335,36 @@ export default function ListingDetailPage() {
               </div>
             </Card>
 
-            {/* Seller Information */}
-            <SellerInfo
-              seller={{
-                name: "Marketplace User",
-                since: "2024",
-                rating: 4.8,
-                reviews: 127,
-                id: listing.sellerId
-              }}
-              onContactClick={() => handleMessageClick({} as React.MouseEvent)}
-            />
           </div>
 
           {/* Actions Box - Right Side */}
           <div className="space-y-6">
             <ListingActions
-              price={listing.price}
+              listing={listing}
               onBuyNow={() => addToCart()}
               onSuggestPrice={() => handleSuggestPrice()}
-              onMessageSeller={() => handleMessageClick({} as React.MouseEvent)}
-              onEditListing={() => setShowEditModal(true)}
+              onMessageSeller={() => handleMessageClick()}
+              onEditListing={() => router.push(`/listings/${listing.id}/edit`)}
               onDeleteListing={() => setShowDeleteModal(true)}
               addingToCart={addingToCart}
               suggestingPrice={priceSuggestionLoading}
+              isOwner={isOwner}
             />
-          </div>
-        </div>
-
-        {/* Date and Rating - Bottom Right */}
-        <div className="absolute bottom-8 right-8 w-64 text-sm text-gray-400 bg-dark-800/80 backdrop-blur-sm rounded-lg px-4 py-2 border border-dark-700 relative">
-          <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 text-yellow-400" />
-            <span>4.5 (12 reviews)</span>
-          </div>
-          <div className="absolute bottom-2 right-4 flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            <span>{formatRelativeTime(listing.createdAt)}</span>
+            
+            {/* Seller Information moved to right sidebar */}
+            {!isOwner && (
+              <SellerInfo
+                seller={{
+                  name: "Marketplace User",
+                  since: "2024",
+                  rating: 4.8,
+                  reviews: 127,
+                  id: listing.sellerId
+                }}
+                onContactClick={() => handleMessageClick()}
+                currentUserId={currentUser?.uid}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -463,36 +400,6 @@ export default function ListingDetailPage() {
                 className="btn btn-primary flex-1"
               >
                 Send Message
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showShareModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl border border-dark-700 p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Share Listing</h3>
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <button
-                onClick={() => copyToClipboard(window.location.href)}
-                className="w-full btn btn-outline text-left"
-              >
-                Copy Link
-              </button>
-              <button
-                onClick={() => copyToClipboard(`${listing.title} - ${formatCurrency(listing.price)}`)}
-                className="w-full btn btn-outline text-left"
-              >
-                Copy Title & Price
               </button>
             </div>
           </div>
