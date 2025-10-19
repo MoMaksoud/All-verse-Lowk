@@ -237,85 +237,6 @@ class StorageService {
     return this.uploadFile(file, path, userMetadata, onProgress);
   }
 
-  // Get all files uploaded by a specific user
-  static async getUserFiles(userId: string): Promise<UploadResult[]> {
-    try {
-      if (!storage) {
-        throw new Error('Firebase Storage is not initialized');
-      }
-
-      // This would require listing files and filtering by metadata
-      // For now, we'll return an empty array as Firebase Storage doesn't have
-      // a direct way to query by custom metadata
-      console.log('📋 Getting files for user:', userId);
-      
-      // TODO: Implement file listing with metadata filtering
-      // This would require storing file references in Firestore for efficient querying
-      
-      return [];
-    } catch (error) {
-      console.error('Error getting user files:', error);
-      throw new Error(`Failed to get user files: ${error}`);
-    }
-  }
-
-  // List all photos for a specific listing
-  static async listListingPhotos(userId: string, listingId: string): Promise<string[]> {
-    try {
-      if (!storage) {
-        throw new Error('Firebase Storage is not initialized');
-      }
-
-      const { listAll, ref } = await import('firebase/storage');
-      const dirRef = ref(storage, `listing-photos/${userId}/${listingId}`);
-      const res = await listAll(dirRef);
-      
-      // Get download URLs for all files
-      const urls = await Promise.all(
-        res.items.map(async (itemRef) => {
-          try {
-            return await getDownloadURL(itemRef);
-          } catch (error) {
-            console.error('Error getting download URL for:', itemRef.fullPath, error);
-            return null;
-          }
-        })
-      );
-
-      return urls.filter(url => url !== null) as string[];
-    } catch (error) {
-      console.error('Error listing listing photos:', error);
-      throw new Error(`Failed to list listing photos: ${error}`);
-    }
-  }
-
-  // Delete a specific photo from a listing
-  static async deleteListingPhoto(userId: string, listingId: string, imageId: string): Promise<void> {
-    try {
-      if (!storage) {
-        throw new Error('Firebase Storage is not initialized');
-      }
-
-      // Find the file by listing the directory and matching the imageId
-      const { listAll, ref } = await import('firebase/storage');
-      const dirRef = ref(storage, `listing-photos/${userId}/${listingId}`);
-      const res = await listAll(dirRef);
-      
-      const fileToDelete = res.items.find(item => 
-        item.name.startsWith(imageId)
-      );
-
-      if (fileToDelete) {
-        await deleteObject(fileToDelete);
-        console.log('✅ Deleted photo:', fileToDelete.fullPath);
-      } else {
-        throw new Error(`Photo with ID ${imageId} not found`);
-      }
-    } catch (error) {
-      console.error('Error deleting listing photo:', error);
-      throw new Error(`Failed to delete listing photo: ${error}`);
-    }
-  }
 
   // Delete all photos for a specific listing
   static async deleteAllListingPhotos(userId: string, listingId: string): Promise<void> {
@@ -345,25 +266,6 @@ class StorageService {
     }
   }
 
-  // Get file metadata including user information
-  static async getFileMetadata(path: string): Promise<any> {
-    try {
-      if (!storage) {
-        throw new Error('Firebase Storage is not initialized');
-      }
-
-      const storageRef = ref(storage, path);
-      const metadata = await getMetadata(storageRef);
-      
-      return {
-        ...metadata,
-        customMetadata: metadata.customMetadata || {}
-      };
-    } catch (error) {
-      console.error('Error getting file metadata:', error);
-      throw new Error(`Failed to get file metadata: ${error}`);
-    }
-  }
 
   // Delete a file from Firebase Storage
   static async deleteFile(path: string): Promise<void> {
@@ -380,19 +282,6 @@ class StorageService {
     }
   }
 
-  // Generate a unique filename
-  static generateUniqueFilename(originalName: string, prefix?: string): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    const extension = originalName.split('.').pop();
-    const baseName = originalName.split('.').slice(0, -1).join('.');
-    
-    if (prefix) {
-      return `${prefix}_${timestamp}_${random}.${extension}`;
-    }
-    
-    return `${baseName}_${timestamp}_${random}.${extension}`;
-  }
 
   // Validate file before upload
   static validateFile(file: File, options: {

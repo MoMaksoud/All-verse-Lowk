@@ -254,34 +254,6 @@ export function getAutocompleteSuggestions(query: string, limit: number = 8): Se
   return uniqueSuggestions;
 }
 
-// Get trending searches
-export function getTrendingSearches(limit: number = 5): SearchSuggestion[] {
-  return searchDatabase
-    .filter(query => query.isTrending)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-    .map(query => ({
-      text: query.query,
-      type: 'trending' as const,
-      count: query.count,
-      category: query.category
-    }));
-}
-
-// Get popular searches by category
-export function getPopularSearchesByCategory(category: string, limit: number = 5): SearchSuggestion[] {
-  return searchDatabase
-    .filter(query => query.category === category)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit)
-    .map(query => ({
-      text: query.query,
-      type: 'popular' as const,
-      count: query.count,
-      category: query.category
-    }));
-}
-
 // Track a search (for analytics)
 export function trackSearch(query: string, category?: string) {
   // In a real app, this would send data to analytics service

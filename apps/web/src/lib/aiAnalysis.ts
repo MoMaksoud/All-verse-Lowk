@@ -28,13 +28,7 @@ export class AIAnalysisService {
   /**
    * Analyze product photos and generate product details
    */
-  static async analyzeProductPhotos(imageUrls: string[], location?: string): Promise<ProductAnalysis | undefined> {
-    console.log('🤖 Starting analyzeProductPhotos with:', imageUrls.length, 'images');
-    console.log('🤖 Image URLs:', imageUrls);
-    console.log('🤖 Location:', location || 'Not specified');
-
-
-  
+  static async analyzeProductPhotos(imageUrls: string[]): Promise<ProductAnalysis | undefined> {
     const prompt = `
       You are a VISUAL PRODUCT LISTER for ALL VERSE GPT. Your job is to (A) extract only what is visibly true from the image(s), then (B) craft a concise, buyer-ready listing that a human can post immediately, with clearly marked placeholders for any info not visible (e.g., storage, battery %, carrier).
       LOCATION CONTEXT: This item is being sold in the United States. Consider US regional pricing differences and local market conditions when suggesting prices. Focus on US marketplace data (eBay, Facebook Marketplace, Craigslist, OfferUp, etc.).
@@ -145,7 +139,7 @@ export class AIAnalysisService {
         - If not exact but clearly within a narrow family (e.g., iPhone 16 Pro vs 15 Pro) → set evidence.model_range and include decisive_cues.
       5) Compose the listing:
         - Title: "Brand Model (Variant) — [enter storage]GB — [enter carrier/unlocked]"
-        - Description (2–5 lines): What it is, visible highlights, honest condition, transaction details (meetup/cash). Do NOT include usage duration placeholders.
+        - Description (2-5 lines): What it is, visible highlights, honest condition, transaction details (meetup/cash). Do NOT include usage duration placeholders.
         - Bullets: Short, scannable, with placeholders for unknowns.
       6) Never invent numbers or claims. Use placeholders instead.
       7) Consider US regional pricing factors for the location when suggesting prices. Use US marketplace data only.
@@ -175,11 +169,9 @@ export class AIAnalysisService {
       });
 
       const text = response?.text ?? '';
-      console.log('🤖 Raw AI response:', text);
 
       // Parse the JSON response
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-      console.log('🤖 Cleaned AI response:', cleanText);
       
       let analysis;
       try {
@@ -213,7 +205,6 @@ export class AIAnalysisService {
         };
     
       } catch (error) {
-        console.error('🤖 AI analysis failed, using fallback:', error);
         return undefined;
       }
   }

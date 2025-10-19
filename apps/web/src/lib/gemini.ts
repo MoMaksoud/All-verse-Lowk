@@ -294,16 +294,6 @@ export class GeminiService {
   }
 
   /**
-   * Generate a short welcome message
-   */
-  static getWelcomeMessage(): ChatResponse {
-    return {
-      message: 'Hi! I\'m here to help you find amazing deals! 🛍️\n\nFind Deals\nTrending Items\nBrowse Categories\nPopular Items\n\nWhat are you looking for?',
-      success: true
-    };
-  }
-
-  /**
    * Generate a marketplace-specific response
    */
   static async generateMarketplaceResponse(userMessage: string, context?: any): Promise<ChatResponse> {
@@ -486,9 +476,11 @@ export class GeminiService {
         Return only the suggestions, one per line, without numbering or bullets.
               `;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const result = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: prompt,
+      });
+      const text = result.text ?? '';
 
       return text.split('\n')
         .map(s => s.trim())
@@ -613,9 +605,11 @@ export class GeminiService {
     `;
 
     try {
-      const result = await model.generateContent(listingsPrompt);
-      const response = await result.response;
-      const text = response.text();
+      const result = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: listingsPrompt,
+      });
+      const text = result.text ?? '';
 
       // Clean and parse JSON response
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();

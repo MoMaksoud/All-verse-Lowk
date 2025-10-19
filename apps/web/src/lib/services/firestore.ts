@@ -12,11 +12,9 @@ import {
   limit,
   startAfter,
   serverTimestamp,
-  Timestamp,
   DocumentSnapshot,
   QueryDocumentSnapshot,
   addDoc,
-  writeBatch,
   onSnapshot,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase';
@@ -658,7 +656,7 @@ export interface FirestoreChat {
   updatedAt?: any;
 }
 
-export interface FirestoreMessage {
+export interface FirestoreChatMessage {
   id?: string;
   senderId: string;
   text: string;
@@ -798,7 +796,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   // Send a message
   async sendMessage(chatId: string, senderId: string, text: string): Promise<string> {
     const messageRef = doc(collection(db, this.collectionName, chatId, 'messages'));
-    const messageData: FirestoreMessage = {
+    const messageData: FirestoreChatMessage = {
       senderId,
       text,
       timestamp: serverTimestamp(),
@@ -818,7 +816,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   }
 
   // Get messages for a chat
-  async getChatMessages(chatId: string): Promise<FirestoreMessage[]> {
+  async getChatMessages(chatId: string): Promise<FirestoreChatMessage[]> {
     const messagesRef = collection(db, this.collectionName, chatId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
     
@@ -826,11 +824,11 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    })) as FirestoreMessage[];
+    })) as FirestoreChatMessage[];
   }
 
   // Subscribe to chat messages (real-time)
-  subscribeToChatMessages(chatId: string, callback: (messages: FirestoreMessage[]) => void): () => void {
+  subscribeToChatMessages(chatId: string, callback: (messages: FirestoreChatMessage[]) => void): () => void {
     const messagesRef = collection(db, this.collectionName, chatId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
     
@@ -838,7 +836,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       const messages = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as FirestoreMessage[];
+      })) as FirestoreChatMessage[];
       callback(messages);
     });
   }

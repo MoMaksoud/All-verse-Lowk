@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { GeminiService } from '@/lib/gemini';
+
+// Import firestore services dynamically to avoid webpack issues
+async function getFirestoreServices() {
+  try {
+    const { firestoreServices } = await import("@/lib/services/firestore");
+    return firestoreServices;
+  } catch (err) {
+    console.error('Failed to import firestore services:', err);
+    throw new Error('Database services not available');
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +23,8 @@ export async function POST(request: NextRequest) {
     const userMessage = message.trim();
 
     // Get all listings for context
-    const listingsResponse = await db.list();
-    const listings = listingsResponse.data;
+    const firestoreServices = await getFirestoreServices();
+    const listings = await firestoreServices.listings.getAllListings();
 
     // Use Gemini AI to generate intelligent responses
     const aiResponse = await GeminiService.generateMarketplaceResponse(userMessage, {

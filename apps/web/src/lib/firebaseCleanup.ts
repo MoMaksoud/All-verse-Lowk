@@ -171,44 +171,4 @@ export class FirebaseCleanupService {
       };
     }
   }
-
-  /**
-   * Clean up orphaned files from Firebase Storage
-   * This can be used for maintenance tasks
-   * @param userId - The ID of the user (optional, for user-specific cleanup)
-   * @returns Promise with cleanup results
-   */
-  static async cleanupOrphanedFiles(userId?: string): Promise<{
-    success: boolean;
-    deletedFiles: number;
-    errors: string[];
-  }> {
-    const errors: string[] = [];
-    let deletedFiles = 0;
-
-    try {
-      console.log('🧹 Starting orphaned files cleanup...');
-      
-      // This would require implementing a more sophisticated cleanup logic
-      // For now, we'll just log that this feature is available
-      console.log('⚠️ Orphaned files cleanup not yet implemented');
-      
-      return {
-        success: true,
-        deletedFiles,
-        errors
-      };
-
-    } catch (err) {
-      const errorMsg = `Failed to cleanup orphaned files: ${err instanceof Error ? err.message : 'Unknown error'}`;
-      console.error('❌ Error:', errorMsg);
-      errors.push(errorMsg);
-      
-      return {
-        success: false,
-        deletedFiles,
-        errors
-      };
-    }
-  }
 }

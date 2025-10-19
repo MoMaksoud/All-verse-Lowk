@@ -16,8 +16,7 @@ import {
   Plus, 
   Minus, 
   ArrowRight,
-  Loader2,
-  AlertCircle
+  Loader2
 } from 'lucide-react';
 
 interface CartItem {

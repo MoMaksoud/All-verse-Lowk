@@ -23,7 +23,6 @@ export interface GooglePlaceDetails {
     short_name: string;
     types: string[];
   }>;
-  name: string;
 }
 
 class GoogleMapsService {
@@ -163,7 +162,7 @@ class GoogleMapsService {
         this.placesService!.getDetails(
           {
             placeId,
-            fields: ['place_id', 'formatted_address', 'geometry', 'address_components', 'name'],
+            fields: ['place_id', 'formatted_address', 'geometry', 'address_components'],
           },
           (place: any, status: any) => {
             if (status === (window as any).google?.maps?.places?.PlacesServiceStatus?.OK && place) {
@@ -177,7 +176,6 @@ class GoogleMapsService {
                   },
                 },
                 address_components: place.address_components || [],
-                name: place.name || '',
               });
             } else {
               resolve(null);

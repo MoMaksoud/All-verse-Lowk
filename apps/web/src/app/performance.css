@@ -1,84 +1,182 @@
-/* Performance-optimized CSS */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Performance-specific CSS optimizations */
 
-/* Optimize animations for better performance */
-@layer utilities {
-  .animate-smooth {
-    animation: smooth 0.3s ease-in-out;
-  }
-  
-  .transition-fast {
-    transition: all 0.15s ease-in-out;
-  }
-  
-  .transition-smooth {
-    transition: all 0.3s ease-in-out;
-  }
-  
-  .will-change-transform {
-    will-change: transform;
-  }
-  
-  .will-change-opacity {
-    will-change: opacity;
-  }
-  
-  .gpu-accelerated {
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    perspective: 1000px;
-  }
+/* Performance optimizations for aurora effects */
+.aurora-gradient,
+.aurora-gradient::before,
+.aurora-gradient::after {
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
-@keyframes smooth {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* GPU acceleration for smooth animations */
+.animated-gradient,
+.animated-gradient::before,
+.animated-gradient::after {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
 }
 
-/* Optimize scrolling */
-html {
+.animated-line,
+.animated-line::after {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Optimize transitions for better performance */
+.listing-container {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, box-shadow;
+}
+
+.listing-container:hover {
+  will-change: transform, box-shadow;
+}
+
+/* Optimize image rendering */
+.listing-container .image-section img {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Performance utilities */
+.performance-optimized {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Reduce repaints and reflows */
+.smooth-scroll {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Reduce layout shifts */
-img {
-  max-width: 100%;
-  height: auto;
+/* Optimize text rendering */
+.text-optimized {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Optimize focus states */
-*:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+/* Performance-focused animations */
+@keyframes optimizedFadeIn {
+  from {
+    opacity: 0;
+    transform: translateZ(0) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateZ(0) translateY(0);
+  }
 }
 
-/* Performance-optimized gradients */
-.text-gradient {
+.optimized-fade-in {
+  animation: optimizedFadeIn 0.3s ease-out;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Reduce motion for accessibility and performance */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-gradient,
+  .aurora-gradient::before,
+  .aurora-gradient::after,
+  .animated-gradient,
+  .animated-gradient::before,
+  .animated-gradient::after,
+  .animated-line,
+  .animated-line::after {
+    animation: none !important;
+    transform: none !important;
+  }
+  
+  .listing-container:hover {
+    transform: none !important;
+  }
+  
+  .listing-container .image-section img:hover {
+    transform: none !important;
+  }
+}
+
+/* Critical rendering path optimizations */
+.critical-content {
+  contain: layout style paint;
+}
+
+.non-critical-content {
+  contain: layout style;
+}
+
+/* Optimize for mobile performance */
+@media (max-width: 768px) {
+  .aurora-gradient,
+  .aurora-gradient::before,
+  .aurora-gradient::after {
+    opacity: 0.5;
+  }
+  
+  .animated-line::after {
+    opacity: 0.3;
+  }
+  
+  .listing-container {
+    transform: none;
+    will-change: auto;
+  }
+  
+  .listing-container:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+}
+
+/* Performance monitoring styles */
+.performance-indicator {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
   color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  z-index: 9999;
+  display: none;
 }
 
-/* Optimize dark mode transitions */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-  }
+.performance-indicator.show {
+  display: block;
 }
 
-/* Optimize print styles */
-@media print {
-  * {
-    background: transparent !important;
-    color: black !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-  }
+/* Optimize font loading */
+.font-display-optimized {
+  font-display: swap;
+}
+
+/* Reduce layout thrashing */
+.stable-layout {
+  contain: layout;
+}
+
+/* Optimize for Core Web Vitals */
+.lcp-optimized {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+.cls-optimized {
+  contain: layout style;
+}
+
+.fid-optimized {
+  touch-action: manipulation;
 }

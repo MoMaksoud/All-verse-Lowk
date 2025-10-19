@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { firestoreServices, FirestoreMessage } from '@/lib/services/firestore';
+import { firestoreServices, FirestoreChatMessage } from '@/lib/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 
-export interface MessageWithUser extends FirestoreMessage {
+export interface MessageWithUser extends FirestoreChatMessage {
   sender?: {
     id: string;
     name: string;

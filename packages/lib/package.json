@@ -11,9 +11,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@marketplace/types": "workspace:*",
-    "clsx": "^2.0.0",
-    "zod": "^3.22.0"
+    "@marketplace/types": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.3.0"

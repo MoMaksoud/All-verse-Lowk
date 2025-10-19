@@ -102,7 +102,6 @@ export function formatLocation(location?: { city: string; state: string; zipCode
   
   return parts.join(', ');
 }
-
 /**
  * Check if a listing is within the specified distance from a location
  * @param listing Listing object with location
@@ -126,3 +125,4 @@ export function isWithinDistance(
   
   return distance <= maxDistance;
 }
+
