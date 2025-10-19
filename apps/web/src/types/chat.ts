@@ -13,6 +13,8 @@ export interface Conversation {
   updatedAt: Date;
   lastMessagePreview: string;
   isDraft: boolean;
+  tokenCount?: number;
+  summary?: string;
 }
 
 export interface Message {

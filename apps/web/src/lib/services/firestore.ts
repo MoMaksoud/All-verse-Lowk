@@ -16,6 +16,7 @@ import {
   QueryDocumentSnapshot,
   addDoc,
   onSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
 
 import { db, isFirebaseConfigured } from '../firebase';
@@ -227,6 +228,11 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
   async getActiveListings(): Promise<FirestoreListing[]> {
     const q = query(this.getCollection(), where('isActive', '==', true));
     const docs = await this.getDocs(q);
+    return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreListing & { id: string }));
+  }
+
+  async getAllListings(): Promise<FirestoreListing[]> {
+    const docs = await this.getDocs(this.getCollection());
     return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreListing & { id: string }));
   }
 
@@ -615,38 +621,6 @@ class ListingPhotosService extends BaseFirestoreService<ListingPhotoUpload> {
 // ============================================================================
 // CHAT SERVICE
 // ============================================================================
-<<<<<<< HEAD
-export interface FirestoreChat {
-  id?: string;
-  participants: string[];
-  lastMessage?: {
-    text: string;
-    timestamp: any;
-    senderId: string;
-  };
-  // Embedded lightweight profile cache to avoid extra reads at runtime
-  participantProfiles?: {
-    [userId: string]: {
-      username?: string;
-      displayName?: string;
-      email?: string;
-      photoURL?: string;
-    };
-  };
-  createdAt?: any;
-  updatedAt?: any;
-}
-
-export interface FirestoreChatMessage {
-  id?: string;
-  senderId: string;
-  text: string;
-  timestamp: any;
-  chatId: string;
-}
-
-=======
->>>>>>> 983c5098455f610a11d5a4733237edb0d9d95047
 export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   constructor() {
     super('chats');
@@ -711,12 +685,8 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   // Send a message
   async sendMessage(chatId: string, senderId: string, text: string): Promise<string> {
     const messageRef = doc(collection(db, this.collectionName, chatId, 'messages'));
-<<<<<<< HEAD
-    const messageData: FirestoreChatMessage = {
-=======
     const messageData: FirestoreMessage = {
       chatId,
->>>>>>> 983c5098455f610a11d5a4733237edb0d9d95047
       senderId,
       text,
       timestamp: serverTimestamp() as Timestamp,
@@ -735,7 +705,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   }
 
   // Get messages for a chat
-  async getChatMessages(chatId: string): Promise<FirestoreChatMessage[]> {
+  async getChatMessages(chatId: string): Promise<FirestoreMessage[]> {
     const messagesRef = collection(db, this.collectionName, chatId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
     
@@ -743,15 +713,11 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-<<<<<<< HEAD
-    })) as FirestoreChatMessage[];
-=======
     })) as unknown as FirestoreMessage[];
->>>>>>> 983c5098455f610a11d5a4733237edb0d9d95047
   }
 
   // Subscribe to chat messages (real-time)
-  subscribeToChatMessages(chatId: string, callback: (messages: FirestoreChatMessage[]) => void): () => void {
+  subscribeToChatMessages(chatId: string, callback: (messages: FirestoreMessage[]) => void): () => void {
     const messagesRef = collection(db, this.collectionName, chatId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
     
@@ -759,11 +725,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       const messages = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-<<<<<<< HEAD
-      })) as FirestoreChatMessage[];
-=======
       })) as unknown as FirestoreMessage[];
->>>>>>> 983c5098455f610a11d5a4733237edb0d9d95047
       callback(messages);
     });
   }
@@ -801,3 +763,6 @@ export const firestoreServices = {
   listingPhotos: new ListingPhotosService(),
   chats: new ChatsService(),
 };
+
+// Re-export types for convenience
+export type { FirestoreChat, FirestoreMessage } from '../types/firestore';

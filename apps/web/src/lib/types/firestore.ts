@@ -185,6 +185,7 @@ export interface UpdatePaymentInput {
 // MESSAGES COLLECTION
 // ============================================================================
 export interface FirestoreMessage {
+  id?: string;
   chatId: string;
   senderId: string;
   text: string;
@@ -201,6 +202,7 @@ export interface CreateMessageInput {
 // CHAT COLLECTION (for organizing messages)
 // ============================================================================
 export interface FirestoreChat {
+  id?: string;
   participants: string[];
   lastMessage?: {
     senderId: string;

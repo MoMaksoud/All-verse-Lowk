@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
           lastMessagePreview: data.lastMessagePreview || '',
+          isDraft: data.isDraft || false,
           tokenCount: data.tokenCount || 0,
           summary: data.summary || ''
         });
@@ -82,6 +83,7 @@ export async function GET(request: NextRequest) {
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date(),
         lastMessagePreview: data.lastMessagePreview || '',
+        isDraft: data.isDraft || false,
         tokenCount: data.tokenCount || 0,
         summary: data.summary || ''
       };
