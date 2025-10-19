@@ -25,6 +25,27 @@ export interface UploadProgress {
   percentage: number;
 }
 
+// New uploadListingPhoto function as specified
+export async function uploadListingPhotoFile(params: {
+  uid: string;
+  listingId: string;
+  file: File;
+}) {
+  const { uid, listingId, file } = params;
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const filename = `${crypto.randomUUID()}.${ext}`;
+  const storagePath = `listing-photos/${uid}/${listingId}/${filename}`;
+
+  if (!storage) {
+    throw new Error('Firebase Storage is not initialized');
+  }
+
+  const r = ref(storage, storagePath);
+  await uploadBytes(r, file, { contentType: file.type });
+  const url = await getDownloadURL(r);
+  return { url, storagePath };
+}
+
 class StorageService {
   // Upload a file to Firebase Storage with user tracking
   static async uploadFile(
@@ -35,7 +56,16 @@ class StorageService {
   ): Promise<UploadResult> {
     try {
       if (!storage) {
-        throw new Error('Firebase Storage is not initialized');
+        console.error('❌ Firebase Storage is not initialized');
+        console.error('❌ Storage object:', storage);
+        console.error('❌ Firebase config check:', {
+          apiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          projectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          authDomain: !!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          storageBucket: !!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          appId: !!process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+        });
+        throw new Error('Firebase Storage is not initialized. Please check your Firebase configuration.');
       }
 
       console.log('📤 Uploading file with user tracking:', {
@@ -89,7 +119,15 @@ class StorageService {
       };
     } catch (error) {
       console.error('❌ Error uploading file:', error);
-      throw new Error(`Failed to upload file: ${error}`);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        storage: !!storage,
+        path: path,
+        fileName: file.name,
+        fileSize: file.size
+      });
+      throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -135,31 +173,25 @@ class StorageService {
     photoIndex: number,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<UploadResult> {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      throw new Error('Listing photo must be an image file');
+    try {
+      const result = await uploadListingPhotoFile({ uid: userId, listingId, file });
+      
+      // Get file metadata for the UploadResult
+      const metadata = await getMetadata(ref(storage, result.storagePath));
+      
+      return {
+        url: result.url,
+        path: result.storagePath,
+        size: metadata.size,
+        type: metadata.contentType || file.type,
+        userId: userId,
+        userEmail: userEmail,
+        uploadedAt: new Date().toISOString(),
+      };
+    } catch (err: any) {
+      console.error('❌ Error uploading listing photo:', err);
+      throw new Error(`Failed to upload listing photo: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      throw new Error('Listing photo must be smaller than 10MB');
-    }
-
-    // Generate unique filename using crypto.randomUUID() for better uniqueness
-    const imageId = crypto.randomUUID();
-    const extension = file.name.split('.').pop() || 'jpg';
-    const filename = `${imageId}.${extension}`;
-    const path = `listing-photos/${userId}/${listingId}/${filename}`;
-
-    const userMetadata: UserMetadata = {
-      userId,
-      userEmail,
-      uploadedAt: new Date().toISOString(),
-      listingId,
-      category: 'listing-photo'
-    };
-
-    return this.uploadFile(file, path, userMetadata, onProgress);
   }
 
   // Upload listing videos

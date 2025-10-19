@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import StorageService from '@/lib/storage';
+import StorageService, { uploadListingPhotoFile } from '@/lib/storage';
 import { firestoreServices } from '@/lib/services/firestore';
 import { ListingPhotoUpload } from '@/lib/types/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
@@ -58,13 +58,11 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
-        const result = await StorageService.uploadListingPhoto(
-          file,
-          userId,
-          userEmail,
+        const result = await uploadListingPhotoFile({
+          uid: userId,
           listingId,
-          i
-        );
+          file
+        });
         photoUrls.push(result.url);
       } catch (error) {
         console.error(`Failed to upload photo ${i}:`, error);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap, Edit, Send } from 'lucide-react';
 import { SimpleListingCreate } from '@marketplace/types';
@@ -11,6 +11,7 @@ import { AIListingAssistant } from '@/components/AIListingAssistant';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
+import { isCloudUrl } from '@/types/photos';
 
 const steps = [
   { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
@@ -33,6 +34,28 @@ export default function SellPage() {
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
+
+  // Photo state management
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [listingId, setListingId] = useState<string | undefined>(undefined);
+  
+  // Photo change handler - memoized to prevent infinite re-renders
+  const handlePhotoChange = useCallback((urls: string[]) => {
+    setPhotoUrls(urls);
+    // Update formData.photos to maintain compatibility
+    setFormData(prev => ({ ...prev, photos: urls }));
+  }, []);
+
+  // Create temporary listing ID for photo uploads
+  useEffect(() => {
+    if (!listingId && currentUser) {
+      // Generate a temporary listing ID for photo uploads
+      const tempId = `temp-${currentUser.uid}-${Date.now()}`;
+      setListingId(tempId);
+    }
+  }, [currentUser, listingId]);
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
@@ -42,6 +65,7 @@ export default function SellPage() {
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [aiAssistantComplete, setAiAssistantComplete] = useState(false);
+  
   const [formData, setFormData] = useState<Omit<SimpleListingCreate, 'price'> & {
     price: string;
     marketResearch?: {
@@ -104,19 +128,21 @@ export default function SellPage() {
     }));
   };
 
-  const handleRemovePhoto = (index: number) => {
+  const handleRemovePhoto = useCallback((index: number) => {
+    setPhotoUrls(prev => prev.filter((_, i) => i !== index));
     setFormData((prev) => ({
       ...prev,
       photos: prev.photos.filter((_, i) => i !== index)
     }));
-  };
+  }, []);
 
   const validateStep = (step: number): boolean => {
     const stepErrors: Record<string, string> = {};
 
     switch (step) {
       case 1:
-        if (!formData.photos?.length) stepErrors.photos = 'At least one photo is required';
+        if (!photoUrls?.length) stepErrors.photos = 'At least one photo is required';
+        else if (!photoUrls.every(url => isCloudUrl(url))) stepErrors.photos = 'Photos must be uploaded to cloud storage';
         break;
       case 2:
         // AI will fill this automatically, so we'll skip validation for now
@@ -210,30 +236,25 @@ export default function SellPage() {
   const performAIAnalysis = async () => {
     console.log('🔥 PERFORM AI ANALYSIS FUNCTION CALLED!');
     console.log('🔥 Current user:', currentUser);
-    console.log('🔥 Form data photos:', formData.photos);
+    console.log('🔥 Photo URLs:', photoUrls);
     
-    if (!currentUser || !formData.photos.length) {
+    if (!currentUser || !photoUrls.length) {
       console.error('❌ AI Analysis aborted: missing user or photos');
       return;
+    }
+
+    // Block if photos are not cloud URLs
+    if (!photoUrls.every(url => isCloudUrl(url))) {
+      throw new Error('Photos must be uploaded to cloud storage before AI analysis');
     }
 
     try {
       setAiAnalyzing(true);
       console.log('🤖 Starting AI analysis for uploaded photos');
       console.log('🤖 Current user:', currentUser.uid);
-      console.log('🤖 Photos to analyze:', formData.photos);
+      console.log('🤖 Photos to analyze:', photoUrls);
       
-      // Verify photos are accessible URLs
-      const validPhotos = formData.photos.filter(url => 
-        url && (url.startsWith('http') || url.startsWith('https'))
-      );
-      
-      if (validPhotos.length === 0) {
-        console.error('❌ No valid HTTP/HTTPS photo URLs found:', formData.photos);
-        throw new Error('Photos must be uploaded to cloud storage before AI analysis');
-      }
-      
-      console.log('🤖 Valid photos for AI analysis:', validPhotos);
+      console.log('🤖 Valid photos for AI analysis:', photoUrls);
       
       const response = await fetch('/api/ai/analyze-product', {
         method: 'POST',
@@ -242,7 +263,7 @@ export default function SellPage() {
           'x-user-id': currentUser.uid,
         },
         body: JSON.stringify({
-          imageUrls: validPhotos, // Use only valid photos
+          imageUrls: photoUrls, // Use only cloud URLs
         }),
       });
       
@@ -435,7 +456,7 @@ export default function SellPage() {
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Price must be greater than 0';
     if (!formData.category) newErrors.category = 'Category is required';
-    if (!formData.photos.length) newErrors.photos = 'At least one photo is required';
+    if (!photoUrls.length) newErrors.photos = 'At least one photo is required';
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -445,42 +466,13 @@ export default function SellPage() {
     try {
       setLoading(true);
       
-      // For now, use sample images for testing
-      // TODO: Implement proper photo upload to Firebase Storage
-      const sampleImages = [
-        '/images/iphone-14.jpg',
-        '/images/macbook-m2.jpg',
-        '/images/air-max-270.avif',
-        '/images/Alexa.jpeg',
-        '/images/basketball.avif',
-        '/images/coffeeetable.jpg',
-        '/images/tennis-racket.avif',
-        '/images/yoga-mat.avif'
-      ];
-      
-      // Use sample images based on category
-      let photoUrls = formData.photos;
-      if (photoUrls.length === 0 || photoUrls.some(photo => photo.startsWith('blob:'))) {
-        // Use a sample image based on category
-        const categoryImages: Record<string, string> = {
-          'electronics': '/images/iphone-14.jpg',
-          'fashion': '/images/air-max-270.avif',
-          'home': '/images/coffeeetable.jpg',
-          'sports': '/images/basketball.avif',
-          'other': '/images/Alexa.jpeg'
-        };
-        
-        photoUrls = [categoryImages[formData.category] || sampleImages[0]];
-        console.log('📸 Using sample image for category:', formData.category, photoUrls);
-      }
-      
-      // Create listing with final data (this is when it actually gets saved)
+      // First, create the listing without photos
       const listingData = {
         title: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),
         category: formData.category,
-        images: photoUrls, // Use processed photo URLs
+        images: photoUrls, // Use cloud URLs directly
         condition: formData.condition || 'good',
         inventory: 1,
         isActive: true,
@@ -502,10 +494,14 @@ export default function SellPage() {
       }
       
       const result = await response.json();
+      const listingId = result.id;
+      
+      // Photos are already uploaded via PhotoUpload component
+      console.log('📸 Listing created with photos:', photoUrls.length);
       
       // Show success message
       addToast('success', 'Listing Published!', 'Your listing has been successfully created and published.');
-      router.push(`/listings/${result.id}`);
+      router.push(`/listings/${listingId}`);
       
     } catch (error) {
       console.error('Error creating listing:', error);
@@ -526,10 +522,10 @@ export default function SellPage() {
               </label>
               <PhotoUpload
                 type="listing"
-                listingId={`temp-${Date.now()}`}
+                listingId={listingId} // Use the listing ID for uploads
                 maxPhotos={10}
-                existingPhotos={formData.photos}
-                onUpload={handlePhotoUpload}
+                existingPhotos={photoUrls}
+                onUpload={handlePhotoChange}
                 onRemove={handleRemovePhoto}
                 className="max-w-2xl mx-auto"
               />
@@ -546,7 +542,7 @@ export default function SellPage() {
               <h3 className="text-xl font-semibold text-white mb-2">AI Analysis</h3>
               <p className="text-gray-400 mb-6">Let our AI analyze your photos and generate product details</p>
               
-              {formData.photos.length === 0 ? (
+              {photoUrls.length === 0 ? (
                 <div className="p-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
                   <p className="text-yellow-400">Please upload photos first to enable AI analysis</p>
                 </div>
@@ -574,7 +570,7 @@ export default function SellPage() {
                   ) : (
                     <div className="space-y-4">
                       <div className="p-4 bg-dark-700 rounded-lg">
-                        <p className="text-gray-400 text-sm mb-2">Photos uploaded: {formData.photos.length}</p>
+                        <p className="text-gray-400 text-sm mb-2">Photos uploaded: {photoUrls.length}</p>
                         <p className="text-white text-sm">Ready for AI analysis</p>
                       </div>
                       
@@ -582,10 +578,13 @@ export default function SellPage() {
                         onClick={() => {
                           performAIAnalysis();
                         }}
-                        disabled={aiAnalyzing}
+                        disabled={aiAnalyzing || isUploadingPhotos || !photoUrls.every(url => isCloudUrl(url))}
                         className="btn btn-primary w-full"
                       >
-                        {aiAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
+                        {aiAnalyzing ? 'Analyzing...' : 
+                         isUploadingPhotos ? 'Uploading Photos...' :
+                         !photoUrls.every(url => isCloudUrl(url)) ? 'Photos Must Be Uploaded' :
+                         'Analyze with AI'}
                       </button>
                       
                       <button
@@ -1162,10 +1161,10 @@ export default function SellPage() {
               <h4 className="text-md font-semibold text-white mb-4">Product Preview</h4>
               
               <div className="flex gap-6">
-                {formData.photos && formData.photos.length > 0 && (
+                {photoUrls && photoUrls.length > 0 && (
                   <div className="flex-shrink-0">
                     <img
-                      src={formData.photos[0]}
+                      src={photoUrls[0]}
                       alt="Item preview"
                       className="w-32 h-32 object-cover rounded-lg"
                     />
@@ -1429,10 +1428,10 @@ export default function SellPage() {
               <h3 className="text-lg font-semibold text-white mb-4">Final Review & Publish</h3>
               
               <div className="space-y-4">
-                {formData.photos && formData.photos.length > 0 && (
+                {photoUrls && photoUrls.length > 0 && (
                   <div className="flex justify-center mb-4">
                     <img
-                      src={formData.photos[0]}
+                      src={photoUrls[0]}
                       alt="Item preview"
                       className="w-32 h-32 object-cover rounded-lg"
                     />

@@ -35,13 +35,37 @@ if (firebaseConfig.apiKey &&
     firebaseConfig.authDomain && 
     firebaseConfig.appId) {
   try {
+    console.log('🔥 Initializing Firebase with config:', {
+      apiKey: firebaseConfig.apiKey ? '✅ Set' : '❌ Missing',
+      projectId: firebaseConfig.projectId ? '✅ Set' : '❌ Missing',
+      authDomain: firebaseConfig.authDomain ? '✅ Set' : '❌ Missing',
+      storageBucket: firebaseConfig.storageBucket ? '✅ Set' : '❌ Missing',
+      appId: firebaseConfig.appId ? '✅ Set' : '❌ Missing'
+    });
+    
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
     storage = getStorage(app);
+    
+    console.log('🔥 Firebase initialized successfully:', {
+      app: !!app,
+      auth: !!auth,
+      db: !!db,
+      storage: !!storage
+    });
   } catch (error) {
-    console.warn('Firebase initialization failed:', error);
+    console.error('❌ Firebase initialization failed:', error);
+    console.error('❌ Firebase config:', firebaseConfig);
   }
+} else {
+  console.warn('⚠️ Firebase configuration incomplete:', {
+    apiKey: !!firebaseConfig.apiKey,
+    projectId: !!firebaseConfig.projectId,
+    authDomain: !!firebaseConfig.authDomain,
+    storageBucket: !!firebaseConfig.storageBucket,
+    appId: !!firebaseConfig.appId
+  });
 }
 
 export { auth, db, storage, isFirebaseConfigured };
