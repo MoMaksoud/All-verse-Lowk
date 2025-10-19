@@ -28,7 +28,13 @@ export class AIAnalysisService {
   /**
    * Analyze product photos and generate product details
    */
+<<<<<<< HEAD
   static async analyzeProductPhotos(imageUrls: string[]): Promise<ProductAnalysis | undefined> {
+=======
+  static async analyzeProductPhotos(imageUrls: string[], location?: string): Promise<ProductAnalysis | undefined> {
+
+  
+>>>>>>> 983c5098455f610a11d5a4733237edb0d9d95047
     const prompt = `
       You are a VISUAL PRODUCT LISTER for ALL VERSE GPT. Your job is to (A) extract only what is visibly true from the image(s), then (B) craft a concise, buyer-ready listing that a human can post immediately, with clearly marked placeholders for any info not visible (e.g., storage, battery %, carrier).
       LOCATION CONTEXT: This item is being sold in the United States. Consider US regional pricing differences and local market conditions when suggesting prices. Focus on US marketplace data (eBay, Facebook Marketplace, Craigslist, OfferUp, etc.).
