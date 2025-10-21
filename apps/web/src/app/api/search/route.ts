@@ -12,6 +12,9 @@ import {
 import { SearchResponse, Conversation, Message } from '@/types/chat';
 import { embeddingService } from '@/lib/embeddings';
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 // GET /api/search - Search conversations and messages
 export async function GET(request: NextRequest) {
   try {

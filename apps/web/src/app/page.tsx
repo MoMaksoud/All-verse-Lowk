@@ -19,7 +19,7 @@ import { useRouteGuard } from '@/hooks/useRouteGuard';
 import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
 
 // Optimized imports - use dynamic imports for heavy components
-import { ListingCard } from '@/components/ListingCard';
+import ListingCard from '@/components/ListingCard';
 import { SearchBar } from '@/components/SearchBar';
 import { AIWidget } from '@/components/AIWidget';
 import { DynamicBackground } from '@/components/DynamicBackground';
@@ -230,7 +230,17 @@ export default function HomePage() {
             {featuredListings && featuredListings.length > 0 ? (
               featuredListings.map((listing) => (
                 <Suspense key={listing.id} fallback={<SkeletonCard />}>
-                  <ListingCard listing={listing} />
+                  <ListingCard 
+                    variant="grid"
+                    id={listing.id}
+                    title={listing.title}
+                    description={listing.description}
+                    price={listing.price}
+                    category={listing.category}
+                    condition={listing.condition}
+                    imageUrl={listing.photos?.[0] || null}
+                    sellerId={listing.sellerId}
+                  />
                 </Suspense>
               ))
             ) : (

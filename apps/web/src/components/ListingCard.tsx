@@ -1,20 +1,42 @@
-'use client';
-
-import React, { useState, useCallback, memo, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Heart, MessageCircle, Clock, X, MapPin, ShoppingCart } from 'lucide-react';
-import { SimpleListing } from '@marketplace/types';
-import { formatLocation } from '@/lib/location';
+"use client";
+import Image from "next/image";
+import Link from "next/link";
+import { ShoppingCart, MessageSquare, Heart } from "lucide-react";
+import clsx from "clsx";
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
 
-interface ListingCardProps {
-  listing: SimpleListing;
-}
+type Props = {
+  variant: "grid" | "list";
+  id: string;
+  title: string;
+  description: string;
+  price: string | number;
+  category: string;
+  condition?: string;
+  imageUrl?: string | null;
+  sellerId?: string;
+  onAddToCart?: () => void;
+  onChat?: () => void;
+  onFav?: () => void;
+};
 
-export const ListingCard = memo(function ListingCard({ listing }: ListingCardProps) {
+export default function ListingCard({
+  variant,
+  id,
+  title,
+  description,
+  price,
+  category,
+  condition,
+  imageUrl,
+  sellerId,
+  onAddToCart,
+  onChat,
+  onFav,
+}: Props) {
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
   const { startChat } = useStartChatFromListing();
@@ -22,297 +44,283 @@ export const ListingCard = memo(function ListingCard({ listing }: ListingCardPro
     if (typeof window !== 'undefined') {
       try {
         const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        return favorites.includes(listing.id);
+        return favorites.includes(id);
       } catch {
         return false;
       }
     }
     return false;
   });
-  const [showMessageModal, setShowMessageModal] = useState(false);
-  const [message, setMessage] = useState('');
   const [addingToCart, setAddingToCart] = useState(false);
 
-  // Handle ESC key to close modal
-  useEffect(() => {
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && showMessageModal) {
-        setShowMessageModal(false);
-      }
-    };
-
-    if (showMessageModal) {
-      document.addEventListener('keydown', handleEscKey);
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscKey);
-      document.body.style.overflow = 'unset';
-    };
-  }, [showMessageModal]);
-
-  const addToCart = async (e: React.MouseEvent) => {
+  const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (!currentUser) {
-      showError('Sign In Required', 'Please sign in to add items to cart');
+      showError('Please log in to add items to cart');
+      return;
+    }
+
+    if (!sellerId) {
+      showError('Unable to add item to cart');
       return;
     }
 
     setAddingToCart(true);
     try {
-      const response = await fetch('/api/carts', {
+      const response = await fetch('/api/cart/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
         },
         body: JSON.stringify({
-          listingId: listing.id,
-          sellerId: listing.sellerId || 'test-seller',
-          qty: 1,
-          priceAtAdd: listing.price,
+          listingId: id,
+          sellerId: sellerId,
+          price: typeof price === 'number' ? price : parseFloat(price.toString().replace(/[^0-9.-]+/g, '')),
         }),
       });
 
       if (response.ok) {
-        showSuccess('Added to Cart!', 'Item has been added to your cart');
+        showSuccess('Item added to cart successfully!');
+        onAddToCart?.();
       } else {
-        showError('Failed to Add', 'Unable to add item to cart');
+        const error = await response.json();
+        showError(error.message || 'Failed to add item to cart');
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      showError('Error', 'Failed to add item to cart');
+      showError('Failed to add item to cart');
     } finally {
       setAddingToCart(false);
     }
-  };
+  }, [currentUser, sellerId, id, price, showSuccess, showError, onAddToCart]);
 
-  const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation
-    e.stopPropagation(); // Stop event bubbling
-    
-    try {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      let updatedFavorites;
-      
-      if (isFavorited) {
-        updatedFavorites = favorites.filter((id: string) => id !== listing.id);
-        showSuccess('Removed from favorites');
-      } else {
-        updatedFavorites = [...favorites, listing.id];
-        showSuccess('Added to favorites');
-      }
-      
-      localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
-      setIsFavorited(!isFavorited);
-    } catch (error) {
-      console.error('Error updating favorites:', error);
-      showError('Failed to update favorites');
-    }
-  }, [isFavorited, listing.id]);
-
-  const handleMessageClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation
-    e.stopPropagation(); // Stop event bubbling
-    setShowMessageModal(true);
-  }, []);
-
-  const handleSendMessage = useCallback(async () => {
-    if (!message.trim()) return;
+  const handleChatClick = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     
     if (!currentUser) {
-      showError('Sign In Required', 'Please sign in to message sellers.');
+      showError('Please log in to start a conversation');
       return;
     }
 
-    if (!listing.sellerId) {
-      showError('Error', 'Unable to find seller information.');
+    if (!sellerId) {
+      showError('Unable to start conversation');
       return;
     }
 
     try {
       await startChat({
-        listingId: listing.id,
-        sellerId: listing.sellerId,
-        listingTitle: listing.title,
-        listingPrice: listing.price,
-        initialMessage: message.trim(),
+        listingId: id,
+        sellerId: sellerId,
+        listingTitle: title,
+        listingPrice: typeof price === 'number' ? price : parseFloat(price.toString().replace(/[^0-9.-]+/g, '')),
       });
-      
-      setMessage('');
-      setShowMessageModal(false);
+      onChat?.();
     } catch (error) {
-      console.error('Error sending message:', error);
-      showError('Failed to send message', 'Please try again later.');
+      console.error('Error starting chat:', error);
+      showError('Failed to start conversation');
     }
-  }, [message, currentUser, listing, startChat, showError]);
+  }, [currentUser, sellerId, id, title, price, startChat, showError, onChat]);
+
+  const handleFavoriteClick = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentUser) {
+      showError('Please log in to favorite items');
+      return;
+    }
+
+    try {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      const isCurrentlyFavorited = favorites.includes(id);
+      
+      let updatedFavorites;
+      if (isCurrentlyFavorited) {
+        updatedFavorites = favorites.filter((favId: string) => favId !== id);
+        setIsFavorited(false);
+        showSuccess('Removed from favorites');
+      } else {
+        updatedFavorites = [...favorites, id];
+        setIsFavorited(true);
+        showSuccess('Added to favorites');
+      }
+      
+      localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+      onFav?.();
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      showError('Failed to update favorites');
+    }
+  }, [currentUser, id, showSuccess, showError, onFav]);
 
   return (
-    <>
-      <Link href={`/listings/${listing.id}`} className="group/card h-full">
-        <div className="listing-container">
-          {/* Image Section with Overlay */}
-          <div className="image-section relative overflow-hidden rounded-t-2xl">
-            {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
-              <Image
-                src={listing.photos[0]}
-                alt={listing.title}
-                width={400}
-                height={300}
-                className="w-full h-full object-cover bg-slate-900"
-                priority={false}
-                placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              />
-            ) : (
-              <div className="w-full h-full bg-dark-700 flex items-center justify-center">
-                <div className="text-center text-gray-400">
-                  <div className="text-4xl mb-2">📦</div>
-                  <div className="text-sm">No Image</div>
+    <Link href={`/listings/${id}`} className="block">
+      <article
+        className={clsx(
+          "rounded-3xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
+          variant === "grid" ? "overflow-hidden" : "p-4 md:p-5"
+        )}
+      >
+        {variant === "grid" ? (
+          <div className="flex flex-col h-full">
+            {/* Image */}
+            <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#0E1526]">
+              {imageUrl ? (
+                <Image
+                  src={imageUrl}
+                  alt={title}
+                  width={800}
+                  height={600}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-zinc-500">
+                  No Image
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="p-4 md:p-5 space-y-2.5 flex-1 flex flex-col">
+              <h3 className="text-lg md:text-xl font-semibold text-zinc-100 line-clamp-2">
+                {title}
+              </h3>
+              <p className="text-sm text-zinc-300/90 line-clamp-3 flex-1">
+                {description}
+              </p>
+
+              <div className="mt-2 flex items-center gap-3 text-sm">
+                <span className="text-blue-400 font-semibold">
+                  {typeof price === "number" ? `$${price}` : price}
+                </span>
+                <span className="text-zinc-400">•</span>
+                <span className="text-zinc-300/90">{category}</span>
+                {condition ? (
+                  <>
+                    <span className="text-zinc-400">•</span>
+                    <span className="inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-300 px-2 py-0.5 text-xs">
+                      {condition}
+                    </span>
+                  </>
+                ) : null}
+              </div>
+
+              {/* Actions */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0E1526] px-4 py-3">
+                  <button 
+                    onClick={handleAddToCart}
+                    disabled={addingToCart}
+                    className="p-2 hover:opacity-80 disabled:opacity-50"
+                  >
+                    <ShoppingCart className="h-5 w-5 text-zinc-200" />
+                  </button>
+                  <button 
+                    onClick={handleChatClick}
+                    className="p-2 hover:opacity-80"
+                  >
+                    <MessageSquare className="h-5 w-5 text-zinc-200" />
+                  </button>
+                  <button 
+                    onClick={handleFavoriteClick}
+                    className={clsx(
+                      "p-2 hover:opacity-80",
+                      isFavorited ? "text-red-500" : "text-zinc-200"
+                    )}
+                  >
+                    <Heart className={clsx(
+                      "h-5 w-5",
+                      isFavorited ? "fill-current" : ""
+                    )} />
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        ) : (
+          // list variant
+          <div className="flex gap-4 md:gap-5">
+            {/* Image */}
+            <div className="w-44 md:w-56 shrink-0">
+              <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526]">
+                {imageUrl ? (
+                  <Image
+                    src={imageUrl}
+                    alt={title}
+                    width={800}
+                    height={450}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-zinc-500">
+                    No Image
+                  </div>
+                )}
+              </div>
+            </div>
 
-            {/* Readability gradient */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
+            {/* Content */}
+            <div className="flex min-w-0 flex-1 flex-col">
+              <h3 className="text-xl font-semibold text-zinc-100 line-clamp-2">
+                {title}
+              </h3>
+              <p className="mt-1 text-sm text-zinc-300/90 line-clamp-3">
+                {description}
+              </p>
 
-            {/* Rating/Date chip with hover expansion */}
-            <div className="absolute bottom-3 right-3 z-20 inline-flex items-center rounded-full bg-black/60 text-white px-2.5 py-1 backdrop-blur transition-all duration-500 ease-in-out shadow">
-              {/* Date expands on hover */}
-              {listing.createdAt && (
-                <span className="overflow-hidden max-w-0 opacity-0 translate-x-2 group-hover/card:max-w-[160px] group-hover/card:opacity-100 group-hover/card:translate-x-0 transition-all duration-500 ease-in-out whitespace-nowrap text-sm">
-                  <Clock className="w-3 h-3 mr-1 inline" />
-                  {new Date(listing.createdAt).toLocaleDateString()}
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                <span className="text-blue-400 font-semibold">
+                  {typeof price === "number" ? `$${price}` : price}
                 </span>
-              )}
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="content-area">
-            <h3 className="group-hover:text-accent-400 transition-colors">
-              {listing.title}
-            </h3>
-            
-            <p className="text-gray-400 text-sm leading-relaxed">
-              {listing.description}
-            </p>
-            
-            {/* Price and Category */}
-            <div className="price-category">
-              <span className="price">${listing.price.toLocaleString()}</span>
-              <span className="category">{listing.category}</span>
-              {listing.condition && (
-                <span className="condition">{listing.condition}</span>
-              )}
-            </div>
-            
-            {/* Location */}
-            {listing.location && (
-              <div className="flex items-center gap-1 mb-3">
-                <MapPin className="w-3 h-3 text-gray-500" />
-                <span className="text-xs text-gray-500">
-                  {formatLocation(listing.location)}
-                </span>
-              </div>
-            )}
-
-            {/* Action Icons - Centered at Bottom */}
-            <div className="action-icons">
-              <button 
-                onClick={addToCart}
-                disabled={addingToCart}
-                className="p-2 rounded-lg hover:bg-dark-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ShoppingCart className={`w-4 h-4 ${addingToCart ? 'text-accent-500' : 'text-gray-400'}`} />
-              </button>
-              <button 
-                onClick={handleMessageClick}
-                className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
-              >
-                <MessageCircle className="w-4 h-4 text-gray-400" />
-              </button>
-              <button 
-                onClick={handleFavoriteClick}
-                className={`p-2 rounded-lg hover:bg-dark-600 transition-colors ${
-                  isFavorited ? 'text-red-500' : 'text-gray-400'
-                }`}
-              >
-                <Heart className={`w-4 h-4 transition-all duration-200 ${
-                  isFavorited ? 'text-red-500 fill-current' : 'text-gray-400'
-                }`} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </Link>
-
-      {/* Message Modal */}
-      {showMessageModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowMessageModal(false);
-            }
-          }}
-        >
-          <div className="bg-dark-800 rounded-lg max-w-md w-full border border-dark-600">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">
-                  Message Seller
-                </h3>
-                <button
-                  onClick={() => setShowMessageModal(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <span className="text-zinc-400">•</span>
+                <span className="text-zinc-300/90">{category}</span>
+                {condition ? (
+                  <>
+                    <span className="text-zinc-400">•</span>
+                    <span className="inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-300 px-2 py-0.5 text-xs">
+                      {condition}
+                    </span>
+                  </>
+                ) : null}
               </div>
 
-              <div className="mb-4">
-                <p className="text-gray-300 text-sm mb-2">About: {listing.title}</p>
-                <p className="text-gray-400 text-xs">Price: ${listing.price.toLocaleString()}</p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Your Message
-                </label>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Hi! I'm interested in your item..."
-                  rows={4}
-                  className="w-full px-3 py-2 border border-dark-600 rounded-md text-sm bg-dark-700 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500"
-                />
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setShowMessageModal(false)}
-                  className="flex-1 btn btn-outline"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!message.trim()}
-                  className="flex-1 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Send Message
-                </button>
+              {/* Actions */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0E1526] px-4 py-3">
+                  <button 
+                    onClick={handleAddToCart}
+                    disabled={addingToCart}
+                    className="p-2 hover:opacity-80 disabled:opacity-50"
+                  >
+                    <ShoppingCart className="h-5 w-5 text-zinc-200" />
+                  </button>
+                  <button 
+                    onClick={handleChatClick}
+                    className="p-2 hover:opacity-80"
+                  >
+                    <MessageSquare className="h-5 w-5 text-zinc-200" />
+                  </button>
+                  <button 
+                    onClick={handleFavoriteClick}
+                    className={clsx(
+                      "p-2 hover:opacity-80",
+                      isFavorited ? "text-red-500" : "text-zinc-200"
+                    )}
+                  >
+                    <Heart className={clsx(
+                      "h-5 w-5",
+                      isFavorited ? "fill-current" : ""
+                    )} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </article>
+    </Link>
   );
-});
+}

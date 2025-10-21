@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, X, Navigation } from 'lucide-react';
+import { Search, X, MapPin } from 'lucide-react';
 import { LocationAutocomplete } from './LocationAutocomplete';
+import Select from './Select';
 import type { ListingFilters, Category } from '@marketplace/types';
 
 interface ListingFiltersProps {
@@ -56,161 +57,156 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
   const hasActiveFilters = Object.values(filters).some(value => value !== undefined && value !== '');
 
   return (
-    <div className="bg-dark-surface rounded-lg border border-dark-border p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white">Filters</h3>
-        {hasActiveFilters && (
+    <aside className="rounded-2xl border border-white/10 bg-[#0B1220] p-4 sm:p-5 md:p-6 shadow-lg/30">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-white">Filters</h3>
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="text-sm text-zinc-400 hover:text-white flex items-center gap-1 transition"
+            >
+              <X className="w-4 h-4" />
+              Clear all
+            </button>
+          )}
+        </div>
+
+        {/* Search */}
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold tracking-wide text-zinc-300/80 uppercase">Search</h3>
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
+              <Search className="h-4.5 w-4.5" />
+            </span>
+            <input
+              type="text"
+              value={localFilters.keyword || ''}
+              onChange={(e) => handleFilterChange('keyword', e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Search listings..."
+              className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-[#0E1526] pl-9 px-3 text-sm text-zinc-100
+                         placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
+            />
+          </div>
+        </div>
+
+        {/* Category */}
+        <div className="space-y-2">
+          <Select
+            label="Category"
+            value={localFilters.category || null}
+            onChange={(value) => handleFilterChange('category', value)}
+            options={[
+              { value: '', label: 'All Categories' },
+              ...categories.map((category) => ({
+                value: category.id,
+                label: category.name
+              }))
+            ]}
+            placeholder="All Categories"
+          />
+        </div>
+
+        {/* Price Range */}
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold tracking-wide text-zinc-300/80 uppercase">Price Range</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="number"
+              value={localFilters.minPrice || ''}
+              onChange={(e) => handleFilterChange('minPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
+              onKeyPress={handleKeyPress}
+              placeholder="Min"
+              inputMode="numeric"
+              className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-[#0E1526] px-3 text-sm text-zinc-100
+                         placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
+            />
+            <input
+              type="number"
+              value={localFilters.maxPrice || ''}
+              onChange={(e) => handleFilterChange('maxPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
+              onKeyPress={handleKeyPress}
+              placeholder="Max"
+              inputMode="numeric"
+              className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-[#0E1526] px-3 text-sm text-zinc-100
+                         placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
+            />
+          </div>
+        </div>
+
+        {/* Location */}
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold tracking-wide text-zinc-300/80 uppercase">Location</h3>
+          <div className="relative">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
+              <MapPin className="h-5 w-5" />
+            </span>
+            <LocationAutocomplete
+              value={localFilters.location || ''}
+              onChange={handleLocationChange}
+              placeholder="City, State or ZIP code..."
+              inputClassName="h-10 w-full rounded-xl border border-white/10 bg-[#0E1526] pl-10 px-3 text-sm text-zinc-100
+                             placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-400">Within</span>
+            <button
+              type="button"
+              className="inline-flex items-center h-9 rounded-xl border border-white/10 bg-[#10192D] px-3 text-xs font-medium
+                         text-zinc-200 hover:bg-[#12203A] focus:ring-2 focus:ring-blue-500/60 outline-none transition"
+            >
+              {localFilters.maxDistance ? `${localFilters.maxDistance} miles` : 'Any distance'}
+            </button>
+          </div>
+        </div>
+
+        {/* Condition */}
+        <div className="space-y-2">
+          <Select
+            label="Condition"
+            value={localFilters.condition || null}
+            onChange={(value) => handleFilterChange('condition', value)}
+            options={[
+              { value: '', label: 'Any Condition' },
+              { value: 'new', label: 'New' },
+              { value: 'like-new', label: 'Like New' },
+              { value: 'good', label: 'Good' },
+              { value: 'fair', label: 'Fair' },
+              { value: 'poor', label: 'Poor' }
+            ]}
+            placeholder="Any Condition"
+          />
+        </div>
+
+        {/* Sort By */}
+        <div className="space-y-2">
+          <Select
+            label="Sort By"
+            value={localFilters.sortBy || null}
+            onChange={(value) => handleFilterChange('sortBy', value)}
+            options={[
+              { value: '', label: 'Relevance' },
+              { value: 'price', label: 'Price' },
+              { value: 'date', label: 'Date' }
+            ]}
+            placeholder="Relevance"
+          />
+        </div>
+
+        {/* Apply Button */}
+        <div className="pt-2">
           <button
-            onClick={handleClearFilters}
-            className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
+            onClick={handleApplyFilters}
+            className="w-full h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-lg
+                       hover:bg-blue-500 active:bg-blue-700 focus:ring-2 focus:ring-blue-500/60 transition"
           >
-            <X className="w-4 h-4" />
-            Clear all
+            Apply Filters
           </button>
-        )}
-      </div>
-
-      {/* Search */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Search
-        </label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            value={localFilters.keyword || ''}
-            onChange={(e) => handleFilterChange('keyword', e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Search listings..."
-            className="w-full pl-10 pr-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-            style={{ colorScheme: 'dark' }}
-          />
         </div>
       </div>
-
-      {/* Category */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Category
-        </label>
-        <select
-          value={localFilters.category || ''}
-          onChange={(e) => handleFilterChange('category', e.target.value)}
-          className="w-full px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-          style={{ colorScheme: 'dark' }}
-        >
-          <option value="" className="bg-dark-surface text-white">All Categories</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id} className="bg-dark-surface text-white">
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Price Range */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Price Range
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="number"
-            value={localFilters.minPrice || ''}
-            onChange={(e) => handleFilterChange('minPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
-            onKeyPress={handleKeyPress}
-            placeholder="Min"
-            className="px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-            style={{ colorScheme: 'dark' }}
-          />
-          <input
-            type="number"
-            value={localFilters.maxPrice || ''}
-            onChange={(e) => handleFilterChange('maxPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
-            onKeyPress={handleKeyPress}
-            placeholder="Max"
-            className="px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-            style={{ colorScheme: 'dark' }}
-          />
-        </div>
-      </div>
-
-      {/* Location */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Location
-        </label>
-        <LocationAutocomplete
-          value={localFilters.location || ''}
-          onChange={handleLocationChange}
-          placeholder="City, State or ZIP code..."
-        />
-        
-        {/* Distance Range */}
-        <div className="flex items-center gap-2 mt-3">
-          <Navigation className="text-gray-400 w-4 h-4" />
-          <span className="text-sm text-gray-300">Within</span>
-          <select
-            value={localFilters.maxDistance || ''}
-            onChange={(e) => handleFilterChange('maxDistance', e.target.value ? parseInt(e.target.value) : undefined)}
-            className="px-3 py-1 border border-dark-border rounded-md text-sm bg-dark-surface text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-            style={{ colorScheme: 'dark' }}
-          >
-            <option value="" className="bg-dark-surface text-white">Any distance</option>
-            <option value="5" className="bg-dark-surface text-white">5 miles</option>
-            <option value="10" className="bg-dark-surface text-white">10 miles</option>
-            <option value="25" className="bg-dark-surface text-white">25 miles</option>
-            <option value="50" className="bg-dark-surface text-white">50 miles</option>
-            <option value="100" className="bg-dark-surface text-white">100 miles</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Condition */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Condition
-        </label>
-        <select
-          value={localFilters.condition || ''}
-          onChange={(e) => handleFilterChange('condition', e.target.value)}
-          className="w-full px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-          style={{ colorScheme: 'dark' }}
-        >
-          <option value="" className="bg-dark-surface text-white">Any Condition</option>
-          <option value="new" className="bg-dark-surface text-white">New</option>
-          <option value="like-new" className="bg-dark-surface text-white">Like New</option>
-          <option value="good" className="bg-dark-surface text-white">Good</option>
-          <option value="fair" className="bg-dark-surface text-white">Fair</option>
-          <option value="poor" className="bg-dark-surface text-white">Poor</option>
-        </select>
-      </div>
-
-      {/* Sort By */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Sort By
-        </label>
-        <select
-          value={localFilters.sortBy || ''}
-          onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-          className="w-full px-3 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-          style={{ colorScheme: 'dark' }}
-        >
-          <option value="" className="bg-dark-surface text-white">Relevance</option>
-          <option value="price" className="bg-dark-surface text-white">Price</option>
-          <option value="date" className="bg-dark-surface text-white">Date</option>
-        </select>
-      </div>
-
-      {/* Apply Filters Button */}
-      <button
-        onClick={handleApplyFilters}
-        className="w-full bg-accent-500 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-accent-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500"
-      >
-        Apply Filters
-      </button>
-    </div>
+    </aside>
   );
 }

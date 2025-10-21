@@ -8,6 +8,7 @@ import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { AIListingAssistant } from '@/components/AIListingAssistant';
+import Select from '@/components/Select';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
@@ -672,19 +673,21 @@ export default function SellPage() {
               <label className="block text-sm font-medium text-white mb-2">
                 Category
               </label>
-              <select
-                value={formData.category || ''}
-                onChange={(e) => handleInputChange('category', e.target.value)}
-                className={`input ${errors.category ? 'border-red-500' : ''}`}
-              >
-                <option value="">Select a category</option>
-                <option value="electronics">Electronics</option>
-                <option value="fashion">Fashion</option>
-                <option value="home">Home</option>
-                <option value="sports">Sports</option>
-                <option value="automotive">Automotive</option>
-                <option value="other">Other</option>
-              </select>
+              <Select
+                value={formData.category || null}
+                onChange={(value) => handleInputChange('category', value)}
+                options={[
+                  { value: '', label: 'Select a category' },
+                  { value: 'electronics', label: 'Electronics' },
+                  { value: 'fashion', label: 'Fashion' },
+                  { value: 'home', label: 'Home' },
+                  { value: 'sports', label: 'Sports' },
+                  { value: 'automotive', label: 'Automotive' },
+                  { value: 'other', label: 'Other' }
+                ]}
+                placeholder="Select a category"
+                className={errors.category ? 'border-red-500' : ''}
+              />
               {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
             </div>
 
@@ -1241,24 +1244,26 @@ export default function SellPage() {
                   <label className="block text-sm font-medium text-white mb-2">
                     Category
                   </label>
-                  <select
-                    value={formData.category || ''}
-                    onChange={(e) => handleInputChange('category', e.target.value)}
-                    className={`input ${errors.category ? 'border-red-500' : ''}`}
-                  >
-                    <option value="">Select a category</option>
-                    <option value="electronics">Electronics</option>
-                    <option value="fashion">Fashion</option>
-                    <option value="home">Home</option>
-                    <option value="sports">Sports</option>
-                    <option value="automotive">Automotive</option>
-                    <option value="toys">Toys</option>
-                    <option value="beauty">Beauty</option>
-                    <option value="appliances">Appliances</option>
-                    <option value="books">Books</option>
-                    <option value="tools">Tools</option>
-                    <option value="other">Other</option>
-                  </select>
+                  <Select
+                    value={formData.category || null}
+                    onChange={(value) => handleInputChange('category', value)}
+                    options={[
+                      { value: '', label: 'Select a category' },
+                      { value: 'electronics', label: 'Electronics' },
+                      { value: 'fashion', label: 'Fashion' },
+                      { value: 'home', label: 'Home' },
+                      { value: 'sports', label: 'Sports' },
+                      { value: 'automotive', label: 'Automotive' },
+                      { value: 'toys', label: 'Toys' },
+                      { value: 'beauty', label: 'Beauty' },
+                      { value: 'appliances', label: 'Appliances' },
+                      { value: 'books', label: 'Books' },
+                      { value: 'tools', label: 'Tools' },
+                      { value: 'other', label: 'Other' }
+                    ]}
+                    placeholder="Select a category"
+                    className={errors.category ? 'border-red-500' : ''}
+                  />
                   {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
                 </div>
 
@@ -1266,18 +1271,20 @@ export default function SellPage() {
                   <label className="block text-sm font-medium text-white mb-2">
                     Condition
                   </label>
-                  <select
-                    value={formData.condition || ''}
-                    onChange={(e) => handleInputChange('condition', e.target.value)}
-                    className={`input ${errors.condition ? 'border-red-500' : ''}`}
-                  >
-                    <option value="">Select condition</option>
-                    <option value="new">New</option>
-                    <option value="like-new">Like New</option>
-                    <option value="good">Good</option>
-                    <option value="fair">Fair</option>
-                    <option value="poor">Poor</option>
-                  </select>
+                  <Select
+                    value={formData.condition || null}
+                    onChange={(value) => handleInputChange('condition', value)}
+                    options={[
+                      { value: '', label: 'Select condition' },
+                      { value: 'new', label: 'New' },
+                      { value: 'like-new', label: 'Like New' },
+                      { value: 'good', label: 'Good' },
+                      { value: 'fair', label: 'Fair' },
+                      { value: 'poor', label: 'Poor' }
+                    ]}
+                    placeholder="Select condition"
+                    className={errors.condition ? 'border-red-500' : ''}
+                  />
                   {errors.condition && <p className="text-red-400 text-sm mt-1">{errors.condition}</p>}
                 </div>
               </div>

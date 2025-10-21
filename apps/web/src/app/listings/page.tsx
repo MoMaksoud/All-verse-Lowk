@@ -5,11 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart } from 'lucide-react';
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
-import { ListingCard } from '@/components/ListingCard';
+import ListingCard from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import Select from '@/components/Select';
+import ListingCollection from '@/components/ListingCollection';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
@@ -196,7 +198,7 @@ function ListingsContent() {
     <div className="min-h-screen bg-dark-950">
       <Navigation />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-4">
@@ -231,17 +233,18 @@ function ListingsContent() {
               <div className="flex items-center space-x-4">
                 {/* Sort Dropdown */}
                 <div className="flex items-center">
-                  <label className="text-sm text-gray-400 mr-2">Sort by:</label>
-                  <select
+                  <Select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200"
-                  >
-                    <option value="newest">Newest</option>
-                    <option value="price-low">Price: Low to High</option>
-                    <option value="price-high">Price: High to Low</option>
-                    <option value="rating">Rating</option>
-                  </select>
+                    onChange={(value) => setSortBy(value as typeof sortBy)}
+                    options={[
+                      { value: 'newest', label: 'Newest' },
+                      { value: 'price-low', label: 'Price: Low to High' },
+                      { value: 'price-high', label: 'Price: High to Low' },
+                      { value: 'rating', label: 'Rating' }
+                    ]}
+                    placeholder="Sort by"
+                    className="min-w-[180px]"
+                  />
                 </div>
 
                 {/* View Mode Toggle */}
@@ -274,105 +277,33 @@ function ListingsContent() {
             {listings.length > 0 ? (
               <>
                 {viewMode === 'grid' ? (
-                  <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {listings.map((listing) => (
-                      <ListingCard
-                        key={listing.id}
-                        listing={listing}
-                      />
-                    ))}
-                  </div>
+                  <ListingCollection 
+                    items={listings.map(listing => ({
+                      id: listing.id,
+                      title: listing.title,
+                      description: listing.description,
+                      price: listing.price,
+                      category: listing.category,
+                      condition: listing.condition,
+                      imageUrl: listing.photos?.[0] || null,
+                      sellerId: listing.sellerId
+                    }))}
+                    view="grid"
+                  />
                 ) : (
-                  <div className="space-y-4">
-                    {listings.map((listing) => (
-                      <div key={listing.id} className="listing-container bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:bg-dark-700 transition-all duration-200 relative">
-                        <Link href={`/listings/${listing.id}`} className="group">
-                          <div className="flex">
-                            {/* Image - Compact */}
-                            <div className="relative w-32 h-24 flex-shrink-0 bg-dark-700">
-                              {listing.photos && listing.photos.length > 0 && listing.photos[0] ? (
-                                <img
-                                  src={listing.photos[0]}
-                                  alt={listing.title}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    const parent = target.parentElement;
-                                    if (parent) {
-                                      parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Image</div>';
-                                    }
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                                  No Image
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Content */}
-                            <div className="flex-1 p-4 flex items-center">
-                              {/* Product Info */}
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-lg font-semibold text-white group-hover:text-accent-400 transition-colors">
-                                  {listing.title}
-                                </h3>
-                                <p className="text-gray-400 text-sm mt-1 leading-relaxed">
-                                  {listing.description}
-                                </p>
-                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                                  <span className="text-accent-400 font-semibold">${listing.price.toLocaleString()}</span>
-                                  <span>•</span>
-                                  <span className="capitalize">{listing.category}</span>
-                                  <span>•</span>
-                                  <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30">
-                                    {listing.condition || 'Good'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                        
-                        {/* Action Icons - Right Side */}
-                        <div className="action-icons">
-                          <button 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              addToCart(listing);
-                            }}
-                            disabled={addingToCart === listing.id}
-                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <ShoppingCart className={`w-4 h-4 ${addingToCart === listing.id ? 'text-accent-500' : 'text-gray-400'}`} />
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleMessageClick(listing);
-                            }}
-                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
-                          >
-                            <MessageCircle className="w-4 h-4 text-gray-400" />
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              // Add favorite functionality here
-                            }}
-                            className="p-2 rounded-lg hover:bg-dark-600 transition-colors"
-                          >
-                            <Heart className="w-4 h-4 text-gray-400" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <ListingCollection 
+                    items={listings.map(listing => ({
+                      id: listing.id,
+                      title: listing.title,
+                      description: listing.description,
+                      price: listing.price,
+                      category: listing.category,
+                      condition: listing.condition,
+                      imageUrl: listing.photos?.[0] || null,
+                      sellerId: listing.sellerId
+                    }))}
+                    view="list"
+                  />
                 )}
 
                 {/* Pagination */}

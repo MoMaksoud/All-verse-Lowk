@@ -1055,6 +1055,35 @@ select:focus {
   .placeholder-transition:focus::placeholder {
     opacity: 0.7;
   }
+
+  /* Select scroll styling */
+  .select-scroll::-webkit-scrollbar { 
+    width: 8px; 
+  }
+  
+  .select-scroll::-webkit-scrollbar-thumb { 
+    background: #1f2a44; 
+    border-radius: 8px; 
+  }
+
+  /* Thin dark scrollbar for dropdowns */
+  .max-h-64::-webkit-scrollbar { 
+    width: 8px; 
+  }
+  
+  .max-h-64::-webkit-scrollbar-thumb { 
+    background: #1f2a44; 
+    border-radius: 8px; 
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-2, .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-2 { -webkit-line-clamp: 2; }
+  .line-clamp-3 { -webkit-line-clamp: 3; }
 }
 
 /* Modern Product Card Design - Fixed Layout */

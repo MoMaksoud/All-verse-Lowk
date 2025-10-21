@@ -17,13 +17,15 @@ interface LocationAutocompleteProps {
   onChange: (location: string, coordinates?: { lat: number; lng: number }) => void;
   placeholder?: string;
   className?: string;
+  inputClassName?: string;
 }
 
 export function LocationAutocomplete({ 
   value, 
   onChange, 
   placeholder = "City, State or ZIP code...",
-  className = ""
+  className = "",
+  inputClassName = ""
 }: LocationAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -234,7 +236,7 @@ export function LocationAutocomplete({
             }
           }}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+          className={inputClassName || "w-full pl-10 pr-10 py-2 border border-dark-border rounded-md text-sm bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"}
           style={{ colorScheme: 'dark' }}
         />
         

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ListingService } from '@/lib/firestore';
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');

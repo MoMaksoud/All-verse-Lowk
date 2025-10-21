@@ -24,9 +24,6 @@ export const metadata: Metadata = {
     shortcut: '/logo.jpg',
     apple: '/logo.jpg',
   },
-  other: {
-    'prefetch': '/api/listings?limit=6',
-  },
 };
 
 export const viewport: Viewport = {

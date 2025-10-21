@@ -6,6 +6,7 @@ import { ArrowLeft, Save, X } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import ListingGalleryEditor from '@/components/ListingGalleryEditor';
+import Select from '@/components/Select';
 import { useAuth } from '@/contexts/AuthContext';
 import { Toast, ToastType } from '@/components/Toast';
 
@@ -249,20 +250,21 @@ export default function EditListingPage() {
                   <label className="block text-sm font-medium text-white mb-2">
                     Category *
                   </label>
-                  <select
+                  <Select
                     value={formData.category}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                  >
-                    <option value="">Select category</option>
-                    <option value="electronics">Electronics</option>
-                    <option value="fashion">Fashion</option>
-                    <option value="home">Home & Garden</option>
-                    <option value="sports">Sports & Outdoors</option>
-                    <option value="books">Books & Media</option>
-                    <option value="vehicles">Vehicles</option>
-                    <option value="other">Other</option>
-                  </select>
+                    onChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                    options={[
+                      { value: '', label: 'Select category' },
+                      { value: 'electronics', label: 'Electronics' },
+                      { value: 'fashion', label: 'Fashion' },
+                      { value: 'home', label: 'Home & Garden' },
+                      { value: 'sports', label: 'Sports & Outdoors' },
+                      { value: 'books', label: 'Books & Media' },
+                      { value: 'vehicles', label: 'Vehicles' },
+                      { value: 'other', label: 'Other' }
+                    ]}
+                    placeholder="Select category"
+                  />
                   {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
                 </div>
 
@@ -270,16 +272,17 @@ export default function EditListingPage() {
                   <label className="block text-sm font-medium text-white mb-2">
                     Condition
                   </label>
-                  <select
+                  <Select
                     value={formData.condition}
-                    onChange={(e) => setFormData(prev => ({ ...prev, condition: e.target.value as any }))}
-                    className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                  >
-                    <option value="new">New</option>
-                    <option value="like-new">Like New</option>
-                    <option value="good">Good</option>
-                    <option value="fair">Fair</option>
-                  </select>
+                    onChange={(value) => setFormData(prev => ({ ...prev, condition: value as any }))}
+                    options={[
+                      { value: 'new', label: 'New' },
+                      { value: 'like-new', label: 'Like New' },
+                      { value: 'good', label: 'Good' },
+                      { value: 'fair', label: 'Fair' }
+                    ]}
+                    placeholder="Select condition"
+                  />
                 </div>
               </div>
 

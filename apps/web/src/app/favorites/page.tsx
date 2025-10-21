@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Heart, Search, Filter } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { ListingCard } from '@/components/ListingCard';
+import ListingCard from '@/components/ListingCard';
 import { Navigation } from '@/components/Navigation';
 
 export default function FavoritesPage() {
@@ -213,7 +213,17 @@ export default function FavoritesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredFavorites.map((listing) => (
                   <div key={listing.id} className="relative group">
-                    <ListingCard listing={listing} />
+                    <ListingCard 
+                      variant="grid"
+                      id={listing.id}
+                      title={listing.title}
+                      description={listing.description}
+                      price={listing.price}
+                      category={listing.category}
+                      condition={listing.condition}
+                      imageUrl={listing.photos?.[0] || null}
+                      sellerId={listing.sellerId}
+                    />
                     <button
                       onClick={() => removeFavorite(listing.id)}
                       className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
