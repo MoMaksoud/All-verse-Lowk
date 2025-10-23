@@ -1,4 +1,5 @@
 import * as React from "react";
+import { formatLocation } from "@/lib/utils/bubbleWheel";
 
 type Loc = { city: string; state: string };
 type Props = {
@@ -37,7 +38,7 @@ const DEFAULT_CITIES: Loc[] = [
   { city: "Tulsa", state: "OK" },   { city: "Arlington", state: "TX" },
 ];
 
-function format(loc: Loc) { return `${loc.city}, ${loc.state}`; }
+// Use the utility function
 
 export default function LocationCombobox({
   value,
@@ -90,7 +91,7 @@ export default function LocationCombobox({
   }, [query, fetchLocations]);
 
   function select(loc: Loc) {
-    const next = format(loc);
+    const next = formatLocation(loc.city, loc.state);
     onChange(next);       // update parent form state
     setQuery(next);       // reflect selection in input
     setOpen(false);
@@ -148,7 +149,7 @@ export default function LocationCombobox({
                 return (
                   <li
                     id={`${panelId}-opt-${i}`}
-                    key={format(loc)}
+                    key={formatLocation(loc.city, loc.state)}
                     role="option"
                     aria-selected={isActive}
                     data-active={isActive}
@@ -157,7 +158,7 @@ export default function LocationCombobox({
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => select(loc)}
                   >
-                    {format(loc)}
+                    {formatLocation(loc.city, loc.state)}
                   </li>
                 );
               })}

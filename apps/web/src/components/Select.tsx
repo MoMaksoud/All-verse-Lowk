@@ -28,11 +28,11 @@ export default function Select({
 
   return (
     <div className={clsx("w-full", className)}>
-      {label ? (
+      {label && (
         <div className="mb-2 text-sm font-medium text-zinc-100">
           {label}
         </div>
-      ) : null}
+      )}
 
       <Listbox value={value} onChange={onChange}>
         <div className="relative">
@@ -61,10 +61,8 @@ export default function Select({
             leaveTo="opacity-0 scale-95 translate-y-1"
           >
             <Listbox.Options
-              className={clsx(
-                "absolute z-50 mt-2 w-full overflow-auto rounded-xl border border-zinc-800 bg-zinc-900/95 p-2 shadow-2xl",
-                "max-h-64 focus:outline-none backdrop-blur-md ring-1 ring-zinc-800/50"
-              )}
+              static
+              className="absolute left-0 right-0 mt-2 z-50 rounded-xl border border-zinc-800 bg-zinc-900/95 backdrop-blur shadow-xl p-1 max-h-72 overflow-auto focus:outline-none"
             >
               {options.map((opt) => (
                 <Listbox.Option
@@ -72,10 +70,10 @@ export default function Select({
                   value={opt.value}
                   className={({ active, selected }) =>
                     clsx(
-                      "relative cursor-pointer select-none rounded-lg px-3 py-2.5 text-sm",
-                      "text-zinc-100 outline-none transition-all duration-150",
-                      "hover:bg-zinc-800/60 focus:bg-zinc-800/60",
-                      active && "bg-zinc-800/60 text-zinc-100",
+                      "relative cursor-pointer select-none rounded-lg px-3 py-2 text-sm",
+                      "text-zinc-200 outline-none transition-all duration-150",
+                      "hover:bg-zinc-800/70 focus:bg-zinc-800/70",
+                      active && "bg-zinc-800/70 text-zinc-100",
                       selected && "bg-blue-600 text-white font-medium"
                     )
                   }
@@ -85,9 +83,7 @@ export default function Select({
                       <span className={clsx("truncate", selected && "font-medium")}>
                         {opt.label}
                       </span>
-                      {selected ? (
-                        <Check className="h-4 w-4 text-white" />
-                      ) : null}
+                      {selected && <Check className="h-4 w-4 text-white" />}
                     </div>
                   )}
                 </Listbox.Option>
