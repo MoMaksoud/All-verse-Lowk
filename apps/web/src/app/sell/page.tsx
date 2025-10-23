@@ -9,6 +9,7 @@ import { Logo } from '@/components/Logo';
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { AIListingAssistant } from '@/components/AIListingAssistant';
 import Select from '@/components/Select';
+import LocationCombobox from '@/components/LocationCombobox';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
@@ -518,18 +519,18 @@ export default function SellPage() {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Upload Your Item Photos
-              </label>
-              <PhotoUpload
-                uid={currentUser.uid}
-                listingId={listingId || ''}
-                max={10}
-                initial={[]}
-                onChange={handlePhotoChange}
-                className="max-w-2xl mx-auto"
-              />
-              {errors.photos && <p className="text-red-400 text-sm mt-1">{errors.photos}</p>}
+              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-4">Upload Your Item Photos</h2>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
+                <PhotoUpload
+                  uid={currentUser.uid}
+                  listingId={listingId || ''}
+                  max={10}
+                  initial={[]}
+                  onChange={handlePhotoChange}
+                  className="max-w-2xl mx-auto"
+                />
+                {errors.photos && <p className="text-red-400 text-sm mt-3">{errors.photos}</p>}
+              </div>
             </div>
           </div>
         );
@@ -538,69 +539,71 @@ export default function SellPage() {
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <Brain className="mx-auto h-16 w-16 text-accent-500 mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">AI Analysis</h3>
-              <p className="text-gray-400 mb-6">Let our AI analyze your photos and generate product details</p>
+              <Brain className="mx-auto h-16 w-16 text-blue-400 mb-4" />
+              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-2">AI Analysis</h2>
+              <p className="text-sm sm:text-base text-zinc-300 leading-7 mb-6">Let our AI analyze your photos and generate product details</p>
               
               {photoUrls.length === 0 ? (
-                <div className="p-6 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                <div className="p-6 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
                   <p className="text-yellow-400">Please upload photos first to enable AI analysis</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {aiAnalyzing ? (
                     <div className="space-y-4 max-w-md mx-auto">
-                      <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                        <span className="text-gray-400">Title</span>
-                        <span className="text-white animate-pulse">Analyzing photos...</span>
+                      <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                        <span className="text-zinc-400">Title</span>
+                        <span className="text-zinc-100 animate-pulse">Analyzing photos...</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                        <span className="text-gray-400">Category</span>
-                        <span className="text-white animate-pulse">Identifying product...</span>
+                      <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                        <span className="text-zinc-400">Category</span>
+                        <span className="text-zinc-100 animate-pulse">Identifying product...</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                        <span className="text-gray-400">Price</span>
-                        <span className="text-white animate-pulse">Calculating market value...</span>
+                      <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                        <span className="text-zinc-400">Price</span>
+                        <span className="text-zinc-100 animate-pulse">Calculating market value...</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
-                        <span className="text-gray-400">Description</span>
-                        <span className="text-white animate-pulse">Generating details...</span>
+                      <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                        <span className="text-zinc-400">Description</span>
+                        <span className="text-zinc-100 animate-pulse">Generating details...</span>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 bg-dark-700 rounded-lg">
-                        <p className="text-gray-400 text-sm mb-2">Photos uploaded: {photoUrls.length}</p>
-                        <p className="text-white text-sm">Ready for AI analysis</p>
+                      <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                        <p className="text-zinc-400 text-sm mb-2">Photos uploaded: {photoUrls.length}</p>
+                        <p className="text-zinc-100 text-sm">Ready for AI analysis</p>
                       </div>
                       
-                      <button
-                        onClick={() => {
-                          performAIAnalysis();
-                        }}
-                        disabled={aiAnalyzing || isUploadingPhotos || !photoUrls.every(url => isCloudUrl(url))}
-                        className="btn btn-primary w-full"
-                      >
-                        {aiAnalyzing ? 'Analyzing...' : 
-                         isUploadingPhotos ? 'Uploading Photos...' :
-                         !photoUrls.every(url => isCloudUrl(url)) ? 'Photos Must Be Uploaded' :
-                         'Analyze with AI'}
-                      </button>
-                      
-                      <button
-                        onClick={() => testFallbackAnalysis()}
-                        disabled={aiAnalyzing}
-                        className="btn btn-secondary w-full"
-                      >
-                        🧪 Test Fallback Analysis
-                      </button>
-                      
-                      <button
-                        onClick={() => setCurrentStep(3)}
-                        className="btn btn-outline w-full"
-                      >
-                        Skip AI Analysis
-                      </button>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={() => {
+                            performAIAnalysis();
+                          }}
+                          disabled={aiAnalyzing || isUploadingPhotos || !photoUrls.every(url => isCloudUrl(url))}
+                          className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex-1"
+                        >
+                          {aiAnalyzing ? 'Analyzing...' : 
+                           isUploadingPhotos ? 'Uploading Photos...' :
+                           !photoUrls.every(url => isCloudUrl(url)) ? 'Photos Must Be Uploaded' :
+                           'Analyze with AI'}
+                        </button>
+                        
+                        <button
+                          onClick={() => testFallbackAnalysis()}
+                          disabled={aiAnalyzing}
+                          className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          🧪 Test Fallback Analysis
+                        </button>
+                        
+                        <button
+                          onClick={() => setCurrentStep(3)}
+                          className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors"
+                        >
+                          Skip AI Analysis
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -628,10 +631,10 @@ export default function SellPage() {
             ) : (
               <>
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-2">Review & Edit AI Suggestions</h3>
-                  <p className="text-gray-400 text-sm">Review the AI-generated details and make any adjustments</p>
+                  <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-2">Review & Edit AI Suggestions</h2>
+                  <p className="text-sm sm:text-base text-zinc-300 leading-7">Review the AI-generated details and make any adjustments</p>
                   {formData.title && formData.description && formData.price && parseFloat(formData.price) > 0 && formData.category && (
-                    <div className="mt-3 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                    <div className="mt-4 p-4 bg-green-900/20 border border-green-500/30 rounded-xl">
                       <div className="flex items-center gap-2 text-green-400">
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                         <span className="text-sm font-medium">✅ Ready to Post!</span>
@@ -642,7 +645,7 @@ export default function SellPage() {
                 </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
+              <label className="block text-sm font-medium text-zinc-100 mb-2">
                 Title
               </label>
               <input
@@ -650,13 +653,13 @@ export default function SellPage() {
                 value={formData.title || ''}
                 onChange={(e) => handleInputChange('title', e.target.value)}
                 placeholder="What are you selling?"
-                className={`input ${errors.title ? 'border-red-500' : ''}`}
+                className={`rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full ${errors.title ? 'border-red-500' : ''}`}
               />
               {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
+              <label className="block text-sm font-medium text-zinc-100 mb-2">
                 Description
               </label>
               <textarea
@@ -664,13 +667,13 @@ export default function SellPage() {
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 placeholder="Describe your item in detail..."
                 rows={4}
-                className={`input resize-none ${errors.description ? 'border-red-500' : ''}`}
+                className={`rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full resize-none ${errors.description ? 'border-red-500' : ''}`}
               />
               {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
+              <label className="block text-sm font-medium text-zinc-100 mb-2">
                 Category
               </label>
               <Select
@@ -693,7 +696,7 @@ export default function SellPage() {
 
             {/* Condition Field */}
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
+              <label className="block text-sm font-medium text-zinc-100 mb-2">
                 Condition
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -702,10 +705,10 @@ export default function SellPage() {
                     key={condition}
                     type="button"
                     onClick={() => handleInputChange('condition', condition)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                       formData.condition === condition
-                        ? 'bg-accent-500 text-white'
-                        : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                     }`}
                   >
                     {condition}
@@ -891,12 +894,12 @@ export default function SellPage() {
 
             {/* Price Field */}
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
+              <label className="block text-sm font-medium text-zinc-100 mb-2">
                 Price
               </label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">$</span>
+                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-zinc-400">$</span>
                   <input
                     type="number"
                     value={formData.price || ''}
@@ -904,7 +907,7 @@ export default function SellPage() {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className={`input pl-8 ${errors.price ? 'border-red-500' : ''}`}
+                    className={`rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 pl-8 text-zinc-100 placeholder-zinc-500 w-full ${errors.price ? 'border-red-500' : ''}`}
                   />
                 </div>
                 <button
@@ -987,14 +990,14 @@ export default function SellPage() {
                       setPriceSuggesting(false);
                     }
                   }}
-                  className={`btn btn-outline whitespace-nowrap flex items-center gap-2 ${
-                    priceSuggesting ? 'opacity-50 cursor-not-allowed' : ''
+                  className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors whitespace-nowrap ${
+                    priceSuggesting ? 'opacity-60 cursor-not-allowed' : ''
                   }`}
                   disabled={!currentUser || formData.photos.length === 0 || priceSuggesting}
                 >
                   {priceSuggesting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin"></div>
                       Analyzing...
                     </>
                   ) : (
@@ -1055,26 +1058,26 @@ export default function SellPage() {
 
             {/* AI Market Research Display */}
             {(formData.marketResearch || aiAnalysis) && (
-              <div className="bg-dark-700 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-white mb-3">🤖 AI Market Analysis</h4>
+              <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
+                <h4 className="text-sm font-medium text-zinc-100 mb-4">🤖 AI Market Analysis</h4>
                 
                 {/* Basic Market Data */}
                 <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                   <div>
-                    <span className="text-gray-400">Market Price:</span>
-                    <span className="ml-2 text-white">
+                    <span className="text-zinc-400">Market Price:</span>
+                    <span className="ml-2 text-zinc-100">
                       ${(aiAnalysis?.suggestedPrice || formData.marketResearch?.averagePrice || 0).toFixed(2)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Price Range:</span>
-                    <span className="ml-2 text-white">
+                    <span className="text-zinc-400">Price Range:</span>
+                    <span className="ml-2 text-zinc-100">
                       ${aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0} - 
                       ${aiAnalysis?.priceRange?.max || formData.marketResearch?.priceRange?.max || 0}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Demand:</span>
+                    <span className="text-zinc-400">Demand:</span>
                     <span className={`ml-2 capitalize ${
                       (aiAnalysis?.marketData?.demandLevel || formData.marketResearch?.marketDemand) === 'high' ? 'text-green-400' :
                       (aiAnalysis?.marketData?.demandLevel || formData.marketResearch?.marketDemand) === 'medium' ? 'text-yellow-400' : 'text-red-400'
@@ -1083,8 +1086,8 @@ export default function SellPage() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Competitors:</span>
-                    <span className="ml-2 text-white">
+                    <span className="text-zinc-400">Competitors:</span>
+                    <span className="ml-2 text-zinc-100">
                       {aiAnalysis?.marketData?.competitorCount || formData.marketResearch?.competitorCount || 0} listings
                     </span>
                   </div>
@@ -1093,33 +1096,33 @@ export default function SellPage() {
                 {/* Detailed Reasoning */}
                 {aiAnalysis?.reasoning && (
                   <div className="mb-4">
-                    <h5 className="text-xs font-medium text-gray-300 mb-2">💡 Price Reasoning:</h5>
-                    <p className="text-xs text-gray-400 leading-relaxed">{aiAnalysis.reasoning}</p>
+                    <h5 className="text-xs font-medium text-zinc-300 mb-2">💡 Price Reasoning:</h5>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{aiAnalysis.reasoning}</p>
                   </div>
                 )}
 
                 {/* Platform Research */}
                 {aiAnalysis?.platformResearch && (
                   <div className="mb-4">
-                    <h5 className="text-xs font-medium text-gray-300 mb-2">🔍 Platform Research:</h5>
+                    <h5 className="text-xs font-medium text-zinc-300 mb-2">🔍 Platform Research:</h5>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {aiAnalysis.platformResearch.eBay && (
-                        <div className="text-gray-400">
+                        <div className="text-zinc-400">
                           <span className="font-medium">eBay:</span> {aiAnalysis.platformResearch.eBay}
                         </div>
                       )}
                       {aiAnalysis.platformResearch.amazon && (
-                        <div className="text-gray-400">
+                        <div className="text-zinc-400">
                           <span className="font-medium">Amazon:</span> {aiAnalysis.platformResearch.amazon}
                         </div>
                       )}
                       {aiAnalysis.platformResearch.facebookMarketplace && (
-                        <div className="text-gray-400">
+                        <div className="text-zinc-400">
                           <span className="font-medium">Facebook:</span> {aiAnalysis.platformResearch.facebookMarketplace}
                         </div>
                       )}
                       {aiAnalysis.platformResearch.craigslist && (
-                        <div className="text-gray-400">
+                        <div className="text-zinc-400">
                           <span className="font-medium">Craigslist:</span> {aiAnalysis.platformResearch.craigslist}
                         </div>
                       )}
@@ -1130,11 +1133,11 @@ export default function SellPage() {
                 {/* Price Factors */}
                 {aiAnalysis?.priceFactors && (
                   <div>
-                    <h5 className="text-xs font-medium text-gray-300 mb-2">📊 Key Price Factors:</h5>
-                    <ul className="text-xs text-gray-400 space-y-1">
+                    <h5 className="text-xs font-medium text-zinc-300 mb-2">📊 Key Price Factors:</h5>
+                    <ul className="text-xs text-zinc-400 space-y-1">
                       {aiAnalysis.priceFactors.map((factor: string, index: number) => (
                         <li key={index} className="flex items-start">
-                          <span className="text-gray-500 mr-2">•</span>
+                          <span className="text-zinc-500 mr-2">•</span>
                           <span>{factor}</span>
                         </li>
                       ))}
@@ -1154,13 +1157,13 @@ export default function SellPage() {
         return (
           <div className="space-y-6">
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-white mb-2">Review & Edit Your Listing</h3>
-              <p className="text-gray-400 text-sm">Review all the details and make any final adjustments before publishing</p>
+              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-2">Review & Edit Your Listing</h2>
+              <p className="text-sm sm:text-base text-zinc-300 leading-7">Review all the details and make any final adjustments before publishing</p>
             </div>
 
             {/* Product Preview */}
-            <div className="card p-6 mb-6">
-              <h4 className="text-md font-semibold text-white mb-4">Product Preview</h4>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 mb-6">
+              <h4 className="text-md font-semibold text-zinc-100 mb-4">Product Preview</h4>
               
               <div className="flex gap-6">
                 {photoUrls && photoUrls.length > 0 && (
@@ -1168,40 +1171,40 @@ export default function SellPage() {
                     <img
                       src={photoUrls[0]}
                       alt="Item preview"
-                      className="w-32 h-32 object-cover rounded-lg"
+                      className="w-32 h-32 object-cover rounded-xl"
                     />
                   </div>
                 )}
                 
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h5 className="font-medium text-white text-lg">{formData.title}</h5>
-                    <p className="text-gray-400 text-sm mt-1">{formData.description}</p>
+                    <h5 className="font-medium text-zinc-100 text-lg">{formData.title}</h5>
+                    <p className="text-zinc-400 text-sm mt-1">{formData.description}</p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-400">Category:</span>
-                      <span className="ml-2 text-white capitalize">{formData.category}</span>
+                      <span className="text-zinc-400">Category:</span>
+                      <span className="ml-2 text-zinc-100 capitalize">{formData.category}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Condition:</span>
-                      <span className="ml-2 text-white">{formData.condition}</span>
+                      <span className="text-zinc-400">Condition:</span>
+                      <span className="ml-2 text-zinc-100">{formData.condition}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Price:</span>
-                      <span className="ml-2 text-white font-semibold">${formData.price.toLocaleString()}</span>
+                      <span className="text-zinc-400">Price:</span>
+                      <span className="ml-2 text-zinc-100 font-semibold">${formData.price.toLocaleString()}</span>
                     </div>
                     {formData.size && (
                       <div>
-                        <span className="text-gray-400">Size:</span>
-                        <span className="ml-2 text-white">{formData.size}</span>
+                        <span className="text-zinc-400">Size:</span>
+                        <span className="ml-2 text-zinc-100">{formData.size}</span>
                       </div>
                     )}
                     {formData.location && (
                       <div>
-                        <span className="text-gray-400">Location:</span>
-                        <span className="ml-2 text-white">{formData.location}</span>
+                        <span className="text-zinc-400">Location:</span>
+                        <span className="ml-2 text-zinc-100">{formData.location}</span>
                       </div>
                     )}
                   </div>
@@ -1344,69 +1347,15 @@ export default function SellPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Location <span className="text-gray-400 text-sm">(US Only)</span>
+                <label className="block text-sm font-medium text-zinc-100 mb-2">
+                  Location <span className="text-zinc-400 text-sm">(US Only)</span>
                 </label>
-                <input
-                  type="text"
+                <LocationCombobox
                   value={formData.location || ''}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  onChange={(value) => handleInputChange('location', value)}
                   placeholder="e.g., Tampa, FL or New York, NY"
-                  className="input"
-                  list="us-locations"
                 />
-                <datalist id="us-locations">
-                  <option value="New York, NY" />
-                  <option value="Los Angeles, CA" />
-                  <option value="Chicago, IL" />
-                  <option value="Houston, TX" />
-                  <option value="Phoenix, AZ" />
-                  <option value="Philadelphia, PA" />
-                  <option value="San Antonio, TX" />
-                  <option value="San Diego, CA" />
-                  <option value="Dallas, TX" />
-                  <option value="San Jose, CA" />
-                  <option value="Austin, TX" />
-                  <option value="Jacksonville, FL" />
-                  <option value="Fort Worth, TX" />
-                  <option value="Columbus, OH" />
-                  <option value="Charlotte, NC" />
-                  <option value="San Francisco, CA" />
-                  <option value="Indianapolis, IN" />
-                  <option value="Seattle, WA" />
-                  <option value="Denver, CO" />
-                  <option value="Washington, DC" />
-                  <option value="Boston, MA" />
-                  <option value="El Paso, TX" />
-                  <option value="Nashville, TN" />
-                  <option value="Detroit, MI" />
-                  <option value="Oklahoma City, OK" />
-                  <option value="Portland, OR" />
-                  <option value="Las Vegas, NV" />
-                  <option value="Memphis, TN" />
-                  <option value="Louisville, KY" />
-                  <option value="Baltimore, MD" />
-                  <option value="Milwaukee, WI" />
-                  <option value="Albuquerque, NM" />
-                  <option value="Tucson, AZ" />
-                  <option value="Fresno, CA" />
-                  <option value="Sacramento, CA" />
-                  <option value="Mesa, AZ" />
-                  <option value="Kansas City, MO" />
-                  <option value="Atlanta, GA" />
-                  <option value="Long Beach, CA" />
-                  <option value="Colorado Springs, CO" />
-                  <option value="Raleigh, NC" />
-                  <option value="Miami, FL" />
-                  <option value="Virginia Beach, VA" />
-                  <option value="Omaha, NE" />
-                  <option value="Oakland, CA" />
-                  <option value="Minneapolis, MN" />
-                  <option value="Tulsa, OK" />
-                  <option value="Arlington, TX" />
-                  <option value="Tampa, FL" />
-                </datalist>
-                <p className="text-gray-400 text-xs mt-1">Enter your US city and state for accurate regional pricing</p>
+                <p className="text-zinc-400 text-xs mt-1">Enter your US city and state for accurate regional pricing</p>
               </div>
 
               {formData.size && (
@@ -1430,8 +1379,8 @@ export default function SellPage() {
       case 5:
         return (
           <div className="space-y-6">
-            <div className="card p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Final Review & Publish</h3>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6">
+              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-4">Final Review & Publish</h2>
               
               <div className="space-y-4">
                 {photoUrls && photoUrls.length > 0 && (
@@ -1439,24 +1388,24 @@ export default function SellPage() {
                     <img
                       src={photoUrls[0]}
                       alt="Item preview"
-                      className="w-32 h-32 object-cover rounded-lg"
+                      className="w-32 h-32 object-cover rounded-xl"
                     />
                   </div>
                 )}
                 
                 <div>
-                  <h4 className="font-medium text-white">{formData.title}</h4>
-                  <p className="text-gray-400 text-sm">{formData.description}</p>
+                  <h4 className="font-medium text-zinc-100">{formData.title}</h4>
+                  <p className="text-zinc-400 text-sm">{formData.description}</p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-400">Category:</span>
-                    <span className="ml-2 text-white">{formData.category}</span>
+                    <span className="text-zinc-400">Category:</span>
+                    <span className="ml-2 text-zinc-100">{formData.category}</span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Price:</span>
-                    <span className="ml-2 text-white">${formData.price.toLocaleString()}</span>
+                    <span className="text-zinc-400">Price:</span>
+                    <span className="ml-2 text-zinc-100">${formData.price.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -1479,61 +1428,71 @@ export default function SellPage() {
     <div className="min-h-screen bg-dark-950">
       <Navigation />
       
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="flex justify-center mb-4">
-            <Logo size="md" />
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 lg:py-16">
+        {/* Header Hero */}
+        <header className="text-center space-y-3 mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300">
+            <img src="/logo.jpg" alt="" className="h-4 w-4 rounded-full" />
+            ALL VERSE GPT
           </div>
-          <h1 className="text-5xl font-bold text-white mb-2">Sell Your Item</h1>
-          <p className="text-lg text-gray-400">Upload a photo and let AI do the work for you</p>
-        </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-100">Sell Your Item</h1>
+          <p className="text-sm sm:text-base text-zinc-300 leading-7">Upload a photo and let AI do the work for you</p>
+        </header>
 
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center">
-            <div className="flex items-center">
-              {steps.map((step, index) => {
-                const Icon = step.icon;
-                return (
-                  <div key={step.id} className="flex items-center">
-                    <div className={`flex items-center justify-center w-12 h-12 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      currentStep >= step.id
-                        ? 'bg-accent-500 text-white glow'
-                        : 'bg-dark-700 text-gray-400'
-                    }`}>
+        {/* Stepper */}
+        <div className="mb-10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-2">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = currentStep === step.id;
+              const isCompleted = currentStep > step.id;
+              const isUpcoming = currentStep < step.id;
+              
+              return (
+                <div key={step.id} className="flex items-center">
+                  <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+                    <div 
+                      className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-200 ${
+                        isActive 
+                          ? 'bg-blue-600 text-white' 
+                          : isCompleted 
+                            ? 'bg-blue-500 text-white' 
+                            : 'bg-zinc-800 text-zinc-300'
+                      }`}
+                      aria-current={isActive ? "step" : undefined}
+                    >
                       <Icon className="w-5 h-5" />
                     </div>
-                    <div className="ml-3">
+                    <div className="text-center sm:text-left">
                       <div className={`text-sm font-medium ${
-                        currentStep >= step.id ? 'text-white' : 'text-gray-400'
+                        isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-500'
                       }`}>
                         {step.title}
                       </div>
-                      <div className="text-xs text-gray-500">{step.description}</div>
+                      <div className="text-xs text-zinc-500">{step.description}</div>
                     </div>
-                    {index < steps.length - 1 && (
-                      <div className={`w-16 h-0.5 mx-4 transition-all duration-200 ${
-                        currentStep > step.id ? 'bg-accent-500' : 'bg-dark-700'
-                      }`} />
-                    )}
                   </div>
-                );
-              })}
-            </div>
+                  {index < steps.length - 1 && (
+                    <div className={`hidden sm:block w-12 h-0.5 mx-4 transition-all duration-200 ${
+                      isCompleted ? 'bg-blue-500' : 'bg-zinc-800'
+                    }`} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Form Content */}
-        <div className="card p-8 no-hover">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
           {renderStepContent()}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-dark-600">
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-zinc-800">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="btn btn-outline flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 disabled:opacity-60 disabled:cursor-not-allowed transition-colors gap-2"
             >
               <ChevronLeft className="w-4 h-4" />
               Previous
@@ -1543,7 +1502,7 @@ export default function SellPage() {
               <button
                 onClick={nextStep}
                 disabled={loading || aiAnalyzing}
-                className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
               >
                 {loading ? 'Creating...' : aiAnalyzing ? 'AI Scanning Photos...' : 
                  currentStep === 1 ? 'Analyze with AI' : 
@@ -1556,14 +1515,14 @@ export default function SellPage() {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
               >
                 {loading ? 'Publishing...' : 'Publish Listing'}
               </button>
             )}
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Toast Container */}
       <div className="fixed top-4 right-4 z-50 space-y-2">

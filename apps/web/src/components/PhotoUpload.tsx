@@ -156,9 +156,9 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       {remainingSlots > 0 && (
         <div
           className={`
-            relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-            ${dragOver ? 'border-accent-500 bg-accent-500/10' : 'border-gray-600'}
-            ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}
+            relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
+            ${dragOver ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-500'}
+            ${isUploading ? 'opacity-60 cursor-not-allowed' : ''}
           `}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -175,27 +175,29 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             disabled={isUploading}
           />
 
-          <div className="flex flex-col items-center space-y-2">
+          <div className="flex flex-col items-center space-y-3">
             {type === 'profile' ? (
-              <Camera className="w-8 h-8 text-gray-400" />
+              <Camera className="w-10 h-10 text-zinc-400" />
             ) : (
-              <ImageIcon className="w-8 h-8 text-gray-400" />
+              <ImageIcon className="w-10 h-10 text-zinc-400" />
             )}
             
-            <div className="text-sm text-gray-400">
-              {isUploading ? (
-                <span className="text-accent-500">Uploading photos...</span>
-              ) : (
-                <>
-                  <span className="text-accent-500">Click to upload</span>
-                  {' '}or drag and drop
-                </>
-              )}
-            </div>
-            
-            <div className="text-xs text-gray-500">
-              {type === 'profile' ? 'Profile picture' : `Up to ${remainingSlots} photos`}
-              {' '}(PNG, JPG, WebP up to 5MB each)
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-zinc-100">
+                {isUploading ? (
+                  <span className="text-blue-400">Uploading photos...</span>
+                ) : (
+                  <>
+                    <span className="text-blue-400">Click to upload</span>
+                    {' '}or drag and drop
+                  </>
+                )}
+              </div>
+              
+              <div className="text-xs text-zinc-500">
+                {type === 'profile' ? 'Profile picture' : `Up to ${remainingSlots} photos`}
+                {' '}(PNG, JPG, WebP up to 5MB each)
+              </div>
             </div>
           </div>
         </div>
@@ -203,7 +205,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
       {/* Error Messages */}
       {hasErrorItems && (
-        <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+        <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
             <span>Some photos failed to upload. Please try again.</span>
@@ -213,16 +215,16 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
       {/* Photo Grid */}
       {items.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {items.map((item, index) => (
             <div key={item.id} className="relative group">
-              <div className="relative">
+              <div className="relative aspect-square">
                 <Image
                   src={item.preview}
                   alt={`Upload ${index + 1}`}
                   width={200}
-                  height={128}
-                  className="w-full h-32 object-cover rounded-lg border border-gray-600"
+                  height={200}
+                  className="w-full h-full object-cover rounded-xl overflow-hidden"
                   priority={false}
                   placeholder="blur"
                   blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
@@ -252,7 +254,8 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                 {/* Remove Button */}
                 <button
                   onClick={() => handleRemovePhoto(index)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                  aria-label="Remove photo"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -272,11 +275,11 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
       {/* Upload Progress */}
       {hasUploadingItems && (
         <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-300">
+          <div className="flex justify-between text-sm text-zinc-300">
             <span>Uploading photos to cloud storage...</span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2">
-            <div className="bg-accent-500 h-2 rounded-full transition-all duration-300 animate-pulse" />
+          <div className="w-full bg-zinc-700 rounded-full h-2">
+            <div className="bg-blue-500 h-2 rounded-full transition-all duration-300 animate-pulse" />
           </div>
         </div>
       )}

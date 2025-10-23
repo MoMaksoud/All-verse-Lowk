@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bot, Send, CheckCircle } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
+import Select from './Select';
 
 interface MissingInfo {
   field: string;
@@ -288,63 +289,60 @@ export function AIListingAssistant({
 
   if (isComplete) {
     return (
-      <div className="bg-green-900/20 border border-green-700 rounded-lg p-6 text-center">
-        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+      <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-6 text-center">
+        <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-green-400 mb-2">Listing Complete!</h3>
-        <p className="text-gray-300">All information has been gathered and your listing is ready to post.</p>
+        <p className="text-zinc-300">All information has been gathered and your listing is ready to post.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-dark-800 border border-dark-700 rounded-lg p-6">
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
       <div className="flex items-center gap-3 mb-6">
-        <Bot className="w-6 h-6 text-blue-500" />
-        <h3 className="text-lg font-semibold text-white">AI Listing Assistant</h3>
-        <div className="ml-auto text-sm text-gray-400">
+        <Bot className="w-6 h-6 text-blue-400" />
+        <h3 className="text-xl sm:text-2xl font-semibold text-zinc-100">AI Listing Assistant</h3>
+        <div className="ml-auto text-sm text-zinc-400">
           Step {currentStep + 1} of {missingInfoQuestions.length}
         </div>
       </div>
 
       <div className="mb-6">
-        <h4 className="text-md font-medium text-white mb-2">
+        <h4 className="text-lg font-medium text-zinc-100 mb-4">
           {currentQuestion.question}
         </h4>
         
         {currentQuestion.type === 'select' ? (
-          <select
-            value={currentAnswer}
-            onChange={(e) => setCurrentAnswer(e.target.value)}
-            className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select an option...</option>
-            {currentQuestion.options?.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <Select
+            value={currentAnswer || null}
+            onChange={(value) => setCurrentAnswer(value)}
+            options={[
+              { value: '', label: 'Select an option...' },
+              ...(currentQuestion.options?.map(option => ({ value: option, label: option })) || [])
+            ]}
+            placeholder="Select an option..."
+          />
         ) : (
           <input
             type={currentQuestion.type}
             value={currentAnswer}
             onChange={(e) => setCurrentAnswer(e.target.value)}
             placeholder={currentQuestion.placeholder}
-            className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 bg-zinc-900/60 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             onKeyPress={(e) => e.key === 'Enter' && handleSubmitAnswer()}
           />
         )}
       </div>
 
       <div className="flex justify-between items-center">
-        <div className="text-sm text-gray-400">
+        <div className="text-sm text-zinc-400">
           {currentStep > 0 && (
             <button
               onClick={() => {
                 setCurrentStep(prev => prev - 1);
                 setCurrentAnswer('');
               }}
-              className="text-blue-400 hover:text-blue-300"
+              className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors"
             >
               ← Previous
             </button>
@@ -354,16 +352,16 @@ export function AIListingAssistant({
         <button
           onClick={handleSubmitAnswer}
           disabled={!currentAnswer.trim()}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
         >
           <Send className="w-4 h-4" />
-          Next
+          {currentStep === missingInfoQuestions.length - 1 ? 'Complete' : 'Next'}
         </button>
       </div>
 
       {/* Progress bar */}
-      <div className="mt-4">
-        <div className="w-full bg-dark-700 rounded-full h-2">
+      <div className="mt-6">
+        <div className="w-full bg-zinc-800 rounded-full h-2">
           <div 
             className="bg-blue-500 h-2 rounded-full transition-all duration-300"
             style={{ width: `${((currentStep + 1) / missingInfoQuestions.length) * 100}%` }}
