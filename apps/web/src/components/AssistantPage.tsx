@@ -16,17 +16,45 @@ export default function AssistantPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'buyer' | 'seller'>('buyer');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Load/save conversation per mode
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`ai-chat-${mode}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setMessages(parsed);
+      } else {
+        setMessages([]);
+      }
+    } catch {}
+  }, [mode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`ai-chat-${mode}`, JSON.stringify(messages));
+    } catch {}
+  }, [messages, mode]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (!taRef.current) return;
+    const el = taRef.current;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+  }, [input]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage = input.trim();
+    const userMessage = input.trim().slice(0, 2000);
     setInput('');
     setIsLoading(true);
 
@@ -101,7 +129,7 @@ export default function AssistantPage() {
             </button>
             <button
               onClick={() => setMode('seller')}
-              className={`px-4 py<｜place▁holder▁no▁763｜> rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                 mode === 'seller' 
                   ? 'bg-blue-600 text-white' 
                   : 'text-zinc-400 hover:text-white'
@@ -153,6 +181,7 @@ export default function AssistantPage() {
         {/* Input */}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <textarea
+            ref={taRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={mode === 'buyer' ? 'What are you looking for?' : 'How can I help you sell?'}
