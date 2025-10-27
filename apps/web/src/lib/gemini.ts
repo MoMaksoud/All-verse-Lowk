@@ -23,6 +23,47 @@ export interface ChatResponse {
 
 export class GeminiService {
   /**
+   * Generate AI response based on role (buyer or seller) and user message
+   * This is the main entry point for role-based AI interactions
+   */
+  static async generateAIResponse(
+    role: 'buyer' | 'seller', 
+    userMessage: string,
+    conversationHistory: any[] = []
+  ): Promise<string> {
+    // Define system prompts for each role
+    const buyerPrompt = `You are a friendly AI shopping assistant for ALL VERSE GPT marketplace!
+Help buyers find great deals and products. Be warm, helpful, and conversational.`;
+
+    const sellerPrompt = `You are a knowledgeable AI selling assistant for ALL VERSE GPT marketplace!
+Help sellers with pricing, market insights, and listing optimization. Be professional and encouraging.`;
+
+    const systemPrompt = role === 'buyer' ? buyerPrompt : sellerPrompt;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: [
+          ...conversationHistory,
+          { role: "user", parts: [{ text: userMessage }] }
+        ],
+        systemInstruction: systemPrompt,
+      });
+
+      return response.text ?? '';
+    } catch (error: any) {
+      console.error('AI Response Error:', error);
+      
+      // Check for quota/rate limit errors
+      if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+        throw new Error('AI service quota exceeded. Please try again later.');
+      }
+      
+      throw new Error(error instanceof Error ? error.message : 'Failed to generate AI response');
+    }
+  }
+
+  /**
    * Generate a response from Gemini AI
    */
   static async generateResponse(prompt: string): Promise<ChatResponse> {
