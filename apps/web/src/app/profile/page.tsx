@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useAuth();
   const router = useRouter();
 
@@ -54,6 +55,36 @@ export default function ProfilePage() {
       setProfile(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onCameraClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser?.uid) return;
+    try {
+      const form = new FormData();
+      form.append('photo', file);
+      const resp = await fetch('/api/upload/profile-photo', {
+        method: 'POST',
+        headers: {
+          'x-user-id': currentUser.uid,
+          'x-user-email': currentUser.email || ''
+        },
+        body: form,
+      });
+      if (!resp.ok) throw new Error('Upload failed');
+      const data = await resp.json();
+      // Optimistically update local profile
+      setProfile((p) => p ? { ...p, profilePicture: data.photoUrl } as any : p);
+    } catch (err) {
+      console.error('Profile photo upload failed:', err);
+    } finally {
+      // Reset input to allow re-selecting same file
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -142,14 +173,32 @@ export default function ProfilePage() {
                     {/* User Identity */}
                     <div className="flex items-start space-x-6">
                       <div className="relative flex-shrink-0">
-                        <DefaultAvatar
-                          name={profile.username}
-                          email={currentUser?.email || undefined}
-                          size="xl"
-                        />
-                        <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-accent-500 hover:bg-accent-600 rounded-full flex items-center justify-center transition-colors">
+                        {profile.profilePicture ? (
+                          <img
+                            src={profile.profilePicture as any}
+                            alt={profile.username}
+                            className="w-20 h-20 rounded-full object-cover"
+                          />
+                        ) : (
+                          <DefaultAvatar
+                            name={profile.username}
+                            email={currentUser?.email || undefined}
+                            size="xl"
+                          />
+                        )}
+                        <button
+                          onClick={onCameraClick}
+                          className="absolute -bottom-2 -right-2 w-8 h-8 bg-accent-500 hover:bg-accent-600 rounded-full flex items-center justify-center transition-colors"
+                        >
                           <Camera className="w-4 h-4 text-white" />
                         </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={onFileSelected}
+                        />
                       </div>
                       
                       <div className="flex-1 min-w-0">

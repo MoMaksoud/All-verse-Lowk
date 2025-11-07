@@ -225,14 +225,12 @@ const Navigation = memo(function Navigation() {
                     onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                     className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2"
                   >
-                    {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
-                      <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
-                        <DefaultAvatar
-                          name={currentUser?.displayName || undefined}
-                          email={currentUser?.email || undefined}
-                          size="sm"
-                        />
-                      </Suspense>
+                    {(profile?.profilePicture || currentUser?.photoURL) ? (
+                      <img
+                        src={(profile?.profilePicture || currentUser?.photoURL) as string}
+                        alt={currentUser?.displayName || 'Avatar'}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
                     ) : (
                       <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
                         <DefaultAvatar
@@ -251,14 +249,12 @@ const Navigation = memo(function Navigation() {
                       {/* Profile Header */}
                       <div className="px-4 py-3 border-b border-dark-600">
                         <div className="flex items-center space-x-3">
-                          {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
-                            <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
-                              <DefaultAvatar
-                                name={currentUser?.displayName || undefined}
-                                email={currentUser?.email || undefined}
-                                size="md"
-                              />
-                            </Suspense>
+                          {(profile?.profilePicture || currentUser?.photoURL) ? (
+                            <img
+                              src={(profile?.profilePicture || currentUser?.photoURL) as string}
+                              alt={currentUser?.displayName || 'Avatar'}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
                           ) : (
                             <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
                               <DefaultAvatar
@@ -545,11 +541,11 @@ const Navigation = memo(function Navigation() {
               {currentUser && (
                 <div className="pt-4 border-t border-dark-600">
                   <div className="flex items-center px-3 py-3">
-                    {(profile?.profilePictureUrl || currentUser?.photoURL) ? (
-                      <DefaultAvatar
-                        name={currentUser?.displayName || undefined}
-                        email={currentUser?.email || undefined}
-                        size="sm"
+                    {(profile?.profilePicture || currentUser?.photoURL) ? (
+                      <img
+                        src={(profile?.profilePicture || currentUser?.photoURL) as string}
+                        alt={currentUser?.displayName || 'Avatar'}
+                        className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
                       <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>

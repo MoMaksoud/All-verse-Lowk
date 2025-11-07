@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AIAnalysisService } from '@/lib/aiAnalysis';
+import { checkRateLimit, getIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const preferredRegion = 'iad1';
 
 export async function POST(req: NextRequest) {
   {
+    // Rate limit to protect the AI endpoint (20/min)
+    const ip = getIp(req as unknown as Request);
+    checkRateLimit(ip, 20);
     const userId = req.headers.get('x-user-id');
 
     if (!userId) {

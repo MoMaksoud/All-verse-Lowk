@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Send, Bot, ShoppingCart, Store } from 'lucide-react';
 
 interface Message {
@@ -17,6 +18,7 @@ export default function AssistantPage() {
   const [mode, setMode] = useState<'buyer' | 'seller'>('buyer');
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const { currentUser } = useAuth();
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function AssistantPage() {
     try {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser?.uid || '' },
         body: JSON.stringify({
           message: userMessage,
           mode,
@@ -196,7 +198,7 @@ export default function AssistantPage() {
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || !input.trim() || !currentUser}
             className="px-5 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             <Send className="w-4 h-4" />

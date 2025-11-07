@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import StorageService from '@/lib/storage';
 import { firestoreServices } from '@/lib/services/firestore';
+import { ProfileService } from '@/lib/firestore';
 import { ProfilePhotoUpload } from '@/lib/types/firestore';
 import { FirebaseCleanupService } from '@/lib/firebaseCleanup';
 
@@ -51,10 +52,9 @@ export async function POST(req: NextRequest) {
 
     await firestoreServices.profilePhotos.saveProfilePhoto(photoData);
 
-    // Update user profile with new photo URL
-    await firestoreServices.users.updateUser(userId, {
-      photoURL: photoUrl,
-    });
+    // Update user profile/user doc with new photo URL
+    await firestoreServices.users.updateUser(userId, { photoURL: photoUrl });
+    await ProfileService.saveProfile(userId, { profilePicture: photoUrl });
 
     return NextResponse.json({
       success: true,

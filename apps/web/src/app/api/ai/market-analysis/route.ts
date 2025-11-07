@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { checkRateLimit, getIp } from '@/lib/rateLimit';
+export const preferredRegion = 'iad1';
+export const dynamic = 'force-dynamic';
 
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: NextRequest) {
   try {
+    // Basic rate limit (30/min per IP)
+    const ip = getIp(req as unknown as Request);
+    checkRateLimit(ip, 30);
     const { title, description, category, condition, location, brand, model } = await req.json();
 
     if (!title || !category) {

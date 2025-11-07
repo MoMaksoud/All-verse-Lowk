@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GeminiService } from '@/lib/gemini';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
+import { assertTokenBudget, addUsage } from '@/lib/aiUsage';
+
+const DAILY_LIMIT = Number(process.env.NEXT_PUBLIC_AI_DAILY_TOKENS || 5000);
+const MAX_OUT_TOKENS = 256;
+const isOutOfScope = (s: string) => /politic|news|program|code|crypto|vpn|religion|medical|legal|tax|homework|api key|bypass|hack/i.test(s || '');
 
 export async function POST(request: NextRequest) {
   try {
     // 1) Rate limit
     const ip = getIp(request as unknown as Request);
     checkRateLimit(ip, 60); // 60 req/min (tune as needed)
+
+    // Require user ID header so we can track per-user usage
+    const userId = request.headers.get('x-user-id');
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
+    }
 
     const { message, mode = 'buyer', conversationHistory = [] } = await request.json();
 
@@ -22,7 +33,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message too long' }, { status: 400 });
     }
 
-    // 3) Build conversation context safely
+    // 3) Marketplace-only scope
+    if (isOutOfScope(trimmed)) {
+      return NextResponse.json({
+        success: true,
+        response: 'I can only help with marketplace-related questions (buying, selling, listings, pricing, shipping).'
+      });
+    }
+
+    // 4) Enforce daily token budget (precharge input + max output)
+    const inputTokens = Math.ceil(trimmed.length / 4);
+    const precharge = inputTokens + MAX_OUT_TOKENS;
+    try {
+      await assertTokenBudget(userId, precharge, DAILY_LIMIT);
+    } catch {
+      return NextResponse.json({
+        success: false,
+        response: 'Free daily AI limit reached. Try again tomorrow.'
+      }, { status: 200 });
+    }
+
+    // 5) Build conversation context safely
     const history = Array.isArray(conversationHistory)
       ? conversationHistory.slice(-10).map((m: any) => ({
           role: m?.role === 'user' ? 'user' : 'assistant',
@@ -30,7 +61,7 @@ export async function POST(request: NextRequest) {
         }))
       : [];
 
-    // 4) Timeout to avoid hanging calls
+    // 6) Timeout to avoid hanging calls
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), 20000); // 20s timeout
 
@@ -41,13 +72,21 @@ export async function POST(request: NextRequest) {
     );
 
     clearTimeout(t);
+    // 7) Reconcile approximate output tokens
+    const outputTokens = Math.ceil((responseText || '').length / 4);
+    await addUsage(userId, inputTokens + outputTokens, precharge);
+
     return NextResponse.json({ response: responseText, success: true });
 
   } catch (error: any) {
-    // Return a clean error with no stack
+    // Return a safe fallback message with 200 status so UI can display it
     const msg = error?.name === 'AbortError'
       ? 'AI timed out. Please try again.'
       : (error?.message || 'Internal error');
-    return NextResponse.json({ response: msg, success: false, error: msg }, { status: 500 });
+    return NextResponse.json({
+      response: 'I hit a temporary error. Please try again shortly.',
+      success: false,
+      error: msg
+    });
   }
 }

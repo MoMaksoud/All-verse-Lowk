@@ -5,6 +5,7 @@ import { Category } from "@marketplace/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = 'iad1';
 
 const categories: Category[] = [
   { 
@@ -40,5 +41,9 @@ const categories: Category[] = [
 ];
 
 export const GET = withApi(async (req: NextRequest) => {
-  return success(categories);
+  return success(categories, {
+    headers: {
+      'Cache-Control': 'public, max-age=300, stale-while-revalidate=600'
+    }
+  });
 });
