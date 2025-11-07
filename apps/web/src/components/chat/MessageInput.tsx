@@ -69,7 +69,7 @@ export function MessageInput({ onSendMessage, disabled = false, placeholder = "T
           placeholder={placeholder}
           disabled={disabled || sending}
           rows={1}
-          className="w-full px-3 py-2 border border-dark-border rounded-lg bg-dark-surface text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-3 py-2 border border-dark-border rounded-lg bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ minHeight: '40px', maxHeight: '120px' }}
         />
       </div>
