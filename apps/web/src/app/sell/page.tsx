@@ -178,65 +178,7 @@ export default function SellPage() {
     }
   };
 
-  const testFallbackAnalysis = async () => {
-    if (!currentUser || !formData.photos.length) return;
-
-    try {
-      setAiAnalyzing(true);
-      
-      console.log('🧪 Testing fallback analysis...');
-      
-      // Call fallback test API
-      const response = await fetch('/api/ai/test-fallback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.uid || '',
-        },
-        body: JSON.stringify({
-          imageUrls: formData.photos,
-          listingId: null // No listing ID since we haven't created one yet
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Fallback test failed: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      const analysis = result.analysis;
-      
-      console.log('🧪 Fallback analysis result:', analysis);
-      
-      // Update form data with fallback data (no database save yet)
-      const aiData = {
-        title: analysis.title,
-        description: analysis.description,
-        category: analysis.category,
-        price: analysis.suggestedPrice,
-        condition: analysis.condition,
-        marketResearch: analysis.marketResearch,
-      };
-      
-      // Update form data to show fallback results
-      setFormData(prev => ({ ...prev, ...aiData }));
-      setCurrentStep(3);
-      console.log('🧪 Form updated with fallback analysis');
-      
-      // Show success toast
-      addToast('success', 'Fallback Analysis Complete', 'Product details generated using fallback analysis!');
-      
-    } catch (error) {
-      console.error('🧪 Fallback analysis error:', error);
-      setErrors({ submit: 'Fallback analysis failed. You can still edit manually.' });
-      setCurrentStep(3);
-      
-      // Show error toast
-      addToast('error', 'Fallback Analysis Failed', 'Unable to generate fallback analysis. Please edit manually.');
-    } finally {
-      setAiAnalyzing(false);
-    }
-  };
+  // Removed legacy fallback analysis tester (no corresponding API route)
 
   const performAIAnalysis = async () => {
     console.log('🔥 PERFORM AI ANALYSIS FUNCTION CALLED!');
@@ -598,13 +540,7 @@ export default function SellPage() {
                            'Analyze with AI'}
                         </button>
                         
-                        <button
-                          onClick={() => testFallbackAnalysis()}
-                          disabled={aiAnalyzing}
-                          className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          🧪 Test Fallback Analysis
-                        </button>
+                        {/* Removed legacy Test Fallback Analysis button */}
                         
                         <button
                           onClick={() => setCurrentStep(3)}
