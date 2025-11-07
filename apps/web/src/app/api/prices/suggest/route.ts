@@ -85,13 +85,16 @@ export async function POST(request: NextRequest) {
 
     // Try Gemini AI first
     try {
-      const priceResponse = await GeminiService.generatePriceSuggestion(
-        title, 
-        description, 
-        category, 
-        condition || 'Good',
-        size || null
-      );
+      const pricePrompt = `You are a pricing expert. Suggest a fair market price range for:
+Title: ${title}
+Description: ${description}
+Category: ${category}
+Condition: ${condition}
+${size ? `Size: ${size}` : ''}
+
+Provide a concise price suggestion with a recommended price range and brief reasoning. Keep it under 100 words.`;
+
+      const priceResponse = await GeminiService.generateResponse(pricePrompt);
 
       if (priceResponse.success) {
         return NextResponse.json({

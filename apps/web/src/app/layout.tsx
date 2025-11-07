@@ -37,8 +37,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full dark">
-      <body className={`${inter.variable} font-sans h-full dark`}>
+    <html lang="en" className="h-full dark" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans h-full dark`} suppressHydrationWarning>
         <div className="min-h-screen">
           <ErrorBoundary>
             <AuthProvider>

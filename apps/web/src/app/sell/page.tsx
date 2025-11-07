@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+
+// Prevent static generation - this page requires authentication
+export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap, Edit, Send } from 'lucide-react';
 import { SimpleListingCreate } from '@marketplace/types';
@@ -51,7 +54,7 @@ export default function SellPage() {
 
   // Create temporary listing ID for photo uploads
   useEffect(() => {
-    if (!listingId && currentUser) {
+    if (!listingId && currentUser?.uid) {
       // Generate a temporary listing ID for photo uploads
       const tempId = `temp-${currentUser.uid}-${Date.now()}`;
       setListingId(tempId);
@@ -188,7 +191,7 @@ export default function SellPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
+          'x-user-id': currentUser?.uid || '',
         },
         body: JSON.stringify({
           imageUrls: formData.photos,
@@ -262,7 +265,7 @@ export default function SellPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
+          'x-user-id': currentUser?.uid || '',
         },
         body: JSON.stringify({
           imageUrls: photoUrls, // Use only cloud URLs
@@ -478,14 +481,14 @@ export default function SellPage() {
         condition: formData.condition || 'good',
         inventory: 1,
         isActive: true,
-        sellerId: currentUser.uid,
+        sellerId: currentUser?.uid || '',
       };
       
       const response = await fetch('/api/listings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
+          'x-user-id': currentUser?.uid || '',
         },
         body: JSON.stringify(listingData),
       });
@@ -521,14 +524,20 @@ export default function SellPage() {
             <div>
               <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-4">Upload Your Item Photos</h2>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
-                <PhotoUpload
-                  uid={currentUser.uid}
-                  listingId={listingId || ''}
-                  max={10}
-                  initial={[]}
-                  onChange={handlePhotoChange}
-                  className="max-w-2xl mx-auto"
-                />
+                {currentUser ? (
+                  <PhotoUpload
+                    uid={currentUser.uid}
+                    listingId={listingId || ''}
+                    max={10}
+                    initial={[]}
+                    onChange={handlePhotoChange}
+                    className="max-w-2xl mx-auto"
+                  />
+                ) : (
+                  <div className="text-center p-8 text-zinc-400">
+                    <p>Please sign in to upload photos</p>
+                  </div>
+                )}
                 {errors.photos && <p className="text-red-400 text-sm mt-3">{errors.photos}</p>}
               </div>
             </div>

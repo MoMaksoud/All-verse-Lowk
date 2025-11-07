@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GeminiService } from '@/lib/gemini';
-import { FirebaseAIService } from '@/lib/firebase-ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,33 +13,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 Processing listings query:', query);
 
-    // Try Firebase AI first for enhanced intelligence
-    const firebaseResponse = await FirebaseAIService.intelligentProductSearch(query);
-    
-    if (firebaseResponse.success && firebaseResponse.data?.recommendations) {
-      const payload = {
-        items: firebaseResponse.data.recommendations,
-        meta: {
-          query: query,
-          total: firebaseResponse.data.recommendations.length,
-          limit: 12,
-          intent: firebaseResponse.data.intent || determineIntent(query),
-          aiGenerated: true,
-          confidence: firebaseResponse.data.confidence,
-          marketInsights: firebaseResponse.data.marketInsights
-        }
-      };
-
-      console.log('🤖 Returning Firebase AI payload:', payload);
-
-      return NextResponse.json({
-        success: true,
-        data: payload,
-        message: 'Firebase AI-generated listings created successfully'
-      });
-    }
-
-    // Fallback to Gemini if Firebase AI fails
+    // Use Gemini AI for intelligent listings
     const aiResponse = await GeminiService.generateIntelligentListings(query);
     
     if (aiResponse.success && aiResponse.listings) {

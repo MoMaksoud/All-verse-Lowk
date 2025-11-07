@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 // Initialize Gemini AI
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
@@ -6,7 +6,7 @@ if (!apiKey) {
   throw new Error('GEMINI_API_KEY or NEXT_PUBLIC_GEMINI_API_KEY environment variable is required. Please add it to your .env.local file.');
 }
 
-const ai = new GoogleGenAI({apiKey: apiKey});
+const genAI = new GoogleGenerativeAI(apiKey);
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -81,15 +81,10 @@ Always end with a short, encouraging call-to-action question.
     const systemPrompt = role === 'buyer' ? buyerPrompt : sellerPrompt;
 
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
-        contents: [
-          ...conversationHistory,
-          { role: "user", parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] }
-        ]
-      });
-
-      return response.text ?? '';
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(`${systemPrompt}\n\n${userMessage}`);
+      const response = await result.response;
+      return response.text();
     } catch (error: any) {
       console.error('AI Response Error:', error);
       
@@ -107,13 +102,12 @@ Always end with a short, encouraging call-to-action question.
    */
   static async generateResponse(prompt: string): Promise<ChatResponse> {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: prompt,
-      });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
 
       return {
-        message: response.text ?? '',
+        message: response.text(),
         success: true
       };
     } catch (error: any) {
@@ -205,11 +199,10 @@ Always end with a short, encouraging call-to-action question.
     `;
 
     try {
-      const result = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: listingsPrompt,
-      });
-      const text = result.text ?? '';
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(listingsPrompt);
+      const response = await result.response;
+      const text = response.text();
 
       // Clean and parse JSON response
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
