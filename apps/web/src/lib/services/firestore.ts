@@ -481,78 +481,7 @@ export class PaymentsService extends BaseFirestoreService<FirestorePayment> {
   }
 }
 
-// ============================================================================
-// MESSAGES SERVICE
-// ============================================================================
-export class MessagesService extends BaseFirestoreService<FirestoreMessage> {
-  constructor() {
-    super(COLLECTIONS.MESSAGES);
-  }
-
-  async getMessage(conversationId: string, messageId: string): Promise<FirestoreMessage | null> {
-    const docRef = doc(db, this.collectionName, conversationId, 'threads', messageId);
-    const docSnapshot = await getDoc(docRef);
-    if (!docSnapshot.exists()) return null;
-    
-    return { id: docSnapshot.id, ...docSnapshot.data() } as FirestoreMessage & { id: string };
-  }
-
-  async createMessage(chatId: string, messageData: CreateMessageInput): Promise<string> {
-    const messageDataWithDefaults = {
-      ...messageData,
-    };
-
-    const docRef = await addDoc(
-      collection(db, this.collectionName, chatId, 'messages'),
-      messageDataWithDefaults
-    );
-    return docRef.id;
-  }
-
-  async getMessages(chatId: string, limitCount: number = 50): Promise<FirestoreMessage[]> {
-    const q = query(
-      collection(db, this.collectionName, chatId, 'messages'),
-      orderBy('timestamp', 'desc'),
-      limit(limitCount)
-    );
-    const docs = await this.getDocs(q);
-    return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreMessage & { id: string }));
-  }
-
-}
-
-// ============================================================================
-// Chats SERVICE
-// ============================================================================
-export class ConversationsService extends BaseFirestoreService<FirestoreChat> {
-  constructor() {
-    super(COLLECTIONS.CHATS);
-  }
-
-  async getConversation(id: string): Promise<FirestoreChat | null> {
-    const doc = await this.getDoc(id);
-    if (!doc.exists()) return null;
-    
-    return { id: doc.id, ...doc.data() } as FirestoreChat & { id: string };
-  }
-
-  async createConversation(conversationData: CreateConversationInput): Promise<string> {
-    const conversationDataWithDefaults = {
-      ...conversationData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-
-    return await this.addDoc(conversationDataWithDefaults);
-  }
-
-  async getConversationsByUser(userId: string): Promise<FirestoreChat[]> {
-    const q = query(this.getCollection(), where('participants', 'array-contains', userId));
-    const docs = await this.getDocs(q);
-    return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreChat & { id: string }));
-  }
-
-}
+// (Removed legacy MessagesService and ConversationsService; use ChatsService instead)
 
 // ============================================================================
 // PROFILE PHOTOS SERVICE
@@ -757,8 +686,6 @@ export const firestoreServices = {
   carts: new CartsService(),
   orders: new OrdersService(),
   payments: new PaymentsService(),
-  messages: new MessagesService(),
-  conversations: new ConversationsService(),
   profilePhotos: new ProfilePhotosService(),
   listingPhotos: new ListingPhotosService(),
   chats: new ChatsService(),
