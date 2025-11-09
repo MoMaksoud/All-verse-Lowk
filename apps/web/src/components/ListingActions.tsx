@@ -1,6 +1,4 @@
 import { DollarSign, MessageCircle, Edit, Trash2 } from "lucide-react";
-import { Card } from "@/components/ui/Card";
-import { formatCurrency } from "@marketplace/lib";
 
 interface ListingActionsProps {
   listing: { id: string; title: string; price: number };
@@ -27,23 +25,23 @@ export function ListingActions({
 }: ListingActionsProps) {
 
   return (
-    <Card>
+    <div className="space-y-4">
       <h3 className="text-zinc-200 font-medium">Actions</h3>
 
       {/* Price Display */}
       <div className="text-center">
         <div className="text-3xl font-bold text-zinc-100 mb-1">
-          {formatCurrency(listing.price)}
+          ${listing.price.toLocaleString()}
         </div>
         <p className="text-sm text-zinc-400">Current asking price</p>
       </div>
 
       {isOwner ? (
         // Owner Actions
-        <>
+        <div className="flex gap-3">
           <button 
             onClick={onEditListing}
-            className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 text-white py-2 text-sm font-medium transition flex items-center justify-center gap-2"
+            className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white py-2 text-sm font-medium transition flex items-center justify-center gap-2"
           >
             <Edit className="w-4 h-4" />
             Edit Listing
@@ -51,12 +49,12 @@ export function ListingActions({
           
           <button 
             onClick={onDeleteListing}
-            className="w-full rounded-xl bg-red-600 hover:bg-red-500 text-white py-2 text-sm font-medium transition flex items-center justify-center gap-2"
+            className="flex-1 rounded-xl bg-red-600 hover:bg-red-500 text-white py-2 text-sm font-medium transition flex items-center justify-center gap-2"
           >
             <Trash2 className="w-4 h-4" />
             Delete Listing
           </button>
-        </>
+        </div>
       ) : (
         // Non-owner Actions
         <>
@@ -86,6 +84,6 @@ export function ListingActions({
           </button>
         </>
       )}
-    </Card>
+    </div>
   );
 }

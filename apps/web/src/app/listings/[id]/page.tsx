@@ -312,59 +312,67 @@ export default function ListingDetailPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content - Left Side */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Photo Gallery */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-5xl">
+            {/* Single Card with Image, Description, and Actions */}
             <Card>
-              <ListingGallery photos={listing.photos || []} title={listing.title} />
-            </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Left Side - Image Gallery (60%) */}
+                <div className="lg:col-span-3">
+                  <ListingGallery photos={listing.photos || []} title={listing.title} />
+                </div>
 
-            {/* Listing Details */}
-            <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <Tag className="w-4 h-4 text-blue-500" />
-                <span className="text-sm text-zinc-400 capitalize">{listing.category}</span>
+                {/* Right Side - Description and Actions (40%) */}
+                <div className="lg:col-span-2 flex flex-col space-y-6">
+                  {/* Listing Details */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Tag className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm text-zinc-400 capitalize">{listing.category}</span>
+                    </div>
+                    <h1 className="text-2xl font-semibold text-zinc-100 mb-4">
+                      {listing.title}
+                    </h1>
+                    <div>
+                      <h3 className="text-lg font-medium text-zinc-200 mb-3">Description</h3>
+                      <p className="text-zinc-300 leading-relaxed">{listing.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Actions Box */}
+                  <div>
+                    <ListingActions
+                      listing={listing}
+                      onBuyNow={() => addToCart()}
+                      onSuggestPrice={() => handleSuggestPrice()}
+                      onMessageSeller={() => handleMessageClick()}
+                      onEditListing={() => router.push(`/listings/${listing.id}/edit`)}
+                      onDeleteListing={() => setShowDeleteModal(true)}
+                      addingToCart={addingToCart}
+                      suggestingPrice={priceSuggestionLoading}
+                      isOwner={isOwner}
+                    />
+                  </div>
+
+                  {/* Seller Information */}
+                  {!isOwner && (
+                    <div>
+                      <SellerInfo
+                        seller={{
+                          name: "Marketplace User",
+                          since: "2024",
+                          rating: 4.8,
+                          reviews: 127,
+                          id: listing.sellerId
+                        }}
+                        onContactClick={() => handleMessageClick()}
+                        currentUserId={currentUser?.uid}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-              <h1 className="text-2xl font-semibold text-zinc-100 mb-4">
-                {listing.title}
-              </h1>
-              <div>
-                <h3 className="text-lg font-medium text-zinc-200 mb-3">Description</h3>
-                <p className="text-zinc-300 leading-relaxed">{listing.description}</p>
-              </div>
             </Card>
-
-          </div>
-
-          {/* Actions Box - Right Side */}
-          <div className="space-y-6">
-            <ListingActions
-              listing={listing}
-              onBuyNow={() => addToCart()}
-              onSuggestPrice={() => handleSuggestPrice()}
-              onMessageSeller={() => handleMessageClick()}
-              onEditListing={() => router.push(`/listings/${listing.id}/edit`)}
-              onDeleteListing={() => setShowDeleteModal(true)}
-              addingToCart={addingToCart}
-              suggestingPrice={priceSuggestionLoading}
-              isOwner={isOwner}
-            />
-            
-            {/* Seller Information moved to right sidebar */}
-            {!isOwner && (
-              <SellerInfo
-                seller={{
-                  name: "Marketplace User",
-                  since: "2024",
-                  rating: 4.8,
-                  reviews: 127,
-                  id: listing.sellerId
-                }}
-                onContactClick={() => handleMessageClick()}
-                currentUserId={currentUser?.uid}
-              />
-            )}
           </div>
         </div>
       </div>

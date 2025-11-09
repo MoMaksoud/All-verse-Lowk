@@ -72,7 +72,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Main Image */}
-      <div className="relative aspect-[4/3] bg-zinc-800 rounded-xl overflow-hidden">
+      <div className="relative aspect-[4/3] w-full bg-zinc-900 rounded-xl overflow-hidden">
         <Image
           src={safePhotos[activeIndex]}
           alt={`${title} - Image ${activeIndex + 1}`}
