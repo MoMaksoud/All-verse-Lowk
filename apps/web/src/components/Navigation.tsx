@@ -7,7 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   Menu, 
   X, 
-  Bell, 
   User, 
   Plus, 
   MessageCircle, 
@@ -39,34 +38,13 @@ const navigation = [
 
 const Navigation = memo(function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [cartItemCount, setCartItemCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: 'New message from John Doe', time: '2 minutes ago', read: false },
-    { id: 2, message: 'Your listing "iPhone 14 Pro" got a new offer', time: '1 hour ago', read: false },
-    { id: 3, message: 'Welcome to All Verse! Start exploring our marketplace.', time: '1 day ago', read: true },
-  ]);
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, logout } = useAuth();
-
-  const handleNotificationClick = (notificationId: number) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId ? { ...notif, read: true } : notif
-      )
-    );
-    setShowNotifications(false);
-  };
-
-  const markAllNotificationsAsRead = () => {
-    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
-  };
-
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
   // Fetch cart item count with caching - debounced to reduce API calls
   const fetchCartCount = useCallback(async () => {
@@ -183,21 +161,6 @@ const Navigation = memo(function Navigation() {
                   title="Favorites"
                 >
                   <Heart className="w-5 h-5" />
-                </button>
-                
-                {/* Notification Bell */}
-                <button 
-                  onClick={() => {
-                    setShowNotifications(true);
-                    // Mark all notifications as read when bell is clicked
-                    markAllNotificationsAsRead();
-                  }}
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
-                >
-                  <Bell className="w-5 h-5" />
-                  {unreadNotificationsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
-                  )}
                 </button>
 
                 {/* Shopping Cart */}
@@ -381,19 +344,6 @@ const Navigation = memo(function Navigation() {
                 >
                   <Heart className="w-5 h-5" />
                 </button>
-                
-                <button 
-                  onClick={() => {
-                    setShowNotifications(true);
-                    markAllNotificationsAsRead();
-                  }}
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
-                >
-                  <Bell className="w-5 h-5" />
-                  {unreadNotificationsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-500 rounded-full"></span>
-                  )}
-                </button>
 
                 <Link
                   href="/cart"
@@ -498,21 +448,6 @@ const Navigation = memo(function Navigation() {
                         <ShoppingCart className="w-5 h-5" />
                         Cart {cartItemCount > 0 && `(${cartItemCount})`}
                       </button>
-                      
-                      <button 
-                        onClick={() => {
-                          setShowNotifications(true);
-                          markAllNotificationsAsRead();
-                          setMobileMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left relative"
-                      >
-                        <Bell className="w-5 h-5" />
-                        Notifications
-                        {unreadNotificationsCount > 0 && (
-                          <span className="absolute right-3 w-2 h-2 bg-accent-500 rounded-full"></span>
-                        )}
-                      </button>
                     </>
                   ) : (
                     <>
@@ -596,53 +531,6 @@ const Navigation = memo(function Navigation() {
           </div>
         )}
       </div>
-
-      {/* Notifications Panel */}
-      {showNotifications && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowNotifications(false)}>
-          <div className="absolute top-16 right-4 w-80 bg-dark-800 rounded-lg shadow-xl border border-dark-600 p-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Notifications</h3>
-              <button
-                onClick={() => setShowNotifications(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {notifications.length > 0 ? (
-                notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification.id)}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                      notification.read 
-                        ? 'bg-dark-700 text-gray-400' 
-                        : 'bg-accent-500/20 text-white border border-accent-500/30'
-                    }`}
-                  >
-                    <p className="text-sm">{notification.message}</p>
-                    <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-400 text-center py-4">No notifications</p>
-              )}
-            </div>
-            
-            {unreadNotificationsCount > 0 && (
-              <button
-                onClick={markAllNotificationsAsRead}
-                className="w-full mt-4 btn btn-outline text-sm"
-              >
-                Mark all as read
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </nav>
   );
 });

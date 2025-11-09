@@ -9,7 +9,6 @@ import {
   ArrowLeft, 
   User, 
   Shield, 
-  Bell, 
   Eye, 
   Palette, 
   CreditCard, 
@@ -23,7 +22,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-type SettingsSection = 'account' | 'security' | 'notifications' | 'privacy' | 'preferences' | 'billing' | 'integrations';
+type SettingsSection = 'account' | 'security' | 'privacy' | 'preferences' | 'billing' | 'integrations';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>('account');
@@ -42,12 +41,6 @@ export default function SettingsPage() {
       name: 'Security & Login',
       icon: Shield,
       description: 'Password, 2FA, and device management'
-    },
-    {
-      id: 'notifications' as SettingsSection,
-      name: 'Notifications',
-      icon: Bell,
-      description: 'Email and app notification preferences'
     },
     {
       id: 'privacy' as SettingsSection,
@@ -232,92 +225,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  const renderNotifications = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-white mb-2">Communication & Notifications</h2>
-        <p className="text-gray-400 mb-4">Control how and when you receive notifications</p>
-      </div>
-
-      <div className="space-y-4">
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Bell className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Push Notifications</h3>
-                <p className="text-gray-400 text-sm">Receive notifications in your browser</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="relative">
-                <input type="checkbox" className="sr-only" defaultChecked />
-                <div className="w-10 h-6 bg-accent-500 rounded-full shadow-inner"></div>
-                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 right-1 transition-transform"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Mail className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Email Notifications</h3>
-                <p className="text-gray-400 text-sm">Receive notifications via email</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="relative">
-                <input type="checkbox" className="sr-only" defaultChecked />
-                <div className="w-10 h-6 bg-accent-500 rounded-full shadow-inner"></div>
-                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 right-1 transition-transform"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Bell className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Message Notifications</h3>
-                <p className="text-gray-400 text-sm">Get notified about new messages</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="relative">
-                <input type="checkbox" className="sr-only" defaultChecked />
-                <div className="w-10 h-6 bg-accent-500 rounded-full shadow-inner"></div>
-                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 right-1 transition-transform"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Bell className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Listing Updates</h3>
-                <p className="text-gray-400 text-sm">Notifications about your listings</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="relative">
-                <input type="checkbox" className="sr-only" />
-                <div className="w-10 h-6 bg-gray-600 rounded-full shadow-inner"></div>
-                <div className="absolute w-4 h-4 bg-white rounded-full shadow top-1 left-1 transition-transform"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   const renderPrivacyData = () => (
     <div className="space-y-6">
@@ -586,8 +493,6 @@ export default function SettingsPage() {
         return renderAccountManagement();
       case 'security':
         return renderSecurityLogin();
-      case 'notifications':
-        return renderNotifications();
       case 'privacy':
         return renderPrivacyData();
       case 'preferences':

@@ -8,7 +8,7 @@ import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import { DefaultAvatar } from '@/components/DefaultAvatar';
 import { Profile } from '@marketplace/types';
-import { User, MapPin, Star, Settings, Edit, Bell, Camera, Shield } from 'lucide-react';
+import { User, MapPin, Star, Settings, Edit, Camera, Shield } from 'lucide-react';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { Navigation } from '@/components/Navigation';
 
@@ -154,10 +154,6 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between mb-8">
                   <h2 className="text-xl font-semibold text-white">Profile Information</h2>
                   <div className="flex items-center space-x-3">
-                    <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
-                      <Bell className="w-5 h-5" />
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
-                    </button>
                     <button
                       onClick={() => setShowEditModal(true)}
                       className="flex items-center px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors"
