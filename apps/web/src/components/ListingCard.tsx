@@ -69,15 +69,18 @@ export default function ListingCard({
 
     setAddingToCart(true);
     try {
-      const response = await fetch('/api/cart/add', {
+      const priceValue = typeof price === 'number' ? price : parseFloat(price.toString().replace(/[^0-9.-]+/g, ''));
+      const response = await fetch('/api/carts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': currentUser.uid,
         },
         body: JSON.stringify({
           listingId: id,
           sellerId: sellerId,
-          price: typeof price === 'number' ? price : parseFloat(price.toString().replace(/[^0-9.-]+/g, '')),
+          qty: 1,
+          priceAtAdd: priceValue,
         }),
       });
 
@@ -85,8 +88,8 @@ export default function ListingCard({
         showSuccess('Item added to cart successfully!');
         onAddToCart?.();
       } else {
-        const error = await response.json();
-        showError(error.message || 'Failed to add item to cart');
+        const errorData = await response.json().catch(() => ({}));
+        showError(errorData.error || errorData.message || 'Failed to add item to cart');
       }
     } catch (error) {
       console.error('Error adding to cart:', error);

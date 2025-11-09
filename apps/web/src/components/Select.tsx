@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useRef, useEffect } from "react";
 import { Listbox, Transition } from "@headlessui/react";
 import { Check, ChevronDown } from "lucide-react";
 import clsx from "clsx";
@@ -25,6 +25,66 @@ export default function Select({
   label,
 }: Props) {
   const selected = options.find(o => o.value === value) ?? null;
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const savedScrollY = useRef(0);
+  const isOpenRef = useRef(false);
+
+  // Prevent scroll when dropdown options are focused
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Watch for when options are added to DOM
+    const observer = new MutationObserver(() => {
+      if (optionsRef.current) {
+        const optionElements = optionsRef.current.querySelectorAll('[role="option"]');
+        optionElements.forEach((option) => {
+          const el = option as HTMLElement;
+          // Override scrollIntoView to prevent page scroll
+          el.scrollIntoView = function() {
+            // Do nothing - prevent scroll into view
+          };
+        });
+      }
+    });
+
+    // Observe the container for changes
+    observer.observe(container, { childList: true, subtree: true });
+
+    // Prevent scroll on focus
+    const handleFocus = (e: FocusEvent) => {
+      if (container.contains(e.target as Node)) {
+        // Save position before any scroll happens
+        const currentScroll = window.scrollY;
+        savedScrollY.current = currentScroll;
+        
+        // Immediately restore if it changed
+        requestAnimationFrame(() => {
+          if (Math.abs(window.scrollY - currentScroll) > 1) {
+            window.scrollTo(0, currentScroll);
+          }
+        });
+      }
+    };
+
+    // Prevent scroll events
+    const handleScroll = (e: Event) => {
+      if (isOpenRef.current && Math.abs(window.scrollY - savedScrollY.current) > 1) {
+        e.preventDefault();
+        window.scrollTo(0, savedScrollY.current);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocus, true);
+    window.addEventListener('scroll', handleScroll, { passive: false, capture: true });
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('focusin', handleFocus, true);
+      window.removeEventListener('scroll', handleScroll, { capture: true });
+    };
+  }, []);
 
   return (
     <div className={clsx("w-full", className)}>
@@ -35,8 +95,22 @@ export default function Select({
       )}
 
       <Listbox value={value} onChange={onChange}>
-        <div className="relative">
+        {({ open }) => {
+          // Track open state and save scroll position
+          if (open && !isOpenRef.current) {
+            isOpenRef.current = true;
+            savedScrollY.current = window.scrollY;
+          } else if (!open) {
+            isOpenRef.current = false;
+          }
+
+          return (
+            <div ref={containerRef} className="relative">
           <Listbox.Button
+            onMouseDown={(e) => {
+              // Save scroll position before dropdown opens
+              savedScrollY.current = window.scrollY;
+            }}
             className={clsx(
               "h-12 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3",
               "text-left text-sm text-zinc-100",
@@ -61,8 +135,10 @@ export default function Select({
             leaveTo="opacity-0 scale-95 translate-y-1"
           >
             <Listbox.Options
+              ref={optionsRef}
               static
-              className="absolute left-0 right-0 mt-2 z-50 rounded-xl border border-zinc-800 bg-zinc-900/95 backdrop-blur shadow-xl p-1 max-h-72 overflow-auto focus:outline-none"
+              className="absolute left-0 right-0 mt-2 z-50 rounded-xl border border-zinc-800 bg-zinc-900/95 backdrop-blur shadow-xl p-1 max-h-72 overflow-y-auto overscroll-contain focus:outline-none"
+              style={{ scrollMargin: 0 }}
             >
               {options.map((opt) => (
                 <Listbox.Option
@@ -77,6 +153,7 @@ export default function Select({
                       selected && "bg-blue-600 text-white font-medium"
                     )
                   }
+                  style={{ scrollMargin: 0 }}
                 >
                   {({ selected }) => (
                     <div className="flex items-center justify-between">
@@ -90,7 +167,9 @@ export default function Select({
               ))}
             </Listbox.Options>
           </Transition>
-        </div>
+            </div>
+          );
+        }}
       </Listbox>
     </div>
   );
