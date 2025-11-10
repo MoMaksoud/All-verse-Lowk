@@ -42,7 +42,7 @@ export interface FirestoreListing {
   currency: string;
   images: string[];
   category: string;
-  condition: 'new' | 'like-new' | 'good' | 'fair';
+  condition: 'new' | 'like-new' | 'good' | 'fair' | 'poor';
   sellerId: string;
   inventory: number;
   isActive: boolean;
@@ -59,7 +59,7 @@ export interface CreateListingInput {
   currency?: string;
   images: string[];
   category: string;
-  condition: 'new' | 'like-new' | 'good' | 'fair';
+  condition: 'new' | 'like-new' | 'good' | 'fair' | 'poor';
   sellerId: string;
   inventory: number;
   isActive?: boolean;

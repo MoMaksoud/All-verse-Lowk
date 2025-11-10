@@ -20,7 +20,7 @@ export interface FirestoreProfile {
   displayName: string; // Display name (can be reused, like Instagram name)
   bio?: string;
   createdAt: any;
-  gender?: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+  gender?: 'male' | 'female' | 'prefer-not-to-say';
   age?: number;
   profilePicture?: string;
   phoneNumber?: string;
