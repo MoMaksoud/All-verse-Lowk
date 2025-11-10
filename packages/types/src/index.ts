@@ -29,7 +29,8 @@ export type ItemConditionPreference = z.infer<typeof ItemConditionPreferenceSche
 
 export const ProfileSchema = z.object({
   userId: z.string(),
-  username: z.string().min(3).max(30),
+  username: z.string().min(3).max(30), // Unique username (like Instagram @username)
+  displayName: z.string().min(1).max(100), // Display name (can be reused, like Instagram name)
   bio: z.string().max(280).optional(),
   createdAt: z.string(), // ISO timestamp
   gender: GenderSchema.optional(),

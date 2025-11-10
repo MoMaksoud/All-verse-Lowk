@@ -26,15 +26,18 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     try {
       if (phase === 'final' && userAnswers && initialEvidence) {
         // Phase 2: Generate final listing with user answers
+        console.log('🔄 Phase 2: Generating final listing...');
         analysis = await AIAnalysisService.generateFinalListing(imageUrls, userAnswers, initialEvidence);
       } else {
         // Phase 1: Initial analysis
+        console.log('🔄 Phase 1: Analyzing product photos...');
         analysis = await AIAnalysisService.analyzeProductPhotos(imageUrls);
       }
-    } catch (aiError) {
-      console.error('AI analysis error:', aiError);
+    } catch (aiError: any) {
+      console.error('❌ AI analysis error:', aiError);
       return NextResponse.json({ 
         error: 'Failed to analyze product',
+        details: aiError?.message || 'Unknown AI error',
         success: false 
       }, { status: 500 });
     }
@@ -42,6 +45,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     if (!analysis) {
       return NextResponse.json({ 
         error: 'Failed to analyze product',
+        details: 'AI service returned no analysis result',
         success: false 
       }, { status: 500 });
     }
@@ -53,10 +57,11 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
         ? 'Final listing generated successfully' 
         : 'Product analysis completed successfully'
     });
-  } catch (error) {
-    console.error('Error analyzing product:', error);
+  } catch (error: any) {
+    console.error('❌ Error analyzing product:', error);
     return NextResponse.json({ 
       error: 'Failed to analyze product',
+      details: error?.message || 'Unknown error',
       success: false 
     }, { status: 500 });
   }

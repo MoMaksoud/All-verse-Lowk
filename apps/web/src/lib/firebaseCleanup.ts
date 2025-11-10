@@ -171,4 +171,168 @@ export class FirebaseCleanupService {
       };
     }
   }
+
+  /**
+   * Complete account deletion - deletes user and ALL associated data
+   * Marks user as deleted so they can't be searched or messaged
+   * Archives chats but keeps them for other users
+   * WARNING: This is irreversible!
+   */
+  static async deleteAccountCompletely(userId: string): Promise<{
+    success: boolean;
+    deleted: {
+      listings: number;
+      profile: boolean;
+      userDoc: boolean;
+      profilePhoto: boolean;
+      cart: boolean;
+      chatsArchived: number;
+    };
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    const deleted = {
+      listings: 0,
+      profile: false,
+      userDoc: false,
+      profilePhoto: false,
+      cart: false,
+      chatsArchived: 0,
+    };
+
+    try {
+      console.log('🗑️ Starting complete account deletion for user:', userId);
+      const firestoreServices = await getFirestoreServices();
+      
+      // 1. Delete all listings (with photos)
+      try {
+        const userListings = await firestoreServices.listings.getListingsBySeller(userId);
+        console.log(`📦 Found ${userListings.length} listings to delete`);
+        
+        for (const listing of userListings) {
+          try {
+            const listingId = (listing as any).id;
+            if (!listingId) {
+              console.warn('⚠️ Listing missing ID, skipping:', listing);
+              continue;
+            }
+            await this.deleteListingCompletely(listingId, userId);
+            deleted.listings++;
+          } catch (err) {
+            const listingId = (listing as any).id || 'unknown';
+            const errorMsg = `Failed to delete listing ${listingId}: ${err instanceof Error ? err.message : 'Unknown error'}`;
+            console.error('⚠️', errorMsg);
+            errors.push(errorMsg);
+          }
+        }
+        console.log(`✅ Deleted ${deleted.listings} listings`);
+      } catch (err) {
+        const errorMsg = `Failed to fetch/delete listings: ${err instanceof Error ? err.message : 'Unknown error'}`;
+        console.error('⚠️', errorMsg);
+        errors.push(errorMsg);
+      }
+
+      // 2. Delete profile photo
+      try {
+        const photoResult = await this.deleteProfilePhotoCompletely(userId);
+        deleted.profilePhoto = photoResult.success;
+        if (!photoResult.success && photoResult.errors.length > 0) {
+          errors.push(...photoResult.errors);
+        }
+      } catch (err) {
+        const errorMsg = `Failed to delete profile photo: ${err instanceof Error ? err.message : 'Unknown error'}`;
+        console.error('⚠️', errorMsg);
+        errors.push(errorMsg);
+      }
+
+      // 3. Mark user as deleted (instead of deleting) - so they can't be searched
+      // This preserves data integrity while preventing new interactions
+      try {
+        await firestoreServices.users.updateUser(userId, {
+          deleted: true,
+          deletedAt: new Date().toISOString(),
+        } as any);
+        console.log('✅ Marked user as deleted');
+      } catch (err) {
+        const errorMsg = `Failed to mark user as deleted: ${err instanceof Error ? err.message : 'Unknown error'}`;
+        console.error('⚠️', errorMsg);
+        errors.push(errorMsg);
+      }
+
+      // 4. Delete profile document (so they can't be found in searches)
+      try {
+        const { ProfileService } = await import('@/lib/firestore');
+        await ProfileService.deleteProfile(userId);
+        deleted.profile = true;
+        console.log('✅ Deleted profile document');
+      } catch (err) {
+        const errorMsg = `Failed to delete profile: ${err instanceof Error ? err.message : 'Unknown error'}`;
+        console.error('⚠️', errorMsg);
+        errors.push(errorMsg);
+      }
+
+      // 5. Delete cart
+      try {
+        await firestoreServices.carts.deleteCart(userId);
+        deleted.cart = true;
+        console.log('✅ Deleted cart');
+      } catch (err) {
+        const errorMsg = `Failed to delete cart: ${err instanceof Error ? err.message : 'Unknown error'}`;
+        console.error('⚠️', errorMsg);
+        errors.push(errorMsg);
+      }
+
+      // 6. Archive chats - mark user as deleted in chats but keep chat history
+      try {
+        const userChats = await firestoreServices.chats.getUserChats(userId);
+        console.log(`💬 Found ${userChats.length} chats to archive`);
+        
+        for (const chat of userChats) {
+          try {
+            // Mark this user as deleted in the chat
+            // This prevents new messages but keeps chat history
+            const { doc, updateDoc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
+            const chatRef = doc(db, 'chats', chat.id);
+            await updateDoc(chatRef, {
+              [`deletedParticipants.${userId}`]: true,
+              [`deletedAt.${userId}`]: new Date().toISOString(),
+            } as any);
+            deleted.chatsArchived++;
+          } catch (err) {
+            const errorMsg = `Failed to archive chat ${chat.id}: ${err instanceof Error ? err.message : 'Unknown error'}`;
+            console.error('⚠️', errorMsg);
+            errors.push(errorMsg);
+          }
+        }
+        console.log(`✅ Archived ${deleted.chatsArchived} chats`);
+      } catch (err) {
+        const errorMsg = `Failed to archive chats: ${err instanceof Error ? err.message : 'Unknown error'}`;
+        console.error('⚠️', errorMsg);
+        errors.push(errorMsg);
+      }
+
+      // Note: We don't delete the user document completely - we mark it as deleted
+      // This allows us to track that the account was deleted while preserving referential integrity
+      deleted.userDoc = true;
+
+      console.log('✅ Account deletion process completed');
+      return {
+        success: errors.length === 0,
+        deleted,
+        errors
+      };
+
+    } catch (err) {
+      const errorMsg = `Account deletion failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      console.error('❌', errorMsg);
+      errors.push(errorMsg);
+      
+      return {
+        success: false,
+        deleted,
+        errors
+      };
+    }
+  }
 }

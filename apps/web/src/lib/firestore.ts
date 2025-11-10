@@ -16,7 +16,8 @@ import { db, isFirebaseConfigured } from './firebase';
 // Profile interface - updated to match new comprehensive profile schema
 export interface FirestoreProfile {
   userId: string;
-  username: string;
+  username: string; // Unique username (like Instagram @username)
+  displayName: string; // Display name (can be reused, like Instagram name)
   bio?: string;
   createdAt: any;
   gender?: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
@@ -42,6 +43,37 @@ export interface FirestoreProfile {
 // Firestore service for profiles
 export class ProfileService {
   private static collectionName = 'profiles';
+
+  // Check if username is available (unique)
+  static async isUsernameAvailable(username: string, excludeUserId?: string): Promise<boolean> {
+    try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
+      
+      // Normalize username: lowercase, remove spaces, remove @
+      const normalizedUsername = username.toLowerCase().trim().replace(/^@/, '').replace(/\s+/g, '');
+      
+      if (normalizedUsername.length < 3) {
+        return false; // Username too short
+      }
+      
+      const profilesRef = collection(db, this.collectionName);
+      const q = query(profilesRef, where('username', '==', normalizedUsername));
+      const querySnapshot = await getDocs(q);
+      
+      // Check if any profile (other than the current user) has this username
+      const existingProfile = querySnapshot.docs.find(doc => {
+        const profile = doc.data() as FirestoreProfile;
+        return profile.userId !== excludeUserId;
+      });
+      
+      return !existingProfile;
+    } catch (error) {
+      console.error('Error checking username availability:', error);
+      throw error;
+    }
+  }
 
   // Get user profile
   static async getProfile(userId: string): Promise<FirestoreProfile | null> {
@@ -75,12 +107,36 @@ export class ProfileService {
       // Check if profile already exists
       const existingProfile = await this.getProfile(userId);
       
+      // Check username uniqueness if username is being changed
+      if (profileData.username !== undefined && profileData.username !== existingProfile?.username) {
+        const normalizedUsername = profileData.username.toLowerCase().trim().replace(/^@/, '').replace(/\s+/g, '');
+        
+        if (normalizedUsername.length < 3) {
+          throw new Error('Username must be at least 3 characters long');
+        }
+        
+        if (normalizedUsername.length > 30) {
+          throw new Error('Username must be 30 characters or less');
+        }
+        
+        // Check if username contains only valid characters (alphanumeric, underscore, period)
+        if (!/^[a-z0-9._]+$/.test(normalizedUsername)) {
+          throw new Error('Username can only contain letters, numbers, underscores, and periods');
+        }
+        
+        const isAvailable = await this.isUsernameAvailable(normalizedUsername, userId);
+        if (!isAvailable) {
+          throw new Error('This username is already taken. Please choose another one.');
+        }
+      }
+      
       // Merge: start with existing profile, then override with provided values
       // Use nullish coalescing (??) to only fall back when value is undefined/null
       // This ensures falsy values (empty strings, 0, empty arrays) are saved
       const profileToSave: any = {
         userId,
-        username: profileData.username ?? existingProfile?.username ?? '',
+        username: profileData.username ? profileData.username.toLowerCase().trim().replace(/^@/, '').replace(/\s+/g, '') : (existingProfile?.username ?? ''),
+        displayName: profileData.displayName ?? existingProfile?.displayName ?? existingProfile?.username ?? '',
         bio: profileData.bio ?? existingProfile?.bio ?? '',
         createdAt: existingProfile?.createdAt ?? serverTimestamp(),
         rating: profileData.rating ?? existingProfile?.rating ?? 0,
@@ -155,14 +211,37 @@ export class ProfileService {
 
   // Create a new user profile (for new users)
   static async createUserProfile(userId: string, userData: {
+    username: string;
     displayName: string;
     email?: string;
     phoneNumber?: string;
     photoURL?: string;
   }): Promise<FirestoreProfile> {
     try {
+      // Normalize and validate username
+      const normalizedUsername = userData.username.toLowerCase().trim().replace(/^@/, '').replace(/\s+/g, '');
+      
+      if (normalizedUsername.length < 3) {
+        throw new Error('Username must be at least 3 characters long');
+      }
+      
+      if (normalizedUsername.length > 30) {
+        throw new Error('Username must be 30 characters or less');
+      }
+      
+      if (!/^[a-z0-9._]+$/.test(normalizedUsername)) {
+        throw new Error('Username can only contain letters, numbers, underscores, and periods');
+      }
+      
+      // Check if username is available
+      const isAvailable = await this.isUsernameAvailable(normalizedUsername, userId);
+      if (!isAvailable) {
+        throw new Error('This username is already taken. Please choose another one.');
+      }
+      
       const profileData: Partial<FirestoreProfile> = {
-        username: userData.displayName || userData.email?.split('@')[0] || 'user',
+        username: normalizedUsername,
+        displayName: userData.displayName || normalizedUsername,
         bio: '',
         rating: 0,
         interestCategories: [],

@@ -5,6 +5,7 @@ const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_
 
 if (!apiKey) {
   console.error('❌ GEMINI_API_KEY is not configured for AI Analysis');
+  console.error('❌ Check environment variables: NEXT_PUBLIC_GEMINI_API_KEY or GEMINI_API_KEY');
 }
 
 const genAi = apiKey ? new GoogleGenAI({ apiKey: apiKey }) : null;
@@ -31,6 +32,13 @@ export interface ProductAnalysis {
 }
 
 export class AIAnalysisService {
+  /**
+   * Check if AI service is properly configured
+   */
+  static isConfigured(): boolean {
+    return !!(apiKey && genAi);
+  }
+
   /**
    * Analyze product photos and generate product details
    */
@@ -224,6 +232,11 @@ export class AIAnalysisService {
     userAnswers: Record<string, string>,
     initialEvidence: any
   ): Promise<ProductAnalysis | undefined> {
+    if (!apiKey || !genAi) {
+      console.error('❌ Gemini API key not configured for final listing generation');
+      throw new Error('AI service is not configured. Please configure GEMINI_API_KEY.');
+    }
+
     const prompt = `
       You are a PROFESSIONAL PRODUCT LISTER for ALL VERSE GPT. Create a polished, buyer-ready listing that is accurate, detailed, and natural-sounding.
 
@@ -272,7 +285,17 @@ export class AIAnalysisService {
     `;
 
     try {
+      console.log('🔄 Generating final listing with:', { 
+        imageUrls: imageUrls.length, 
+        userAnswersCount: Object.keys(userAnswers).length,
+        hasInitialEvidence: !!initialEvidence 
+      });
+
       const imageResponse = await fetch(imageUrls[0]);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+      }
+      
       const imageBuffer = await imageResponse.arrayBuffer();
       const imageBlob = new Blob([imageBuffer], { type: 'image/jpeg' });
       
@@ -280,6 +303,8 @@ export class AIAnalysisService {
         file: imageBlob,
         config: { mimeType: 'image/jpeg' }
       });
+
+      console.log('🔄 Image uploaded, generating content...');
 
       const response = await genAi.models.generateContent({
         model: "gemini-2.5-flash",
@@ -290,13 +315,28 @@ export class AIAnalysisService {
       });
 
       const text = response?.text ?? '';
+      console.log('🔄 Raw AI response length:', text.length);
+
+      if (!text || text.trim().length === 0) {
+        throw new Error('Empty response from AI');
+      }
+
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-      const analysis = JSON.parse(cleanText);
+      console.log('🔄 Parsing JSON response...');
+      
+      let analysis;
+      try {
+        analysis = JSON.parse(cleanText);
+      } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError);
+        console.error('❌ Response text:', cleanText.substring(0, 500));
+        throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      }
 
       const listing = analysis.listing_ready || {};
       const market = analysis.market_analysis || {};
 
-      return {
+      const result = {
         title: listing.title || 'Product Item',
         description: listing.description || 'Product in good condition',
         category: (listing.category || 'other') as ProductAnalysis['category'],
@@ -309,16 +349,24 @@ export class AIAnalysisService {
         marketResearch: {
           averagePrice: market.suggestedPrice || listing.suggested_price || 100,
           priceRange: market.priceRange || {
-            min: Math.round((market.suggestedPrice || 100) * 0.8),
-            max: Math.round((market.suggestedPrice || 100) * 1.2)
+            min: Math.round((market.suggestedPrice || listing.suggested_price || 100) * 0.8),
+            max: Math.round((market.suggestedPrice || listing.suggested_price || 100) * 1.2)
           },
           marketDemand: (market.marketDemand || 'medium') as 'high' | 'medium' | 'low',
           competitorCount: 10
         }
       };
+
+      console.log('✅ Final listing generated successfully');
+      return result;
     } catch (error) {
-      console.error('Error generating final listing:', error);
-      return undefined;
+      console.error('❌ Error generating final listing:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      });
+      throw error; // Re-throw instead of returning undefined
     }
   }
 }

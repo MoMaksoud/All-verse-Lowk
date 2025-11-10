@@ -387,6 +387,10 @@ export class CartsService extends BaseFirestoreService<FirestoreCart> {
     });
   }
 
+  async deleteCart(uid: string): Promise<void> {
+    await this.deleteDoc(uid);
+  }
+
   // Subscribe to real-time updates for a user's cart
   subscribeToCart(uid: string, callback: (cart: (FirestoreCart & { id: string }) | null) => void): () => void {
     const ref = doc(db, this.collectionName, uid);
@@ -566,11 +570,30 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
 
   // Create or get existing chat between two users
   async getOrCreateChat(userId1: string, userId2: string): Promise<string> {
+    // Check if either user is deleted
+    const user1Doc = await getDoc(doc(db, COLLECTIONS.USERS, userId1));
+    const user2Doc = await getDoc(doc(db, COLLECTIONS.USERS, userId2));
+    
+    const user1Deleted = user1Doc.exists() && (user1Doc.data() as any)?.deleted === true;
+    const user2Deleted = user2Doc.exists() && (user2Doc.data() as any)?.deleted === true;
+    
+    if (user1Deleted || user2Deleted) {
+      throw new Error('Cannot create chat with a deleted user');
+    }
+    
     const participants = [userId1, userId2].sort();
     const chatId = participants.join('_');
     
     const chatRef = doc(db, this.collectionName, chatId);
     const chatSnap = await getDoc(chatRef);
+    
+    // Check if chat exists and if user is marked as deleted in it
+    if (chatSnap.exists()) {
+      const chatData = chatSnap.data() as any;
+      if (chatData?.deletedParticipants?.[userId1] || chatData?.deletedParticipants?.[userId2]) {
+        throw new Error('Cannot message a deleted user');
+      }
+    }
     
     if (!chatSnap.exists()) {
       // Fetch minimal profile info for both users from profiles (preferred) or users fallback
@@ -646,6 +669,22 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
 
   // Send a message
   async sendMessage(chatId: string, senderId: string, text: string): Promise<string> {
+    // Check if chat exists and if recipient is deleted
+    const chatDoc = await this.getDoc(chatId);
+    if (!chatDoc.exists()) {
+      throw new Error('Chat not found');
+    }
+    
+    const chat = chatDoc.data() as any;
+    const participants = chat?.participants || [];
+    const deletedParticipants = chat?.deletedParticipants || {};
+    
+    // Find the other participant
+    const otherParticipant = participants.find((p: string) => p !== senderId);
+    if (otherParticipant && deletedParticipants[otherParticipant]) {
+      throw new Error('Cannot send message to a deleted user');
+    }
+    
     const messageRef = doc(collection(db, this.collectionName, chatId, 'messages'));
     const messageData: FirestoreMessage = {
       chatId,
@@ -656,11 +695,6 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     };
     
     await setDoc(messageRef, messageData);
-    
-    // Get chat to find other participants
-    const chatDoc = await this.getDoc(chatId);
-    const chat = chatDoc.exists() ? chatDoc.data() : null;
-    const participants = (chat as any)?.participants || [];
     
     // Update last message and increment unread for others
     const chatRef = doc(db, this.collectionName, chatId);

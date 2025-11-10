@@ -112,10 +112,11 @@ export default function SignUp() {
         }
       }
       
-      // Create profile with the user's display name as username if not provided
+      // Create profile with username and displayName
       const profileToCreate = {
         ...profileData,
-        username: profileData.username || formData.displayName,
+        username: profileData.username || formData.displayName.toLowerCase().replace(/\s+/g, ''),
+        displayName: formData.displayName, // Use the displayName from signup form
       };
 
       // Save profile to Firestore

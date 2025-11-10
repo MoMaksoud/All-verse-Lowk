@@ -127,16 +127,23 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Username *
           </label>
-          <input
-            type="text"
-            value={formData.username}
-            onChange={(e) => handleInputChange('username', e.target.value)}
-            placeholder="Choose a unique username"
-            className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-            maxLength={30}
-          />
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">@</span>
+            <input
+              type="text"
+              value={formData.username}
+              onChange={(e) => {
+                // Normalize: lowercase, remove spaces, remove @, only allow alphanumeric, underscore, period
+                const value = e.target.value.toLowerCase().replace(/^@/, '').replace(/\s+/g, '').replace(/[^a-z0-9._]/g, '');
+                handleInputChange('username', value);
+              }}
+              placeholder="username"
+              className="w-full pl-8 pr-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+              maxLength={30}
+            />
+          </div>
           <p className="text-xs text-gray-500 mt-1">
-            {formData.username.length}/30 characters
+            {formData.username.length}/30 characters • Only letters, numbers, underscores, and periods
           </p>
         </div>
 

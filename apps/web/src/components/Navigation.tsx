@@ -20,7 +20,6 @@ import {
   ShoppingCart, 
   Package, 
   List, 
-  HelpCircle,
   TrendingUp,
   Bell
 } from 'lucide-react';
@@ -111,10 +110,10 @@ const Navigation = memo(function Navigation() {
     const fetchProfile = async () => {
       try {
         const { apiGet } = await import('@/lib/api-client');
-        const response = await apiGet('/api/profile', { requireAuth: false });
+        // Use default requireAuth: true since dropdown only shows for authenticated users
+        const response = await apiGet('/api/profile');
         
-        if (response.status === 401) {
-          // If profile requires auth and user isn't logged in, that's ok
+        if (!response.ok) {
           return;
         }
         
@@ -370,22 +369,6 @@ const Navigation = memo(function Navigation() {
                         >
                           <TrendingUp className="w-4 h-4 mr-3" />
                           My Sales
-                        </Link>
-                        <Link
-                          href="/favorites"
-                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <Heart className="w-4 h-4 mr-3" />
-                          Favorites
-                        </Link>
-                        <Link
-                          href="/help"
-                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <HelpCircle className="w-4 h-4 mr-3" />
-                          Help & Support
                         </Link>
                       </div>
 

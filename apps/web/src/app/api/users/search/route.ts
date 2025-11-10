@@ -36,13 +36,16 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
 
     const snapshot = await getDocs(q);
     const users = snapshot.docs
-      .map(doc => ({
-        userId: doc.id,
-        username: doc.data().username,
-        displayName: doc.data().displayName || doc.data().username,
-        profilePicture: doc.data().profilePicture || '',
-        bio: doc.data().bio || ''
-      }))
+      .map(doc => {
+        const data = doc.data();
+        return {
+          userId: doc.id,
+          username: data.username,
+          displayName: data.displayName || data.username, // Fallback to username if displayName doesn't exist (for old profiles)
+          profilePicture: data.profilePicture || '',
+          bio: data.bio || ''
+        };
+      })
       .filter(user => {
         // Exclude current user
         if (user.userId === req.userId) return false;

@@ -15,9 +15,11 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
     const userId = requestedUserId || request.userId;
     
     if (!userId) {
+      // Return 400 (Bad Request) instead of 401 when userId is missing but auth is optional
+      // This distinguishes between "not authenticated" (401) and "missing required parameter" (400)
       return NextResponse.json(
         { error: 'User ID is required. Please provide userId query parameter or authenticate.' },
-        { status: 401 }
+        { status: 400 }
       );
     }
 
@@ -98,6 +100,18 @@ export const PUT = withApi(async (request: NextRequest & { userId: string }) => 
 
   } catch (error: any) {
     console.error('Error updating/creating profile:', error);
+    
+    // Check if it's a username conflict error
+    if (error?.message?.includes('username') || error?.message?.includes('taken')) {
+      return NextResponse.json(
+        { 
+          error: 'Username unavailable', 
+          details: error?.message || 'This username is already taken'
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         error: 'Failed to update profile', 
