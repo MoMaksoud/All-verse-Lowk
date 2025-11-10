@@ -79,7 +79,9 @@ Always end with a short, encouraging call-to-action question.
     const systemPrompt = role === 'buyer' ? buyerPrompt : sellerPrompt;
 
     try {
+      console.log('🔵 Initializing Gemini model...');
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      console.log('✅ Gemini model initialized');
 
       // Build conversation history if provided
       let fullPrompt = systemPrompt;
@@ -95,18 +97,37 @@ Always end with a short, encouraging call-to-action question.
         fullPrompt = `${systemPrompt}\n\n${userMessage}`;
       }
 
+      console.log('🔵 Calling Gemini generateContent, prompt length:', fullPrompt.length);
       const result = await model.generateContent(fullPrompt);
+      console.log('✅ Gemini generateContent completed');
       const response = await result.response;
-      return response.text();
+      const text = response.text();
+      console.log('✅ Gemini response text extracted, length:', text?.length);
+      return text;
     } catch (error: any) {
-      console.error('AI Response Error:', error);
+      console.error('❌ AI Response Error:', {
+        message: error?.message || 'Unknown error',
+        code: error?.code,
+        status: error?.status,
+        stack: error?.stack
+      });
       
-      // Check for quota/rate limit errors
-      if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+      // Check for specific error types
+      if (error?.message?.includes('API_KEY_INVALID') || error?.message?.includes('API key')) {
+        throw new Error('GEMINI_API_KEY is invalid. Please check your API key configuration.');
+      }
+      
+      if (error?.message?.includes('quota') || error?.message?.includes('429') || error?.message?.includes('Too Many Requests')) {
         throw new Error('AI service quota exceeded. Please try again later.');
       }
       
-      throw new Error(error instanceof Error ? error.message : 'Failed to generate AI response');
+      if (error?.message?.includes('PERMISSION_DENIED') || error?.status === 403) {
+        throw new Error('AI service access denied. Please check your API key permissions.');
+      }
+      
+      // Re-throw with more context
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate AI response';
+      throw new Error(`Gemini API error: ${errorMessage}`);
     }
   }
 

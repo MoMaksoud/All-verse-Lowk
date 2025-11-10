@@ -14,9 +14,19 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
     // Use requestedUserId if provided (for public profiles), otherwise use authenticated userId
     const userId = requestedUserId || request.userId;
     
+    // Check if a token was provided but failed verification
+    const authHeader = request.headers.get('authorization');
+    const tokenProvided = authHeader && authHeader.startsWith('Bearer ');
+    
     if (!userId) {
-      // Return 400 (Bad Request) instead of 401 when userId is missing but auth is optional
-      // This distinguishes between "not authenticated" (401) and "missing required parameter" (400)
+      // If a token was provided but userId is missing, it means auth failed - return 401
+      if (tokenProvided) {
+        return NextResponse.json(
+          { error: 'Unauthorized', message: 'Invalid or expired authentication token' },
+          { status: 401 }
+        );
+      }
+      // Otherwise, return 400 for missing userId when no auth was attempted
       return NextResponse.json(
         { error: 'User ID is required. Please provide userId query parameter or authenticate.' },
         { status: 400 }

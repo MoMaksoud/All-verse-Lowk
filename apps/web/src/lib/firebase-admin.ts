@@ -1,8 +1,10 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 let adminApp: App | null = null;
 let adminAuth: Auth | null = null;
+let adminFirestore: Firestore | null = null;
 
 // Initialize Firebase Admin SDK
 function getAdminApp(): App {
@@ -15,6 +17,7 @@ function getAdminApp(): App {
   if (existingApps.length > 0) {
     adminApp = existingApps[0];
     adminAuth = getAuth(adminApp);
+    adminFirestore = getFirestore(adminApp);
     return adminApp;
   }
 
@@ -64,6 +67,7 @@ function getAdminApp(): App {
     }
 
     adminAuth = getAuth(adminApp);
+    adminFirestore = getFirestore(adminApp);
     return adminApp;
   } catch (error: any) {
     console.error('❌ Firebase Admin initialization failed:', error?.message || error);
@@ -78,6 +82,21 @@ export function getAdminAuth(): Auth {
     getAdminApp();
   }
   return adminAuth!;
+}
+
+export function getAdminFirestore(): Firestore {
+  if (!adminFirestore) {
+    try {
+      getAdminApp();
+    } catch (error: any) {
+      console.error('❌ Failed to initialize Admin Firestore:', error?.message || error);
+      throw new Error(`Firebase Admin Firestore initialization failed: ${error?.message || 'Unknown error'}`);
+    }
+  }
+  if (!adminFirestore) {
+    throw new Error('Firebase Admin Firestore is not initialized');
+  }
+  return adminFirestore;
 }
 
 export async function verifyIdToken(token: string): Promise<{ uid: string; [key: string]: any }> {

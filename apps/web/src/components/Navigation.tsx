@@ -105,15 +105,26 @@ const Navigation = memo(function Navigation() {
 
   // Fetch profile data for avatar - only when dropdown is opened
   useEffect(() => {
-    if (!showProfileDropdown || profile || !currentUser) return;
+    if (!showProfileDropdown || profile || !currentUser?.uid) return;
     
     const fetchProfile = async () => {
       try {
+        // Wait a bit to ensure auth token is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const { apiGet } = await import('@/lib/api-client');
         // Use default requireAuth: true since dropdown only shows for authenticated users
         const response = await apiGet('/api/profile');
         
+        // Silently handle errors - profile might not exist yet or auth might be in progress
         if (!response.ok) {
+          // Don't log 400/401/404 errors as they're expected scenarios
+          // 400: Missing userId (shouldn't happen if auth is working)
+          // 401: Invalid/expired token (user needs to re-authenticate)
+          // 404: Profile doesn't exist yet (user needs to create profile)
+          if (response.status !== 400 && response.status !== 401 && response.status !== 404) {
+            console.error('Error fetching profile:', response.status);
+          }
           return;
         }
         
@@ -123,7 +134,11 @@ const Navigation = memo(function Navigation() {
           setProfile(result.data);
         }
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        // Silently handle errors - don't spam console with expected errors
+        // Only log unexpected errors
+        if (error instanceof Error && !error.message.includes('fetch')) {
+          console.error('Error fetching profile:', error);
+        }
       }
     };
 

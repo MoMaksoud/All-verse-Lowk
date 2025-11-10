@@ -11,10 +11,8 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
-    "@google/genai": "^1.17.0",
     "@google/generative-ai": "^0.24.1",
     "@headlessui/react": "^2.2.9",
-    "@marketplace/lib": "file:../../packages/lib",
     "@marketplace/types": "file:../../packages/types",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",

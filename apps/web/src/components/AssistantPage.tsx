@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Send, Bot, ShoppingCart, Store } from 'lucide-react';
 
@@ -8,7 +8,7 @@ interface Message {
   id: string;
   role: 'user' | 'ai';
   content: string;
-  timestamp: Date;
+  timestamp: string; // Changed from Date to string for JSON serialization
 }
 
 export default function AssistantPage() {
@@ -25,23 +25,35 @@ export default function AssistantPage() {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load/save conversation per mode
+  // Load conversation per mode - only on mount or mode change
   useEffect(() => {
     try {
       const raw = localStorage.getItem(`ai-chat-${mode}`);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setMessages(parsed);
-      } else {
-        setMessages([]);
+        if (Array.isArray(parsed)) {
+          setMessages(parsed);
+        }
       }
-    } catch {}
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      setMessages([]);
+    }
   }, [mode]);
 
+  // Debounced save to localStorage - only save after messages change
   useEffect(() => {
-    try {
-      localStorage.setItem(`ai-chat-${mode}`, JSON.stringify(messages));
-    } catch {}
+    if (messages.length === 0) return;
+    
+    const timeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem(`ai-chat-${mode}`, JSON.stringify(messages));
+      } catch (error) {
+        console.error('Error saving conversation:', error);
+      }
+    }, 500); // Debounce by 500ms
+
+    return () => clearTimeout(timeoutId);
   }, [messages, mode]);
 
   // Auto-resize textarea
@@ -52,9 +64,9 @@ export default function AssistantPage() {
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
   }, [input]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !currentUser) return;
 
     const userMessage = input.trim().slice(0, 2000);
     setInput('');
@@ -65,8 +77,9 @@ export default function AssistantPage() {
       id: crypto.randomUUID(),
       role: 'user',
       content: userMessage,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(), // Store as ISO string
     };
+    
     setMessages(prev => [...prev, userMsg]);
 
     try {
@@ -74,18 +87,24 @@ export default function AssistantPage() {
       const response = await apiPost('/api/ai/chat', {
         message: userMessage,
         mode,
-        conversationHistory: messages.slice(-10), // Last 10 messages for context
+        conversationHistory: messages.slice(-10).map(m => ({
+          role: m.role,
+          content: m.content
+        })),
       });
 
-      if (!response.ok) throw new Error('Failed to get response');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to get response');
+      }
 
       const data = await response.json();
 
       const aiMsg: Message = {
         id: crypto.randomUUID(),
         role: 'ai',
-        content: data.response,
-        timestamp: new Date(),
+        content: data.response || 'No response received',
+        timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
@@ -93,14 +112,14 @@ export default function AssistantPage() {
       const errorMsg: Message = {
         id: crypto.randomUUID(),
         role: 'ai',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date(),
+        content: error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [input, isLoading, currentUser, mode, messages]);
 
   return (
     <div className="h-[calc(100vh-64px)] overflow-hidden bg-zinc-950">
