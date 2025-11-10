@@ -23,6 +23,7 @@ export async function createPaymentIntent(amount: number, currency: string = 'us
       success: true,
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      paymentIntent, // Return full object for metadata updates
     };
   } catch (error) {
     console.error('Error creating payment intent:', error);
@@ -93,5 +94,139 @@ export function calculateTotalWithFees(subtotal: number, tax: number = 0): {
     tax,
     fees,
     total,
+  };
+}
+
+// ============================================================================
+// STRIPE CONNECT - SELLER PAYOUTS
+// ============================================================================
+
+/**
+ * Create a Stripe Connect account for a seller
+ */
+export async function createConnectAccount(email: string, userId: string) {
+  try {
+    const account = await stripe.accounts.create({
+      type: 'express',
+      country: 'US',
+      email,
+      metadata: {
+        userId,
+      },
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+    });
+
+    return {
+      success: true,
+      accountId: account.id,
+      account,
+    };
+  } catch (error) {
+    console.error('Error creating Connect account:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create Connect account',
+    };
+  }
+}
+
+/**
+ * Create account link for onboarding
+ */
+export async function createAccountLink(accountId: string, returnUrl: string, refreshUrl: string) {
+  try {
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      return_url: returnUrl,
+      refresh_url: refreshUrl,
+      type: 'account_onboarding',
+    });
+
+    return {
+      success: true,
+      url: accountLink.url,
+    };
+  } catch (error) {
+    console.error('Error creating account link:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create account link',
+    };
+  }
+}
+
+/**
+ * Get Connect account status
+ */
+export async function getConnectAccount(accountId: string) {
+  try {
+    const account = await stripe.accounts.retrieve(accountId);
+    return {
+      success: true,
+      account,
+      chargesEnabled: account.charges_enabled,
+      payoutsEnabled: account.payouts_enabled,
+      detailsSubmitted: account.details_submitted,
+    };
+  } catch (error) {
+    console.error('Error retrieving Connect account:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to retrieve Connect account',
+    };
+  }
+}
+
+/**
+ * Transfer funds to seller's Connect account
+ * This is called after payment succeeds
+ */
+export async function transferToSeller(accountId: string, amount: number, orderId: string) {
+  try {
+    // Amount in cents
+    const amountInCents = Math.round(amount * 100);
+    
+    const transfer = await stripe.transfers.create({
+      amount: amountInCents,
+      currency: 'usd',
+      destination: accountId,
+      metadata: {
+        orderId,
+        type: 'seller_payout',
+      },
+    });
+
+    return {
+      success: true,
+      transferId: transfer.id,
+      transfer,
+    };
+  } catch (error) {
+    console.error('Error transferring to seller:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to transfer to seller',
+    };
+  }
+}
+
+/**
+ * Calculate seller payout amount (after platform fees)
+ */
+export function calculateSellerPayout(itemTotal: number, platformFeePercent: number = 10): {
+  itemTotal: number;
+  platformFee: number;
+  sellerPayout: number;
+} {
+  const platformFee = itemTotal * (platformFeePercent / 100);
+  const sellerPayout = itemTotal - platformFee;
+
+  return {
+    itemTotal,
+    platformFee,
+    sellerPayout,
   };
 }

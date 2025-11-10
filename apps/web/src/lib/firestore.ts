@@ -35,6 +35,9 @@ export interface FirestoreProfile {
   shoppingFrequency?: 'daily' | 'weekly' | 'monthly' | 'occasionally' | 'rarely';
   itemConditionPreference: 'new-only' | 'second-hand-only' | 'both';
   updatedAt?: any;
+  // Stripe Connect for seller payouts
+  stripeConnectAccountId?: string;
+  stripeConnectOnboardingComplete?: boolean;
 }
 
 // Firestore service for profiles
@@ -87,6 +90,8 @@ export class ProfileService {
         budget: profileData.budget || existingProfile?.budget,
         shoppingFrequency: profileData.shoppingFrequency || existingProfile?.shoppingFrequency,
         itemConditionPreference: profileData.itemConditionPreference || existingProfile?.itemConditionPreference || 'both',
+        stripeConnectAccountId: profileData.stripeConnectAccountId || existingProfile?.stripeConnectAccountId,
+        stripeConnectOnboardingComplete: profileData.stripeConnectOnboardingComplete ?? existingProfile?.stripeConnectOnboardingComplete,
         updatedAt: serverTimestamp(),
       };
       

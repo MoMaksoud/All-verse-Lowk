@@ -46,4 +46,4 @@ export const GET = withApi(async (req: NextRequest) => {
       'Cache-Control': 'public, max-age=300, stale-while-revalidate=600'
     }
   });
-});
+}, { requireAuth: false }); // Categories should be public

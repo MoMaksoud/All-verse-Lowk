@@ -33,6 +33,7 @@ function getAdminApp(): App {
           : serviceAccount;
       } catch (parseError) {
         console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON');
+        console.error('❌ To fix: Get service account key from Firebase Console → Project Settings → Service Accounts');
         throw new Error('Invalid FIREBASE_SERVICE_ACCOUNT_KEY format. Must be valid JSON.');
       }
       
@@ -42,22 +43,32 @@ function getAdminApp(): App {
       });
       console.log('✅ Firebase Admin initialized with service account');
     } else {
-      console.log('⚠️ No FIREBASE_SERVICE_ACCOUNT_KEY found, using default credentials...');
+      console.log('⚠️ No FIREBASE_SERVICE_ACCOUNT_KEY found, attempting default credentials...');
       if (!projectId) {
+        console.error('❌ NEXT_PUBLIC_FIREBASE_PROJECT_ID is missing');
+        console.error('❌ To fix: Add FIREBASE_SERVICE_ACCOUNT_KEY to .env.local');
+        console.error('❌ Get it from: Firebase Console → Project Settings → Service Accounts → Generate New Private Key');
         throw new Error('NEXT_PUBLIC_FIREBASE_PROJECT_ID is required when using default credentials');
       }
       // Use default credentials (for Firebase Cloud Functions or GCP)
-      adminApp = initializeApp({
-        projectId: projectId,
-      });
-      console.log('✅ Firebase Admin initialized with default credentials');
+      try {
+        adminApp = initializeApp({
+          projectId: projectId,
+        });
+        console.log('✅ Firebase Admin initialized with default credentials');
+      } catch (defaultError) {
+        console.error('❌ Default credentials failed. You need FIREBASE_SERVICE_ACCOUNT_KEY for local development.');
+        console.error('❌ Get it from: Firebase Console → Project Settings → Service Accounts → Generate New Private Key');
+        throw defaultError;
+      }
     }
 
     adminAuth = getAuth(adminApp);
     return adminApp;
   } catch (error: any) {
     console.error('❌ Firebase Admin initialization failed:', error?.message || error);
-    console.error('❌ Make sure FIREBASE_SERVICE_ACCOUNT_KEY or default credentials are configured');
+    console.error('❌ Make sure FIREBASE_SERVICE_ACCOUNT_KEY is set in .env.local');
+    console.error('❌ Get service account key from: Firebase Console → Project Settings → Service Accounts');
     throw new Error(`Firebase Admin initialization failed: ${error?.message || 'Unknown error'}`);
   }
 }

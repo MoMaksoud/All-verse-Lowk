@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyWebhookSignature } from '@/lib/stripe';
+import { verifyWebhookSignature, transferToSeller, calculateSellerPayout } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
+import { ProfileService } from '@/lib/firestore';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -97,6 +98,34 @@ async function handlePaymentSucceeded(paymentIntent: any) {
         await firestoreServices.listings.updateInventory(item.listingId, item.qty);
         console.log(`✅ Updated inventory for listing ${item.listingId}`);
 
+        // Calculate seller payout (after platform fee)
+        const itemTotal = item.unitPrice * item.qty;
+        const { sellerPayout, platformFee } = calculateSellerPayout(itemTotal, 10); // 10% platform fee
+
+        // Transfer funds to seller's Stripe Connect account
+        try {
+          const sellerProfile = await ProfileService.getProfile(item.sellerId);
+          if (sellerProfile?.stripeConnectAccountId && sellerProfile?.stripeConnectOnboardingComplete) {
+            const transferResult = await transferToSeller(
+              sellerProfile.stripeConnectAccountId,
+              sellerPayout,
+              (order as any).id
+            );
+            
+            if (transferResult.success) {
+              console.log(`✅ Transferred $${sellerPayout.toFixed(2)} to seller ${item.sellerId}`);
+            } else {
+              console.error(`❌ Failed to transfer to seller ${item.sellerId}:`, transferResult.error);
+            }
+          } else {
+            console.warn(`⚠️ Seller ${item.sellerId} doesn't have a connected Stripe account. Payout will be pending.`);
+            // TODO: Store pending payout in database for later processing
+          }
+        } catch (transferError) {
+          console.error(`❌ Error transferring to seller ${item.sellerId}:`, transferError);
+          // Continue even if transfer fails - we can retry later
+        }
+
         // Create notifications
         // Buyer notification
         await addDoc(collection(db, 'users', order.buyerId, 'notifications'), {
@@ -115,7 +144,7 @@ async function handlePaymentSucceeded(paymentIntent: any) {
           orderId: (order as any).id,
           listingId: item.listingId,
           title: 'Item Sold',
-          message: `Your item "${item.title}" has been sold!`,
+          message: `Your item "${item.title}" has been sold! $${sellerPayout.toFixed(2)} will be transferred to your account.`,
           createdAt: serverTimestamp(),
           seen: false,
         });

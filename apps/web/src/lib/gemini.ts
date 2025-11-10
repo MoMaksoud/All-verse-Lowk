@@ -18,7 +18,6 @@ export interface ChatResponse {
   message: string;
   success: boolean;
   error?: string;
-  listings?: any[];
 }
 
 export class GeminiService {
@@ -144,114 +143,6 @@ Always end with a short, encouraging call-to-action question.
   static async generateSearchSuggestions(): Promise<string[]> { return []; }
 
   static async generatePriceSuggestion(): Promise<ChatResponse> { return { message: '', success: false }; }
-
-  /**
-   * Generate intelligent listings based on user query using Gemini AI
-   */
-  static async generateIntelligentListings(query: string): Promise<ChatResponse> {
-    const listingsPrompt = `
-      You are an intelligent product curator for ALL VERSE GPT marketplace! 🎯
-
-      User query: "${query}"
-
-      Generate 4-6 realistic product listings that would match this search. Each listing MUST be a JSON object with these exact fields (strict types/values):
-
-      {
-        "id": "unique-id",
-        "title": "Specific Product Name and key spec (size/capacity/color). DO NOT include price or condition words",
-        "price": {"value": number, "currency": "USD"},
-        "condition": "New|Like New|Excellent|Good|Fair",
-        "seller": {"id": "seller-id", "name": "Seller Name"},
-        "imageUrl": "https://images.unsplash.com/photo-[relevant-photo-id]?w=400&h=300&fit=crop",
-        "url": "/listings/unique-id",
-        "category": "electronics|fashion|home|sports|automotive|books|other",
-        "badges": ["Trending"|"New"|"Hot"|"Popular"|"Deal"|"Best Seller"],
-        "location": "City, State",
-        "createdAt": "2025-01-XXTXX:XX:XX.000Z",
-        "score": 0.XX
-      }
-
-      ENHANCED GUIDELINES:
-      - Make titles VERY specific: "iPhone 13 Pro 128GB Space Gray" not "iPhone"
-      - Include model numbers, sizes, colors when relevant
-      - Price ranges: Electronics $50-2000, Fashion $15-500, Home $25-800, Sports $20-400, Books $5-50
-      - Use realistic seller names: "TechDeals", "FashionForward", "HomeDecor", "SportsGear", "BookLover"
-      - Choose appropriate Unsplash photo IDs for each product type
-      - Use Florida cities: Miami, Tampa, Orlando, Jacksonville, Fort Lauderdale
-      - Score should be 0.85-0.98 for relevance
-      - Make badges contextually relevant to the product and query
-
-      VALIDATION RULES:
-      - Titles must not contain words like "new", "like new", "good condition", or prices.
-      - category MUST be lowercase and one of: electronics, fashion, home, sports, automotive, books, other
-      - price.value MUST be a number (no strings); currency MUST be "USD"
-      - badges MUST be an array with 0-2 values chosen from the allowed list
-      - location format: "City, ST" (two-letter US state code)
-
-      Return ONLY a raw JSON array with no prose and no markdown fences.
-
-      Examples based on query context:
-      - "iPhone" → iPhone 13 Pro, iPhone 14, iPhone SE, AirPods
-      - "laptop" → MacBook Pro, Dell XPS, HP Pavilion, Gaming Laptop
-      - "shoes" → Nike Air Max, Adidas Ultraboost, Converse Chuck Taylor
-      - "trending" → Mix of popular items across categories
-      - "deals" → Items under $200 with "Deal" badges
-    `;
-
-    try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(listingsPrompt);
-      const response = await result.response;
-      const text = response.text();
-
-      // Clean and parse JSON response
-      const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-      const listings = JSON.parse(cleanText);
-
-      // Validate and enhance listings
-      const validatedListings = listings.map((listing: any, index: number) => ({
-        id: listing.id || `ai-listing-${index + 1}`,
-        title: listing.title || 'Product Item',
-        price: {
-          value: Math.max(10, Math.min(2000, listing.price?.value || 100)),
-          currency: 'USD'
-        },
-        condition: ['New', 'Like New', 'Excellent', 'Good', 'Fair'].includes(listing.condition) 
-          ? listing.condition : 'Good',
-        seller: {
-          id: listing.seller?.id || `seller-${index + 1}`,
-          name: listing.seller?.name || 'Local Seller'
-        },
-        imageUrl: listing.imageUrl || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop',
-        url: listing.url || `/listings/ai-listing-${index + 1}`,
-        category: ['electronics', 'fashion', 'home', 'sports', 'automotive', 'books', 'other'].includes(listing.category)
-          ? listing.category : 'other',
-        badges: Array.isArray(listing.badges) ? listing.badges.slice(0, 2) : ['Popular'],
-        location: listing.location || 'Miami, FL',
-        createdAt: listing.createdAt || new Date().toISOString(),
-        score: Math.max(0.8, Math.min(0.98, listing.score || 0.9))
-      }));
-
-      return {
-        message: `Found ${validatedListings.length} relevant listings!`,
-        success: true,
-        listings: validatedListings
-      };
-    } catch (error: any) {
-      console.error('Gemini listings generation error:', error);
-      
-      // Check for quota errors
-      if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
-        throw new Error('AI service quota exceeded. Please try again later.');
-      }
-      
-      return {
-        message: 'Unable to generate listings at this time.',
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
 }
 
 export default GeminiService;

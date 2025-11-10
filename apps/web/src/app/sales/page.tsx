@@ -15,7 +15,9 @@ import {
   XCircle,
   Eye,
   Loader2,
-  TrendingUp
+  TrendingUp,
+  CreditCard,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -103,6 +105,8 @@ export default function SalesPage() {
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Order | null>(null);
+  const [stripeAccount, setStripeAccount] = useState<any>(null);
+  const [loadingAccount, setLoadingAccount] = useState(true);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -176,6 +180,71 @@ export default function SalesPage() {
     return () => unsubscribe();
   }, [currentUser?.uid]);
 
+  // Fetch Stripe Connect account status
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setLoadingAccount(false);
+      return;
+    }
+
+    const fetchAccountStatus = async () => {
+      try {
+        const { apiGet } = await import('@/lib/api-client');
+        const response = await apiGet('/api/stripe/connect/account-status');
+        
+        if (response.ok) {
+          const data = await response.json();
+          setStripeAccount(data);
+        }
+      } catch (error) {
+        console.error('Error fetching account status:', error);
+      } finally {
+        setLoadingAccount(false);
+      }
+    };
+
+    fetchAccountStatus();
+  }, [currentUser?.uid]);
+
+  const handleConnectStripe = async () => {
+    if (!currentUser?.email) {
+      alert('Email is required to connect Stripe');
+      return;
+    }
+
+    try {
+      setLoadingAccount(true);
+      const { apiPost } = await import('@/lib/api-client');
+      
+      // Create account if doesn't exist
+      const createResponse = await apiPost('/api/stripe/connect/create-account', {
+        email: currentUser.email,
+      });
+
+      if (!createResponse.ok) {
+        throw new Error('Failed to create Connect account');
+      }
+
+      // Get account link
+      const linkResponse = await apiPost('/api/stripe/connect/account-link', {
+        returnUrl: window.location.href,
+        refreshUrl: window.location.href,
+      });
+
+      if (!linkResponse.ok) {
+        throw new Error('Failed to create account link');
+      }
+
+      const linkData = await linkResponse.json();
+      window.location.href = linkData.url;
+    } catch (error) {
+      console.error('Error connecting Stripe:', error);
+      alert('Failed to connect Stripe account. Please try again.');
+    } finally {
+      setLoadingAccount(false);
+    }
+  };
+
   if (!currentUser) {
     return (
       <div className="min-h-screen relative overflow-hidden">
@@ -214,6 +283,33 @@ export default function SalesPage() {
             <p className="text-gray-400">Track your sold items and earnings</p>
           </div>
 
+          {/* Stripe Connect Setup */}
+          {!loadingAccount && (!stripeAccount?.hasAccount || !stripeAccount?.payoutsEnabled) && (
+            <Card className="mb-8 border-yellow-500/20 bg-yellow-500/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <AlertCircle className="w-6 h-6 text-yellow-400" />
+                  <div>
+                    <h3 className="text-white font-semibold mb-1">Connect Stripe to Receive Payouts</h3>
+                    <p className="text-gray-400 text-sm">
+                      {!stripeAccount?.hasAccount 
+                        ? 'Set up your Stripe account to receive payments from sales'
+                        : 'Complete your Stripe onboarding to enable payouts'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleConnectStripe}
+                  disabled={loadingAccount}
+                  className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  {loadingAccount ? 'Loading...' : 'Connect Stripe'}
+                </button>
+              </div>
+            </Card>
+          )}
+
           {/* Earnings Summary */}
           {sales.length > 0 && (
             <Card className="mb-8">
@@ -223,6 +319,9 @@ export default function SalesPage() {
                   <div>
                     <p className="text-gray-400 text-sm">Total Earnings</p>
                     <p className="text-2xl font-bold text-white">{formatCurrency(totalEarnings)}</p>
+                    {stripeAccount?.payoutsEnabled && (
+                      <p className="text-green-400 text-xs mt-1">✓ Payouts enabled</p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">

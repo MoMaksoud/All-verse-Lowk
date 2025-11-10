@@ -70,6 +70,7 @@ export default function SellPage() {
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [aiAssistantComplete, setAiAssistantComplete] = useState(false);
+  const [initialEvidence, setInitialEvidence] = useState<any>(null);
   
   const [formData, setFormData] = useState<Omit<SimpleListingCreate, 'price'> & {
     price: string;
@@ -218,25 +219,14 @@ export default function SellPage() {
       console.log('🤖 API response result:', result);
       const analysis = result.analysis;
       
-      // Update form data with AI-generated data (no database save yet)
-      const aiData = {
-        title: analysis.title,
-        description: analysis.description,
-        category: analysis.category,
-        price: analysis.suggestedPrice ? analysis.suggestedPrice.toString() : '',
-        condition: analysis.condition,
-        marketResearch: analysis.marketResearch,
-      };
-      
-      console.log('🤖 AI Data to update form:', aiData);
-      console.log('🤖 Analysis condition:', analysis.condition);
-      console.log('🤖 Current formData.condition:', formData.condition);
-      
-      // Update form data to show AI results
-      setFormData(prev => {
-        const updated = { ...prev, ...aiData };
-        console.log('🤖 Updated formData.condition:', updated.condition);
-        return updated;
+      // Store initial evidence for Phase 2 - use the full evidence object if available
+      setInitialEvidence(analysis._evidence || {
+        brand: analysis.brand,
+        model: analysis.model,
+        product_type: analysis.category,
+        visible_features: analysis.features,
+        model_exact: analysis.model,
+        model_range: analysis.model
       });
       
       // Store the analysis for the AI assistant
@@ -247,8 +237,18 @@ export default function SellPage() {
         console.log('🤖 Missing information detected:', analysis.missingInfo);
         setShowAIAssistant(true);
         setCurrentStep(3); // Go to AI assistant step
-        addToast('info', 'AI Assistant Ready', 'The AI needs some additional information to complete your listing.');
+        addToast('info', 'Additional Info Needed', 'Please answer a few questions to complete your listing.');
       } else {
+        // No missing info, use initial analysis
+        const aiData = {
+          title: analysis.title,
+          description: analysis.description,
+          category: analysis.category,
+          price: analysis.suggestedPrice ? analysis.suggestedPrice.toString() : '',
+          condition: analysis.condition,
+          marketResearch: analysis.marketResearch,
+        };
+        setFormData(prev => ({ ...prev, ...aiData }));
         setCurrentStep(3); // Go to review step
         addToast('success', 'AI Analysis Complete', 'Product details have been generated successfully!');
       }
@@ -298,12 +298,75 @@ export default function SellPage() {
     }));
   };
 
-  const handleAIAssistantComplete = () => {
-    console.log('🤖 AI Assistant completed');
-    setShowAIAssistant(false);
-    setAiAssistantComplete(true);
-    setCurrentStep(4); // Move to review & edit step
-    addToast('success', 'Listing Complete!', 'All information has been gathered. Review and edit your listing before publishing!');
+  const handleAIAssistantComplete = async (userAnswers?: Record<string, string>) => {
+    console.log('🤖 AI Assistant completed with answers:', userAnswers);
+    console.log('🤖 Initial evidence:', initialEvidence);
+    console.log('🤖 Photo URLs count:', photoUrls.length);
+    
+    // If we have user answers and initial evidence, generate final listing
+    if (userAnswers && Object.keys(userAnswers).length > 0 && initialEvidence && photoUrls.length > 0) {
+      try {
+        setAiAnalyzing(true);
+        const { apiPost } = await import('@/lib/api-client');
+        const response = await apiPost('/api/ai/analyze-product', {
+          imageUrls: photoUrls,
+          phase: 'final',
+          userAnswers,
+          initialEvidence
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('🤖 Phase 2 API error:', errorText);
+          throw new Error(`Failed to generate final listing: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (!result.success || !result.analysis) {
+          console.error('🤖 Invalid Phase 2 response:', result);
+          throw new Error('Invalid response from Phase 2');
+        }
+        
+        const finalAnalysis = result.analysis;
+        console.log('🤖 Final analysis received:', finalAnalysis);
+
+        // Update form with final, polished listing
+        setFormData(prev => ({
+          ...prev,
+          title: finalAnalysis.title,
+          description: finalAnalysis.description,
+          category: finalAnalysis.category,
+          price: finalAnalysis.suggestedPrice ? finalAnalysis.suggestedPrice.toString() : '',
+          condition: finalAnalysis.condition,
+          marketResearch: finalAnalysis.marketResearch,
+        }));
+        setAiAnalysis(finalAnalysis);
+        setShowAIAssistant(false);
+        setAiAssistantComplete(true);
+        setCurrentStep(4);
+        addToast('success', 'Listing Ready!', 'Your listing has been generated with all the details.');
+      } catch (error) {
+        console.error('❌ Error generating final listing:', error);
+        addToast('error', 'Generation Failed', error instanceof Error ? error.message : 'Could not generate final listing. Using initial analysis.');
+        setShowAIAssistant(false);
+        setAiAssistantComplete(true);
+        setCurrentStep(4);
+      } finally {
+        setAiAnalyzing(false);
+      }
+    } else {
+      console.warn('⚠️ Missing data for Phase 2:', { 
+        hasUserAnswers: !!userAnswers, 
+        userAnswersCount: userAnswers ? Object.keys(userAnswers).length : 0,
+        hasInitialEvidence: !!initialEvidence,
+        photoUrlsCount: photoUrls.length 
+      });
+      setShowAIAssistant(false);
+      setAiAssistantComplete(true);
+      setCurrentStep(4);
+      addToast('success', 'Listing Complete!', 'All information has been gathered. Review and edit your listing before publishing!');
+    }
   };
 
   const suggestAIPrice = async () => {

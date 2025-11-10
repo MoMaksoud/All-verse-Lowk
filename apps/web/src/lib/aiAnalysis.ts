@@ -16,6 +16,7 @@ export interface ProductAnalysis {
   brand: string;
   model: string;
   missingInfo?: string[]; // Information that needs to be gathered from the user
+  _evidence?: any; // Full evidence object from Phase 1 for Phase 2 generation
   marketResearch: {
     averagePrice: number;
     priceRange: { min: number; max: number };
@@ -99,7 +100,7 @@ export class AIAnalysisService {
 
       For SHOES/SNEAKERS:
       - "What size are these shoes?"
-      - "What condition are these shoes in?"
+      - "What condition are these shoes in?" , if user's answer is 'NEW', then never ask "How long have you used this item?"
       - "What color are these shoes?"
       - "How long have you worn these shoes?"
       - "Do you have the original box?"
@@ -113,11 +114,8 @@ export class AIAnalysisService {
 
       For CLOTHING:
       - "What size is this item?"
-      - "What condition is this item in?"
-      - "What color is this item?"
-      - "How long have you worn this item?"
-      - "What material is this made of?"
-
+      - "What condition is this item in? , if user's answer is 'NEW', then never ask "How long have you used this item?"
+      
       For ELECTRONICS (laptops, tablets, etc.):
       - "What storage capacity does this have?"
       - "What is the battery health percentage?"
@@ -125,7 +123,7 @@ export class AIAnalysisService {
       - "Do you have the original box and accessories?"
 
       For OTHER ITEMS:
-      - "What condition is this item in?"
+      - "What condition is this item in?", if user's answer is 'NEW', then never ask "How long have you used this item?"
       - "What color is this item?"
       - "How long have you used this item?"
       - "Do you have the original packaging?"
@@ -193,6 +191,8 @@ export class AIAnalysisService {
           brand: evidence.brand || 'Various',
           model: evidence.model_exact || evidence.model_range || 'Standard',
         missingInfo: listing.contextual_questions || [],
+          // Store full evidence object for Phase 2
+          _evidence: evidence,
           marketResearch: {
             averagePrice: listing.suggested_price || 100,
           priceRange: { 
@@ -207,5 +207,111 @@ export class AIAnalysisService {
       } catch (error) {
         return undefined;
       }
+  }
+
+  /**
+   * Phase 2: Generate final listing with image + user answers
+   */
+  static async generateFinalListing(
+    imageUrls: string[], 
+    userAnswers: Record<string, string>,
+    initialEvidence: any
+  ): Promise<ProductAnalysis | undefined> {
+    const prompt = `
+      You are a PROFESSIONAL PRODUCT LISTER for ALL VERSE GPT. Create a polished, buyer-ready listing that is accurate, detailed, and natural-sounding.
+
+      Initial Analysis Evidence:
+      ${JSON.stringify(initialEvidence, null, 2)}
+
+      User-Provided Information:
+      ${JSON.stringify(userAnswers, null, 2)}
+
+      Your task:
+      1. Combine the visual evidence from the image(s) with the user-provided information
+      2. Create a professional, natural-sounding listing that doesn't sound robotic
+      3. Write in a conversational, trustworthy tone - like a real person describing their item
+      4. Be specific and detailed, but concise (3-5 sentences)
+      5. Highlight key selling points naturally
+      6. Use the user's exact answers where provided (size, condition, etc.)
+
+      Return ONLY valid JSON with this exact structure:
+
+      {
+        "listing_ready": {
+          "title": "Brand Model Size/Color - Specific, NO condition words or prices",
+          "description": "Write 3-5 natural sentences. Describe what makes this item special, its condition in detail, notable features. Sound conversational but professional. Include specific details from image and user answers.",
+          "category": "electronics|fashion|home|sports|automotive|toys|beauty|appliances|books|tools|other",
+          "condition": "new|like-new|good|fair|poor",
+          "suggested_price": number
+        },
+        "market_analysis": {
+          "suggestedPrice": number,
+          "priceRange": { "min": number, "max": number },
+          "confidence": 0.0-1.0,
+          "marketDemand": "high|medium|low"
+        }
+      }
+
+      Writing Guidelines:
+      - Description should read like a real person wrote it, not AI
+      - Use natural transitions: "This item features...", "The condition is...", "Perfect for..."
+      - Be specific: "Size 10 Nike Air Max" not "Nike shoes"
+      - Include condition details naturally: "Like new, only worn a few times" not just "like-new"
+      - If user said "new", emphasize: "Brand new, never used, still in original packaging"
+      - No emojis, no ALL CAPS, no excessive punctuation
+      - Sound conversational, not robotic
+
+      Return ONLY the JSON.
+    `;
+
+    try {
+      const imageResponse = await fetch(imageUrls[0]);
+      const imageBuffer = await imageResponse.arrayBuffer();
+      const imageBlob = new Blob([imageBuffer], { type: 'image/jpeg' });
+      
+      const image = await genAi.files.upload({
+        file: imageBlob,
+        config: { mimeType: 'image/jpeg' }
+      });
+
+      const response = await genAi.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: createUserContent([
+          createPartFromUri(image.uri!, image.mimeType!),
+          prompt,
+        ]),
+      });
+
+      const text = response?.text ?? '';
+      const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+      const analysis = JSON.parse(cleanText);
+
+      const listing = analysis.listing_ready || {};
+      const market = analysis.market_analysis || {};
+
+      return {
+        title: listing.title || 'Product Item',
+        description: listing.description || 'Product in good condition',
+        category: (listing.category || 'other') as ProductAnalysis['category'],
+        condition: (listing.condition || 'good') as ProductAnalysis['condition'],
+        suggestedPrice: market.suggestedPrice || listing.suggested_price || 100,
+        confidence: Math.max(0.1, Math.min(1.0, market.confidence || 0.9)),
+        features: initialEvidence?.visible_features || [],
+        brand: initialEvidence?.brand || 'Various',
+        model: initialEvidence?.model_exact || initialEvidence?.model_range || 'Standard',
+        marketResearch: {
+          averagePrice: market.suggestedPrice || listing.suggested_price || 100,
+          priceRange: market.priceRange || {
+            min: Math.round((market.suggestedPrice || 100) * 0.8),
+            max: Math.round((market.suggestedPrice || 100) * 1.2)
+          },
+          marketDemand: (market.marketDemand || 'medium') as 'high' | 'medium' | 'low',
+          competitorCount: 10
+        }
+      };
+    } catch (error) {
+      console.error('Error generating final listing:', error);
+      return undefined;
+    }
   }
 }

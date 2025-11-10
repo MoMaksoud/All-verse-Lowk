@@ -4,10 +4,24 @@ import { checkRateLimit, getIp } from '@/lib/rateLimit';
 export const preferredRegion = 'iad1';
 export const dynamic = 'force-dynamic';
 
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '');
+// Check for Gemini API key
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.error('❌ GEMINI_API_KEY is not configured');
+}
+
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if API key is configured
+    if (!apiKey || !genAI) {
+      return NextResponse.json({ 
+        error: 'AI service is not configured',
+        details: 'GEMINI_API_KEY is missing. Please configure it in your environment variables.'
+      }, { status: 500 });
+    }
+
     // Basic rate limit (30/min per IP)
     const ip = getIp(req as unknown as Request);
     checkRateLimit(ip, 30);
@@ -98,22 +112,34 @@ export async function POST(req: NextRequest) {
 
     const result = await model_ai.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-
-    console.log('🔍 Raw AI market analysis response:', text);
-
-    // Clean and parse JSON response
-    const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-    console.log('🔍 Cleaned AI response:', cleanText);
     
-    let analysis;
+    // Handle response - since responseMimeType is set to JSON, it might already be parsed
+    let analysis: any;
     try {
+      const text = response.text();
+      console.log('🔍 Raw AI market analysis response:', text);
+      
+      // Clean and parse JSON response
+      const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+      console.log('🔍 Cleaned AI response:', cleanText);
+      
       analysis = JSON.parse(cleanText);
       console.log('🔍 Parsed AI market analysis:', analysis);
     } catch (parseError) {
-      console.error('🔍 JSON parsing failed:', parseError);
-      console.error('🔍 Raw text that failed to parse:', cleanText);
-      throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`);
+      // Try to get JSON directly if responseMimeType handled it
+      try {
+        const jsonText = (response as any).text?.() || '';
+        if (jsonText) {
+          analysis = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
+          console.log('🔍 Parsed from JSON response:', analysis);
+        } else {
+          throw parseError;
+        }
+      } catch (fallbackError) {
+        console.error('🔍 JSON parsing failed:', parseError);
+        console.error('🔍 Fallback parsing also failed:', fallbackError);
+        throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`);
+      }
     }
 
     // Validate the analysis structure

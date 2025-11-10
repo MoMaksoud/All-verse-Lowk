@@ -52,10 +52,12 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     const tax = subtotal * taxRate;
     const { fees, total } = calculateTotalWithFees(subtotal, tax);
 
-    // Create payment intent
+    // Create payment intent with application fee for Stripe Connect
+    // Note: For Connect, we'll use transfers instead of application fees for simplicity
     const paymentResult = await createPaymentIntent(total, 'usd', {
       userId: req.userId,
       orderType: 'marketplace',
+      orderId: '', // Will be set after order creation
     });
 
     if (!paymentResult.success) {
@@ -76,6 +78,22 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     };
 
     const orderId = await firestoreServices.orders.createOrder(orderData);
+
+    // Update payment intent metadata with orderId
+    if (paymentResult.paymentIntentId) {
+      try {
+        const { stripe } = await import('@/lib/stripe');
+        await stripe.paymentIntents.update(paymentResult.paymentIntentId, {
+          metadata: {
+            ...paymentResult.paymentIntent?.metadata,
+            orderId,
+          },
+        });
+      } catch (error) {
+        console.error('Error updating payment intent metadata:', error);
+        // Non-critical, continue
+      }
+    }
 
     // Create payment record
     const paymentData: CreatePaymentInput = {

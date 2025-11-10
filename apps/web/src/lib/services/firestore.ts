@@ -575,12 +575,27 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     if (!chatSnap.exists()) {
       // Fetch minimal profile info for both users from profiles (preferred) or users fallback
       const buildProfile = async (uid: string) => {
-        const profileDoc = await getDoc(doc(db, 'profiles', uid));
-        const p: any = profileDoc.data();
-        const displayName = p?.displayName || p?.username;
-        const username = p?.username;
-        const photoURL = p?.profilePicture;
-        return { displayName, username, photoURL };
+        try {
+          const profileDoc = await getDoc(doc(db, 'profiles', uid));
+          const p: any = profileDoc.data();
+          // Ensure displayName is never undefined - use fallbacks
+          const displayName = p?.displayName || p?.username || `User ${uid.substring(0, 8)}`;
+          const username = p?.username || displayName;
+          const photoURL = p?.profilePicture || '';
+          return { 
+            displayName: displayName || `User ${uid.substring(0, 8)}`, 
+            username: username || displayName || `User ${uid.substring(0, 8)}`, 
+            photoURL: photoURL || '' 
+          };
+        } catch (error) {
+          console.error(`Error fetching profile for ${uid}:`, error);
+          // Return safe defaults if profile fetch fails
+          return {
+            displayName: `User ${uid.substring(0, 8)}`,
+            username: `User ${uid.substring(0, 8)}`,
+            photoURL: ''
+          };
+        }
       };
 
       const [p1, p2] = await Promise.all([buildProfile(userId1), buildProfile(userId2)]);
@@ -588,8 +603,16 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       const newChat: FirestoreChat = {
         participants,
         participantProfiles: {
-          [userId1]: p1,
-          [userId2]: p2,
+          [userId1]: {
+            displayName: p1.displayName || `User ${userId1.substring(0, 8)}`,
+            username: p1.username || p1.displayName || `User ${userId1.substring(0, 8)}`,
+            photoURL: p1.photoURL || ''
+          },
+          [userId2]: {
+            displayName: p2.displayName || `User ${userId2.substring(0, 8)}`,
+            username: p2.username || p2.displayName || `User ${userId2.substring(0, 8)}`,
+            photoURL: p2.photoURL || ''
+          },
         },
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,

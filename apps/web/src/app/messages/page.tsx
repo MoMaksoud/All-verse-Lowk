@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { useChats } from '@/hooks/useChats';
@@ -8,11 +9,20 @@ import { useChatMessages } from '@/hooks/useChatMessages';
 import { ChatList } from '@/components/chat/ChatList';
 import { ChatView } from '@/components/chat/ChatView';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { ArrowLeft } from 'lucide-react';
+import { UserSearchModal } from '@/components/UserSearchModal';
+import { ArrowLeft, Plus } from 'lucide-react';
+import { firestoreServices } from '@/lib/services/firestore';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function MessagesPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { currentUser } = useAuth();
+  const { showError, showSuccess } = useToast();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [showUserSearch, setShowUserSearch] = useState(false);
   const { chats, loading: chatsLoading, error: chatsError, startChat } = useChats();
   const { 
     messages, 
@@ -24,6 +34,19 @@ export default function MessagesPage() {
 
   const selectedChat = chats.find(chat => chat.id === selectedChatId);
   const otherUser = selectedChat?.otherUser;
+
+  // Auto-select chat from URL parameter
+  useEffect(() => {
+    const chatIdFromUrl = searchParams.get('chatId');
+    if (chatIdFromUrl && chatIdFromUrl !== selectedChatId) {
+      // Set the chat from URL - messages will load even if chat isn't in list yet
+      // (chat might be newly created and subscription hasn't updated)
+      if (!chatsLoading) {
+        setSelectedChatId(chatIdFromUrl);
+        setShowMobileChat(true);
+      }
+    }
+  }, [searchParams, chatsLoading, selectedChatId]);
 
   const handleChatSelect = (chatId: string) => {
     setSelectedChatId(chatId);
@@ -39,6 +62,27 @@ export default function MessagesPage() {
       await sendMessage(text);
       } catch (error) {
       console.error('Failed to send message:', error);
+    }
+  };
+
+  const handleSelectUser = async (userId: string) => {
+    if (!currentUser) {
+      showError('Sign In Required', 'Please sign in to start a conversation.');
+      return;
+    }
+    
+    try {
+      // Create or get existing chat
+      const chatId = await firestoreServices.chats.getOrCreateChat(currentUser.uid, userId);
+      
+      // Navigate to the chat
+      router.push(`/messages?chatId=${chatId}`);
+      setSelectedChatId(chatId);
+      setShowMobileChat(true);
+      showSuccess('Chat Started', 'You can now start messaging!');
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      showError('Failed to Start Chat', 'Please try again later.');
     }
   };
 
@@ -68,8 +112,16 @@ export default function MessagesPage() {
           {/* Chat List - Hidden on mobile when chat is open */}
           <div className={`lg:col-span-1 min-h-0 ${showMobileChat ? 'hidden lg:block' : 'block'}`}>
             <div className="bg-dark-surface rounded-lg border border-dark-border h-full flex flex-col min-h-0">
-              <div className="p-4 border-b border-dark-border flex-shrink-0">
-                  <h2 className="text-lg font-semibold text-white">Conversations</h2>
+              <div className="p-4 border-b border-dark-border flex-shrink-0 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">Conversations</h2>
+                <button
+                  onClick={() => setShowUserSearch(true)}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  aria-label="New message"
+                  title="New message"
+                >
+                  <Plus className="w-5 h-5 text-white" />
+                </button>
               </div>
 
               <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
@@ -132,6 +184,13 @@ export default function MessagesPage() {
           </div>
         </div>
       </div>
+
+      {/* User Search Modal */}
+      <UserSearchModal
+        isOpen={showUserSearch}
+        onClose={() => setShowUserSearch(false)}
+        onSelectUser={handleSelectUser}
+      />
     </div>
   );
 }

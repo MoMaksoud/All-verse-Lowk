@@ -27,9 +27,9 @@ export const startChatFromListing = async (
       await firestoreServices.chats.sendMessage(chatId, currentUserId, options.initialMessage);
     }
     
-    // Navigate to messages page if router is provided
+    // Navigate to messages page with chatId if router is provided
     if (router) {
-      router.push('/messages');
+      router.push(`/messages?chatId=${chatId}`);
     }
     
     return chatId;

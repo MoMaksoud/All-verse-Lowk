@@ -14,7 +14,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     checkRateLimit(ip, 20);
 
     const body = await req.json();
-    const { imageUrls } = body;
+    const { imageUrls, phase, userAnswers, initialEvidence } = body;
     
 
     if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
@@ -24,16 +24,34 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     let analysis;
     
     try {
-      analysis = await AIAnalysisService.analyzeProductPhotos(imageUrls);
+      if (phase === 'final' && userAnswers && initialEvidence) {
+        // Phase 2: Generate final listing with user answers
+        analysis = await AIAnalysisService.generateFinalListing(imageUrls, userAnswers, initialEvidence);
+      } else {
+        // Phase 1: Initial analysis
+        analysis = await AIAnalysisService.analyzeProductPhotos(imageUrls);
+      }
     } catch (aiError) {
+      console.error('AI analysis error:', aiError);
+      return NextResponse.json({ 
+        error: 'Failed to analyze product',
+        success: false 
+      }, { status: 500 });
+    }
+
+    if (!analysis) {
+      return NextResponse.json({ 
+        error: 'Failed to analyze product',
+        success: false 
+      }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
-      analysis: {
-        ...analysis,
-      },
-      message: 'Product analysis completed successfully'
+      analysis,
+      message: phase === 'final' 
+        ? 'Final listing generated successfully' 
+        : 'Product analysis completed successfully'
     });
   } catch (error) {
     console.error('Error analyzing product:', error);

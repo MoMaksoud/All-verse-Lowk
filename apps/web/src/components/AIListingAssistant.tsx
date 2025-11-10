@@ -29,7 +29,7 @@ interface AIListingAssistantProps {
     condition: string;
     suggestedPrice: number;
   }) => void;
-  onComplete: () => void;
+  onComplete: (userAnswers?: Record<string, string>) => void;
 }
 
 export function AIListingAssistant({ 
@@ -228,7 +228,7 @@ export function AIListingAssistant({
       setIsComplete(true);
       showSuccess('Listing Complete!', 'All information has been gathered and your listing is ready to post!');
       setTimeout(() => {
-        onComplete();
+        onComplete(newInputs); // Pass user answers to onComplete
       }, 1500);
     }
   };
