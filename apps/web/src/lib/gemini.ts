@@ -40,13 +40,13 @@ export class GeminiService {
     Core goals:
     - Help buyers quickly discover relevant listings, categories, or item types.
     - Provide clear, concrete suggestions (3-5 items, keywords, or product ideas) based on their query.
-    - Guide users toward refining their search by price, location, or condition.
+    - Guide users toward refining their search by price or condition.
     - If key info is missing (budget, category, or item type), ask one short clarifying question before giving results.
     
     Style rules:
     - Keep answers concise: 1-3 short sentences, followed by 3-5 plain-text suggestions, each on a new line.
     - Use plain text only — no emojis, formatting, or bullets.
-    - Never make up listings, prices, or locations.
+    - Never make up listings or prices.
     - If a query is not about buying or finding items, respond with:
       "This AI is only for helping buyers on AllVerse. Please switch to Seller mode for other questions."
     
@@ -63,7 +63,7 @@ Core goals:
 - Help sellers write better titles, descriptions, and tags.
 - Suggest realistic, data-informed prices and highlight how to make listings stand out.
 - Recommend improvements to photos, category choice, and delivery method.
-- If missing key info (title, item condition, category, or location), ask one brief clarifying question before giving advice.
+- If missing key info (title, item condition, or category), ask one brief clarifying question before giving advice.
 
 Style rules:
 - Keep responses short and to the point: 1-3 clear sentences.
@@ -80,7 +80,22 @@ Always end with a short, encouraging call-to-action question.
 
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(`${systemPrompt}\n\n${userMessage}`);
+
+      // Build conversation history if provided
+      let fullPrompt = systemPrompt;
+      if (conversationHistory && conversationHistory.length > 0) {
+        const historyText = conversationHistory
+          .map((msg: any) => {
+            const role = msg.role === 'user' ? 'User' : 'Assistant';
+            return `${role}: ${msg.parts?.[0]?.text || msg.content || ''}`;
+          })
+          .join('\n\n');
+        fullPrompt = `${systemPrompt}\n\nPrevious conversation:\n${historyText}\n\nCurrent message:\n${userMessage}`;
+      } else {
+        fullPrompt = `${systemPrompt}\n\n${userMessage}`;
+      }
+
+      const result = await model.generateContent(fullPrompt);
       const response = await result.response;
       return response.text();
     } catch (error: any) {

@@ -333,7 +333,14 @@ class StorageService {
     }
 
     if (allowedTypes.length > 0) {
-      const isValidType = allowedTypes.some(type => file.type.startsWith(type));
+      const isValidType = allowedTypes.some(type => {
+        // Handle wildcard patterns like 'image/*'
+        if (type.endsWith('/*')) {
+          const baseType = type.slice(0, -2); // Remove '/*'
+          return file.type.startsWith(baseType + '/');
+        }
+        return file.type.startsWith(type);
+      });
       if (!isValidType) {
         return { isValid: false, error: `File type not supported. Allowed types: ${allowedTypes.join(', ')}` };
       }

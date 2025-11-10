@@ -3,6 +3,9 @@ import { GeminiService } from '@/lib/gemini';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
 import { assertTokenBudget, addUsage } from '@/lib/aiUsage';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const DAILY_LIMIT = Number(process.env.NEXT_PUBLIC_AI_DAILY_TOKENS || 5000);
 const MAX_OUT_TOKENS = 256;
 const isOutOfScope = (s: string) => /politic|news|program|code|crypto|vpn|religion|medical|legal|tax|homework|api key|bypass|hack/i.test(s || '');

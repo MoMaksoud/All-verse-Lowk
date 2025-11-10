@@ -63,6 +63,17 @@ export function withApi(
             { status: 401 }
           );
         }
+      } else {
+        // Even when auth is optional, try to get userId if token is provided
+        const authHeader = req.headers.get('authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          try {
+            const userId = await verifyFirebaseToken(req);
+            (req as any).userId = userId;
+          } catch {
+            // Ignore auth errors when auth is optional - userId will remain undefined
+          }
+        }
       }
       
       const res = await handler(req as NextRequest & { userId: string }, context);

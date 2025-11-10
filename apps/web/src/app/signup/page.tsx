@@ -101,18 +101,22 @@ export default function SignUp() {
         return;
       }
       
-      // Wait a bit more to ensure auth token is ready
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Ensure token is ready before making the API call
+      if (firebaseUser) {
+        try {
+          await firebaseUser.getIdToken(true);
+        } catch (tokenError) {
+          setError('Authentication error. Please try refreshing the page and signing up again.');
+          setProfileLoading(false);
+          return;
+        }
+      }
       
       // Create profile with the user's display name as username if not provided
       const profileToCreate = {
         ...profileData,
         username: profileData.username || formData.displayName,
-        // Don't include userId - it's set from the auth token on the server
       };
-
-      console.log('Creating profile with data:', profileToCreate);
-      console.log('User ID:', userId);
 
       // Save profile to Firestore
       const { apiPut } = await import('@/lib/api-client');
@@ -122,17 +126,22 @@ export default function SignUp() {
         let errorMessage = 'Failed to create profile';
         try {
           const errorData = await response.json();
-          console.error('Profile creation failed:', errorData);
           errorMessage = errorData.error || errorData.details || errorMessage;
+          
+          if (response.status === 401) {
+            errorMessage = 'Authentication failed. Please try refreshing the page and signing up again.';
+          } else if (response.status === 400) {
+            errorMessage = errorData.error || 'Invalid profile data. Please check your information and try again.';
+          }
         } catch (e) {
-          const errorText = await response.text();
-          console.error('Profile creation failed (non-JSON):', errorText);
+          if (response.status === 401) {
+            errorMessage = 'Authentication failed. Please try refreshing the page and signing up again.';
+          }
         }
         throw new Error(errorMessage);
       }
 
-      const result = await response.json();
-      console.log('Profile created successfully:', result);
+      await response.json();
 
       // Show success message
       setProfileSuccess(true);

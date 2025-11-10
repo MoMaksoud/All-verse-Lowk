@@ -31,7 +31,8 @@ export default function ProfilePage() {
       setLoading(true);
       
       const { apiGet } = await import('@/lib/api-client');
-      const response = await apiGet('/api/profile', { requireAuth: false });
+      // Send auth token to get current user's profile
+      const response = await apiGet('/api/profile');
 
       if (response.status === 404) {
         setProfile(null);

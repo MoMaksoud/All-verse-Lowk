@@ -69,50 +69,72 @@ export class ProfileService {
       if (!db || !isFirebaseConfigured()) {
         throw new Error('Database not initialized or Firebase not configured');
       }
-      console.log('ProfileService.saveProfile called with userId:', userId);
-      console.log('ProfileService.saveProfile called with profileData:', JSON.stringify(profileData, null, 2));
       
       const profileRef = doc(db, this.collectionName, userId);
-      console.log('Profile reference created:', profileRef);
       
       // Check if profile already exists
       const existingProfile = await this.getProfile(userId);
       
-      // Create a simple profile object with required fields
-      const profileToSave: FirestoreProfile = {
+      // Merge: start with existing profile, then override with provided values
+      // Use nullish coalescing (??) to only fall back when value is undefined/null
+      // This ensures falsy values (empty strings, 0, empty arrays) are saved
+      const profileToSave: any = {
         userId,
-        username: profileData.username || existingProfile?.username || '',
-        bio: profileData.bio || existingProfile?.bio || '',
-        createdAt: existingProfile?.createdAt || serverTimestamp(),
-        gender: profileData.gender || existingProfile?.gender,
-        age: profileData.age || existingProfile?.age,
-        profilePicture: profileData.profilePicture || existingProfile?.profilePicture || '',
-        phoneNumber: profileData.phoneNumber || existingProfile?.phoneNumber || '',
-        rating: profileData.rating || existingProfile?.rating || 0,
-        interestCategories: profileData.interestCategories || existingProfile?.interestCategories || [],
-        userActivity: profileData.userActivity || existingProfile?.userActivity || 'both-buy-sell',
-        budget: profileData.budget || existingProfile?.budget,
-        shoppingFrequency: profileData.shoppingFrequency || existingProfile?.shoppingFrequency,
-        itemConditionPreference: profileData.itemConditionPreference || existingProfile?.itemConditionPreference || 'both',
-        stripeConnectAccountId: profileData.stripeConnectAccountId || existingProfile?.stripeConnectAccountId,
-        stripeConnectOnboardingComplete: profileData.stripeConnectOnboardingComplete ?? existingProfile?.stripeConnectOnboardingComplete,
+        username: profileData.username ?? existingProfile?.username ?? '',
+        bio: profileData.bio ?? existingProfile?.bio ?? '',
+        createdAt: existingProfile?.createdAt ?? serverTimestamp(),
+        rating: profileData.rating ?? existingProfile?.rating ?? 0,
+        interestCategories: profileData.interestCategories ?? existingProfile?.interestCategories ?? [],
+        userActivity: profileData.userActivity ?? existingProfile?.userActivity ?? 'both-buy-sell',
+        itemConditionPreference: profileData.itemConditionPreference ?? existingProfile?.itemConditionPreference ?? 'both',
         updatedAt: serverTimestamp(),
       };
       
-      // Log safe fields (exclude serverTimestamp which can't be serialized)
-      console.log('Saving to Firestore:', {
-        userId,
-        username: profileToSave.username,
-        bio: profileToSave.bio,
-        hasProfilePicture: !!profileToSave.profilePicture,
-        rating: profileToSave.rating,
-        userActivity: profileToSave.userActivity,
-        interestCategoriesCount: profileToSave.interestCategories?.length || 0
+      // Only include optional fields if they have values (not undefined)
+      if (profileData.gender !== undefined || existingProfile?.gender !== undefined) {
+        profileToSave.gender = profileData.gender ?? existingProfile?.gender;
+      }
+      if (profileData.age !== undefined || existingProfile?.age !== undefined) {
+        profileToSave.age = profileData.age ?? existingProfile?.age;
+      }
+      if (profileData.profilePicture !== undefined || existingProfile?.profilePicture) {
+        profileToSave.profilePicture = profileData.profilePicture ?? existingProfile?.profilePicture ?? '';
+      }
+      if (profileData.phoneNumber !== undefined || existingProfile?.phoneNumber) {
+        profileToSave.phoneNumber = profileData.phoneNumber ?? existingProfile?.phoneNumber ?? '';
+      }
+      if (profileData.budget !== undefined || existingProfile?.budget) {
+        const budget = profileData.budget ?? existingProfile?.budget;
+        if (budget) {
+          // Clean budget object - remove undefined properties
+          const cleanBudget: any = {};
+          if (budget.min !== undefined && budget.min !== null) cleanBudget.min = budget.min;
+          if (budget.max !== undefined && budget.max !== null) cleanBudget.max = budget.max;
+          if (budget.currency) cleanBudget.currency = budget.currency;
+          if (Object.keys(cleanBudget).length > 0) {
+            profileToSave.budget = cleanBudget;
+          }
+        }
+      }
+      if (profileData.shoppingFrequency !== undefined || existingProfile?.shoppingFrequency !== undefined) {
+        profileToSave.shoppingFrequency = profileData.shoppingFrequency ?? existingProfile?.shoppingFrequency;
+      }
+      if (profileData.stripeConnectAccountId !== undefined || existingProfile?.stripeConnectAccountId) {
+        profileToSave.stripeConnectAccountId = profileData.stripeConnectAccountId ?? existingProfile?.stripeConnectAccountId;
+      }
+      if (profileData.stripeConnectOnboardingComplete !== undefined || existingProfile?.stripeConnectOnboardingComplete !== undefined) {
+        profileToSave.stripeConnectOnboardingComplete = profileData.stripeConnectOnboardingComplete ?? existingProfile?.stripeConnectOnboardingComplete;
+      }
+      
+      // Remove any undefined values before saving (Firestore doesn't accept undefined)
+      const cleanedProfile: any = {};
+      Object.keys(profileToSave).forEach(key => {
+        if (profileToSave[key] !== undefined) {
+          cleanedProfile[key] = profileToSave[key];
+        }
       });
       
-      await setDoc(profileRef, profileToSave, { merge: true });
-      
-      console.log('Profile saved to Firestore successfully');
+      await setDoc(profileRef, cleanedProfile, { merge: true });
       
       // Fetch and return the saved profile (to get actual timestamps)
       const savedProfile = await this.getProfile(userId);

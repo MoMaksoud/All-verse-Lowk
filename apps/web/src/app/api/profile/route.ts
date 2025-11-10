@@ -16,7 +16,7 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
     
     if (!userId) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: 'User ID is required. Please provide userId query parameter or authenticate.' },
         { status: 401 }
       );
     }
@@ -56,7 +56,6 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
 export const PUT = withApi(async (request: NextRequest & { userId: string }) => {
   try {
     if (!request.userId) {
-      console.error('❌ No userId in request');
       return NextResponse.json(
         { error: 'User ID is required', details: 'Authentication failed' },
         { status: 401 }
@@ -64,27 +63,45 @@ export const PUT = withApi(async (request: NextRequest & { userId: string }) => 
     }
 
     const body = await request.json();
-    console.log('✅ Profile update request:', { userId: request.userId, bodyKeys: Object.keys(body) });
     
-    // Use saveProfile for both create and update (it uses setDoc with merge: true)
-    // This is safer than updateProfile which fails if document doesn't exist
-    const result = await ProfileService.saveProfile(request.userId, body);
+    // Clean up undefined/null values and ensure proper structure
+    const cleanedBody: any = {};
+    Object.keys(body).forEach(key => {
+      const value = body[key];
+      
+      // Skip undefined and null values
+      if (value === undefined || value === null) {
+        return;
+      }
+      
+      // Handle budget object - only include if it has valid values
+      if (key === 'budget' && typeof value === 'object' && !Array.isArray(value)) {
+        const budget: any = {};
+        if (value.min !== undefined && value.min !== null && value.min !== '') budget.min = value.min;
+        if (value.max !== undefined && value.max !== null && value.max !== '') budget.max = value.max;
+        if (value.currency) budget.currency = value.currency;
+        if (Object.keys(budget).length > 0) {
+          cleanedBody[key] = budget;
+        }
+      } 
+      // Include all other valid values (arrays, strings, numbers, booleans, etc.)
+      else {
+        cleanedBody[key] = value;
+      }
+    });
     
-    console.log('✅ Profile saved successfully');
+    const result = await ProfileService.saveProfile(request.userId, cleanedBody);
     return NextResponse.json({
       success: true,
       data: result
     });
 
   } catch (error: any) {
-    console.error('❌ Error updating/creating profile:', error);
-    console.error('❌ Error stack:', error?.stack);
-    console.error('❌ Error name:', error?.name);
+    console.error('Error updating/creating profile:', error);
     return NextResponse.json(
       { 
         error: 'Failed to update profile', 
-        details: error?.message || 'Unknown error',
-        stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+        details: error?.message || 'Unknown error'
       },
       { status: 500 }
     );

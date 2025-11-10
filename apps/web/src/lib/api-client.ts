@@ -16,33 +16,21 @@ export interface ApiRequestOptions extends RequestInit {
 async function getAuthToken(): Promise<string | null> {
   try {
     if (!auth) {
-      console.warn('⚠️ Firebase auth not initialized');
       return null;
     }
 
-    console.log('🔍 Waiting for auth state to be ready...');
-    // Wait for auth to be ready (handles async initialization)
     await auth.authStateReady();
-    console.log('✅ Auth state ready');
     
     const currentUser = auth.currentUser;
-    console.log('🔍 Current user from auth:', currentUser ? { 
-      uid: currentUser.uid, 
-      email: currentUser.email,
-      emailVerified: currentUser.emailVerified 
-    } : null);
     
     if (!currentUser) {
-      console.warn('⚠️ No current user found after authStateReady');
       return null;
     }
     
-    console.log('🔍 Getting ID token...');
     const token = await currentUser.getIdToken();
-    console.log('✅ Auth token retrieved successfully (length:', token.length, ')');
     return token;
   } catch (error) {
-    console.error('❌ Error getting auth token:', error);
+    console.error('Error getting auth token:', error);
     return null;
   }
 }
@@ -57,12 +45,9 @@ export async function apiRequest(
 ): Promise<Response> {
   const { requireAuth = true, headers = {}, ...fetchOptions } = options;
 
-  // Get auth token if authentication is required
   if (requireAuth) {
     const token = await getAuthToken();
     if (!token) {
-      console.error('❌ No auth token available for request to:', url);
-      // Return 401 response instead of throwing to allow graceful handling
       return new Response(
         JSON.stringify({ error: 'Unauthorized', message: 'User not authenticated' }),
         { 
@@ -72,9 +57,7 @@ export async function apiRequest(
       );
     }
 
-    // Add Authorization header
     headers['Authorization'] = `Bearer ${token}`;
-    console.log('✅ Authorization header added to request:', url.substring(0, 50));
   }
 
   // Don't set Content-Type for FormData (browser will set it with boundary)
