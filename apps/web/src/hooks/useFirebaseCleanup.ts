@@ -30,12 +30,8 @@ export function useFirebaseCleanup() {
     setIsDeleting(true);
     
     try {
-      const response = await fetch(`/api/listings/${listingId}`, {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': currentUser.uid,
-        },
-      });
+      const { apiDelete } = await import('@/lib/api-client');
+      const response = await apiDelete(`/api/listings/${listingId}`);
 
       if (response.ok) {
         const result = await response.json();
@@ -92,12 +88,8 @@ export function useFirebaseCleanup() {
     setIsDeleting(true);
     
     try {
-      const response = await fetch('/api/upload/profile-photo', {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': currentUser.uid,
-        },
-      });
+      const { apiDelete } = await import('@/lib/api-client');
+      const response = await apiDelete('/api/upload/profile-photo');
 
       if (response.ok) {
         const result = await response.json();

@@ -17,6 +17,7 @@ import {
   addDoc,
   onSnapshot,
   Timestamp,
+  increment,
 } from 'firebase/firestore';
 
 import { db, isFirebaseConfigured } from '../firebase';
@@ -286,11 +287,19 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
     const newInventory = Math.max(0, listing.inventory - quantitySold);
     const newSoldCount = listing.soldCount + quantitySold;
 
-    await this.updateDoc(id, {
+    const updates: any = {
       inventory: newInventory,
       soldCount: newSoldCount,
       isActive: newInventory > 0,
-    });
+    };
+
+    // Mark as sold if inventory reaches 0 (but keep isActive true for 2 days)
+    if (newInventory === 0) {
+      updates.soldAt = serverTimestamp();
+      updates.isActive = true; // Keep active for 2 days, then filter out
+    }
+
+    await this.updateDoc(id, updates);
   }
 }
 
@@ -568,9 +577,10 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       const buildProfile = async (uid: string) => {
         const profileDoc = await getDoc(doc(db, 'profiles', uid));
         const p: any = profileDoc.data();
+        const displayName = p?.displayName || p?.username;
         const username = p?.username;
         const photoURL = p?.profilePicture;
-        return { username, photoURL };
+        return { displayName, username, photoURL };
       };
 
       const [p1, p2] = await Promise.all([buildProfile(userId1), buildProfile(userId2)]);
@@ -619,18 +629,45 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       senderId,
       text,
       timestamp: serverTimestamp() as Timestamp,
+      readBy: [senderId], // Sender has read their own message
     };
     
     await setDoc(messageRef, messageData);
     
-    // Update last message in chat
-    await this.updateLastMessage(chatId, {
-      text,
-      senderId,
-      timestamp: serverTimestamp() as Timestamp,
-    });
+    // Get chat to find other participants
+    const chatDoc = await this.getDoc(chatId);
+    const chat = chatDoc.exists() ? chatDoc.data() : null;
+    const participants = (chat as any)?.participants || [];
+    
+    // Update last message and increment unread for others
+    const chatRef = doc(db, this.collectionName, chatId);
+    const updates: any = {
+      lastMessage: {
+        text,
+        senderId,
+        timestamp: serverTimestamp() as Timestamp,
+      },
+      updatedAt: serverTimestamp(),
+    };
+    
+    // Increment unread count for each participant except sender
+    for (const uid of participants) {
+      if (uid !== senderId) {
+        updates[`unreadCount.${uid}`] = increment(1);
+      }
+    }
+    
+    await updateDoc(chatRef, updates);
     
     return messageRef.id;
+  }
+  
+  // Mark messages as read
+  async markChatAsRead(chatId: string, userId: string): Promise<void> {
+    const chatRef = doc(db, this.collectionName, chatId);
+    await updateDoc(chatRef, {
+      [`unreadCount.${userId}`]: 0,
+    });
   }
 
   // Get messages for a chat

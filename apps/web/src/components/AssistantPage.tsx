@@ -70,14 +70,11 @@ export default function AssistantPage() {
     setMessages(prev => [...prev, userMsg]);
 
     try {
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser?.uid || '' },
-        body: JSON.stringify({
-          message: userMessage,
-          mode,
-          conversationHistory: messages.slice(-10), // Last 10 messages for context
-        }),
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/ai/chat', {
+        message: userMessage,
+        mode,
+        conversationHistory: messages.slice(-10), // Last 10 messages for context
       });
 
       if (!response.ok) throw new Error('Failed to get response');

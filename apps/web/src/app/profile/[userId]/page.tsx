@@ -34,11 +34,8 @@ export default function UserProfilePage() {
         setLoading(true);
         
         // Fetch user profile
-        const profileResponse = await fetch(`/api/profile?userId=${params.userId}`, {
-          headers: {
-            'x-user-id': params.userId as string,
-          },
-        });
+        const { apiGet } = await import('@/lib/api-client');
+        const profileResponse = await apiGet(`/api/profile?userId=${params.userId}`, { requireAuth: false });
 
         if (!profileResponse.ok) {
           throw new Error('Failed to fetch profile');
@@ -47,11 +44,9 @@ export default function UserProfilePage() {
         const profileData = await profileResponse.json();
         
         // Fetch user's listings
-        const listingsResponse = await fetch(`/api/my-listings`, {
-          headers: {
-            'x-user-id': params.userId as string,
-          },
-        });
+        // Note: my-listings requires auth, so we can't fetch other users' listings this way
+        // This should be changed to a public endpoint or removed
+        const listingsResponse = await fetch(`/api/my-listings`);
 
         let listings = [];
         if (listingsResponse.ok) {

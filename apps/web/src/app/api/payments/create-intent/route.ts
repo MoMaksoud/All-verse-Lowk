@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPaymentIntent, calculateTotalWithFees } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
 import { CreatePaymentInput } from '@/lib/types/firestore';
+import { withApi } from '@/lib/withApi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
+export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-    }
 
     const body = await req.json();
     const { cartItems, shippingAddress, taxRate = 0.08 } = body;
@@ -57,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     // Create payment intent
     const paymentResult = await createPaymentIntent(total, 'usd', {
-      userId,
+      userId: req.userId,
       orderType: 'marketplace',
     });
 
@@ -67,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     // Create order in database
     const orderData = {
-      buyerId: userId,
+      buyerId: req.userId,
       items: orderItems,
       subtotal,
       fees,
@@ -83,7 +80,7 @@ export async function POST(req: NextRequest) {
     // Create payment record
     const paymentData: CreatePaymentInput = {
       orderId,
-      userId, // Track which user made the payment
+      userId: req.userId, // Track which user made the payment
       amount: total,
       currency: 'USD',
       stripeEventId: paymentResult.paymentIntentId!,
@@ -105,4 +102,4 @@ export async function POST(req: NextRequest) {
     console.error('Error creating payment intent:', error);
     return NextResponse.json({ error: 'Failed to create payment intent' }, { status: 500 });
   }
-}
+});

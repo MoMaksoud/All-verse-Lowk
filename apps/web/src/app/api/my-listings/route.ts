@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ListingService } from '@/lib/firestore';
+import { withApi } from '@/lib/withApi';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+export const GET = withApi(async (request: NextRequest & { userId: string }) => {
   try {
-    const userId = request.headers.get('x-user-id');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 401 }
-      );
-    }
-
-    const listings = await ListingService.getUserListings(userId);
+    const listings = await ListingService.getUserListings(request.userId);
     
     // Transform the data to match the expected format
     const transformedListings = listings.map(listing => ({
@@ -45,4 +37,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

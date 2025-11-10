@@ -198,18 +198,12 @@ export default function ListingDetailPage() {
 
     setAddingToCart(true);
     try {
-      const response = await fetch('/api/carts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify({
-          listingId: listing.id,
-          sellerId: listing.sellerId || 'test-seller',
-          qty: 1,
-          priceAtAdd: listing.price,
-        }),
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/carts', {
+        listingId: listing.id,
+        sellerId: listing.sellerId || 'test-seller',
+        qty: 1,
+        priceAtAdd: listing.price,
       });
 
       if (response.ok) {
@@ -229,12 +223,8 @@ export default function ListingDetailPage() {
     if (!listing || !currentUser) return;
     
     try {
-      const response = await fetch(`/api/listings/${listing.id}`, {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': currentUser.uid,
-        },
-      });
+      const { apiDelete } = await import('@/lib/api-client');
+      const response = await apiDelete(`/api/listings/${listing.id}`);
       
       if (response.ok) {
         showSuccess('Listing deleted successfully!');

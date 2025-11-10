@@ -76,14 +76,8 @@ export default function SignUp() {
       console.log('User ID:', currentUser?.uid);
 
       // Save profile to Firestore
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.uid || '',
-        },
-        body: JSON.stringify(profileToCreate),
-      });
+      const { apiPut } = await import('@/lib/api-client');
+      const response = await apiPut('/api/profile', profileToCreate);
       
       if (!response.ok) {
         const errorData = await response.json();

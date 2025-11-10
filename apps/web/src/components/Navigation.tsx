@@ -20,11 +20,15 @@ import {
   ShoppingCart, 
   Package, 
   List, 
-  HelpCircle 
+  HelpCircle,
+  TrendingUp,
+  Bell
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Profile } from '@marketplace/types';
+import { useChats } from '@/hooks/useChats';
+import { useNotifications } from '@/hooks/useNotifications';
 
 // Lazy load heavy components
 const DefaultAvatar = lazy(() => import('./DefaultAvatar').then(module => ({ default: module.DefaultAvatar })));
@@ -39,28 +43,32 @@ const navigation = [
 const Navigation = memo(function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [cartItemCount, setCartItemCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, logout } = useAuth();
+  const { notifications, unreadCount: notificationCount, markAsRead, markAllAsRead } = useNotifications();
 
   // Fetch cart item count with caching - debounced to reduce API calls
   const fetchCartCount = useCallback(async () => {
     if (!currentUser?.uid) return;
     
     try {
-      const response = await fetch('/api/carts', {
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet('/api/carts', {
         headers: {
-          'x-user-id': currentUser.uid,
           'Cache-Control': 'max-age=60'
         },
-        cache: 'no-store',  
+        cache: 'no-store' as RequestCache,  
       });
       
       if (response.ok) {
-        const cart = await response.json();
+        const data = await response.json();
+        const cart = data.data || data;
         const totalItems = cart.items?.reduce((sum: number, item: any) => sum + item.qty, 0) || 0;
         setCartItemCount(totalItems);
       }
@@ -79,11 +87,14 @@ const Navigation = memo(function Navigation() {
     }
   };
 
-  // Handle clicking outside dropdown
+  // Handle clicking outside dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowProfileDropdown(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
       }
     };
 
@@ -99,11 +110,14 @@ const Navigation = memo(function Navigation() {
     
     const fetchProfile = async () => {
       try {
-        const response = await fetch('/api/profile', {
-          headers: {
-            'x-user-id': currentUser.uid,
-          },
-        });
+        const { apiGet } = await import('@/lib/api-client');
+        const response = await apiGet('/api/profile', { requireAuth: false });
+        
+        if (response.status === 401) {
+          // If profile requires auth and user isn't logged in, that's ok
+          return;
+        }
+        
         const result = await response.json();
         
         if (result.success) {
@@ -162,6 +176,75 @@ const Navigation = memo(function Navigation() {
                 >
                   <Heart className="w-5 h-5" />
                 </button>
+
+                {/* Notifications */}
+                <div className="relative" ref={notificationsRef}>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
+                    title="Notifications"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold animate-pulse">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notifications Dropdown */}
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 bg-dark-surface border border-dark-border rounded-xl shadow-xl z-50 max-h-96 overflow-hidden flex flex-col">
+                      <div className="p-4 border-b border-dark-border flex items-center justify-between">
+                        <h3 className="text-white font-semibold">Notifications</h3>
+                        {notificationCount > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-xs text-accent-400 hover:text-accent-300"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                      <div className="overflow-y-auto flex-1">
+                        {notifications.length === 0 ? (
+                          <div className="p-4 text-center text-gray-400 text-sm">
+                            No notifications
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-dark-border">
+                            {notifications.map((notif) => (
+                              <button
+                                key={notif.id}
+                                onClick={() => {
+                                  if (!notif.seen) markAsRead(notif.id);
+                                  if (notif.orderId) router.push(`/orders`);
+                                  setShowNotifications(false);
+                                }}
+                                className={`w-full text-left p-4 hover:bg-dark-700/50 transition-colors ${
+                                  !notif.seen ? 'bg-blue-950/20' : ''
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
+                                    !notif.seen ? 'bg-accent-500' : 'bg-transparent'
+                                  }`} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-white font-medium text-sm">{notif.title}</p>
+                                    <p className="text-gray-400 text-xs mt-1">{notif.message}</p>
+                                    <p className="text-gray-500 text-xs mt-1">
+                                      {notif.createdAt?.toDate?.()?.toLocaleString() || 'Just now'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Shopping Cart */}
                 <Link
@@ -279,6 +362,14 @@ const Navigation = memo(function Navigation() {
                         >
                           <Package className="w-4 h-4 mr-3" />
                           My Orders
+                        </Link>
+                        <Link
+                          href="/sales"
+                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          onClick={() => setShowProfileDropdown(false)}
+                        >
+                          <TrendingUp className="w-4 h-4 mr-3" />
+                          My Sales
                         </Link>
                         <Link
                           href="/favorites"

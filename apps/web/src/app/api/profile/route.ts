@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProfileService } from '@/lib/firestore';
+import { withApi } from '@/lib/withApi';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 300; // Cache for 5 minutes
 
-export async function GET(request: NextRequest) {
+export const GET = withApi(async (request: NextRequest & { userId?: string }) => {
   try {
     const { searchParams } = new URL(request.url);
     const requestedUserId = searchParams.get('userId');
-    const currentUserId = request.headers.get('x-user-id');
     
-    // Use requestedUserId if provided (for public profiles), otherwise use currentUserId
-    const userId = requestedUserId || currentUserId;
+    // Use requestedUserId if provided (for public profiles), otherwise use authenticated userId
+    const userId = requestedUserId || request.userId;
     
     if (!userId) {
       return NextResponse.json(
@@ -51,34 +51,26 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, { requireAuth: false }); // Allow public profile viewing
 
-export async function PUT(request: NextRequest) {
+export const PUT = withApi(async (request: NextRequest & { userId: string }) => {
   try {
-    const userId = request.headers.get('x-user-id');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 401 }
-      );
-    }
 
     const body = await request.json();
-    console.log('Profile update request:', { userId, body });
+    console.log('Profile update request:', { userId: request.userId, body });
     
     // Check if profile exists
-    const existingProfile = await ProfileService.getProfile(userId);
+    const existingProfile = await ProfileService.getProfile(request.userId);
     
     let result;
     if (existingProfile) {
       // Update existing profile
       console.log('Updating existing profile');
-      result = await ProfileService.updateProfile(userId, body);
+      result = await ProfileService.updateProfile(request.userId, body);
     } else {
       // Create new profile
       console.log('Creating new profile');
-      result = await ProfileService.saveProfile(userId, body);
+      result = await ProfileService.saveProfile(request.userId, body);
     }
     
     return NextResponse.json({
@@ -94,4 +86,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

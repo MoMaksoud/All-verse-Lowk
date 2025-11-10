@@ -32,11 +32,9 @@ export const usePhotoUpload = () => {
       const formData = new FormData();
       formData.append('photo', file);
 
-      const response = await fetch('/api/upload/profile-photo', {
+      const { apiRequest } = await import('@/lib/api-client');
+      const response = await apiRequest('/api/upload/profile-photo', {
         method: 'POST',
-        headers: {
-          'x-user-id': currentUser.uid,
-        },
         body: formData,
       });
 
@@ -71,11 +69,9 @@ export const usePhotoUpload = () => {
       formData.append('listingId', listingId);
       files.forEach(file => formData.append('photos', file));
 
-      const response = await fetch('/api/upload/listing-photos', {
+      const { apiRequest } = await import('@/lib/api-client');
+      const response = await apiRequest('/api/upload/listing-photos', {
         method: 'POST',
-        headers: {
-          'x-user-id': currentUser.uid,
-        },
         body: formData,
       });
 
@@ -106,12 +102,8 @@ export const usePhotoUpload = () => {
     setState(prev => ({ ...prev, uploading: true, error: null }));
 
     try {
-      const response = await fetch('/api/upload/profile-photo', {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': currentUser.uid,
-        },
-      });
+      const { apiDelete } = await import('@/lib/api-client');
+      const response = await apiDelete('/api/upload/profile-photo');
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -136,12 +128,8 @@ export const usePhotoUpload = () => {
     setState(prev => ({ ...prev, uploading: true, error: null }));
 
     try {
-      const response = await fetch(`/api/upload/listing-photos?listingId=${listingId}`, {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': currentUser.uid,
-        },
-      });
+      const { apiDelete } = await import('@/lib/api-client');
+      const response = await apiDelete(`/api/upload/listing-photos?listingId=${listingId}`);
 
       if (!response.ok) {
         const errorData = await response.json();

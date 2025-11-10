@@ -85,6 +85,7 @@ export function useChats() {
             if (embedded) {
               return {
                 ...chat,
+                unreadCount: chat.unreadCount || {}, // Preserve unreadCount
                 otherUser: {
                   id: otherUserId,
                   name: embedded.displayName || embedded.username || `User ${otherUserId.substring(0, 8)}`,
@@ -99,6 +100,7 @@ export function useChats() {
             const otherUser = await firestoreServices.users.getUser(otherUserId);
             return {
               ...chat,
+              unreadCount: chat.unreadCount || {}, // Preserve unreadCount
               otherUser: {
                 id: otherUserId,
                 name: otherUser?.displayName || otherUser?.email || `User ${otherUserId.substring(0, 8)}`,
@@ -111,6 +113,7 @@ export function useChats() {
             console.warn('Failed to load user data for chat:', error);
             return {
               ...chat,
+              unreadCount: chat.unreadCount || {}, // Preserve unreadCount
               otherUser: {
                 id: otherUserId,
                 name: 'Unknown User',

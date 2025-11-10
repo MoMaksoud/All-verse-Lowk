@@ -7,17 +7,13 @@ const DAILY_LIMIT = Number(process.env.NEXT_PUBLIC_AI_DAILY_TOKENS || 5000);
 const MAX_OUT_TOKENS = 256;
 const isOutOfScope = (s: string) => /politic|news|program|code|crypto|vpn|religion|medical|legal|tax|homework|api key|bypass|hack/i.test(s || '');
 
-export async function POST(request: NextRequest) {
+import { withApi } from '@/lib/withApi';
+
+export const POST = withApi(async (request: NextRequest & { userId: string }) => {
   try {
     // 1) Rate limit
     const ip = getIp(request as unknown as Request);
     checkRateLimit(ip, 60); // 60 req/min (tune as needed)
-
-    // Require user ID header so we can track per-user usage
-    const userId = request.headers.get('x-user-id');
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-    }
 
     const { message, mode = 'buyer', conversationHistory = [] } = await request.json();
 
@@ -45,7 +41,7 @@ export async function POST(request: NextRequest) {
     const inputTokens = Math.ceil(trimmed.length / 4);
     const precharge = inputTokens + MAX_OUT_TOKENS;
     try {
-      await assertTokenBudget(userId, precharge, DAILY_LIMIT);
+      await assertTokenBudget(request.userId, precharge, DAILY_LIMIT);
     } catch {
       return NextResponse.json({
         success: false,
@@ -74,7 +70,7 @@ export async function POST(request: NextRequest) {
     clearTimeout(t);
     // 7) Reconcile approximate output tokens
     const outputTokens = Math.ceil((responseText || '').length / 4);
-    await addUsage(userId, inputTokens + outputTokens, precharge);
+    await addUsage(request.userId, inputTokens + outputTokens, precharge);
 
     return NextResponse.json({ response: responseText, success: true });
 
@@ -89,4 +85,4 @@ export async function POST(request: NextRequest) {
       error: msg
     });
   }
-}
+});

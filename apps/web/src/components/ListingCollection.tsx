@@ -20,7 +20,7 @@ export default function ListingCollection({
 }) {
   if (view === "grid") {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         {items.map((item) => (
           <ListingCard 
             key={item.id} 

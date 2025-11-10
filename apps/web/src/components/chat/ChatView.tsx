@@ -66,8 +66,8 @@ export function ChatView({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="flex items-center space-x-3 p-4 border-b border-dark-border bg-dark-surface">
+      {/* Chat Header - Hidden on mobile (shown in Messages page) */}
+      <div className="hidden lg:flex items-center space-x-3 p-4 border-b border-dark-border bg-dark-surface">
         {otherUser?.photoURL ? (
           <img
             src={otherUser.photoURL}

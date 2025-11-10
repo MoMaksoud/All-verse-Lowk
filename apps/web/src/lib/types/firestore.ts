@@ -46,6 +46,7 @@ export interface FirestoreListing {
   sellerId: string;
   inventory: number;
   isActive: boolean;
+  soldAt?: Timestamp; // When the listing was sold
   createdAt: Timestamp;
   updatedAt: Timestamp;
   soldCount: number;
@@ -190,6 +191,7 @@ export interface FirestoreMessage {
   senderId: string;
   text: string;
   timestamp: Timestamp;
+  readBy?: string[];
 }
 
 export interface CreateMessageInput {
@@ -211,15 +213,31 @@ export interface FirestoreChat {
   };
   participantProfiles?: {
     [userId: string]: {
+      displayName?: string;
       username?: string;
+      photoURL?: string;
     };
   };
+  unreadCount?: { [userId: string]: number };
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
 export interface CreateConversationInput {
   participants: string[];
+}
+
+// ============================================================================
+// NOTIFICATIONS COLLECTION
+// ============================================================================
+export interface FirestoreNotification {
+  type: 'order_confirmed' | 'item_sold' | 'message' | 'order_shipped' | 'order_delivered';
+  orderId?: string;
+  listingId?: string;
+  title: string;
+  message: string;
+  createdAt: Timestamp;
+  seen: boolean;
 }
 
 // ============================================================================

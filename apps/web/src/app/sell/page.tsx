@@ -203,15 +203,9 @@ export default function SellPage() {
       
       console.log('🤖 Valid photos for AI analysis:', photoUrls);
       
-      const response = await fetch('/api/ai/analyze-product', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.uid || '',
-        },
-        body: JSON.stringify({
-          imageUrls: photoUrls, // Use only cloud URLs
-        }),
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/ai/analyze-product', {
+        imageUrls: photoUrls, // Use only cloud URLs
       });
       
       if (!response.ok) {
@@ -426,14 +420,8 @@ export default function SellPage() {
         sellerId: currentUser?.uid || '',
       };
       
-      const response = await fetch('/api/listings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.uid || '',
-        },
-        body: JSON.stringify(listingData),
-      });
+      const { apiPost: apiPostListing } = await import('@/lib/api-client');
+      const response = await apiPostListing('/api/listings', listingData);
       
       if (!response.ok) {
         const errorData = await response.text();

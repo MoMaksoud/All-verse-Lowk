@@ -30,11 +30,8 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/profile', {
-        headers: {
-          'x-user-id': currentUser?.uid || '',
-        },
-      });
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet('/api/profile', { requireAuth: false });
 
       if (response.status === 404) {
         setProfile(null);
@@ -68,10 +65,10 @@ export default function ProfilePage() {
     try {
       const form = new FormData();
       form.append('photo', file);
-      const resp = await fetch('/api/upload/profile-photo', {
+      const { apiRequest } = await import('@/lib/api-client');
+      const resp = await apiRequest('/api/upload/profile-photo', {
         method: 'POST',
         headers: {
-          'x-user-id': currentUser.uid,
           'x-user-email': currentUser.email || ''
         },
         body: form,

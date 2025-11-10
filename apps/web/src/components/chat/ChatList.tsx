@@ -4,6 +4,7 @@ import React from 'react';
 import { MessageCircle, Clock, User } from 'lucide-react';
 import { ChatWithUser } from '@/hooks/useChats';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ChatListProps {
   chats: ChatWithUser[];
@@ -14,6 +15,8 @@ interface ChatListProps {
 }
 
 export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }: ChatListProps) {
+  const { currentUser } = useAuth();
+  
   const formatTimestamp = (timestamp: any) => {
     if (!timestamp) return '';
     
@@ -58,64 +61,80 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
 
   return (
     <div className="p-4 space-y-2">
-      {chats.map((chat) => (
-        <div
-          key={chat.id}
-          onClick={() => onChatSelect(chat.id!)}
-          className={`p-4 rounded-lg cursor-pointer transition-colors ${
-            selectedChatId === chat.id
-              ? 'bg-accent-500/20 border border-accent-500/30'
-              : 'bg-dark-surface hover:bg-dark-surface/80 border border-dark-border'
-          }`}
-        >
-          <div className="flex items-start space-x-3">
-            {/* Avatar */}
-            <div className="flex-shrink-0">
-              {chat.otherUser?.photoURL ? (
-                <img
-                  src={chat.otherUser.photoURL}
-                  alt={chat.otherUser.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-accent-500/20 flex items-center justify-center">
-                  <User className="w-5 h-5 text-accent-400" />
-                </div>
-              )}
-            </div>
-
-            {/* Chat Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-white truncate">
-                    {chat.otherUser?.name || 'Unknown User'}
-                  </h3>
-                  {chat.otherUser?.username && (
-                    <p className="text-xs text-gray-400 truncate">
-                      @{chat.otherUser.username}
-                    </p>
-                  )}
-                </div>
-                {chat.lastMessage?.timestamp && (
-                  <div className="flex items-center text-xs text-gray-400 ml-2">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {formatTimestamp(chat.lastMessage.timestamp)}
+      {chats.map((chat) => {
+        const unreadCount = currentUser?.uid ? (chat.unreadCount?.[currentUser.uid] || 0) : 0;
+        const hasUnread = unreadCount > 0;
+        
+        return (
+          <div
+            key={chat.id}
+            onClick={() => onChatSelect(chat.id!)}
+            className={`p-4 rounded-lg cursor-pointer transition-all relative ${
+              selectedChatId === chat.id
+                ? 'bg-accent-500/20 border border-accent-500/30'
+                : hasUnread
+                ? 'bg-blue-950/40 border border-blue-500/30 hover:bg-blue-950/60'
+                : 'bg-dark-surface hover:bg-dark-surface/80 border border-dark-border'
+            }`}
+          >
+            <div className="flex items-start space-x-3">
+              {/* Avatar */}
+              <div className="flex-shrink-0 relative">
+                {chat.otherUser?.photoURL ? (
+                  <img
+                    src={chat.otherUser.photoURL}
+                    alt={chat.otherUser.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-accent-500/20 flex items-center justify-center">
+                    <User className="w-5 h-5 text-accent-400" />
+                  </div>
+                )}
+                {hasUnread && (
+                  <div className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
                   </div>
                 )}
               </div>
-              
-              {chat.lastMessage ? (
-                <p className="text-sm text-gray-300 truncate">
-                  {chat.lastMessage.text}
-                </p>
-              ) : (
-                <p className="text-sm text-gray-500 italic">No messages yet</p>
-              )}
+
+              {/* Chat Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`text-sm truncate ${
+                      hasUnread ? 'text-white font-bold' : 'text-white font-medium'
+                    }`}>
+                      {chat.otherUser?.name || 'Unknown User'}
+                    </h3>
+                    {chat.otherUser?.username && (
+                      <p className="text-xs text-gray-400 truncate">
+                        @{chat.otherUser.username}
+                      </p>
+                    )}
+                  </div>
+                  {chat.lastMessage?.timestamp && (
+                    <div className="flex items-center text-xs text-gray-400 ml-2">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {formatTimestamp(chat.lastMessage.timestamp)}
+                    </div>
+                  )}
+                </div>
+                
+                {chat.lastMessage ? (
+                  <p className={`text-sm truncate ${
+                    hasUnread ? 'text-gray-200 font-medium' : 'text-gray-300'
+                  }`}>
+                    {chat.lastMessage.text}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No messages yet</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

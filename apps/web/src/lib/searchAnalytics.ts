@@ -178,7 +178,7 @@ class SearchTrie {
     let node = this.root;
     for (const char of word) {
       if (!node[char]) {
-        node[char] = { children: {}, queries: [] };
+        node[char] = { queries: [] };
       }
       node = node[char];
     }
@@ -221,8 +221,11 @@ class SearchTrie {
       results.push(...node.queries);
     }
     
-    for (const child of Object.values(node.children || {})) {
-      this.collectAllQueries(child, results);
+    // Iterate over all properties that are child nodes (not 'queries')
+    for (const key in node) {
+      if (key !== 'queries' && typeof node[key] === 'object' && node[key] !== null) {
+        this.collectAllQueries(node[key], results);
+      }
     }
   }
 }

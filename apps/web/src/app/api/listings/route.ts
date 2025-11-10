@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CreateListingInput } from "@/lib/types/firestore";
 import { calculateDistance } from "@/lib/location";
+import { withApi } from "@/lib/withApi";
 
 // Import firestore services dynamically to avoid webpack issues
 async function getFirestoreServices() {
@@ -94,9 +95,25 @@ export async function GET(req: NextRequest) {
     const transformedItems = filteredData
       .filter(listing => {
         // Filter out placeholder listings
-        return listing.title !== 'AI Analyzing...' && 
-               listing.description !== 'AI is analyzing your photos...' &&
-               listing.price > 0;
+        if (listing.title === 'AI Analyzing...' || 
+            listing.description === 'AI is analyzing your photos...' ||
+            listing.price <= 0) {
+          return false;
+        }
+
+        // Filter out sold listings older than 2 days
+        if (listing.soldAt) {
+          const soldDate = listing.soldAt.toDate ? listing.soldAt.toDate() : new Date(listing.soldAt);
+          const twoDaysAgo = new Date();
+          twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+          
+          // If sold more than 2 days ago, hide it from marketplace
+          if (soldDate < twoDaysAgo) {
+            return false;
+          }
+        }
+
+        return true;
       })
       .map(listing => ({
         id: (listing as any).id, // FirestoreListing & { id: string }
@@ -157,13 +174,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-    }
-
     const body = await req.json() as CreateListingInput;
     
     // Basic validation
@@ -175,7 +187,7 @@ export async function POST(req: NextRequest) {
 
     const listingData = {
       ...body,
-      sellerId: userId,
+      sellerId: req.userId, // Use verified userId from token
       inventory: body.inventory || 1,
       currency: body.currency || 'USD',
       condition: body.condition || 'good',
@@ -194,4 +206,4 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ error: `Failed to create listing: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 });
   }
-}
+});

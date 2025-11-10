@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import StorageService from '@/lib/storage';
+import { withApi } from '@/lib/withApi';
 
-export async function POST(request: NextRequest) {
+export const POST = withApi(async (request: NextRequest & { userId: string }) => {
   try {
-    const userId = request.headers.get('x-user-id');
     const userEmail = request.headers.get('x-user-email');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 401 }
-      );
-    }
 
     if (!userEmail) {
       return NextResponse.json(
@@ -39,7 +32,7 @@ export async function POST(request: NextRequest) {
     
     switch (uploadType) {
       case 'profile-picture':
-        result = await StorageService.uploadProfilePicture(file, userId, userEmail);
+        result = await StorageService.uploadProfilePicture(file, request.userId, userEmail || 'unknown@example.com');
         break;
       case 'listing-photo':
         if (!listingId) {
@@ -49,7 +42,7 @@ export async function POST(request: NextRequest) {
           );
         }
         const photoIndex = parseInt(formData.get('photoIndex') as string) || 0;
-        result = await StorageService.uploadListingPhoto(file, userId, userEmail, listingId, photoIndex);
+        result = await StorageService.uploadListingPhoto(file, request.userId, userEmail || 'unknown@example.com', listingId, photoIndex);
         break;
       case 'listing-video':
         if (!listingId) {
@@ -59,7 +52,7 @@ export async function POST(request: NextRequest) {
           );
         }
         const videoIndex = parseInt(formData.get('videoIndex') as string) || 0;
-        result = await StorageService.uploadListingVideo(file, userId, userEmail, listingId, videoIndex);
+        result = await StorageService.uploadListingVideo(file, request.userId, userEmail || 'unknown@example.com', listingId, videoIndex);
         break;
       case 'chat-attachment':
         if (!conversationId || !messageId) {
@@ -68,7 +61,7 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        result = await StorageService.uploadChatAttachment(file, userId, userEmail, conversationId, messageId);
+        result = await StorageService.uploadChatAttachment(file, request.userId, userEmail || 'unknown@example.com', conversationId, messageId);
         break;
       case 'custom':
         if (!customPath) {
@@ -78,8 +71,8 @@ export async function POST(request: NextRequest) {
           );
         }
         const userMetadata = {
-          userId,
-          userEmail,
+          userId: request.userId,
+          userEmail: userEmail || 'unknown@example.com',
           uploadedAt: new Date().toISOString(),
           category: 'custom'
         };
@@ -104,18 +97,10 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withApi(async (request: NextRequest & { userId: string }) => {
   try {
-    const userId = request.headers.get('x-user-id');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 401 }
-      );
-    }
 
     const { path } = await request.json();
     
@@ -140,4 +125,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -56,22 +56,21 @@ export default function CartPage() {
   const fetchCart = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/carts', {
-        headers: {
-          'x-user-id': currentUser?.uid || '',
-        },
-      });
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet('/api/carts');
 
       if (response.ok) {
-        const cart = await response.json();
+        const data = await response.json();
+        const cart = data.data || data;
         setCartItems(cart.items || []);
 
         // Fetch listing details for each cart item
+        const { apiGet: apiGetPublic } = await import('@/lib/api-client');
         const listingPromises = cart.items.map(async (item: CartItem) => {
-          const listingResponse = await fetch(`/api/listings/${item.listingId}`);
+          const listingResponse = await apiGetPublic(`/api/listings/${item.listingId}`, { requireAuth: false });
           if (listingResponse.ok) {
             const listingData = await listingResponse.json();
-            return { id: item.listingId, listing: listingData };
+            return { id: item.listingId, listing: listingData.data || listingData };
           }
           return null;
         });
@@ -96,14 +95,8 @@ export default function CartPage() {
 
   const updateCartItem = async (listingId: string, qty: number) => {
     try {
-      const response = await fetch('/api/carts', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.uid || '',
-        },
-        body: JSON.stringify({ listingId, qty }),
-      });
+      const { apiPut } = await import('@/lib/api-client');
+      const response = await apiPut('/api/carts', { listingId, qty });
 
       if (response.ok) {
         fetchCart(); // Refresh cart
@@ -115,12 +108,8 @@ export default function CartPage() {
 
   const removeFromCart = async (listingId: string) => {
     try {
-      const response = await fetch(`/api/carts?listingId=${listingId}`, {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': currentUser?.uid || '',
-        },
-      });
+      const { apiDelete } = await import('@/lib/api-client');
+      const response = await apiDelete(`/api/carts?listingId=${listingId}`);
 
       if (response.ok) {
         fetchCart(); // Refresh cart

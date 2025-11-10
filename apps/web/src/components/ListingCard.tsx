@@ -70,18 +70,12 @@ export default function ListingCard({
     setAddingToCart(true);
     try {
       const priceValue = typeof price === 'number' ? price : parseFloat(price.toString().replace(/[^0-9.-]+/g, ''));
-      const response = await fetch('/api/carts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify({
-          listingId: id,
-          sellerId: sellerId,
-          qty: 1,
-          priceAtAdd: priceValue,
-        }),
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/carts', {
+        listingId: id,
+        sellerId: sellerId,
+        qty: 1,
+        priceAtAdd: priceValue,
       });
 
       if (response.ok) {
@@ -170,41 +164,41 @@ export default function ListingCard({
         {variant === "grid" ? (
           <div className="flex flex-col h-full">
             {/* Image */}
-            <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl bg-[#0E1526]">
+            <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526]">
               {imageUrl ? (
                 <Image
                   src={imageUrl}
                   alt={title}
                   width={800}
-                  height={600}
+                  height={800}
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-zinc-500">
+                <div className="flex h-full w-full items-center justify-center text-zinc-500 text-xs">
                   No Image
                 </div>
               )}
             </div>
 
             {/* Content */}
-            <div className="p-4 md:p-5 space-y-2.5 flex-1 flex flex-col">
-              <h3 className="text-lg md:text-xl font-semibold text-zinc-100 line-clamp-2">
+            <div className="p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 flex-1 flex flex-col">
+              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-zinc-100 line-clamp-2">
                 {title}
               </h3>
-              <p className="text-sm text-zinc-300/90 line-clamp-3 flex-1">
+              <p className="hidden sm:block text-xs sm:text-sm text-zinc-300/90 line-clamp-2 flex-1">
                 {description}
               </p>
 
-              <div className="mt-2 flex items-center gap-3 text-sm">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
                 <span className="text-blue-400 font-semibold">
                   {typeof price === "number" ? `$${price}` : price}
                 </span>
-                <span className="text-zinc-400">•</span>
-                <span className="text-zinc-300/90">{category}</span>
+                <span className="hidden sm:inline text-zinc-400">•</span>
+                <span className="hidden sm:inline text-zinc-300/90 text-xs truncate">{category}</span>
                 {condition ? (
                   <>
-                    <span className="text-zinc-400">•</span>
-                    <span className="inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-300 px-2 py-0.5 text-xs">
+                    <span className="hidden lg:inline text-zinc-400">•</span>
+                    <span className="hidden lg:inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-300 px-2 py-0.5 text-xs">
                       {condition}
                     </span>
                   </>
@@ -212,30 +206,30 @@ export default function ListingCard({
               </div>
 
               {/* Actions */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0E1526] px-4 py-3">
+              <div className="mt-2 sm:mt-3">
+                <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-[#0E1526] px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
                   <button 
                     onClick={handleAddToCart}
                     disabled={addingToCart}
-                    className="p-2 hover:opacity-80 disabled:opacity-50"
+                    className="p-1 sm:p-1.5 lg:p-2 hover:opacity-80 disabled:opacity-50"
                   >
-                    <ShoppingCart className="h-5 w-5 text-zinc-200" />
+                    <ShoppingCart className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-zinc-200" />
                   </button>
                   <button 
                     onClick={handleChatClick}
-                    className="p-2 hover:opacity-80"
+                    className="p-1 sm:p-1.5 lg:p-2 hover:opacity-80"
                   >
-                    <MessageSquare className="h-5 w-5 text-zinc-200" />
+                    <MessageSquare className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-zinc-200" />
                   </button>
                   <button 
                     onClick={handleFavoriteClick}
                     className={clsx(
-                      "p-2 hover:opacity-80",
+                      "p-1 sm:p-1.5 lg:p-2 hover:opacity-80",
                       isFavorited ? "text-red-500" : "text-zinc-200"
                     )}
                   >
                     <Heart className={clsx(
-                      "h-5 w-5",
+                      "h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5",
                       isFavorited ? "fill-current" : ""
                     )} />
                   </button>

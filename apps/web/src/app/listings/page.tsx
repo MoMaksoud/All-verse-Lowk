@@ -158,18 +158,12 @@ function ListingsContent() {
 
     setAddingToCart(listing.id);
     try {
-      const response = await fetch('/api/carts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify({
-          listingId: listing.id,
-          sellerId: listing.sellerId || 'test-seller',
-          qty: 1,
-          priceAtAdd: listing.price,
-        }),
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/carts', {
+        listingId: listing.id,
+        sellerId: listing.sellerId || 'test-seller',
+        qty: 1,
+        priceAtAdd: listing.price,
       });
 
       if (response.ok) {

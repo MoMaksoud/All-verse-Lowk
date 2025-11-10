@@ -4,16 +4,13 @@ import { firestoreServices } from '@/lib/services/firestore';
 import { ProfileService } from '@/lib/firestore';
 import { ProfilePhotoUpload } from '@/lib/types/firestore';
 import { FirebaseCleanupService } from '@/lib/firebaseCleanup';
+import { withApi } from '@/lib/withApi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
+export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-    }
 
     const formData = await req.formData();
     const file = formData.get('photo') as File;
@@ -34,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     // Upload photo to Firebase Storage
     const userEmail = req.headers.get('x-user-email') || 'unknown@example.com';
-    const result = await StorageService.uploadProfilePicture(file, userId, userEmail);
+    const result = await StorageService.uploadProfilePicture(file, req.userId, userEmail);
     const photoUrl = result.url;
     
     // Extract file path from URL for tracking
@@ -44,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     // Save photo metadata to Firestore
     const photoData: ProfilePhotoUpload = {
-      userId,
+      userId: req.userId,
       photoUrl,
       photoPath,
       uploadedAt: new Date() as any, // Will be converted to Timestamp in service
@@ -53,8 +50,8 @@ export async function POST(req: NextRequest) {
     await firestoreServices.profilePhotos.saveProfilePhoto(photoData);
 
     // Update user profile/user doc with new photo URL
-    await firestoreServices.users.updateUser(userId, { photoURL: photoUrl });
-    await ProfileService.saveProfile(userId, { profilePicture: photoUrl });
+    await firestoreServices.users.updateUser(req.userId, { photoURL: photoUrl });
+    await ProfileService.saveProfile(req.userId, { profilePicture: photoUrl });
 
     return NextResponse.json({
       success: true,
@@ -66,17 +63,12 @@ export async function POST(req: NextRequest) {
     console.error('Error uploading profile photo:', error);
     return NextResponse.json({ error: 'Failed to upload profile photo' }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-    }
-
     // Use the comprehensive cleanup service
-    const cleanupResult = await FirebaseCleanupService.deleteProfilePhotoCompletely(userId);
+    const cleanupResult = await FirebaseCleanupService.deleteProfilePhotoCompletely(req.userId);
     
     if (cleanupResult.success) {
       return NextResponse.json({
@@ -93,4 +85,4 @@ export async function DELETE(req: NextRequest) {
     console.error('Error deleting profile photo:', error);
     return NextResponse.json({ error: 'Failed to delete profile photo' }, { status: 500 });
   }
-}
+});

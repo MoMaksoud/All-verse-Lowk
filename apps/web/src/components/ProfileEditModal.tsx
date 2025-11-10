@@ -128,14 +128,8 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         itemConditionPreference: formData.itemConditionPreference,
       };
 
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify(profileData),
-      });
+      const { apiPut } = await import('@/lib/api-client');
+      const response = await apiPut('/api/profile', profileData);
 
       if (!response.ok) {
         const errorData = await response.json();

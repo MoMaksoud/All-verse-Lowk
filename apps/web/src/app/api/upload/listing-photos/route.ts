@@ -3,26 +3,22 @@ import StorageService, { uploadListingPhotoFile } from '@/lib/storage';
 import { firestoreServices } from '@/lib/services/firestore';
 import { ListingPhotoUpload } from '@/lib/types/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
+import { withApi } from '@/lib/withApi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
+export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
     console.log('📸 Listing photos upload request received');
     
-    const userId = req.headers.get('x-user-id');
     const userEmail = req.headers.get('x-user-email') || 'unknown@example.com';
-    if (!userId) {
-      console.log('❌ No user ID provided');
-      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-    }
 
     const formData = await req.formData();
     const listingId = formData.get('listingId') as string;
     const files = formData.getAll('photos') as File[];
     
-    console.log('📸 Upload details:', { userId, listingId, fileCount: files.length });
+    console.log('📸 Upload details:', { userId: req.userId, listingId, fileCount: files.length });
     
     if (!listingId) {
       console.log('❌ No listing ID provided');
@@ -59,7 +55,7 @@ export async function POST(req: NextRequest) {
       const file = files[i];
       try {
         const result = await uploadListingPhotoFile({
-          uid: userId,
+          uid: req.userId,
           listingId,
           file
         });
@@ -85,12 +81,12 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Save photo metadata to Firestore (only if Firebase is configured)
-    if (isFirebaseConfigured()) {
-      console.log('📸 Saving photo metadata to Firestore...');
-      const photoData: ListingPhotoUpload = {
-        listingId,
-        userId,
+      // Save photo metadata to Firestore (only if Firebase is configured)
+      if (isFirebaseConfigured()) {
+        console.log('📸 Saving photo metadata to Firestore...');
+        const photoData: ListingPhotoUpload = {
+          listingId,
+          userId: req.userId,
         photoUrls,
         photoPaths,
         uploadedAt: new Date() as any, // Will be converted to Timestamp in service
@@ -124,14 +120,10 @@ export async function POST(req: NextRequest) {
     console.error('Error uploading listing photos:', error);
     return NextResponse.json({ error: 'Failed to upload listing photos' }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-    }
 
     const { searchParams } = new URL(req.url);
     const listingId = searchParams.get('listingId');
@@ -166,4 +158,4 @@ export async function DELETE(req: NextRequest) {
     console.error('Error deleting listing photos:', error);
     return NextResponse.json({ error: 'Failed to delete listing photos' }, { status: 500 });
   }
-}
+});

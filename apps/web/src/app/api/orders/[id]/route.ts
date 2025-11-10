@@ -8,20 +8,15 @@ import { UpdateOrderInput } from "@/lib/types/firestore";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const GET = withApi(async (req: NextRequest, { params }: { params: { id: string } }) => {
+export const GET = withApi(async (req: NextRequest & { userId: string }, { params }: { params: { id: string } }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(unauthorized("User ID is required"));
-    }
-
     const order = await firestoreServices.orders.getOrder(params.id);
     if (!order) {
       return error(notFound("Order not found"));
     }
 
     // Check if user has permission to view this order
-    if (order.buyerId !== userId && !order.items.some(item => item.sellerId === userId)) {
+    if (order.buyerId !== req.userId && !order.items.some(item => item.sellerId === req.userId)) {
       return error(unauthorized("You don't have permission to view this order"));
     }
 
@@ -32,20 +27,15 @@ export const GET = withApi(async (req: NextRequest, { params }: { params: { id: 
   }
 });
 
-export const PATCH = withApi(async (req: NextRequest, { params }: { params: { id: string } }) => {
+export const PATCH = withApi(async (req: NextRequest & { userId: string }, { params }: { params: { id: string } }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(unauthorized("User ID is required"));
-    }
-
     const order = await firestoreServices.orders.getOrder(params.id);
     if (!order) {
       return error(notFound("Order not found"));
     }
 
     // Check if user has permission to update this order
-    if (order.buyerId !== userId && !order.items.some(item => item.sellerId === userId)) {
+    if (order.buyerId !== req.userId && !order.items.some(item => item.sellerId === req.userId)) {
       return error(unauthorized("You don't have permission to update this order"));
     }
 

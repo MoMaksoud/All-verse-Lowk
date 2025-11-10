@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { retrievePaymentIntent } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
+import { withApi } from '@/lib/withApi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: NextRequest) {
+export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 401 });
-    }
 
     const body = await req.json();
     const { paymentIntentId } = body;
@@ -19,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment intent ID is required' }, { status: 400 });
     }
 
-    console.log('Confirming payment for user:', userId, 'paymentIntentId:', paymentIntentId);
+    console.log('Confirming payment for user:', req.userId, 'paymentIntentId:', paymentIntentId);
 
     // Retrieve payment intent from Stripe
     const paymentResult = await retrievePaymentIntent(paymentIntentId);
@@ -36,7 +33,7 @@ export async function POST(req: NextRequest) {
     console.log('Payment intent status:', paymentIntent.status);
 
     // Find the order associated with this payment intent
-    const orders = await firestoreServices.orders.getOrdersByBuyer(userId);
+    const orders = await firestoreServices.orders.getOrdersByBuyer(req.userId);
     console.log('Found orders for buyer:', orders.length);
     
     const order = orders.find(o => o.paymentIntentId === paymentIntentId);
@@ -84,7 +81,7 @@ export async function POST(req: NextRequest) {
 
       // Clear user's cart
       try {
-        await firestoreServices.carts.clearCart(userId);
+        await firestoreServices.carts.clearCart(req.userId);
         console.log('Cart cleared successfully');
       } catch (error) {
         console.error('Error clearing cart:', error);
@@ -113,7 +110,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Clear user's cart
-      await firestoreServices.carts.clearCart(userId);
+      await firestoreServices.carts.clearCart(req.userId);
 
       return NextResponse.json({
         success: true,
@@ -146,4 +143,4 @@ export async function POST(req: NextRequest) {
     console.error('Error confirming payment:', error);
     return NextResponse.json({ error: 'Failed to confirm payment' }, { status: 500 });
   }
-}
+});

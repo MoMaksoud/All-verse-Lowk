@@ -77,8 +77,11 @@ export function SearchBar({ className = '' }: SearchBarProps) {
       const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
       
-      if (data.success) {
-        setAutocompleteSuggestions(data.data.suggestions || []);
+      // API returns { query, suggestions, count, types } directly
+      if (data && Array.isArray(data.suggestions)) {
+        setAutocompleteSuggestions(data.suggestions);
+      } else {
+        setAutocompleteSuggestions([]);
       }
     } catch (error) {
       console.error('Error fetching suggestions:', error);
@@ -193,7 +196,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
         <div className="absolute top-full left-0 right-0 mt-2 bg-dark-800 rounded-xl border border-dark-600 shadow-2xl z-[9999] max-h-96 overflow-y-auto">
           <div className="p-4">
             {/* Autocomplete Suggestions */}
-            {query.length >= 1 && autocompleteSuggestions.length > 0 && (
+            {query.length >= 2 && autocompleteSuggestions.length > 0 && (
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Bot className="w-4 h-4 text-accent-400" />
@@ -224,8 +227,8 @@ export function SearchBar({ className = '' }: SearchBarProps) {
               </div>
             )}
 
-            {/* No suggestions message */}
-            {query.length >= 1 && autocompleteSuggestions.length === 0 && !isLoadingSuggestions && (
+            {/* No suggestions message - only show if we've actually tried to fetch (query >= 2 chars) */}
+            {query.length >= 2 && autocompleteSuggestions.length === 0 && !isLoadingSuggestions && (
               <div className="mb-4">
                 <div className="text-center py-4 text-gray-400 text-sm">
                   No suggestions found for "{query}"

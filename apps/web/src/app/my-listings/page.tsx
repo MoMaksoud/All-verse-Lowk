@@ -81,35 +81,67 @@ export default function MyListingsPage() {
     listingId: null,
     listingTitle: ''
   });
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const { showSuccess, showError } = useToast();
   const { isDeleting, deleteListing } = useFirebaseCleanup();
 
   useEffect(() => {
-    if (currentUser?.uid) {
-      fetchMyListings();
+    console.log('🔍 Auth state check:', {
+      authLoading,
+      currentUser: currentUser ? { uid: currentUser.uid, email: currentUser.email } : null,
+      hasUid: !!currentUser?.uid
+    });
+
+    // Wait for auth to finish loading
+    if (authLoading) {
+      console.log('⏳ Auth still loading, waiting...');
+      return;
     }
-  }, [currentUser]);
+
+    if (!currentUser?.uid) {
+      console.warn('⚠️ No current user, cannot fetch listings');
+      console.warn('⚠️ Auth state:', { currentUser, authLoading });
+      setError('Please sign in to view your listings');
+      setLoading(false);
+      return;
+    }
+    console.log('✅ User authenticated, fetching listings for:', currentUser.uid);
+    fetchMyListings();
+  }, [currentUser, authLoading]);
 
   const fetchMyListings = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/my-listings', {
-        headers: {
-          'x-user-id': currentUser?.uid || '',
-        },
-      });
+      console.log('🔍 Starting fetchMyListings...');
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet('/api/my-listings');
+      
+      console.log('🔍 API response status:', response.status);
+      console.log('🔍 API response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (response.status === 401) {
+        // User not authenticated - redirect to login or show message
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ 401 Unauthorized:', errorData);
+        setError('Please sign in to view your listings');
+        return;
+      }
 
       if (response.ok) {
         const data = await response.json();
         setListings(data.data || []);
       } else {
-        setError('Failed to fetch listings');
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || 'Failed to fetch listings');
       }
     } catch (error) {
       console.error('Error fetching listings:', error);
-      setError('Failed to fetch listings');
+      if (error instanceof Error && error.message.includes('not authenticated')) {
+        setError('Please sign in to view your listings');
+      } else {
+        setError('Failed to fetch listings');
+      }
     } finally {
       setLoading(false);
     }
@@ -147,6 +179,23 @@ export default function MyListingsPage() {
     setDeleteModal({ isOpen: false, listingId: null, listingTitle: '' });
   };
 
+  // Wait for auth to finish loading before showing sign-in prompt
+  if (authLoading) {
+    return (
+      <div className="min-h-screen relative overflow-hidden">
+        <DynamicBackground intensity="low" showParticles={true} />
+        <Navigation />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
+            <p className="text-zinc-400 text-lg">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
   if (!currentUser) {
     return (
       <div className="min-h-screen relative overflow-hidden">
@@ -157,7 +206,7 @@ export default function MyListingsPage() {
             <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your listings</h1>
             <Link
               href="/signin"
-              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 inline-flex items-center gap-2"
             >
               Sign In
             </Link>
@@ -242,7 +291,7 @@ export default function MyListingsPage() {
               </div>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               {listings.map((listing) => (
                 <Card key={listing.id} className="group hover:scale-[1.02] transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10">
                   {/* Image */}

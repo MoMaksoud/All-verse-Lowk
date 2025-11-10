@@ -62,7 +62,7 @@ export class AIAnalysisService {
         "listing_ready": {
           "platform_style": "facebook_marketplace", 
           "title": "Short, specific. Include brand + model + key spec (capacity/size/color). DO NOT include condition or price in the title",
-          "description": "2–5 short lines, seller perspective. Only visible facts + placeholders for unknowns.",
+          "description": "2-5 short lines, seller perspective. Only visible facts + placeholders for unknowns.",
           "bullets": [
             "• Visible feature 1",
             "• Visible feature 2",

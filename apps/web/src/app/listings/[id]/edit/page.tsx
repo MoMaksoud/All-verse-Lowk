@@ -131,20 +131,14 @@ export default function EditListingPage() {
     try {
       setLoading(true);
       
-      const response = await fetch(`/api/listings/${listingId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.uid,
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          price: parseFloat(formData.price),
-          category: formData.category,
-          condition: formData.condition,
-          images: photoUrls,
-        }),
+      const { apiPut } = await import('@/lib/api-client');
+      const response = await apiPut(`/api/listings/${listingId}`, {
+        title: formData.title,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        category: formData.category,
+        condition: formData.condition,
+        images: photoUrls,
       });
       
       if (!response.ok) {

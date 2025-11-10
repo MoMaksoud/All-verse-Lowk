@@ -50,18 +50,13 @@ export const GET = withApi(async (
     console.error('Error fetching listing:', err);
     return error(badRequest("Failed to fetch listing"));
   }
-});
+}, { requireAuth: false }); // Listing details can be viewed without auth
 
 export const PUT = withApi(async (
-  req: NextRequest,
+  req: NextRequest & { userId: string },
   { params }: { params: { id: string } }
 ) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(badRequest("User ID is required"));
-    }
-
     const body = await req.json() as UpdateListingInput;
     
     const firestoreServices = await getFirestoreServices();
@@ -73,7 +68,7 @@ export const PUT = withApi(async (
     }
 
     // Check if user owns this listing
-    if (existingListing.sellerId !== userId) {
+    if (existingListing.sellerId !== req.userId) {
       return error(badRequest("You can only update your own listings"));
     }
     
@@ -109,20 +104,14 @@ export const PUT = withApi(async (
 });
 
 export const DELETE = withApi(async (
-  req: NextRequest,
+  req: NextRequest & { userId: string },
   { params }: { params: { id: string } }
 ) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      console.error('❌ No user ID provided');
-      return error(badRequest("User ID is required"));
-    }
-
-    console.log('🗑️ Starting deletion for listing:', params.id, 'by user:', userId);
+    console.log('🗑️ Starting deletion for listing:', params.id, 'by user:', req.userId);
 
     // Use the comprehensive cleanup service
-    const cleanupResult = await FirebaseCleanupService.deleteListingCompletely(params.id, userId);
+    const cleanupResult = await FirebaseCleanupService.deleteListingCompletely(params.id, req.userId);
     
     console.log('🧹 Cleanup result:', cleanupResult);
     

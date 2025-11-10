@@ -76,16 +76,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
 
     try {
       // Create payment intent
-      const response = await fetch('/api/payments/create-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.uid || '',
-        },
-        body: JSON.stringify({
-          cartItems,
-          shippingAddress,
-        }),
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/payments/create-intent', {
+        cartItems,
+        shippingAddress,
       });
 
       const data = await response.json();
@@ -116,15 +110,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
       }
 
       // Confirm payment on server
-      const confirmResponse = await fetch('/api/payments/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.uid || '',
-        },
-        body: JSON.stringify({
-          paymentIntentId: data.paymentIntentId,
-        }),
+      const { apiPost: apiPostConfirm } = await import('@/lib/api-client');
+      const confirmResponse = await apiPostConfirm('/api/payments/confirm', {
+        paymentIntentId: data.paymentIntentId,
       });
 
       const confirmData = await confirmResponse.json();

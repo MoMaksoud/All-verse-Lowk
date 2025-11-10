@@ -7,21 +7,16 @@ import { badRequest, unauthorized } from "@/lib/errors";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const GET = withApi(async (req: NextRequest) => {
+export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(unauthorized("User ID is required"));
-    }
-
     const url = new URL(req.url);
     const role = url.searchParams.get('role') || 'buyer'; // 'buyer' or 'seller'
 
     let orders;
     if (role === 'buyer') {
-      orders = await firestoreServices.orders.getOrdersByBuyer(userId);
+      orders = await firestoreServices.orders.getOrdersByBuyer(req.userId);
     } else if (role === 'seller') {
-      orders = await firestoreServices.orders.getOrdersBySeller(userId);
+      orders = await firestoreServices.orders.getOrdersBySeller(req.userId);
     } else {
       return error(badRequest("Invalid role parameter. Must be 'buyer' or 'seller'"));
     }
@@ -50,13 +45,8 @@ export const GET = withApi(async (req: NextRequest) => {
   }
 });
 
-export const POST = withApi(async (req: NextRequest) => {
+export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(unauthorized("User ID is required"));
-    }
-
     const body = await req.json();
     const { items, subtotal, fees, tax, total, currency, paymentIntentId, shippingAddress } = body;
 
@@ -69,7 +59,7 @@ export const POST = withApi(async (req: NextRequest) => {
     }
 
     const orderData = {
-      buyerId: userId,
+      buyerId: req.userId,
       items,
       subtotal,
       fees,

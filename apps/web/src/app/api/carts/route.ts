@@ -8,14 +8,9 @@ import { AddToCartInput } from "@/lib/types/firestore";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const GET = withApi(async (req: NextRequest) => {
+export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(unauthorized("User ID is required"));
-    }
-
-    const cart = await firestoreServices.carts.getCart(userId);
+    const cart = await firestoreServices.carts.getCart(req.userId);
     return success(cart || { items: [], updatedAt: new Date() });
   } catch (err) {
     console.error('Error fetching cart:', err);
@@ -23,13 +18,8 @@ export const GET = withApi(async (req: NextRequest) => {
   }
 });
 
-export const POST = withApi(async (req: NextRequest) => {
+export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(unauthorized("User ID is required"));
-    }
-
     const body = await req.json() as AddToCartInput;
     
     // Validate required fields
@@ -37,8 +27,8 @@ export const POST = withApi(async (req: NextRequest) => {
       return error(badRequest("Missing required fields: listingId, sellerId, qty, priceAtAdd"));
     }
 
-    await firestoreServices.carts.addToCart(userId, body);
-    const updatedCart = await firestoreServices.carts.getCart(userId);
+    await firestoreServices.carts.addToCart(req.userId, body);
+    const updatedCart = await firestoreServices.carts.getCart(req.userId);
     
     return success(updatedCart, { status: 201 });
   } catch (err) {
@@ -47,21 +37,16 @@ export const POST = withApi(async (req: NextRequest) => {
   }
 });
 
-export const PUT = withApi(async (req: NextRequest) => {
+export const PUT = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(unauthorized("User ID is required"));
-    }
-
     const body = await req.json() as { listingId: string; qty: number };
     
     if (!body.listingId || body.qty === undefined) {
       return error(badRequest("Missing required fields: listingId, qty"));
     }
 
-    await firestoreServices.carts.updateCartItem(userId, body);
-    const updatedCart = await firestoreServices.carts.getCart(userId);
+    await firestoreServices.carts.updateCartItem(req.userId, body);
+    const updatedCart = await firestoreServices.carts.getCart(req.userId);
     
     return success(updatedCart);
   } catch (err) {
@@ -70,25 +55,20 @@ export const PUT = withApi(async (req: NextRequest) => {
   }
 });
 
-export const DELETE = withApi(async (req: NextRequest) => {
+export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      return error(unauthorized("User ID is required"));
-    }
-
     const { searchParams } = new URL(req.url);
     const listingId = searchParams.get('listingId');
     
     if (listingId) {
       // Remove specific item
-      await firestoreServices.carts.removeFromCart(userId, listingId);
+      await firestoreServices.carts.removeFromCart(req.userId, listingId);
     } else {
       // Clear entire cart
-      await firestoreServices.carts.clearCart(userId);
+      await firestoreServices.carts.clearCart(req.userId);
     }
     
-    const updatedCart = await firestoreServices.carts.getCart(userId);
+    const updatedCart = await firestoreServices.carts.getCart(req.userId);
     return success(updatedCart);
   } catch (err) {
     console.error('Error clearing cart:', err);
