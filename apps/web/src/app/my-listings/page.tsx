@@ -35,7 +35,6 @@ interface MyListing {
   updatedAt: string;
   sellerId: string;
   status: string;
-  location?: string;
 }
 
 const formatCurrency = (amount: number) => {
@@ -353,13 +352,6 @@ export default function MyListingsPage() {
                         {formatCurrency(listing.price)}
                       </div>
                     </div>
-
-                    {listing.location && (
-                      <div className="flex items-center gap-1.5 text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span className="truncate">{listing.location}</span>
-                      </div>
-                    )}
 
                     <div className="flex items-center gap-1.5 text-sm text-zinc-500 group-hover:text-zinc-400 transition-colors">
                       <Calendar className="w-3.5 h-3.5" />

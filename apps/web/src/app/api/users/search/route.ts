@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 
 export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {
+    if (!db || !isFirebaseConfigured()) {
+      return NextResponse.json({ 
+        error: 'Database not initialized or Firebase not configured' 
+      }, { status: 503 });
+    }
+
     const { searchParams } = new URL(req.url);
     const searchTerm = searchParams.get('q');
     

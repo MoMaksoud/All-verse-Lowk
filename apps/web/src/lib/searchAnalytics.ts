@@ -153,11 +153,6 @@ const searchDatabase: SearchQuery[] = [
   { query: 'under 100', count: 280, lastSearched: '2024-01-18', category: 'modifier' },
   { query: 'under 50', count: 250, lastSearched: '2024-01-18', category: 'modifier' },
   { query: 'under 200', count: 200, lastSearched: '2024-01-17', category: 'modifier' },
-  { query: 'near me', count: 320, lastSearched: '2024-01-19', category: 'location' },
-  { query: 'local', count: 250, lastSearched: '2024-01-18', category: 'location' },
-  { query: 'tampa', count: 180, lastSearched: '2024-01-17', category: 'location' },
-  { query: 'miami', count: 150, lastSearched: '2024-01-17', category: 'location' },
-  { query: 'orlando', count: 120, lastSearched: '2024-01-16', category: 'location' },
 ];
 
 // Trie-like structure for efficient prefix matching

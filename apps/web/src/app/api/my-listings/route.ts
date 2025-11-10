@@ -21,7 +21,6 @@ export const GET = withApi(async (request: NextRequest & { userId: string }) => 
       updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: listing.sellerId,
       status: listing.status || 'active',
-      location: undefined,
     }));
 
     return NextResponse.json({

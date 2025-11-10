@@ -25,13 +25,13 @@ export async function POST(req: NextRequest) {
     // Basic rate limit (30/min per IP)
     const ip = getIp(req as unknown as Request);
     checkRateLimit(ip, 30);
-    const { title, description, category, condition, location, brand, model } = await req.json();
+    const { title, description, category, condition, brand, model } = await req.json();
 
     if (!title || !category) {
       return NextResponse.json({ error: 'Title and category are required' }, { status: 400 });
     }
 
-    console.log('🔍 Starting AI market analysis for:', { title, category, condition, location });
+    console.log('🔍 Starting AI market analysis for:', { title, category, condition });
 
     const model_ai = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
@@ -54,7 +54,6 @@ export async function POST(req: NextRequest) {
     - Condition: ${condition || 'Good'}
     - Brand: ${brand || 'Unknown'}
     - Model: ${model || 'Unknown'}
-    - Location: ${location || 'United States'}
 
     Your task (US MARKET FOCUS ONLY):
     1. Research current US market prices for this exact item or similar items

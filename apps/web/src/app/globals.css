@@ -1190,12 +1190,6 @@ select:focus {
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-/* Location Section */
-.listing-container .content-area .flex.items-center.gap-1.mb-3 {
-  flex-shrink: 0; /* Keep location fixed */
-  margin-bottom: 8px; /* Reduced margin */
-}
-
 /* Date/Rating Chip - Now handled by Tailwind classes */
 
 /* Old date-rating styles removed - now using Tailwind */

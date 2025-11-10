@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { User, MapPin, Phone, Star, Heart, ShoppingBag, DollarSign, Calendar } from 'lucide-react';
+import { User, Phone, Star, Heart, ShoppingBag, DollarSign, Calendar } from 'lucide-react';
 import { Profile } from '@marketplace/types';
 
 interface ProfileDisplayProps {
@@ -100,16 +100,6 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
                 <div>
                   <span className="text-sm text-gray-400">Age:</span>
                   <span className="ml-2 text-white">{profile.age} years old</span>
-                </div>
-              </div>
-            )}
-
-            {profile.location && (
-              <div className="flex items-center space-x-3">
-                <MapPin className="w-5 h-5 text-gray-400" />
-                <div>
-                  <span className="text-sm text-gray-400">Location:</span>
-                  <span className="ml-2 text-white">{profile.location}</span>
                 </div>
               </div>
             )}

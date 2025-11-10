@@ -8,7 +8,6 @@ type Listing = {
   id: string;
   title: string;
   price: number;
-  location?: string;
   imageUrl: string;
   createdAt?: string | Date;
 };
@@ -53,11 +52,6 @@ function ListingCardComponent({ listing, view = "comfortable" }: Props) {
           <span className={`${priceSize} font-semibold text-blue-600 dark:text-blue-400`}>
             ${listing.price.toLocaleString()}
           </span>
-          {listing.location && (
-            <span className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 line-clamp-1">
-              {listing.location}
-            </span>
-          )}
         </div>
       </div>
     </Link>

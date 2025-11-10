@@ -12,7 +12,6 @@ import { Logo } from '@/components/Logo';
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { AIListingAssistant } from '@/components/AIListingAssistant';
 import Select from '@/components/Select';
-import LocationCombobox from '@/components/LocationCombobox';
 import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
@@ -83,7 +82,6 @@ export default function SellPage() {
     condition?: string;
     size?: string;
     sizeCategory?: 'clothing' | 'footwear';
-    location?: string;
   }>({
     title: '',
     description: '',
@@ -93,7 +91,6 @@ export default function SellPage() {
     condition: '',
     size: '',
     sizeCategory: undefined,
-    location: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -158,7 +155,6 @@ export default function SellPage() {
         if (!formData.description?.trim()) stepErrors.description = 'Description is required';
         if (!formData.category) stepErrors.category = 'Category is required';
         if (!formData.price || parseFloat(formData.price) <= 0) stepErrors.price = 'Valid price is required';
-        // Location not required for MVP
         break;
     }
 
@@ -375,12 +371,6 @@ export default function SellPage() {
       return;
     }
 
-    // Basic US location validation
-    if (formData.location && !formData.location.match(/^[A-Za-z\s]+,\s*[A-Z]{2}$/)) {
-      addToast('warning', 'Location Format', 'Please use format: "City, ST" (e.g., Tampa, FL)');
-      return;
-    }
-
     // Rate limiting - prevent too frequent requests
     const now = Date.now();
     if (now - lastPriceSuggestionTime < 5000) { // 5 seconds cooldown
@@ -404,7 +394,6 @@ export default function SellPage() {
           description: formData.description,
           category: formData.category,
           condition: formData.condition,
-          location: formData.location || 'United States',
           brand: aiAnalysis?.brand || 'Unknown',
           model: aiAnalysis?.model || 'Unknown'
         }),
@@ -1197,12 +1186,6 @@ export default function SellPage() {
                         <span className="ml-2 text-zinc-100">{formData.size}</span>
                       </div>
                     )}
-                    {formData.location && (
-                      <div>
-                        <span className="text-zinc-400">Location:</span>
-                        <span className="ml-2 text-zinc-100">{formData.location}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1340,18 +1323,6 @@ export default function SellPage() {
                     </div>
                   </div>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-100 mb-2">
-                  Location <span className="text-zinc-400 text-sm">(US Only)</span>
-                </label>
-                <LocationCombobox
-                  value={formData.location || ''}
-                  onChange={(value) => handleInputChange('location', value)}
-                  placeholder="e.g., Tampa, FL or New York, NY"
-                />
-                <p className="text-zinc-400 text-xs mt-1">Enter your US city and state for accurate regional pricing</p>
               </div>
 
               {formData.size && (

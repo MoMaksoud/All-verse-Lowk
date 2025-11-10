@@ -101,6 +101,9 @@ export function calculateTotalWithFees(subtotal: number, tax: number = 0): {
 // STRIPE CONNECT - SELLER PAYOUTS
 // ============================================================================
 
+// Platform service fee percentage (4.5%)
+export const PLATFORM_SERVICE_FEE_PERCENT = 4.5;
+
 /**
  * Create a Stripe Connect account for a seller
  */
@@ -216,7 +219,7 @@ export async function transferToSeller(accountId: string, amount: number, orderI
 /**
  * Calculate seller payout amount (after platform fees)
  */
-export function calculateSellerPayout(itemTotal: number, platformFeePercent: number = 10): {
+export function calculateSellerPayout(itemTotal: number, platformFeePercent: number = PLATFORM_SERVICE_FEE_PERCENT): {
   itemTotal: number;
   platformFee: number;
   sellerPayout: number;

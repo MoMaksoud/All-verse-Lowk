@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, User, MapPin, Heart, DollarSign, ShoppingBag } from 'lucide-react';
 import { CreateProfileInput, Gender, ShoppingFrequency, UserActivity, ItemConditionPreference } from '@marketplace/types';
-import { SimpleLocationAutocomplete } from '@/components/SimpleLocationAutocomplete';
 import { FileUpload } from '@/components/FileUpload';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -35,7 +34,6 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
     bio: '',
     gender: undefined,
     age: undefined,
-    location: '',
     profilePicture: undefined,
     phoneNumber: '',
     interestCategories: [],
@@ -202,20 +200,6 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
               </p>
             )}
           </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Location
-          </label>
-          <SimpleLocationAutocomplete
-            value={formData.location || ''}
-            onChange={(location, coordinates) => {
-              handleInputChange('location', location);
-            }}
-            placeholder="City, State or ZIP code"
-            className="w-full"
-          />
         </div>
 
         <div>

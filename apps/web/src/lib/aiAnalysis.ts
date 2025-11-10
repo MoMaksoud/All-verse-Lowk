@@ -2,7 +2,12 @@ import { createPartFromUri, createUserContent, GoogleGenAI } from '@google/genai
 
 // Initialize Gemini AI
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-const genAi = new GoogleGenAI({ apiKey: apiKey });
+
+if (!apiKey) {
+  console.error('❌ GEMINI_API_KEY is not configured for AI Analysis');
+}
+
+const genAi = apiKey ? new GoogleGenAI({ apiKey: apiKey }) : null;
 
 
 export interface ProductAnalysis {
@@ -29,10 +34,14 @@ export class AIAnalysisService {
   /**
    * Analyze product photos and generate product details
    */
-  static async analyzeProductPhotos(imageUrls: string[], location?: string): Promise<ProductAnalysis | undefined> {
+  static async analyzeProductPhotos(imageUrls: string[]): Promise<ProductAnalysis | undefined> {
+    if (!apiKey || !genAi) {
+      console.error('❌ Gemini API key not configured for product analysis');
+      throw new Error('AI service is not configured. Please configure GEMINI_API_KEY.');
+    }
+
     const prompt = `
       You are a VISUAL PRODUCT LISTER for ALL VERSE GPT. Your job is to (A) extract only what is visibly true from the image(s), then (B) craft a concise, buyer-ready listing that a human can post immediately, with clearly marked placeholders for any info not visible (e.g., storage, battery %, carrier).
-      LOCATION CONTEXT: This item is being sold in the United States. Consider US regional pricing differences and local market conditions when suggesting prices. Focus on US marketplace data (eBay, Facebook Marketplace, Craigslist, OfferUp, etc.).
 
       Rules:
       - Use ONLY visible evidence (logos, model text, ports, buttons, materials, labels, barcodes, regulatory marks). Include OCR of readable text exactly as seen.
@@ -41,7 +50,6 @@ export class AIAnalysisService {
       - Never invent condition, price, storage, battery %, carrier, or accessories if not visible. Use placeholders.
       - Do NOT include usage duration placeholders like "Worn for [enter duration]" in descriptions.
       - Tone: clear, trustworthy, concise. No emojis. No hype words. No promises about warranties unless visible.
-      - Consider US regional pricing: items in major US cities (NYC, LA, SF) typically command higher prices than rural areas or smaller cities.
       - CONSISTENCY RULES: The value of listing_ready.condition must NEVER contradict the wording in title/description/evidence. If any condition words appear in the title (e.g., "good condition", "like new", "new"), REMOVE them from the title and set listing_ready.condition accordingly. When uncertain, set condition to "unknown" rather than guessing.
 
       Return ONLY valid JSON with this exact structure:
@@ -90,7 +98,6 @@ export class AIAnalysisService {
           ],
           "optional_sections": {
             "included_items_line": "Includes: [enter items, e.g., cable/case/box]",
-            "meetup_location_line": "Pickup/meetup: [enter area]",
             "pricing_policy_line": "Price: [enter price] (firm/obo)"
           }
         }
@@ -140,7 +147,7 @@ export class AIAnalysisService {
         - Description (2-5 lines): What it is, visible highlights, honest condition, transaction details (meetup/cash). Do NOT include usage duration placeholders.
         - Bullets: Short, scannable, with placeholders for unknowns.
       6) Never invent numbers or claims. Use placeholders instead.
-      7) Consider US regional pricing factors for the location when suggesting prices. Use US marketplace data only.
+      7) Use US marketplace data only when suggesting prices.
 
       Return ONLY the JSON.
       `;

@@ -42,12 +42,6 @@ function ListingsContent() {
       if (appliedFilters.condition) params.set('condition', appliedFilters.condition);
       if (appliedFilters.minPrice !== undefined) params.set('min', appliedFilters.minPrice.toString());
       if (appliedFilters.maxPrice !== undefined) params.set('max', appliedFilters.maxPrice.toString());
-      if (appliedFilters.location) params.set('location', appliedFilters.location);
-      if (appliedFilters.maxDistance !== undefined) params.set('maxDistance', appliedFilters.maxDistance.toString());
-      if (appliedFilters.userCoordinates) {
-        params.set('userLat', appliedFilters.userCoordinates.lat.toString());
-        params.set('userLng', appliedFilters.userCoordinates.lng.toString());
-      }
       params.set('page', currentPage.toString());
       params.set('limit', '9'); // Reduced from 12 to 9 for faster loading
     

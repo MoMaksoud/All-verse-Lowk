@@ -49,25 +49,20 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
       }, { status: 200 });
     }
 
-    // 5) Build conversation context safely
+    // 5) Build conversation context safely (last 10 messages for context)
     const history = Array.isArray(conversationHistory)
       ? conversationHistory.slice(-10).map((m: any) => ({
           role: m?.role === 'user' ? 'user' : 'assistant',
           parts: [{ text: String(m?.content ?? '') }],
+          content: String(m?.content ?? ''),
         }))
       : [];
-
-    // 6) Timeout to avoid hanging calls
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 20000); // 20s timeout
 
     const responseText = await GeminiService.generateAIResponse(
       mode === 'seller' ? 'seller' : 'buyer',
       trimmed,
       history
     );
-
-    clearTimeout(t);
     // 7) Reconcile approximate output tokens
     const outputTokens = Math.ceil((responseText || '').length / 4);
     await addUsage(request.userId, inputTokens + outputTokens, precharge);
@@ -76,9 +71,8 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
 
   } catch (error: any) {
     // Return a safe fallback message with 200 status so UI can display it
-    const msg = error?.name === 'AbortError'
-      ? 'AI timed out. Please try again.'
-      : (error?.message || 'Internal error');
+    const msg = error?.message || 'Internal error';
+    console.error('AI chat error:', error);
     return NextResponse.json({
       response: 'I hit a temporary error. Please try again shortly.',
       success: false,

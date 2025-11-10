@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Phone, Mail, Star, MapPin, Calendar, Shield, Flag } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Phone, Mail, Star, Calendar, Shield, Flag } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 
@@ -13,7 +13,6 @@ interface UserProfile {
   email: string;
   avatar: string;
   bio: string;
-  location: string;
   rating: number;
   reviewCount: number;
   memberSince: string;
@@ -61,7 +60,6 @@ export default function UserProfilePage() {
           email: '', // Email is not exposed in public profiles
           avatar: profileData.data?.profilePicture || '',
           bio: profileData.data?.bio || '',
-          location: profileData.data?.location || '',
           rating: profileData.data?.rating || 0,
           reviewCount: 0, // This would need to be calculated from reviews
           memberSince: profileData.data?.createdAt || new Date().toISOString(),
@@ -209,10 +207,6 @@ export default function UserProfilePage() {
                     <Star className="w-4 h-4 text-yellow-500 fill-current" />
                     <span className="text-sm">{profile.rating}</span>
                     <span className="text-sm">({profile.reviewCount} reviews)</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">{profile.location}</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="w-4 h-4" />

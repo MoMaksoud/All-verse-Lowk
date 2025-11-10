@@ -34,7 +34,6 @@ export const ProfileSchema = z.object({
   createdAt: z.string(), // ISO timestamp
   gender: GenderSchema.optional(),
   age: z.number().min(13).max(120).optional(),
-  location: z.string().max(120).optional(),
   profilePicture: z.string().optional(),
   phoneNumber: z.string().optional(),
   rating: z.number().min(0).max(5).default(0),
@@ -69,15 +68,6 @@ export type SimpleListing = {
   photos: string[]; // data URLs or remote URLs
   createdAt: string; // ISO
   updatedAt: string; // ISO
-  location?: {
-    city: string;
-    state: string;
-    zipCode?: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
-  };
   sellerId?: string;
   condition?: 'new' | 'like-new' | 'good' | 'fair' | 'poor';
 };
@@ -97,12 +87,6 @@ export type ListingFilters = {
   minPrice?: number;
   maxPrice?: number;
   condition?: string;
-  location?: string;
-  maxDistance?: number; // in miles
-  userCoordinates?: {
-    lat: number;
-    lng: number;
-  };
   sortBy?: 'price' | 'date' | 'relevance';
   sortOrder?: 'asc' | 'desc';
 };

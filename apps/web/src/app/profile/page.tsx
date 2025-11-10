@@ -8,7 +8,7 @@ import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import { DefaultAvatar } from '@/components/DefaultAvatar';
 import { Profile } from '@marketplace/types';
-import { User, MapPin, Star, Settings, Edit, Camera, Shield } from 'lucide-react';
+import { User, Star, Settings, Edit, Camera, Shield } from 'lucide-react';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { Navigation } from '@/components/Navigation';
 
@@ -214,14 +214,6 @@ export default function ProfilePage() {
                         <p className="text-gray-400">
                           {profile.bio || 'No bio added yet.'}
                         </p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Location</h4>
-                        <div className="flex items-center text-gray-400">
-                          <MapPin className="w-4 h-4 mr-2" />
-                          {profile.location || 'No location set.'}
-                        </div>
                       </div>
 
                       <div>

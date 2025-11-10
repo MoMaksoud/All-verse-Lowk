@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 
 interface OrderItem {
   listingId: string;
@@ -106,6 +106,12 @@ export default function OrdersPage() {
 
   useEffect(() => {
     if (!currentUser?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    if (!db || !isFirebaseConfigured()) {
+      console.error('Database not initialized');
       setLoading(false);
       return;
     }

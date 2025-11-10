@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyWebhookSignature, transferToSeller, calculateSellerPayout } from '@/lib/stripe';
+import { verifyWebhookSignature, transferToSeller, calculateSellerPayout, PLATFORM_SERVICE_FEE_PERCENT } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
 import { ProfileService } from '@/lib/firestore';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export const runtime = 'nodejs';
@@ -61,6 +61,11 @@ export async function POST(req: NextRequest) {
 
 async function handlePaymentSucceeded(paymentIntent: any) {
   try {
+    if (!db || !isFirebaseConfigured()) {
+      console.error('❌ Database not initialized');
+      throw new Error('Database not initialized or Firebase not configured');
+    }
+
     console.log('✅ Payment succeeded:', paymentIntent.id);
     
     // Find payment record
@@ -100,7 +105,10 @@ async function handlePaymentSucceeded(paymentIntent: any) {
 
         // Calculate seller payout (after platform fee)
         const itemTotal = item.unitPrice * item.qty;
-        const { sellerPayout, platformFee } = calculateSellerPayout(itemTotal, 10); // 10% platform fee
+        const { sellerPayout, platformFee } = calculateSellerPayout(itemTotal, PLATFORM_SERVICE_FEE_PERCENT);
+        
+        // Log platform fee collection
+        console.log(`💰 Platform service fee: $${platformFee.toFixed(2)} (${PLATFORM_SERVICE_FEE_PERCENT}% of $${itemTotal.toFixed(2)})`);
 
         // Transfer funds to seller's Stripe Connect account
         try {

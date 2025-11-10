@@ -9,6 +9,7 @@ import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import { ProfileSetupForm } from '@/components/ProfileSetupForm';
 import { CreateProfileInput } from '@marketplace/types';
+import { auth } from '@/lib/firebase';
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -38,51 +39,96 @@ export default function SignUp() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
+    // Clear previous errors
+    setError('');
+
+    // Validate password match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    try {
-      setError('');
-      setLoading(true);
-      await signup(formData.email, formData.password, formData.displayName);
-      setShowProfileSetup(true);
-    } catch (error: any) {
-      setError('Failed to create account. Please try again.');
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address (e.g., example@email.com)');
+      return;
     }
 
-    setLoading(false);
+    // Validate password length (Firebase requires at least 6 characters)
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    // Validate display name
+    if (!formData.displayName || formData.displayName.trim().length < 2) {
+      setError('Please enter your full name (at least 2 characters)');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await signup(formData.email.trim(), formData.password, formData.displayName.trim());
+      setShowProfileSetup(true);
+    } catch (error: any) {
+      // Show the actual error message from Firebase
+      const errorMessage = error?.message || 'Failed to create account. Please try again.';
+      setError(errorMessage);
+      console.error('Signup error:', error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleProfileSubmit(profileData: CreateProfileInput) {
     try {
-      // Check if user is authenticated
-      if (!currentUser?.uid) {
-        setError('You must be logged in to create a profile');
+      setProfileLoading(true);
+      setError(''); // Clear any previous errors
+      
+      // Wait for auth to be ready and get user directly from Firebase
+      if (auth) {
+        await auth.authStateReady();
+      }
+      
+      // Get user directly from Firebase auth (more reliable than state)
+      const firebaseUser = auth?.currentUser || currentUser;
+      const userId = firebaseUser?.uid;
+      
+      if (!userId) {
+        setError('You must be logged in to create a profile. Please try refreshing the page.');
+        setProfileLoading(false);
         return;
       }
       
-      setProfileLoading(true);
+      // Wait a bit more to ensure auth token is ready
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       // Create profile with the user's display name as username if not provided
       const profileToCreate = {
         ...profileData,
         username: profileData.username || formData.displayName,
-        userId: currentUser?.uid, // Add user ID
+        // Don't include userId - it's set from the auth token on the server
       };
 
       console.log('Creating profile with data:', profileToCreate);
-      console.log('User ID:', currentUser?.uid);
+      console.log('User ID:', userId);
 
       // Save profile to Firestore
       const { apiPut } = await import('@/lib/api-client');
       const response = await apiPut('/api/profile', profileToCreate);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Profile creation failed:', errorData);
-        throw new Error('Failed to create profile');
+        let errorMessage = 'Failed to create profile';
+        try {
+          const errorData = await response.json();
+          console.error('Profile creation failed:', errorData);
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (e) {
+          const errorText = await response.text();
+          console.error('Profile creation failed (non-JSON):', errorText);
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -95,9 +141,9 @@ export default function SignUp() {
       setTimeout(() => {
         router.push('/');
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Profile creation error:', error);
-      setError('Failed to create profile. Please try again.');
+      setError(error?.message || 'Failed to create profile. Please try again.');
     } finally {
       setProfileLoading(false);
     }
@@ -184,6 +230,13 @@ export default function SignUp() {
                 <p className="font-medium mb-2">📧 Check your email!</p>
                 <p className="text-sm">We've sent a verification link to <strong>{formData.email}</strong>. Please check your email and click the verification link to complete your account setup.</p>
               </div>
+
+              {/* Error display for profile creation */}
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6">
+                  {error}
+                </div>
+              )}
               
               <ProfileSetupForm
                 onSubmit={handleProfileSubmit}

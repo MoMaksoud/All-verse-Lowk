@@ -29,7 +29,6 @@ export class GeminiService {
     role: 'buyer' | 'seller', 
     userMessage: string,
     conversationHistory: any[] = []
-    
   ): Promise<string> {
     // Define system prompts for each role
     const buyerPrompt = `
@@ -125,24 +124,6 @@ Always end with a short, encouraging call-to-action question.
     }
   }
 
-  /**
-   * Handle common requests with quick responses
-   */
-  static async handleQuickRequest(): Promise<ChatResponse> { return { message: '', success: false }; }
-
-  // marketplace-specific helpers removed as unused
-
-  /**
-   * Generate product recommendations
-   */
-  static async generateProductRecommendations(): Promise<ChatResponse> { return { message: '', success: false }; }
-
-  /**
-   * Generate search suggestions
-   */
-  static async generateSearchSuggestions(): Promise<string[]> { return []; }
-
-  static async generatePriceSuggestion(): Promise<ChatResponse> { return { message: '', success: false }; }
 }
 
 export default GeminiService;

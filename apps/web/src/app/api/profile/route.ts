@@ -55,34 +55,37 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
 
 export const PUT = withApi(async (request: NextRequest & { userId: string }) => {
   try {
+    if (!request.userId) {
+      console.error('❌ No userId in request');
+      return NextResponse.json(
+        { error: 'User ID is required', details: 'Authentication failed' },
+        { status: 401 }
+      );
+    }
 
     const body = await request.json();
-    console.log('Profile update request:', { userId: request.userId, body });
+    console.log('✅ Profile update request:', { userId: request.userId, bodyKeys: Object.keys(body) });
     
-    // Check if profile exists
-    const existingProfile = await ProfileService.getProfile(request.userId);
+    // Use saveProfile for both create and update (it uses setDoc with merge: true)
+    // This is safer than updateProfile which fails if document doesn't exist
+    const result = await ProfileService.saveProfile(request.userId, body);
     
-    let result;
-    if (existingProfile) {
-      // Update existing profile
-      console.log('Updating existing profile');
-      result = await ProfileService.updateProfile(request.userId, body);
-    } else {
-      // Create new profile
-      console.log('Creating new profile');
-      result = await ProfileService.saveProfile(request.userId, body);
-    }
-    
+    console.log('✅ Profile saved successfully');
     return NextResponse.json({
       success: true,
       data: result
     });
 
   } catch (error: any) {
-    console.error('Error updating/creating profile:', error);
-    console.error('Error details:', error);
+    console.error('❌ Error updating/creating profile:', error);
+    console.error('❌ Error stack:', error?.stack);
+    console.error('❌ Error name:', error?.name);
     return NextResponse.json(
-      { error: 'Failed to update profile', details: error.message },
+      { 
+        error: 'Failed to update profile', 
+        details: error?.message || 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      },
       { status: 500 }
     );
   }

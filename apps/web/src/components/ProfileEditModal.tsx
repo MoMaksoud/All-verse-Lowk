@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { Profile } from '@marketplace/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { SimpleLocationAutocomplete } from '@/components/SimpleLocationAutocomplete';
 import { User, Save, X, Heart, DollarSign, ShoppingBag } from 'lucide-react';
 
 interface ProfileEditModalProps {
@@ -25,7 +24,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     bio: '',
     age: undefined as number | undefined,
     gender: '',
-    location: '',
     phoneNumber: '',
     interestCategories: [] as string[],
     userActivity: '',
@@ -65,7 +63,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         bio: profile.bio || '',
         age: profile.age,
         gender: profile.gender || '',
-        location: profile.location || '',
         phoneNumber: profile.phoneNumber || '',
         interestCategories: profile.interestCategories || [],
         userActivity: profile.userActivity || '',
@@ -119,7 +116,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         bio: formData.bio,
         age: formData.age,
         gender: formData.gender,
-        location: formData.location,
         phoneNumber: formData.phoneNumber,
         interestCategories: formData.interestCategories,
         userActivity: formData.userActivity,
@@ -289,20 +285,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   <option value="non-binary">Non-binary</option>
                   <option value="prefer-not-to-say">Prefer not to say</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Location
-                </label>
-                <SimpleLocationAutocomplete
-                  value={formData.location}
-                  onChange={(location, coordinates) => {
-                    handleInputChange('location', location);
-                  }}
-                  placeholder="City, State or ZIP code"
-                  className="w-full"
-                />
               </div>
             </div>
 

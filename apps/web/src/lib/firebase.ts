@@ -18,9 +18,9 @@ const isFirebaseConfigured = () => {
   const isConfigured = firebaseConfig.apiKey &&
          firebaseConfig.projectId &&
          firebaseConfig.authDomain &&
-         firebaseConfig.appId
+         firebaseConfig.appId;
 
-  return isConfigured;
+  return !!isConfigured;
 };
 
 // Initialize Firebase only if properly configured
@@ -56,7 +56,15 @@ if (firebaseConfig.apiKey &&
     });
   } catch (error) {
     console.error('❌ Firebase initialization failed:', error);
-    console.error('❌ Firebase config:', firebaseConfig);
+    console.error('❌ Firebase config:', {
+      apiKey: !!firebaseConfig.apiKey,
+      projectId: !!firebaseConfig.projectId,
+      authDomain: !!firebaseConfig.authDomain,
+      storageBucket: !!firebaseConfig.storageBucket,
+      appId: !!firebaseConfig.appId
+    });
+    // Keep db as null - will be checked in service methods
+    console.error('❌ Firebase services will not be available until configuration is fixed');
   }
 } else {
   console.warn('⚠️ Firebase configuration incomplete:', {
@@ -66,6 +74,7 @@ if (firebaseConfig.apiKey &&
     storageBucket: !!firebaseConfig.storageBucket,
     appId: !!firebaseConfig.appId
   });
+  console.warn('⚠️ Please check your .env.local file for missing Firebase environment variables');
 }
 
 export { auth, db, storage, isFirebaseConfigured };

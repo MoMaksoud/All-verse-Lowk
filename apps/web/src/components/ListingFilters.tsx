@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, X, MapPin } from 'lucide-react';
-import { LocationAutocomplete } from './LocationAutocomplete';
+import { Search, X } from 'lucide-react';
 import Select from './Select';
 import type { ListingFilters, Category } from '@marketplace/types';
 
@@ -22,16 +21,6 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
 
   const handleFilterChange = (key: keyof ListingFilters, value: any) => {
     const newFilters = { ...localFilters, [key]: value };
-    setLocalFilters(newFilters);
-    // Don't auto-apply - only update local state
-  };
-
-  const handleLocationChange = (location: string, coordinates?: { lat: number; lng: number }) => {
-    const newFilters = { 
-      ...localFilters, 
-      location,
-      userCoordinates: coordinates
-    };
     setLocalFilters(newFilters);
     // Don't auto-apply - only update local state
   };
@@ -133,33 +122,6 @@ export function ListingFilters({ filters, categories, onFiltersChange }: Listing
               className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-[#0E1526] px-3 text-sm text-zinc-100
                          placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
             />
-          </div>
-        </div>
-
-        {/* Location */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-semibold tracking-wide text-zinc-300/80 uppercase">Location</h3>
-          <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
-              <MapPin className="h-5 w-5" />
-            </span>
-            <LocationAutocomplete
-              value={localFilters.location || ''}
-              onChange={handleLocationChange}
-              placeholder="City, State or ZIP code..."
-              inputClassName="h-10 w-full rounded-xl border border-white/10 bg-[#0E1526] pl-10 px-3 text-sm text-zinc-100
-                             placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-400">Within</span>
-            <button
-              type="button"
-              className="inline-flex items-center h-9 rounded-xl border border-white/10 bg-[#10192D] px-3 text-xs font-medium
-                         text-zinc-200 hover:bg-[#12203A] focus:ring-2 focus:ring-blue-500/60 outline-none transition"
-            >
-              {localFilters.maxDistance ? `${localFilters.maxDistance} miles` : 'Any distance'}
-            </button>
           </div>
         </div>
 

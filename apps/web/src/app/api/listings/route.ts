@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CreateListingInput } from "@/lib/types/firestore";
-import { calculateDistance } from "@/lib/location";
 import { withApi } from "@/lib/withApi";
 
 // Import firestore services dynamically to avoid webpack issues
@@ -28,10 +27,6 @@ export async function GET(req: NextRequest) {
     const condition = url.searchParams.get('condition') || undefined;
     const min = url.searchParams.get('min') ? Number(url.searchParams.get('min')) : undefined;
     const max = url.searchParams.get('max') ? Number(url.searchParams.get('max')) : undefined;
-    const location = url.searchParams.get('location') || undefined;
-    const maxDistance = url.searchParams.get('maxDistance') ? Number(url.searchParams.get('maxDistance')) : undefined;
-    const userLat = url.searchParams.get('userLat') ? Number(url.searchParams.get('userLat')) : undefined;
-    const userLng = url.searchParams.get('userLng') ? Number(url.searchParams.get('userLng')) : undefined;
     const page = Number(url.searchParams.get('page')) || 1;
     const limit = Number(url.searchParams.get('limit')) || 20;
     const sort = url.searchParams.get('sort') || 'recent';
@@ -42,9 +37,6 @@ export async function GET(req: NextRequest) {
       condition: condition,
       minPrice: min,
       maxPrice: max,
-      location: location,
-      maxDistance: maxDistance,
-      userCoordinates: userLat && userLng ? { lat: userLat, lng: userLng } : undefined,
     };
 
 
@@ -75,22 +67,6 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    // Apply location filtering if user coordinates are provided (still needed as this can't be done at DB level)
-    if (filters.userCoordinates && filters.maxDistance) {
-      filteredData = filteredData.filter(listing => {
-        if (!(listing as any).location?.coordinates) return false;
-        
-        const distance = calculateDistance(
-          filters.userCoordinates!.lat,
-          filters.userCoordinates!.lng,
-          (listing as any).location.coordinates.lat,
-          (listing as any).location.coordinates.lng
-        );
-        
-        return distance <= filters.maxDistance!;
-      });
-    }
-    
     // Transform FirestoreListing to SimpleListing format and filter out placeholder listings
     const transformedItems = filteredData
       .filter(listing => {
@@ -103,7 +79,17 @@ export async function GET(req: NextRequest) {
 
         // Filter out sold listings older than 2 days
         if (listing.soldAt) {
-          const soldDate = listing.soldAt.toDate ? listing.soldAt.toDate() : new Date(listing.soldAt);
+          // Handle Firestore Timestamp - check if it has toDate method
+          let soldDate: Date;
+          if (listing.soldAt && typeof listing.soldAt === 'object' && 'toDate' in listing.soldAt && typeof (listing.soldAt as any).toDate === 'function') {
+            soldDate = (listing.soldAt as any).toDate();
+          } else if (listing.soldAt instanceof Date) {
+            soldDate = listing.soldAt;
+          } else {
+            // If it's a number (timestamp) or string, convert it via unknown first
+            soldDate = new Date(listing.soldAt as unknown as string | number);
+          }
+          
           const twoDaysAgo = new Date();
           twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
           
@@ -125,7 +111,6 @@ export async function GET(req: NextRequest) {
         createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         sellerId: listing.sellerId,
-        location: undefined, // Add location if available
       }));
 
     // Apply final pagination to return the correct number of results

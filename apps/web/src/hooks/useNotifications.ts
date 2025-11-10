@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, where, updateDoc, doc, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { FirestoreNotification } from '@/lib/types/firestore';
 
@@ -18,6 +18,12 @@ export function useNotifications() {
 
   useEffect(() => {
     if (!currentUser?.uid) {
+      setLoading(false);
+      return;
+    }
+
+    if (!db || !isFirebaseConfigured()) {
+      console.error('Database not initialized');
       setLoading(false);
       return;
     }
@@ -51,7 +57,7 @@ export function useNotifications() {
 
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || !db || !isFirebaseConfigured()) return;
 
     try {
       const notifRef = doc(db, 'users', currentUser.uid, 'notifications', notificationId);
@@ -63,7 +69,7 @@ export function useNotifications() {
 
   // Mark all notifications as read
   const markAllAsRead = async () => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || !db || !isFirebaseConfigured()) return;
 
     try {
       const batch = writeBatch(db);

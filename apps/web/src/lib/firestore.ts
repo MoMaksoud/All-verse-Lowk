@@ -11,7 +11,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 
-import { db } from './firebase';
+import { db, isFirebaseConfigured } from './firebase';
 
 // Profile interface - updated to match new comprehensive profile schema
 export interface FirestoreProfile {
@@ -21,7 +21,6 @@ export interface FirestoreProfile {
   createdAt: any;
   gender?: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
   age?: number;
-  location?: string;
   profilePicture?: string;
   phoneNumber?: string;
   rating: number;
@@ -47,6 +46,9 @@ export class ProfileService {
   // Get user profile
   static async getProfile(userId: string): Promise<FirestoreProfile | null> {
     try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
       const profileRef = doc(db, this.collectionName, userId);
       const profileSnap = await getDoc(profileRef);
       
@@ -64,6 +66,9 @@ export class ProfileService {
   // Create or update user profile
   static async saveProfile(userId: string, profileData: Partial<FirestoreProfile>): Promise<FirestoreProfile> {
     try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
       console.log('ProfileService.saveProfile called with userId:', userId);
       console.log('ProfileService.saveProfile called with profileData:', JSON.stringify(profileData, null, 2));
       
@@ -81,7 +86,6 @@ export class ProfileService {
         createdAt: existingProfile?.createdAt || serverTimestamp(),
         gender: profileData.gender || existingProfile?.gender,
         age: profileData.age || existingProfile?.age,
-        location: profileData.location || existingProfile?.location || '',
         profilePicture: profileData.profilePicture || existingProfile?.profilePicture || '',
         phoneNumber: profileData.phoneNumber || existingProfile?.phoneNumber || '',
         rating: profileData.rating || existingProfile?.rating || 0,
@@ -95,13 +99,27 @@ export class ProfileService {
         updatedAt: serverTimestamp(),
       };
       
-      console.log('Saving to Firestore:', JSON.stringify(profileToSave, null, 2));
+      // Log safe fields (exclude serverTimestamp which can't be serialized)
+      console.log('Saving to Firestore:', {
+        userId,
+        username: profileToSave.username,
+        bio: profileToSave.bio,
+        hasProfilePicture: !!profileToSave.profilePicture,
+        rating: profileToSave.rating,
+        userActivity: profileToSave.userActivity,
+        interestCategoriesCount: profileToSave.interestCategories?.length || 0
+      });
       
       await setDoc(profileRef, profileToSave, { merge: true });
       
       console.log('Profile saved to Firestore successfully');
       
-      return profileToSave;
+      // Fetch and return the saved profile (to get actual timestamps)
+      const savedProfile = await this.getProfile(userId);
+      if (!savedProfile) {
+        throw new Error('Failed to retrieve saved profile');
+      }
+      return savedProfile;
     } catch (error) {
       console.error('Error saving profile:', error);
       console.error('Error details:', {
@@ -124,7 +142,6 @@ export class ProfileService {
       const profileData: Partial<FirestoreProfile> = {
         username: userData.displayName || userData.email?.split('@')[0] || 'user',
         bio: '',
-        location: '',
         rating: 0,
         interestCategories: [],
         userActivity: 'both-buy-sell',
@@ -143,6 +160,9 @@ export class ProfileService {
   // Update specific profile fields
   static async updateProfile(userId: string, updates: Partial<FirestoreProfile>): Promise<FirestoreProfile> {
     try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
       const profileRef = doc(db, this.collectionName, userId);
       
       await updateDoc(profileRef, {
@@ -162,6 +182,9 @@ export class ProfileService {
   // Delete user profile
   static async deleteProfile(userId: string): Promise<void> {
     try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
       const profileRef = doc(db, this.collectionName, userId);
       await deleteDoc(profileRef);
     } catch (error) {
@@ -173,6 +196,9 @@ export class ProfileService {
   // Get all profiles (for admin purposes)
   static async getAllProfiles(): Promise<FirestoreProfile[]> {
     try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
       const profilesRef = collection(db, this.collectionName);
       const querySnapshot = await getDocs(profilesRef);
       
@@ -209,6 +235,9 @@ export class ListingService {
   // Create a new listing
   static async createListing(listingData: Omit<FirestoreListing, 'id' | 'createdAt' | 'updatedAt'>): Promise<FirestoreListing> {
     try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
       const listingsRef = collection(db, this.collectionName);
       const newListingRef = doc(listingsRef);
       
@@ -230,6 +259,9 @@ export class ListingService {
   // Get user's listings
   static async getUserListings(userId: string): Promise<FirestoreListing[]> {
     try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
       const listingsRef = collection(db, this.collectionName);
       const q = query(listingsRef, where('sellerId', '==', userId));
       const querySnapshot = await getDocs(q);
@@ -247,6 +279,9 @@ export class ListingService {
   // Get all active listings
   static async getAllListings(): Promise<FirestoreListing[]> {
     try {
+      if (!db || !isFirebaseConfigured()) {
+        throw new Error('Database not initialized or Firebase not configured');
+      }
       const listingsRef = collection(db, this.collectionName);
       const q = query(listingsRef, where('status', '==', 'active'));
       const querySnapshot = await getDocs(q);

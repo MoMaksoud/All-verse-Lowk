@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { 
   collection, 
   addDoc, 
@@ -12,6 +12,10 @@ import {
 import { Conversation } from '@/types/chat';
 
 export async function createOrGetDraft(uid: string): Promise<Conversation> {
+  if (!db || !isFirebaseConfigured()) {
+    throw new Error('Database not initialized or Firebase not configured');
+  }
+  
   // Check for existing draft
   const existing = await getDocs(
     query(
@@ -51,6 +55,10 @@ export async function promoteDraftToActive(
   chatId: string, 
   firstMessage: string
 ): Promise<void> {
+  if (!db || !isFirebaseConfigured()) {
+    throw new Error('Database not initialized or Firebase not configured');
+  }
+  
   const { updateDoc, doc } = await import('firebase/firestore');
   
   const chatRef = doc(db, `users/${uid}/chats/${chatId}`);
@@ -67,6 +75,10 @@ export async function updateChatOnMessage(
   chatId: string, 
   message: string
 ): Promise<void> {
+  if (!db || !isFirebaseConfigured()) {
+    throw new Error('Database not initialized or Firebase not configured');
+  }
+  
   const { updateDoc, doc } = await import('firebase/firestore');
   
   const chatRef = doc(db, `users/${uid}/chats/${chatId}`);

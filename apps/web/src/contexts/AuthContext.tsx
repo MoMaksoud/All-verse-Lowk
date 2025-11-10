@@ -101,9 +101,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Load user profile from Firestore if user is authenticated
       if (user) {
         try {
-          const profile = await ProfileService.getProfile(user.uid);
-          setUserProfile(profile);
+          // Only try to get profile if Firebase is configured
+          if (isFirebaseConfigured()) {
+            const profile = await ProfileService.getProfile(user.uid);
+            setUserProfile(profile);
+          } else {
+            setUserProfile(null);
+          }
         } catch (error) {
+          console.error('Error loading user profile:', error);
           setUserProfile(null);
         }
       } else {

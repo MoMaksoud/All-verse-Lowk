@@ -6,7 +6,6 @@ type Listing = {
   id: string;
   title: string;
   price: number;
-  location?: string;
   imageUrl: string;
   createdAt?: string | Date;
 };
