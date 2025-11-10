@@ -307,6 +307,75 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-800/50 bg-gray-900/30 backdrop-blur-sm py-12 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Contact Section */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Contact Us</h3>
+              <a 
+                href="mailto:info@allversegpt.com" 
+                className="text-gray-400 hover:text-accent-400 transition-colors inline-flex items-center gap-2"
+              >
+                <span>info@allversegpt.com</span>
+              </a>
+            </div>
+
+            {/* Links Section */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Quick Links</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/about" className="text-gray-400 hover:text-accent-400 transition-colors">
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="text-gray-400 hover:text-accent-400 transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="text-gray-400 hover:text-accent-400 transition-colors">
+                    Terms of Service
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Additional Links */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Resources</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/help" className="text-gray-400 hover:text-accent-400 transition-colors">
+                    Help Center
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/faq" className="text-gray-400 hover:text-accent-400 transition-colors">
+                    FAQ
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="text-gray-400 hover:text-accent-400 transition-colors">
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Copyright */}
+          <div className="mt-8 pt-8 border-t border-gray-800/50 text-center">
+            <p className="text-gray-400 text-sm">
+              © {new Date().getFullYear()} All Verse GPT. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

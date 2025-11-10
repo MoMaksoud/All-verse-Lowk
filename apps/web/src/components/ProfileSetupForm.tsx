@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, User, MapPin, Heart, DollarSign, ShoppingBag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Camera, Heart, DollarSign, ShoppingBag } from 'lucide-react';
 import { CreateProfileInput, Gender, ShoppingFrequency, UserActivity, ItemConditionPreference } from '@marketplace/types';
 import { FileUpload } from '@/components/FileUpload';
 import { useAuth } from '@/contexts/AuthContext';
@@ -383,7 +383,7 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
   const renderStep5 = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <MapPin className="w-12 h-12 mx-auto mb-4 text-accent-500" />
+        <Camera className="w-12 h-12 mx-auto mb-4 text-accent-500" />
         <h2 className="text-2xl font-bold text-white mb-2">Profile Picture</h2>
         <p className="text-gray-400">Add a profile picture to personalize your account</p>
       </div>

@@ -7,7 +7,6 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { 
   CreditCard, 
-  MapPin, 
   ShoppingBag, 
   ArrowLeft, 
   CheckCircle,
@@ -134,8 +133,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Shipping Address */}
       <div className="bg-dark-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <MapPin className="w-5 h-5 mr-2 text-accent-500" />
+        <h3 className="text-lg font-semibold text-white mb-4">
           Shipping Address
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

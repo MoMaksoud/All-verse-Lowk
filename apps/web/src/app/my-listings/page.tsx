@@ -17,7 +17,6 @@ import {
   Calendar,
   DollarSign,
   Tag,
-  MapPin,
   AlertCircle
 } from 'lucide-react';
 import { useFirebaseCleanup } from '@/hooks/useFirebaseCleanup';

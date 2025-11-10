@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Heart, MapPin, Star, MessageCircle, X, ArrowLeft, Clock, Tag } from 'lucide-react';
+import { Heart, Star, MessageCircle, X, ArrowLeft, Clock, Tag } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Navigation } from '@/components/Navigation';

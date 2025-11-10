@@ -89,8 +89,7 @@ export default function SignIn() {
         <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-6 sm:space-y-8">
           <div className="text-center">
-            <Logo size="lg" className="justify-center mb-6 sm:mb-8" />
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Welcome Back</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 ">Welcome Back</h2>
             <p className="text-sm sm:text-base text-gray-400">Sign in to your account</p>
           </div>
 
