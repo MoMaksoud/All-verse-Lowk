@@ -339,14 +339,6 @@ const Navigation = memo(function Navigation() {
                           Settings
                         </Link>
                         <Link
-                          href="/sell"
-                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <Plus className="w-4 h-4 mr-3" />
-                          Sell Item
-                        </Link>
-                        <Link
                           href="/my-listings"
                           className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
                           onClick={() => setShowProfileDropdown(false)}
