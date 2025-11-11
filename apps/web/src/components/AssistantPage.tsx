@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { auth } from '@/lib/firebase';
 import { Send, Bot, ShoppingCart, Store } from 'lucide-react';
 
 interface Message {
@@ -69,6 +70,18 @@ export default function AssistantPage() {
     e.preventDefault();
     if (!input.trim() || isLoading || !currentUser) return;
 
+    // Ensure auth is ready and force token refresh before making API call
+    if (auth) {
+      await auth.authStateReady();
+      const firebaseUser = auth.currentUser;
+      if (firebaseUser) {
+        // Force refresh token to ensure it's valid
+        await firebaseUser.getIdToken(true);
+        // Small delay to ensure token is propagated
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
     const userMessage = input.trim().slice(0, 2000);
     setInput('');
     setIsLoading(true);
@@ -96,7 +109,16 @@ export default function AssistantPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to get response');
+        const errorMessage = errorData.error || errorData.message || 'Failed to get response';
+        
+        // Provide more specific error messages
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please refresh the page and try again.');
+        } else if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        } else {
+          throw new Error(errorMessage);
+        }
       }
 
       const data = await response.json();

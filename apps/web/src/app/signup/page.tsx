@@ -101,10 +101,18 @@ export default function SignUp() {
         return;
       }
       
-      // Ensure token is ready before making the API call
+      // Force token refresh before making the API call (especially important for Google sign-in)
       if (firebaseUser) {
         try {
-          await firebaseUser.getIdToken(true);
+          // Force refresh to get a fresh token
+          const token = await firebaseUser.getIdToken(true);
+          if (!token) {
+            setError('Authentication error. Please try refreshing the page and signing up again.');
+            setProfileLoading(false);
+            return;
+          }
+          // Small delay to ensure token is fully propagated
+          await new Promise(resolve => setTimeout(resolve, 200));
         } catch (tokenError) {
           setError('Authentication error. Please try refreshing the page and signing up again.');
           setProfileLoading(false);
@@ -171,6 +179,17 @@ export default function SignUp() {
       setError('');
       setLoading(true);
       const user = await signInWithGoogle();
+      
+      // Wait for auth state to be fully ready and force token refresh
+      if (auth) {
+        await auth.authStateReady();
+        // Force a fresh token after Google sign-in
+        if (user) {
+          await user.getIdToken(true); // Force refresh
+        }
+        // Give auth state a moment to propagate
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
       
       // Check if user already has a profile
       try {

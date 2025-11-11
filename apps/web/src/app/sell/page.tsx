@@ -1399,7 +1399,7 @@ export default function SellPage() {
         {/* Header Hero */}
         <header className="text-center space-y-3 mb-10">
           <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300">
-            <img src="/logo.jpg" alt="" className="h-4 w-4 rounded-full" />
+            <img src="/logo.jpg" alt="" className="h-4 w-auto rounded-full" />
             ALL VERSE GPT
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-100">Sell Your Item</h1>
