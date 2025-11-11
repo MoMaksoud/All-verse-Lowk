@@ -9,7 +9,9 @@ import {
   signOut, 
   onAuthStateChanged, 
   updateProfile,
-  sendEmailVerification
+  sendEmailVerification,
+  signInWithPopup,
+  GoogleAuthProvider
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { ProfileService } from '@/lib/firestore';
@@ -18,6 +20,7 @@ interface AuthContextType {
   currentUser: User | null;
   signup: (email: string, password: string, displayName: string) => Promise<void>;
   login: (email: string, password: string) => Promise<any>;
+  signInWithGoogle: () => Promise<User>;
   logout: () => Promise<void>;
   loading: boolean;
   isConfigured: boolean;
@@ -81,6 +84,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
+  async function signInWithGoogle() {
+    if (!auth || !isConfigured) {
+      throw new Error('Firebase is not properly configured. Please set up your Firebase project.');
+    }
+    
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      return result.user;
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        throw new Error('Sign-in popup was closed. Please try again.');
+      } else if (error.code === 'auth/popup-blocked') {
+        throw new Error('Popup was blocked by your browser. Please allow popups and try again.');
+      } else if (error.code === 'auth/network-request-failed') {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      } else {
+        throw new Error(`Google sign-in failed: ${error.message || 'Unknown error'}`);
+      }
+    }
+  }
+
   function logout() {
     if (!auth || !isConfigured) {
       throw new Error('Firebase is not properly configured. Please set up your Firebase project.');
@@ -126,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     currentUser,
     signup,
     login,
+    signInWithGoogle,
     logout,
     loading,
     isConfigured,

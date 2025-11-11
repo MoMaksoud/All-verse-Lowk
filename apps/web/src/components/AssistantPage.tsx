@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Send, Bot, ShoppingCart, Store } from 'lucide-react';
 
@@ -120,6 +121,25 @@ export default function AssistantPage() {
       setIsLoading(false);
     }
   }, [input, isLoading, currentUser, mode, messages]);
+
+  // Show sign-in notice if user is not authenticated
+  if (!currentUser) {
+    return (
+      <div className="h-[calc(100vh-64px)] overflow-hidden bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-300 text-lg mb-6">
+            Sign up to start chatting with your AI assistant.
+          </p>
+          <Link
+            href="/signup"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+          >
+            Sign Up
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-64px)] overflow-hidden bg-zinc-950">
