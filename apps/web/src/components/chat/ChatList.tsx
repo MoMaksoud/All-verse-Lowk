@@ -5,6 +5,8 @@ import { MessageCircle, Clock, User } from 'lucide-react';
 import { ChatWithUser } from '@/hooks/useChats';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChatContext } from '@/contexts/ChatContext';
+import { firestoreServices } from '@/lib/services/firestore';
 
 interface ChatListProps {
   chats: ChatWithUser[];
@@ -16,6 +18,7 @@ interface ChatListProps {
 
 export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }: ChatListProps) {
   const { currentUser } = useAuth();
+  const { currentChatId, setCurrentChatId } = useChatContext();
   
   const formatTimestamp = (timestamp: any) => {
     if (!timestamp) return '';
@@ -62,13 +65,46 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
   return (
     <div className="p-4 space-y-2">
       {chats.map((chat) => {
+        // Calculate unread based on timestamps (WhatsApp-like)
+        const hasUnread = (() => {
+          if (!currentUser?.uid || !chat.lastMessage?.timestamp) return false;
+          
+          // Get when Messages page was last opened
+          const lastOpenedMessagesPageAt = localStorage.getItem(`lastOpenedMessagesPageAt_${currentUser.uid}`);
+          const lastOpenedTimestamp = lastOpenedMessagesPageAt ? parseInt(lastOpenedMessagesPageAt, 10) : 0;
+          
+          // Convert Firestore Timestamp to milliseconds
+          const lastMessageTime = chat.lastMessage.timestamp.toDate ? 
+            chat.lastMessage.timestamp.toDate().getTime() : 
+            (chat.lastMessage.timestamp as any).seconds * 1000;
+          
+          // Get when this chat was last opened
+          const chatLastOpenedAt = chat.lastOpenedAt?.[currentUser.uid];
+          const chatLastOpenedTime = chatLastOpenedAt ? 
+            (chatLastOpenedAt.toDate ? chatLastOpenedAt.toDate().getTime() : (chatLastOpenedAt as any).seconds * 1000) : 
+            0;
+          
+          // Chat is unread if last message is newer than when it was last opened
+          return lastMessageTime > Math.max(lastOpenedTimestamp, chatLastOpenedTime);
+        })();
+        
+        // Keep unreadCount for display (legacy support, but we use hasUnread for logic)
         const unreadCount = currentUser?.uid ? (chat.unreadCount?.[currentUser.uid] || 0) : 0;
-        const hasUnread = unreadCount > 0;
         
         return (
           <div
             key={chat.id}
-            onClick={() => onChatSelect(chat.id!)}
+            onClick={async () => {
+              // Set currentChatId when clicking a chat (marks as inside that chat)
+              if (chat.id) {
+                setCurrentChatId(chat.id);
+                // Mark chat as opened when clicked (updates lastOpenedAt, removes badge from chat)
+                if (currentUser?.uid) {
+                  await firestoreServices.chats.markChatAsOpened(chat.id, currentUser.uid);
+                }
+              }
+              onChatSelect(chat.id!);
+            }}
             className={`p-4 rounded-xl cursor-pointer transition-all relative ${
               selectedChatId === chat.id
                 ? 'bg-blue-600/20 border border-blue-500/30'
@@ -91,7 +127,8 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
                     <User className="w-5 h-5 text-blue-400" />
                   </div>
                 )}
-                {hasUnread && (
+                {/* Show badge only if chat is unread AND not currently viewing this chat */}
+                {hasUnread && currentChatId !== chat.id && (
                   <div className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </div>

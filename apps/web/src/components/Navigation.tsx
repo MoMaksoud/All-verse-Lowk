@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense, lazy, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy, useCallback, memo, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 // Optimized lucide-react imports - only import what's actually used
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChatContext } from '@/contexts/ChatContext';
 import { Profile } from '@marketplace/types';
 import { useChats } from '@/hooks/useChats';
 
@@ -46,6 +47,41 @@ const Navigation = memo(function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, logout } = useAuth();
+  const { chats } = useChats();
+  const { currentChatId, setCurrentChatId } = useChatContext();
+
+  // Calculate total unread messages count (WhatsApp-like: based on timestamps)
+  const unreadMessageCount = useMemo(() => {
+    if (!currentUser?.uid || !chats) return 0;
+    
+    // Get when Messages page was last opened
+    const lastOpenedMessagesPageAt = localStorage.getItem(`lastOpenedMessagesPageAt_${currentUser.uid}`);
+    const lastOpenedTimestamp = lastOpenedMessagesPageAt ? parseInt(lastOpenedMessagesPageAt, 10) : 0;
+    
+    // Count chats with messages newer than last time Messages page was opened
+    return chats.reduce((total, chat) => {
+      if (!chat.lastMessage?.timestamp) return total;
+      
+      // Convert Firestore Timestamp to milliseconds
+      const lastMessageTime = chat.lastMessage.timestamp.toDate ? 
+        chat.lastMessage.timestamp.toDate().getTime() : 
+        (chat.lastMessage.timestamp as any).seconds * 1000;
+      
+      // Show unread if last message is newer than when Messages page was last opened
+      // AND if the chat hasn't been opened since then
+      const chatLastOpenedAt = chat.lastOpenedAt?.[currentUser.uid];
+      const chatLastOpenedTime = chatLastOpenedAt ? 
+        (chatLastOpenedAt.toDate ? chatLastOpenedAt.toDate().getTime() : (chatLastOpenedAt as any).seconds * 1000) : 
+        0;
+      
+      // Chat is unread if:
+      // 1. Last message is newer than when Messages page was last opened, OR
+      // 2. Last message is newer than when this specific chat was last opened
+      const isUnread = lastMessageTime > Math.max(lastOpenedTimestamp, chatLastOpenedTime);
+      
+      return isUnread ? total + 1 : total;
+    }, 0);
+  }, [chats, currentUser?.uid]);
 
   // Fetch cart item count with caching - debounced to reduce API calls
   const fetchCartCount = useCallback(async () => {
@@ -152,12 +188,22 @@ const Navigation = memo(function Navigation() {
           <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
             {navigation.map((item) => {
               const Icon = item.icon;
+              const isMessages = item.name === 'Messages';
+              // Show badge only if has unread messages AND not currently inside a chat
+              const showBadge = isMessages && unreadMessageCount > 0 && currentChatId === null;
+              
               return (
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={() => {
+                    // When clicking Messages tab, set currentChatId to null (not inside a chat)
+                    if (isMessages) {
+                      setCurrentChatId(null);
+                    }
+                  }}
                   prefetch={true}
-                  className={`flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 ${
+                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 ${
                     pathname === item.href
                       ? 'text-accent-400 bg-dark-700/50'
                       : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
@@ -165,6 +211,11 @@ const Navigation = memo(function Navigation() {
                 >
                   <Icon className="w-4 h-4" />
                   {item.name}
+                  {showBadge && (
+                    <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                      {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -409,20 +460,35 @@ const Navigation = memo(function Navigation() {
             <div className="px-4 py-3 space-y-2">
               {navigation.map((item) => {
                 const Icon = item.icon;
+                const isMessages = item.name === 'Messages';
+                // Show badge only if has unread messages AND not currently inside a chat
+                const showBadge = isMessages && unreadMessageCount > 0 && currentChatId === null;
+                
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
                     prefetch={true}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
+                    className={`relative flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
                       pathname === item.href
                         ? 'text-accent-400 bg-dark-700/50'
                         : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
                     }`}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      // When clicking Messages tab, set currentChatId to null (not inside a chat)
+                      if (isMessages) {
+                        setCurrentChatId(null);
+                      }
+                    }}
                   >
                     <Icon className="w-5 h-5" />
                     {item.name}
+                    {showBadge && (
+                      <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                        {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

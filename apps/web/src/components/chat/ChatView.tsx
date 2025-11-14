@@ -95,7 +95,7 @@ export function ChatView({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 chat-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-zinc-400">
             <div className="text-center">

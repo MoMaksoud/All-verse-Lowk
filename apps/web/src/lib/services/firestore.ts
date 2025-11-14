@@ -719,11 +719,20 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     return messageRef.id;
   }
   
-  // Mark messages as read
+  // Mark messages as read (legacy - sets unreadCount to 0)
   async markChatAsRead(chatId: string, userId: string): Promise<void> {
     const chatRef = doc(db, this.collectionName, chatId);
     await updateDoc(chatRef, {
       [`unreadCount.${userId}`]: 0,
+    });
+  }
+
+  // Mark chat as opened (updates lastOpenedAt timestamp)
+  async markChatAsOpened(chatId: string, userId: string): Promise<void> {
+    const chatRef = doc(db, this.collectionName, chatId);
+    await updateDoc(chatRef, {
+      [`lastOpenedAt.${userId}`]: serverTimestamp(),
+      [`unreadCount.${userId}`]: 0, // Also clear unread count
     });
   }
 

@@ -219,6 +219,7 @@ export interface FirestoreChat {
     };
   };
   unreadCount?: { [userId: string]: number };
+  lastOpenedAt?: { [userId: string]: Timestamp }; // When each user last opened this chat
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

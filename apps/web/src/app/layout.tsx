@@ -5,6 +5,7 @@ import './globals.css';
 import './performance.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { ChatProvider } from '@/contexts/ChatContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteTransitionMonitor } from '@/lib/performance';
 
@@ -44,8 +45,10 @@ export default function RootLayout({
           <ErrorBoundary>
             <AuthProvider>
               <ToastProvider>
-                <RouteTransitionMonitor />
-                {children}
+                <ChatProvider>
+                  <RouteTransitionMonitor />
+                  {children}
+                </ChatProvider>
               </ToastProvider>
             </AuthProvider>
           </ErrorBoundary>

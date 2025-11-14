@@ -6,6 +6,7 @@ import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { useChats } from '@/hooks/useChats';
 import { useChatMessages } from '@/hooks/useChatMessages';
+import { useChatContext } from '@/contexts/ChatContext';
 import { ChatList } from '@/components/chat/ChatList';
 import { ChatView } from '@/components/chat/ChatView';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -24,6 +25,7 @@ export default function MessagesPage() {
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const { chats, loading: chatsLoading, error: chatsError, startChat } = useChats();
+  const { setCurrentChatId } = useChatContext();
   const { 
     messages, 
     loading: messagesLoading, 
@@ -31,9 +33,23 @@ export default function MessagesPage() {
     sending, 
     sendMessage 
   } = useChatMessages(selectedChatId);
-
   const selectedChat = chats.find(chat => chat.id === selectedChatId);
   const otherUser = selectedChat?.otherUser;
+
+  // Update lastOpenedMessagesPageAt when Messages page is opened (clears global badge)
+  useEffect(() => {
+    if (!currentUser?.uid || chatsLoading) return;
+    
+    // Store timestamp in localStorage to track when Messages page was last opened
+    // This is used to calculate global unread badge (shows if any chat has messages newer than this)
+    const now = Date.now();
+    localStorage.setItem(`lastOpenedMessagesPageAt_${currentUser.uid}`, now.toString());
+  }, [currentUser?.uid, chatsLoading]); // Run when page loads
+
+  // Sync currentChatId with selectedChatId
+  useEffect(() => {
+    setCurrentChatId(selectedChatId);
+  }, [selectedChatId, setCurrentChatId]);
 
   // Auto-select chat from URL parameter
   useEffect(() => {
@@ -124,7 +140,7 @@ export default function MessagesPage() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto chat-scrollbar">
+              <div className="flex-1 overflow-y-auto scrollbar-thin">
                 <ChatList
                   chats={chats}
                   loading={chatsLoading}

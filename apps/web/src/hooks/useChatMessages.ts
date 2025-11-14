@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { firestoreServices } from '@/lib/services/firestore';
 import { FirestoreMessage } from '@/lib/types/firestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +21,6 @@ export function useChatMessages(chatId: string | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const markedAsReadRef = useRef<string | null>(null);
 
   const loadMessages = useCallback(async () => {
     if (!chatId || !currentUser?.uid) return;
@@ -122,17 +121,6 @@ export function useChatMessages(chatId: string | null) {
     const unsubscribe = subscribeToMessages();
     return unsubscribe;
   }, [subscribeToMessages]);
-
-  // Mark chat as read when opened
-  useEffect(() => {
-    if (chatId && currentUser?.uid && chatId !== markedAsReadRef.current) {
-      markedAsReadRef.current = chatId;
-      const timer = setTimeout(() => {
-        firestoreServices.chats.markChatAsRead(chatId, currentUser.uid).catch(console.error);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [chatId, currentUser?.uid]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!chatId || !currentUser?.uid || !text.trim()) return;
