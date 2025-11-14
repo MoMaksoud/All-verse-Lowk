@@ -18,7 +18,6 @@ export default function AssistantPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'buyer' | 'seller'>('buyer');
-  const [tokenUsage, setTokenUsage] = useState<{ used: number; remaining: number; limit: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const { currentUser } = useAuth();
@@ -66,33 +65,6 @@ export default function AssistantPage() {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
   }, [input]);
-
-  // Fetch token usage
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-
-    const fetchTokenUsage = async () => {
-      try {
-        const { apiGet } = await import('@/lib/api-client');
-        const response = await apiGet('/api/ai/usage');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setTokenUsage(data.data);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching token usage:', error);
-      }
-    };
-
-    fetchTokenUsage();
-    // Refresh token usage after each message (when messages change and not loading)
-    if (messages.length > 0 && !isLoading) {
-      const timeoutId = setTimeout(fetchTokenUsage, 1000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [currentUser?.uid, messages.length, isLoading]);
 
   const handleClearChat = useCallback(() => {
     if (confirm('Are you sure you want to clear this conversation?')) {
@@ -224,24 +196,6 @@ export default function AssistantPage() {
               </button>
             )}
           </div>
-
-          {/* Token Usage Display */}
-          {tokenUsage && (
-            <div className="mb-3 text-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-800 rounded-lg text-sm">
-                <span className="text-zinc-400">Daily tokens:</span>
-                <span className={`font-medium ${
-                  tokenUsage.remaining < tokenUsage.limit * 0.1 
-                    ? 'text-red-400' 
-                    : tokenUsage.remaining < tokenUsage.limit * 0.3 
-                    ? 'text-yellow-400' 
-                    : 'text-green-400'
-                }`}>
-                  {tokenUsage.remaining.toLocaleString()} / {tokenUsage.limit.toLocaleString()} remaining
-                </span>
-              </div>
-            </div>
-          )}
 
           {/* Mode Toggle */}
           <div className="flex bg-zinc-800 rounded-lg p-1 w-fit mx-auto">
