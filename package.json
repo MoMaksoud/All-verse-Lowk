@@ -22,6 +22,7 @@
     "pnpm": ">=8.0.0"
   },
   "dependencies": {
+    "firebase-admin": "^13.6.0",
     "zod": "^4.1.5"
   }
 }

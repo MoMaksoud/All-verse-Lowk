@@ -3,7 +3,6 @@ import { verifyWebhookSignature, transferToSeller, calculateSellerPayout, PLATFO
 import { firestoreServices } from '@/lib/services/firestore';
 import { ProfileService } from '@/lib/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -133,33 +132,8 @@ async function handlePaymentSucceeded(paymentIntent: any) {
           console.error(`❌ Error transferring to seller ${item.sellerId}:`, transferError);
           // Continue even if transfer fails - we can retry later
         }
-
-        // Create notifications
-        // Buyer notification
-        await addDoc(collection(db, 'users', order.buyerId, 'notifications'), {
-          type: 'order_confirmed',
-          orderId: (order as any).id,
-          listingId: item.listingId,
-          title: 'Order Confirmed',
-          message: `Your order for ${item.title} has been confirmed!`,
-          createdAt: serverTimestamp(),
-          seen: false,
-        });
-
-        // Seller notification
-        await addDoc(collection(db, 'users', item.sellerId, 'notifications'), {
-          type: 'item_sold',
-          orderId: (order as any).id,
-          listingId: item.listingId,
-          title: 'Item Sold',
-          message: `Your item "${item.title}" has been sold! $${sellerPayout.toFixed(2)} will be transferred to your account.`,
-          createdAt: serverTimestamp(),
-          seen: false,
-        });
-
-        console.log(`✅ Notifications created for buyer and seller`);
       } catch (error) {
-        console.error(`❌ Error updating inventory/notifications for listing ${item.listingId}:`, error);
+        console.error(`❌ Error updating inventory for listing ${item.listingId}:`, error);
         // Continue with other items even if one fails
       }
     }

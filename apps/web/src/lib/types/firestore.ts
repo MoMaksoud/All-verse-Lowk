@@ -228,19 +228,6 @@ export interface CreateConversationInput {
 }
 
 // ============================================================================
-// NOTIFICATIONS COLLECTION
-// ============================================================================
-export interface FirestoreNotification {
-  type: 'order_confirmed' | 'item_sold' | 'message' | 'order_shipped' | 'order_delivered';
-  orderId?: string;
-  listingId?: string;
-  title: string;
-  message: string;
-  createdAt: Timestamp;
-  seen: boolean;
-}
-
-// ============================================================================
 // UTILITY TYPES
 // ============================================================================
 export interface PaginationOptions {

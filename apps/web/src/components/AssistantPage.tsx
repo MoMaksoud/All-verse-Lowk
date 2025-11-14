@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase';
-import { Send, Bot, ShoppingCart, Store } from 'lucide-react';
+import { Send, Bot, ShoppingCart, Store, Trash2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -18,6 +18,7 @@ export default function AssistantPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'buyer' | 'seller'>('buyer');
+  const [tokenUsage, setTokenUsage] = useState<{ used: number; remaining: number; limit: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const { currentUser } = useAuth();
@@ -65,6 +66,44 @@ export default function AssistantPage() {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
   }, [input]);
+
+  // Fetch token usage
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const fetchTokenUsage = async () => {
+      try {
+        const { apiGet } = await import('@/lib/api-client');
+        const response = await apiGet('/api/ai/usage');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setTokenUsage(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching token usage:', error);
+      }
+    };
+
+    fetchTokenUsage();
+    // Refresh token usage after each message (when messages change and not loading)
+    if (messages.length > 0 && !isLoading) {
+      const timeoutId = setTimeout(fetchTokenUsage, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentUser?.uid, messages.length, isLoading]);
+
+  const handleClearChat = useCallback(() => {
+    if (confirm('Are you sure you want to clear this conversation?')) {
+      setMessages([]);
+      try {
+        localStorage.removeItem(`ai-chat-${mode}`);
+      } catch (error) {
+        console.error('Error clearing conversation:', error);
+      }
+    }
+  }, [mode]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,13 +206,42 @@ export default function AssistantPage() {
     <div className="h-[calc(100vh-64px)] overflow-hidden bg-zinc-950">
       <main className="flex flex-col h-full max-w-4xl mx-auto px-4 py-4">
         {/* Header */}
-        <div className="text-center mb-4">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Bot className="w-5 h-5 text-white" />
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-white">AI Assistant</h1>
             </div>
-            <h1 className="text-2xl font-bold text-white">AI Assistant</h1>
+            {messages.length > 0 && (
+              <button
+                onClick={handleClearChat}
+                className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                title="Clear conversation"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
           </div>
+
+          {/* Token Usage Display */}
+          {tokenUsage && (
+            <div className="mb-3 text-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-800 rounded-lg text-sm">
+                <span className="text-zinc-400">Daily tokens:</span>
+                <span className={`font-medium ${
+                  tokenUsage.remaining < tokenUsage.limit * 0.1 
+                    ? 'text-red-400' 
+                    : tokenUsage.remaining < tokenUsage.limit * 0.3 
+                    ? 'text-yellow-400' 
+                    : 'text-green-400'
+                }`}>
+                  {tokenUsage.remaining.toLocaleString()} / {tokenUsage.limit.toLocaleString()} remaining
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Mode Toggle */}
           <div className="flex bg-zinc-800 rounded-lg p-1 w-fit mx-auto">

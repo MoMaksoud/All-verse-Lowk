@@ -162,4 +162,24 @@ export async function addUsage(userId: string, actualTotalTokens: number, precha
   }
 }
 
+/**
+ * Get current token usage for a user (for display purposes)
+ */
+export async function getTokenUsage(userId: string, dailyLimit = DEFAULT_DAILY_LIMIT): Promise<{ used: number; remaining: number; limit: number }> {
+  try {
+    const usage = await getUsageRecord(userId);
+    return {
+      used: usage.tokensUsed,
+      remaining: Math.max(0, dailyLimit - usage.tokensUsed),
+      limit: dailyLimit,
+    };
+  } catch (error) {
+    // Return default values if tracking fails
+    return {
+      used: 0,
+      remaining: dailyLimit,
+      limit: dailyLimit,
+    };
+  }
+}
 

@@ -1,12 +1,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-// Initialize Gemini AI
-const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
-if (!apiKey) {
-  throw new Error('GEMINI_API_KEY or NEXT_PUBLIC_GEMINI_API_KEY environment variable is required. Please add it to your .env.local file.');
+// Lazy initialization function to avoid module-level errors
+function getGenAI() {
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY or NEXT_PUBLIC_GEMINI_API_KEY environment variable is required. Please add it to your .env.local file.');
+  }
+  
+  return new GoogleGenerativeAI(apiKey);
 }
-
-const genAI = new GoogleGenerativeAI(apiKey);
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -24,29 +27,40 @@ export class GeminiService {
   /**
    * Generate AI response based on role (buyer or seller) and user message
    * This is the main entry point for role-based AI interactions
+   * @param role - 'buyer' or 'seller'
+   * @param userMessage - The user's message
+   * @param conversationHistory - Previous conversation messages
+   * @param listingsContext - Optional database listings context (for buyer mode)
    */
   static async generateAIResponse(
     role: 'buyer' | 'seller', 
     userMessage: string,
-    conversationHistory: any[] = []
+    conversationHistory: any[] = [],
+    listingsContext: string = ''
   ): Promise<string> {
     // Define system prompts for each role
     const buyerPrompt = `
-    You are the ALL VERSE GPT Buyer Assistant.
+    You are the ALL VERSE GPT Buyer Assistant for the AllVerse marketplace.
 
     Your sole purpose is to help users find, compare, and decide on items within the AllVerse marketplace.
-    If a user asks about anything unrelated to buying, browsing, or product discovery, politely decline and remind them that this chat is for buyers only.
+    You have access to the current listings in our database and must use ONLY those listings when answering questions.
+    
+    CRITICAL RULES:
+    - You MUST only reference listings that are provided in the database context below.
+    - NEVER make up, invent, or hallucinate listings, prices, or products.
+    - If a user asks about something not in the listings, say "I don't see that item in our current listings, but here are similar items..." or "That item isn't currently available, but we have..."
+    - If no listings match the query, be honest: "I don't see any listings matching that description right now."
     
     Core goals:
-    - Help buyers quickly discover relevant listings, categories, or item types.
-    - Provide clear, concrete suggestions (3-5 items, keywords, or product ideas) based on their query.
+    - Help buyers quickly discover relevant listings from our ACTUAL database.
+    - Provide specific listings with titles, prices, and categories from the database context.
     - Guide users toward refining their search by price or condition.
     - If key info is missing (budget, category, or item type), ask one short clarifying question before giving results.
     
     Style rules:
-    - Keep answers concise: 1-3 short sentences, followed by 3-5 plain-text suggestions, each on a new line.
+    - Keep answers concise: 1-3 short sentences, followed by specific listings from the database.
+    - When mentioning listings, include: title, price, category, and condition.
     - Use plain text only — no emojis, formatting, or bullets.
-    - Never make up listings or prices.
     - If a query is not about buying or finding items, respond with:
       "This AI is only for helping buyers on AllVerse. Please switch to Seller mode for other questions."
     
@@ -80,11 +94,18 @@ Always end with a short, encouraging call-to-action question.
 
     try {
       console.log('🔵 Initializing Gemini model...');
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const genAI = getGenAI();
       console.log('✅ Gemini model initialized');
 
       // Build conversation history if provided
       let fullPrompt = systemPrompt;
+      
+      // Add listings context for buyer mode
+      if (role === 'buyer' && listingsContext) {
+        fullPrompt = `${systemPrompt}${listingsContext}`;
+      }
+      
+      // Add conversation history
       if (conversationHistory && conversationHistory.length > 0) {
         const historyText = conversationHistory
           .map((msg: any) => {
@@ -92,12 +113,13 @@ Always end with a short, encouraging call-to-action question.
             return `${role}: ${msg.parts?.[0]?.text || msg.content || ''}`;
           })
           .join('\n\n');
-        fullPrompt = `${systemPrompt}\n\nPrevious conversation:\n${historyText}\n\nCurrent message:\n${userMessage}`;
+        fullPrompt = `${fullPrompt}\n\nPrevious conversation:\n${historyText}\n\nCurrent message:\n${userMessage}`;
       } else {
-        fullPrompt = `${systemPrompt}\n\n${userMessage}`;
+        fullPrompt = `${fullPrompt}\n\nCurrent message:\n${userMessage}`;
       }
 
       console.log('🔵 Calling Gemini generateContent, prompt length:', fullPrompt.length);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const result = await model.generateContent(fullPrompt);
       console.log('✅ Gemini generateContent completed');
       const response = await result.response;
@@ -125,6 +147,16 @@ Always end with a short, encouraging call-to-action question.
         throw new Error('AI service access denied. Please check your API key permissions.');
       }
       
+      // Check for 404/model not found errors
+      if (error?.status === 404 || error?.message?.includes('404') || error?.message?.includes('NOT_FOUND') || error?.message?.includes('not found')) {
+        throw new Error('Gemini model not found. The model name may be incorrect or the API version may have changed.');
+      }
+      
+      // Check for network/connection errors
+      if (error?.message?.includes('ENOTFOUND') || error?.message?.includes('ETIMEDOUT') || error?.message?.includes('ECONNREFUSED') || error?.code === 'ENOTFOUND' || error?.code === 'ETIMEDOUT') {
+        throw new Error('Unable to connect to Gemini API. Please check your internet connection.');
+      }
+      
       // Re-throw with more context
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate AI response';
       throw new Error(`Gemini API error: ${errorMessage}`);
@@ -136,7 +168,8 @@ Always end with a short, encouraging call-to-action question.
    */
   static async generateResponse(prompt: string): Promise<ChatResponse> {
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const genAI = getGenAI();
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const result = await model.generateContent(prompt);
       const response = await result.response;
 
