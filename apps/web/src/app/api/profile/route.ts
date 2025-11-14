@@ -4,7 +4,7 @@ import { withApi } from '@/lib/withApi';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const revalidate = 300; // Cache for 5 minutes
+export const revalidate = 15; // Cache for 15 seconds
 
 export const GET = withApi(async (request: NextRequest & { userId?: string }) => {
   try {
@@ -49,9 +49,9 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
 
     // Add caching headers for public profiles
     if (requestedUserId) {
-      response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+      response.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30');
     } else {
-      response.headers.set('Cache-Control', 'private, max-age=60');
+      response.headers.set('Cache-Control', 'private, max-age=10');
     }
 
     return response;

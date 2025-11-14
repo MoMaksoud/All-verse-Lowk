@@ -21,7 +21,7 @@ export function ResourcePreloader() {
               var prefetch = function(){
                 fetch('/api/listings?limit=3', {
                   method: 'GET',
-                  headers: { 'Cache-Control': 'max-age=600' }
+                  headers: { 'Cache-Control': 'max-age=30' }
                 }).catch(function(){ /* non-critical */ });
               };
 

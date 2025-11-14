@@ -8,7 +8,7 @@ interface CacheEntry<T> {
 
 class DataCache {
   private cache = new Map<string, CacheEntry<any>>();
-  private readonly DEFAULT_TTL = 60000; // 1 minute
+  private readonly DEFAULT_TTL = 15000; // 15 seconds
 
   set<T>(key: string, data: T, ttl = this.DEFAULT_TTL): void {
     this.cache.set(key, {
@@ -60,6 +60,11 @@ class DataCache {
 
 const dataCache = new DataCache();
 
+// Cache version for invalidating on code changes
+const CACHE_VERSION = typeof window !== 'undefined' 
+  ? (window as any).__NEXT_DATA__?.buildId || Date.now().toString()
+  : Date.now().toString();
+
 interface UseOptimizedFetchOptions {
   enabled?: boolean;
   ttl?: number;
@@ -72,18 +77,21 @@ export function useOptimizedFetch<T>(
   fetcher: () => Promise<T>,
   options: UseOptimizedFetchOptions = {}
 ) {
-  const { enabled = true, ttl = 60000, onSuccess, onError } = options;
+  // Add version to cache key so it invalidates on new builds
+  const versionedKey = `${key}__v${CACHE_VERSION}`;
+  
+  const { enabled = true, ttl = 15000, onSuccess, onError } = options;
   
   const [data, setData] = useState<T | null>(() => {
     // Try to get cached data immediately
-    return dataCache.get<T>(key) || null;
+    return dataCache.get<T>(versionedKey) || null;
   });
-  const [loading, setLoading] = useState(!dataCache.has(key));
+  const [loading, setLoading] = useState(!dataCache.has(versionedKey));
   const [error, setError] = useState<Error | null>(null);
 
   const fetchData = useCallback(async () => {
     // Check cache first
-    const cachedData = dataCache.get<T>(key);
+    const cachedData = dataCache.get<T>(versionedKey);
     if (cachedData) {
       setData(cachedData);
       setLoading(false);
@@ -97,7 +105,7 @@ export function useOptimizedFetch<T>(
       const result = await fetcher();
       
       // Cache the result
-      dataCache.set(key, result, ttl);
+      dataCache.set(versionedKey, result, ttl);
       
       setData(result);
       onSuccess?.(result);
@@ -111,30 +119,37 @@ export function useOptimizedFetch<T>(
     } finally {
       setLoading(false);
     }
-  }, [key, fetcher, ttl, onSuccess, onError]);
+  }, [versionedKey, fetcher, ttl, onSuccess, onError]);
 
   const refetch = useCallback(() => {
     // Clear cache for this key and refetch
-    dataCache.delete(key);
+    dataCache.delete(versionedKey);
     return fetchData();
-  }, [key, fetchData]);
+  }, [versionedKey, fetchData]);
 
   useEffect(() => {
-    if (enabled && !dataCache.has(key)) {
+    if (enabled && !dataCache.has(versionedKey)) {
       fetchData().catch(err => {
-        console.error('Failed to fetch data for key:', key, err);
+        console.error('Failed to fetch data for key:', versionedKey, err);
       });
     }
-  }, [enabled, key, fetchData]);
+  }, [enabled, versionedKey, fetchData]);
 
   return {
     data,
     loading,
     error,
     refetch,
-    isStale: data ? dataCache.isStale(key, ttl) : false
+    isStale: data ? dataCache.isStale(versionedKey, ttl) : false
   };
 }
 
 // Export cache for manual management
 export { dataCache };
+
+// Clear cache in dev mode on page reload to catch code changes
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  window.addEventListener('beforeunload', () => {
+    dataCache.clear();
+  });
+}

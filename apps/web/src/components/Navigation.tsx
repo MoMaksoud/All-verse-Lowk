@@ -60,7 +60,7 @@ const Navigation = memo(function Navigation() {
       const { apiGet } = await import('@/lib/api-client');
       const response = await apiGet('/api/carts', {
         headers: {
-          'Cache-Control': 'max-age=60'
+          'Cache-Control': 'max-age=10'
         },
         cache: 'no-store' as RequestCache,  
       });

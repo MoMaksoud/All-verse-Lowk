@@ -81,6 +81,13 @@ const nextConfig = {
     ];
   },
 
+  // Generate unique build ID for cache busting
+  generateBuildId: async () => {
+    // Use BUILD_ID from environment or generate from timestamp
+    // This ensures cache invalidation on new builds
+    return process.env.BUILD_ID || `build-${Date.now()}`;
+  },
+
   // Webpack optimizations
   webpack: (config, { dev, isServer }) => {
     // Enable tree shaking for better bundle size (only in production)

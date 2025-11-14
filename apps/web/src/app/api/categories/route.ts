@@ -43,7 +43,7 @@ const categories: Category[] = [
 export const GET = withApi(async (req: NextRequest) => {
   return success(categories, {
     headers: {
-      'Cache-Control': 'public, max-age=300, stale-while-revalidate=600'
+      'Cache-Control': 'public, max-age=30, stale-while-revalidate=60'
     }
   });
 }, { requireAuth: false }); // Categories should be public

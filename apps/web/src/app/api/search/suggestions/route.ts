@@ -16,7 +16,7 @@ export const GET = withApi(async (req: NextRequest) => {
       query: '',
       suggestions: [],
       count: 0
-    }, { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } });
+    }, { headers: { 'Cache-Control': 'public, max-age=10, stale-while-revalidate=20' } });
   }
   
   // Track the search for analytics
@@ -30,5 +30,5 @@ export const GET = withApi(async (req: NextRequest) => {
     suggestions: suggestions.map(s => s.text),
     count: suggestions.length,
     types: suggestions.map(s => s.type)
-  }, { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } });
+  }, { headers: { 'Cache-Control': 'public, max-age=10, stale-while-revalidate=20' } });
 }, { requireAuth: false }); // Search suggestions should be public

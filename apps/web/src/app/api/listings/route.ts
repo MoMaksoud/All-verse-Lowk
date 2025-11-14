@@ -15,7 +15,7 @@ async function getFirestoreServices() {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const revalidate = 60; // Cache for 1 minute for better performance
+export const revalidate = 10; // Cache for 10 seconds
 
 export async function GET(req: NextRequest) {
   try {
@@ -128,10 +128,8 @@ export async function GET(req: NextRequest) {
       },
     });
     
-    // Add aggressive caching headers for better performance
-    response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-    response.headers.set('CDN-Cache-Control', 'public, max-age=60');
-    response.headers.set('Vercel-CDN-Cache-Control', 'public, max-age=60');
+    // Add caching headers with shorter TTL
+    response.headers.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
     return response;
   } catch (error) {
     console.error('Error fetching listings:', error);

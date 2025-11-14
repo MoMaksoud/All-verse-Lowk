@@ -34,7 +34,7 @@ export default function HomePage() {
       const response = await apiGet('/api/listings?limit=4', { 
         requireAuth: false,
         headers: {
-          'Cache-Control': 'max-age=300',
+          'Cache-Control': 'max-age=15',
         },
       });
       
@@ -64,7 +64,7 @@ export default function HomePage() {
   } = useOptimizedFetch<SimpleListing[]>(
     'featured-listings', 
     fetchFeaturedListings,
-    { ttl: 300000 } // 5 minutes cache
+    { ttl: 15000 } // 15 seconds cache
   );
 
   // Show skeleton loading instead of spinner for better perceived performance
