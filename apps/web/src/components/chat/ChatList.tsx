@@ -51,7 +51,7 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
 
   if (chats.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+      <div className="flex flex-col items-center justify-center h-64 text-zinc-400">
         <MessageCircle className="w-12 h-12 mb-4" />
         <p className="text-lg font-medium">No conversations yet</p>
         <p className="text-sm">Start a conversation with someone!</p>
@@ -69,12 +69,12 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
           <div
             key={chat.id}
             onClick={() => onChatSelect(chat.id!)}
-            className={`p-4 rounded-lg cursor-pointer transition-all relative ${
+            className={`p-4 rounded-xl cursor-pointer transition-all relative ${
               selectedChatId === chat.id
-                ? 'bg-accent-500/20 border border-accent-500/30'
+                ? 'bg-blue-600/20 border border-blue-500/30'
                 : hasUnread
                 ? 'bg-blue-950/40 border border-blue-500/30 hover:bg-blue-950/60'
-                : 'bg-dark-surface hover:bg-dark-surface/80 border border-dark-border'
+                : 'bg-zinc-800/50 hover:bg-zinc-800/80 border border-zinc-700'
             }`}
           >
             <div className="flex items-start space-x-3">
@@ -87,8 +87,8 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
                     className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-accent-500/20 flex items-center justify-center">
-                    <User className="w-5 h-5 text-accent-400" />
+                  <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+                    <User className="w-5 h-5 text-blue-400" />
                   </div>
                 )}
                 {hasUnread && (
@@ -108,13 +108,13 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
                       {chat.otherUser?.name || 'Unknown User'}
                     </h3>
                     {chat.otherUser?.username && (
-                      <p className="text-xs text-gray-400 truncate">
+                      <p className="text-xs text-zinc-400 truncate">
                         @{chat.otherUser.username}
                       </p>
                     )}
                   </div>
                   {chat.lastMessage?.timestamp && (
-                    <div className="flex items-center text-xs text-gray-400 ml-2">
+                    <div className="flex items-center text-xs text-zinc-400 ml-2">
                       <Clock className="w-3 h-3 mr-1" />
                       {formatTimestamp(chat.lastMessage.timestamp)}
                     </div>
@@ -123,12 +123,12 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
                 
                 {chat.lastMessage ? (
                   <p className={`text-sm truncate ${
-                    hasUnread ? 'text-gray-200 font-medium' : 'text-gray-300'
+                    hasUnread ? 'text-zinc-200 font-medium' : 'text-zinc-300'
                   }`}>
                     {chat.lastMessage.text}
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-500 italic">No messages yet</p>
+                  <p className="text-sm text-zinc-500 italic">No messages yet</p>
                 )}
               </div>
             </div>

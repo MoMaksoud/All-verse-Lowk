@@ -18,6 +18,7 @@ export default function AssistantPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'buyer' | 'seller'>('buyer');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const { currentUser } = useAuth();
@@ -67,15 +68,22 @@ export default function AssistantPage() {
   }, [input]);
 
   const handleClearChat = useCallback(() => {
-    if (confirm('Are you sure you want to clear this conversation?')) {
-      setMessages([]);
-      try {
-        localStorage.removeItem(`ai-chat-${mode}`);
-      } catch (error) {
-        console.error('Error clearing conversation:', error);
-      }
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const confirmDeleteChat = useCallback(() => {
+    setMessages([]);
+    try {
+      localStorage.removeItem(`ai-chat-${mode}`);
+    } catch {
+      // Silently fail if localStorage is unavailable
     }
+    setShowDeleteConfirm(false);
   }, [mode]);
+
+  const cancelDeleteChat = useCallback(() => {
+    setShowDeleteConfirm(false);
+  }, []);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,69 +230,98 @@ export default function AssistantPage() {
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto mb-4">
-          <div className="space-y-4">
-            {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500">
-                <Bot className="w-12 h-12 mb-4" />
-                <p className="text-lg font-medium">Start a conversation</p>
-                <p className="text-sm">Your AI assistant is ready to help!</p>
-              </div>
-            ) : (
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+        {/* Chat Box Container */}
+        <div className="flex-1 flex flex-col min-h-0 mb-4 bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden">
+          {/* Messages Area with Scrollbar */}
+          <div className="flex-1 overflow-y-auto p-4 chat-scrollbar">
+            <div className="space-y-4">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500">
+                  <Bot className="w-12 h-12 mb-4" />
+                  <p className="text-lg font-medium">Start a conversation</p>
+                  <p className="text-sm">Your AI assistant is ready to help!</p>
+                </div>
+              ) : (
+                messages.map((msg) => (
                   <div
-                    className={`max-w-[80%] px-4 py-3 rounded-xl text-sm ${
-                      msg.role === 'ai'
-                        ? 'bg-zinc-900 border border-zinc-800 text-zinc-100'
-                        : 'bg-blue-600 text-white'
-                    }`}
+                    key={msg.id}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {msg.content}
+                    <div
+                      className={`max-w-[80%] px-4 py-3 rounded-xl text-sm ${
+                        msg.role === 'ai'
+                          ? 'bg-zinc-800/80 border border-zinc-700 text-zinc-100'
+                          : 'bg-blue-600 text-white'
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                  </div>
+                ))
+              )}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-zinc-800/80 border border-zinc-700 px-4 py-3 rounded-xl text-sm text-zinc-400">
+                    Thinking...
                   </div>
                 </div>
-              ))
-            )}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-zinc-900 border border-zinc-800 px-4 py-3 rounded-xl text-sm text-zinc-400">
-                  Thinking...
-                </div>
-              </div>
-            )}
-            <div ref={scrollRef} />
+              )}
+              <div ref={scrollRef} />
+            </div>
+          </div>
+
+          {/* Input Area */}
+          <div className="flex-shrink-0 border-t border-zinc-800 p-4">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <textarea
+                ref={taRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={mode === 'buyer' ? 'What are you looking for?' : 'How can I help you sell?'}
+                className="flex-1 resize-none rounded-xl bg-zinc-900/80 text-sm px-4 py-3 outline-none border border-zinc-700 focus:border-blue-600 min-h-[48px] max-h-[120px] text-zinc-100 placeholder:text-zinc-500"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
+                }}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim() || !currentUser}
+                className="px-5 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
           </div>
         </div>
-
-        {/* Input */}
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <textarea
-            ref={taRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={mode === 'buyer' ? 'What are you looking for?' : 'How can I help you sell?'}
-            className="flex-1 resize-none rounded-xl bg-zinc-900 text-sm px-4 py-3 outline-none border border-zinc-800 focus:border-blue-600 min-h-[48px] max-h-[120px] text-zinc-100 placeholder:text-zinc-500"
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim() || !currentUser}
-            className="px-5 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={cancelDeleteChat}>
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-2">Clear Conversation</h3>
+            <p className="text-zinc-400 mb-6">Are you sure you want to clear this conversation? This action cannot be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelDeleteChat}
+                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteChat}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

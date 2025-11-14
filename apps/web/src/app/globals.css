@@ -6,33 +6,72 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgb(75, 85, 99) rgb(31, 41, 55);
+    scrollbar-color: rgb(82, 82, 91) rgb(24, 24, 27);
   }
   
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
   }
   
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: rgb(31, 41, 55);
-    border-radius: 3px;
+    background: rgb(24, 24, 27);
+    border-radius: 4px;
   }
   
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgb(75, 85, 99);
-    border-radius: 3px;
+    background: rgb(82, 82, 91);
+    border-radius: 4px;
+    border: 2px solid rgb(24, 24, 27);
   }
   
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgb(107, 114, 128);
+    background: rgb(113, 113, 122);
   }
   
-  .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
-    background: rgb(75, 85, 99);
+  .scrollbar-thumb-zinc-600::-webkit-scrollbar-thumb {
+    background: rgb(82, 82, 91);
   }
   
-  .scrollbar-track-gray-800::-webkit-scrollbar-track {
-    background: rgb(31, 41, 55);
+  .scrollbar-thumb-zinc-500::-webkit-scrollbar-thumb {
+    background: rgb(113, 113, 122);
+  }
+  
+  .scrollbar-track-zinc-900::-webkit-scrollbar-track {
+    background: rgb(24, 24, 27);
+  }
+  
+  .hover\:scrollbar-thumb-zinc-500:hover::-webkit-scrollbar-thumb {
+    background: rgb(113, 113, 122);
+  }
+  
+  /* Chat scrollbar - custom styling for chat messages */
+  .chat-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(82, 82, 91) rgb(24, 24, 27);
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-track {
+    background: rgb(24, 24, 27);
+    border-radius: 4px;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    background: rgb(82, 82, 91);
+    border-radius: 4px;
+    border: 2px solid rgb(24, 24, 27);
+    transition: background 0.2s ease;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgb(113, 113, 122);
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-thumb:active {
+    background: rgb(161, 161, 170);
   }
 }
 

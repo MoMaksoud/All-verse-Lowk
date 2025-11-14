@@ -95,7 +95,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-950">
+    <div className="min-h-screen bg-zinc-950">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -105,18 +105,18 @@ export default function MessagesPage() {
             <Logo size="md" />
           </div>
           <h1 className="text-5xl font-bold text-white mb-2">Messages</h1>
-          <p className="text-lg text-gray-400">Connect with buyers and sellers</p>
+          <p className="text-lg text-zinc-400">Connect with buyers and sellers</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-200px)]">
           {/* Chat List - Hidden on mobile when chat is open */}
           <div className={`lg:col-span-1 min-h-0 ${showMobileChat ? 'hidden lg:block' : 'block'}`}>
-            <div className="bg-dark-surface rounded-lg border border-dark-border h-full flex flex-col min-h-0">
-              <div className="p-4 border-b border-dark-border flex-shrink-0 flex items-center justify-between">
+            <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 h-full flex flex-col min-h-0">
+              <div className="p-4 border-b border-zinc-800 flex-shrink-0 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Conversations</h2>
                 <button
                   onClick={() => setShowUserSearch(true)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
                   aria-label="New message"
                   title="New message"
                 >
@@ -124,7 +124,7 @@ export default function MessagesPage() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+              <div className="flex-1 overflow-y-auto chat-scrollbar">
                 <ChatList
                   chats={chats}
                   loading={chatsLoading}
@@ -138,14 +138,14 @@ export default function MessagesPage() {
 
           {/* Chat View - Full screen on mobile when open */}
           <div className={`lg:col-span-2 min-h-0 ${showMobileChat ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-dark-surface rounded-lg border border-dark-border h-full flex flex-col min-h-0">
+            <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 h-full flex flex-col min-h-0">
               {selectedChatId ? (
                 <>
                   {/* Mobile back button */}
-                  <div className="lg:hidden flex items-center gap-3 p-3 border-b border-dark-border bg-dark-surface">
+                  <div className="lg:hidden flex items-center gap-3 p-3 border-b border-zinc-800 bg-zinc-900/50">
                     <button
                       onClick={handleBack}
-                      className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                      className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
                       aria-label="Back"
                     >
                       <ArrowLeft className="w-5 h-5 text-white" />
@@ -174,7 +174,7 @@ export default function MessagesPage() {
                     <h3 className="text-lg font-medium text-white mb-2">
                       Select a conversation
                     </h3>
-                    <p className="text-gray-400">
+                    <p className="text-zinc-400">
                       Choose a conversation from the list to start messaging
                     </p>
                   </div>

@@ -67,7 +67,7 @@ export function ChatView({
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header - Hidden on mobile (shown in Messages page) */}
-      <div className="hidden lg:flex items-center space-x-3 p-4 border-b border-dark-border bg-dark-surface">
+      <div className="hidden lg:flex items-center space-x-3 p-4 border-b border-zinc-800 bg-zinc-900/50">
         {otherUser?.photoURL ? (
           <img
             src={otherUser.photoURL}
@@ -75,8 +75,8 @@ export function ChatView({
             className="w-8 h-8 rounded-full object-cover"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-accent-500/20 flex items-center justify-center">
-            <User className="w-4 h-4 text-accent-400" />
+          <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
+            <User className="w-4 h-4 text-blue-400" />
           </div>
         )}
         <div>
@@ -84,20 +84,20 @@ export function ChatView({
             {otherUser?.name || 'Unknown User'}
           </h2>
           {otherUser?.username && (
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-zinc-400">
               @{otherUser.username}
             </p>
           )}
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-zinc-400">
             {otherUser?.email}
           </p>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 chat-scrollbar">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-400">
+          <div className="flex items-center justify-center h-full text-zinc-400">
             <div className="text-center">
               <p className="text-lg font-medium">No messages yet</p>
               <p className="text-sm">Start the conversation!</p>
@@ -110,18 +110,18 @@ export function ChatView({
               className={`flex ${message.sender?.id === otherUser?.id ? 'justify-start' : 'justify-end'}`}
             >
               <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                className={`max-w-xs lg:max-w-md px-4 py-3 rounded-xl text-sm ${
                   message.sender?.id === otherUser?.id
-                    ? 'bg-dark-surface border border-dark-border'
-                    : 'bg-accent-500 text-white'
+                    ? 'bg-zinc-800/80 border border-zinc-700 text-zinc-100'
+                    : 'bg-blue-600 text-white'
                 }`}
               >
                 <p className="text-sm">{message.text}</p>
                 <p
                   className={`text-xs mt-1 ${
                     message.sender?.id === otherUser?.id
-                      ? 'text-gray-400'
-                      : 'text-accent-100'
+                      ? 'text-zinc-400'
+                      : 'text-blue-100'
                   }`}
                 >
                   {formatMessageTime(message.timestamp)}

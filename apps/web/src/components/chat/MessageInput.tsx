@@ -59,7 +59,7 @@ export function MessageInput({ onSendMessage, disabled = false, placeholder = "T
   }, []);
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end space-x-3 p-4 border-t border-dark-border">
+    <form onSubmit={handleSubmit} className="flex items-end space-x-3 p-4 border-t border-zinc-800">
       <div className="flex-1">
         <textarea
           ref={textareaRef}
@@ -69,15 +69,15 @@ export function MessageInput({ onSendMessage, disabled = false, placeholder = "T
           placeholder={placeholder}
           disabled={disabled || sending}
           rows={1}
-          className="w-full px-3 py-2 border border-dark-border rounded-lg bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-accent-500 focus:border-accent-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ minHeight: '40px', maxHeight: '120px' }}
+          className="w-full px-4 py-3 border border-zinc-700 rounded-xl bg-zinc-900/80 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ minHeight: '48px', maxHeight: '120px' }}
         />
       </div>
       
       <button
         type="submit"
         disabled={!message.trim() || sending || disabled}
-        className="flex-shrink-0 w-10 h-10 bg-accent-500 text-white rounded-lg flex items-center justify-center hover:bg-accent-600 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {sending ? (
           <Loader2 className="w-5 h-5 animate-spin" />
