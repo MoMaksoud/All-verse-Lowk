@@ -9,7 +9,6 @@ import {
   signOut, 
   onAuthStateChanged, 
   updateProfile,
-  sendEmailVerification,
   signInWithPopup,
   GoogleAuthProvider
 } from 'firebase/auth';
@@ -51,9 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await updateProfile(userCredential.user, {
         displayName: displayName,
       });
-      
-      // Send email verification
-      await sendEmailVerification(userCredential.user);
       
       // Don't create profile automatically - let the user fill out the comprehensive form
       // The profile will be created when they submit the ProfileSetupForm

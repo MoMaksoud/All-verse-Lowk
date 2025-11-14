@@ -286,12 +286,6 @@ export default function SignUp() {
             ) : (
               <div className="max-w-md mx-auto">
               
-              {/* Email verification notice */}
-              <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-4 py-3 rounded-lg mb-6">
-                <p className="font-medium mb-2">📧 Check your email!</p>
-                <p className="text-sm">We've sent a verification link to <strong>{formData.email}</strong>. Please check your email and click the verification link to complete your account setup.</p>
-              </div>
-
               {/* Error display for profile creation */}
               {error && (
                 <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6">
