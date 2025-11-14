@@ -225,7 +225,10 @@ export default function SettingsPage() {
         body: form,
       });
       
-      if (!resp.ok) throw new Error('Upload failed');
+      if (!resp.ok) {
+        const errorData = await resp.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Upload failed');
+      }
       const data = await resp.json();
       
       setProfile((p: any) => p ? { ...p, profilePicture: data.photoUrl } : p);
@@ -233,7 +236,8 @@ export default function SettingsPage() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       console.error('Profile photo upload failed:', err);
-      setError(err?.message || 'Failed to upload photo');
+      const errorMessage = err?.message || 'Failed to upload photo';
+      setError(errorMessage);
     } finally {
       setSaving(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

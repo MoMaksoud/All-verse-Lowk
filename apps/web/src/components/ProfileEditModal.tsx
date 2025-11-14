@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Profile } from '@marketplace/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Save, X, Heart, DollarSign, ShoppingBag } from 'lucide-react';
+import Select from './Select';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -175,7 +176,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         }
       }}
     >
-      <div className="bg-dark-800 rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-dark-700">
+      <div className="bg-dark-800 rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto chat-scrollbar border border-dark-700">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-white">Edit Profile</h2>
           <button
@@ -271,20 +272,19 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Gender
-                </label>
-                <select
+                <Select
+                  label="Gender"
                   value={formData.gender || ''}
-                  onChange={(e) => handleInputChange('gender', e.target.value || undefined)}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                >
-                  <option value="">Prefer not to say</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="non-binary">Non-binary</option>
-                  <option value="prefer-not-to-say">Prefer not to say</option>
-                </select>
+                  onChange={(value) => handleInputChange('gender', value || undefined)}
+                  placeholder="Prefer not to say"
+                  options={[
+                    { value: '', label: 'Prefer not to say' },
+                    { value: 'male', label: 'Male' },
+                    { value: 'female', label: 'Female' },
+                    { value: 'non-binary', label: 'Non-binary' },
+                    { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -337,53 +337,50 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  User Activity
-                </label>
-                <select
+                <Select
+                  label="User Activity"
                   value={formData.userActivity}
-                  onChange={(e) => handleInputChange('userActivity', e.target.value)}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                >
-                  <option value="">Select activity</option>
-                  <option value="buy-only">Buy Only</option>
-                  <option value="sell-only">Sell Only</option>
-                  <option value="both-buy-sell">Both Buy & Sell</option>
-                </select>
+                  onChange={(value) => handleInputChange('userActivity', value)}
+                  placeholder="Select activity"
+                  options={[
+                    { value: '', label: 'Select activity' },
+                    { value: 'buy-only', label: 'Buy Only' },
+                    { value: 'sell-only', label: 'Sell Only' },
+                    { value: 'both-buy-sell', label: 'Both Buy & Sell' },
+                  ]}
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Shopping Frequency
-                </label>
-                <select
+                <Select
+                  label="Shopping Frequency"
                   value={formData.shoppingFrequency}
-                  onChange={(e) => handleInputChange('shoppingFrequency', e.target.value)}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                >
-                  <option value="">Select frequency</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="rarely">Rarely</option>
-                </select>
+                  onChange={(value) => handleInputChange('shoppingFrequency', value)}
+                  placeholder="Select frequency"
+                  options={[
+                    { value: '', label: 'Select frequency' },
+                    { value: 'daily', label: 'Daily' },
+                    { value: 'weekly', label: 'Weekly' },
+                    { value: 'monthly', label: 'Monthly' },
+                    { value: 'rarely', label: 'Rarely' },
+                  ]}
+                />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Item Condition Preference
-              </label>
-              <select
+              <Select
+                label="Item Condition Preference"
                 value={formData.itemConditionPreference}
-                onChange={(e) => handleInputChange('itemConditionPreference', e.target.value)}
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-              >
-                <option value="">Select preference</option>
-                <option value="new-only">New Only</option>
-                <option value="second-hand-only">Second Hand Only</option>
-                <option value="both">Both</option>
-              </select>
+                onChange={(value) => handleInputChange('itemConditionPreference', value)}
+                placeholder="Select preference"
+                options={[
+                  { value: '', label: 'Select preference' },
+                  { value: 'new-only', label: 'New Only' },
+                  { value: 'second-hand-only', label: 'Second Hand Only' },
+                  { value: 'both', label: 'Both' },
+                ]}
+              />
             </div>
           </div>
 
@@ -424,19 +421,18 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Currency
-                </label>
-                <select
+                <Select
+                  label="Currency"
                   value={formData.budget.currency}
-                  onChange={(e) => handleInputChange('budget', { ...formData.budget, currency: e.target.value })}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                >
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="GBP">GBP</option>
-                  <option value="CAD">CAD</option>
-                </select>
+                  onChange={(value) => handleInputChange('budget', { ...formData.budget, currency: value })}
+                  placeholder="Select currency"
+                  options={[
+                    { value: 'USD', label: 'USD' },
+                    { value: 'EUR', label: 'EUR' },
+                    { value: 'GBP', label: 'GBP' },
+                    { value: 'CAD', label: 'CAD' },
+                  ]}
+                />
               </div>
             </div>
           </div>

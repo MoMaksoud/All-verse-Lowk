@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, User, Camera, Heart, DollarSign, ShoppingBag
 import { CreateProfileInput, Gender, ShoppingFrequency, UserActivity, ItemConditionPreference } from '@marketplace/types';
 import { FileUpload } from '@/components/FileUpload';
 import { useAuth } from '@/contexts/AuthContext';
+import Select from './Select';
 
 interface ProfileSetupFormProps {
   onSubmit: (profileData: CreateProfileInput) => void;
@@ -166,20 +167,19 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Gender
-            </label>
-            <select
+            <Select
+              label="Gender"
               value={formData.gender || ''}
-              onChange={(e) => handleInputChange('gender', e.target.value || undefined)}
-              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-            >
-              <option value="">Prefer not to say</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="non-binary">Non-binary</option>
-              <option value="prefer-not-to-say">Prefer not to say</option>
-            </select>
+              onChange={(value) => handleInputChange('gender', value || undefined)}
+              placeholder="Prefer not to say"
+              options={[
+                { value: '', label: 'Prefer not to say' },
+                { value: 'male', label: 'Male' },
+                { value: 'female', label: 'Female' },
+                { value: 'non-binary', label: 'Non-binary' },
+                { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+              ]}
+            />
           </div>
 
           <div>
@@ -289,21 +289,20 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            How often do you shop?
-          </label>
-          <select
+          <Select
+            label="How often do you shop?"
             value={formData.shoppingFrequency || ''}
-            onChange={(e) => handleInputChange('shoppingFrequency', e.target.value || undefined)}
-            className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-          >
-            <option value="">Select frequency</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="occasionally">Occasionally</option>
-            <option value="rarely">Rarely</option>
-          </select>
+            onChange={(value) => handleInputChange('shoppingFrequency', value || undefined)}
+            placeholder="Select frequency"
+            options={[
+              { value: '', label: 'Select frequency' },
+              { value: 'daily', label: 'Daily' },
+              { value: 'weekly', label: 'Weekly' },
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'occasionally', label: 'Occasionally' },
+              { value: 'rarely', label: 'Rarely' },
+            ]}
+          />
         </div>
 
         <div>

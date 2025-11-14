@@ -1,10 +1,12 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getStorage, Storage } from 'firebase-admin/storage';
 
 let adminApp: App | null = null;
 let adminAuth: Auth | null = null;
 let adminFirestore: Firestore | null = null;
+let adminStorage: Storage | null = null;
 
 // Initialize Firebase Admin SDK
 function getAdminApp(): App {
@@ -18,6 +20,7 @@ function getAdminApp(): App {
     adminApp = existingApps[0];
     adminAuth = getAuth(adminApp);
     adminFirestore = getFirestore(adminApp);
+    adminStorage = getStorage(adminApp);
     return adminApp;
   }
 
@@ -68,6 +71,7 @@ function getAdminApp(): App {
 
     adminAuth = getAuth(adminApp);
     adminFirestore = getFirestore(adminApp);
+    adminStorage = getStorage(adminApp);
     return adminApp;
   } catch (error: any) {
     console.error('❌ Firebase Admin initialization failed:', error?.message || error);
@@ -102,6 +106,21 @@ export function getAdminFirestore(): Firestore {
     throw new Error('Firebase Admin Firestore is not initialized');
   }
   return adminFirestore;
+}
+
+export function getAdminStorage(): Storage {
+  if (!adminStorage) {
+    try {
+      getAdminApp();
+    } catch (error: any) {
+      console.error('❌ Failed to initialize Admin Storage:', error?.message || error);
+      throw new Error(`Firebase Admin Storage initialization failed: ${error?.message || 'Unknown error'}`);
+    }
+  }
+  if (!adminStorage) {
+    throw new Error('Firebase Admin Storage is not initialized');
+  }
+  return adminStorage;
 }
 
 export async function verifyIdToken(token: string): Promise<{ uid: string; [key: string]: any }> {
