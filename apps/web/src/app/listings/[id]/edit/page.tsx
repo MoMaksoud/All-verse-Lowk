@@ -67,7 +67,8 @@ export default function EditListingPage() {
       if (!listingId || !currentUser) return;
 
       try {
-        const response = await fetch(`/api/listings/${listingId}`);
+        const { apiGet } = await import('@/lib/api-client');
+        const response = await apiGet(`/api/listings/${listingId}`, { requireAuth: false });
         if (!response.ok) {
           throw new Error('Failed to load listing');
         }

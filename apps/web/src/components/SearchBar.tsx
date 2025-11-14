@@ -74,7 +74,8 @@ export function SearchBar({ className = '' }: SearchBarProps) {
 
     setIsLoadingSuggestions(true);
     try {
-      const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(searchQuery)}`);
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet(`/api/search/suggestions?q=${encodeURIComponent(searchQuery)}`, { requireAuth: false });
       const data = await response.json();
       
       // API returns { query, suggestions, count, types } directly

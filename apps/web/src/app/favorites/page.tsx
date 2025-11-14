@@ -37,10 +37,11 @@ export default function FavoritesPage() {
         }
 
         // Fetch details for each favorite listing
+        const { apiGet } = await import('@/lib/api-client');
         const favoriteListings = await Promise.all(
           favoriteIds.map(async (id: string) => {
             try {
-              const response = await fetch(`/api/listings/${id}`);
+              const response = await apiGet(`/api/listings/${id}`, { requireAuth: false });
               if (response.ok) {
                 return await response.json();
               }

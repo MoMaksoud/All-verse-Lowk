@@ -30,7 +30,9 @@ export default function HomePage() {
 
   const fetchFeaturedListings = useCallback(async () => {
     try {
-      const response = await fetch('/api/listings?limit=4', {
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet('/api/listings?limit=4', { 
+        requireAuth: false,
         headers: {
           'Cache-Control': 'max-age=300',
         },

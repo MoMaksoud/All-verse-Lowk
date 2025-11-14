@@ -71,7 +71,8 @@ export default function ListingDetailPage() {
     
     try {
       setLoading(true);
-      const response = await fetch(`/api/listings/${params.id}`);
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet(`/api/listings/${params.id}`, { requireAuth: false });
       if (response.ok) {
         const data = await response.json();
         setListing(data);
@@ -156,17 +157,12 @@ export default function ListingDetailPage() {
     setShowPriceSuggestionModal(true);
     
     try {
-      const response = await fetch('/api/prices/suggest', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: listing.title,
-          description: listing.description,
-          category: listing.category,
-        }),
-      });
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/prices/suggest', {
+        title: listing.title,
+        description: listing.description,
+        category: listing.category,
+      }, { requireAuth: false });
       
       if (response.ok) {
         const data = await response.json();

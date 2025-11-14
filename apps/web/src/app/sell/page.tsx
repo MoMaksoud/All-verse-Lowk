@@ -384,20 +384,15 @@ export default function SellPage() {
       
       console.log('💰 Starting AI market analysis for pricing...');
       
-      const response = await fetch('/api/ai/market-analysis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          condition: formData.condition,
-          brand: aiAnalysis?.brand || 'Unknown',
-          model: aiAnalysis?.model || 'Unknown'
-        }),
-      });
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/ai/market-analysis', {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        condition: formData.condition,
+        brand: aiAnalysis?.brand || 'Unknown',
+        model: aiAnalysis?.model || 'Unknown'
+      }, { requireAuth: false });
       
       if (!response.ok) {
         throw new Error('Market analysis failed');
@@ -928,19 +923,14 @@ export default function SellPage() {
                         size: formData.size
                       });
                       
-                      const response = await fetch('/api/prices/suggest', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          title: formData.title,
-                          description: formData.description,
-                          category: formData.category,
-                          condition: formData.condition,
-                          size: formData.size || null
-                        }),
-                      });
+                      const { apiPost: apiPostPrice } = await import('@/lib/api-client');
+                      const response = await apiPostPrice('/api/prices/suggest', {
+                        title: formData.title,
+                        description: formData.description,
+                        category: formData.category,
+                        condition: formData.condition,
+                        size: formData.size || null
+                      }, { requireAuth: false });
                       
                       const result = await response.json();
                       console.log('💰 Price suggestion result:', result);

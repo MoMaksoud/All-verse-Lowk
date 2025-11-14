@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { 
   getAuth, 
   User, 
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const isConfigured = !!isFirebaseConfigured();
 
-  async function signup(email: string, password: string, displayName: string) {
+  const signup = useCallback(async (email: string, password: string, displayName: string) => {
     if (!auth || !isConfigured) {
       throw new Error('Firebase is not properly configured. Please set up your Firebase project.');
     }
@@ -75,16 +75,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(`Account creation failed: ${error.message || 'Unknown error'}`);
       }
     }
-  }
+  }, [isConfigured]);
 
-  function login(email: string, password: string) {
+  const login = useCallback((email: string, password: string) => {
     if (!auth || !isConfigured) {
       throw new Error('Firebase is not properly configured. Please set up your Firebase project.');
     }
     return signInWithEmailAndPassword(auth, email, password);
-  }
+  }, [isConfigured]);
 
-  async function signInWithGoogle() {
+  const signInWithGoogle = useCallback(async () => {
     if (!auth || !isConfigured) {
       throw new Error('Firebase is not properly configured. Please set up your Firebase project.');
     }
@@ -104,15 +104,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(`Google sign-in failed: ${error.message || 'Unknown error'}`);
       }
     }
-  }
+  }, [isConfigured]);
 
-  function logout() {
+  const logout = useCallback(() => {
     if (!auth || !isConfigured) {
       throw new Error('Firebase is not properly configured. Please set up your Firebase project.');
     }
     setUserProfile(null);
     return signOut(auth);
-  }
+  }, [isConfigured]);
 
   useEffect(() => {
     if (!auth || !isConfigured) {
@@ -157,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isConfigured,
     userProfile,
     isEmailVerified: currentUser?.emailVerified || false,
-  }), [currentUser, loading, userProfile, isConfigured]);
+  }), [currentUser, loading, userProfile, isConfigured, signup, login, signInWithGoogle, logout]);
 
   return (
     <AuthContext.Provider value={value}>

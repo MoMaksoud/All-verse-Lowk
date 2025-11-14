@@ -56,6 +56,9 @@ function generateFallbackPriceSuggestion(title: string, description: string, cat
   return `Great product!\n\nSuggested price: $${minPrice}-$${maxPrice}\nBased on ${category} market rates\n\nPro tip: Check competitor prices weekly\n\nReady to list?`;
 }
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Get client IP for rate limiting

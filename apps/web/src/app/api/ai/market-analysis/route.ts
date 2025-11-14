@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
+export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
 export const dynamic = 'force-dynamic';
 
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
       "reasoning": {
         "priceJustification": "Detailed explanation of why this price is suggested",
         "marketTrends": "Current market trends affecting this item",
-        "regionalInsights": "Location-specific pricing insights",
+        "regionalInsights": "Regional pricing insights",
         "conditionNotes": "How condition affects the suggested price"
       },
       "recommendations": [

@@ -45,13 +45,8 @@ export default function UserProfilePage() {
         // Fetch user's listings
         // Note: my-listings requires auth, so we can't fetch other users' listings this way
         // This should be changed to a public endpoint or removed
-        const listingsResponse = await fetch(`/api/my-listings`);
-
+        // For now, skip fetching listings for other users since my-listings requires auth
         let listings = [];
-        if (listingsResponse.ok) {
-          const listingsData = await listingsResponse.json();
-          listings = listingsData.data || [];
-        }
 
         // Transform profile data to match UserProfile interface
         const userProfile: UserProfile = {

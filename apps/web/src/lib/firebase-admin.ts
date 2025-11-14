@@ -77,11 +77,16 @@ function getAdminApp(): App {
   }
 }
 
-export function getAdminAuth(): Auth {
+export function getAdminAuth(): Auth | null {
   if (!adminAuth) {
-    getAdminApp();
+    try {
+      getAdminApp();
+    } catch (error) {
+      console.error('❌ Firebase Admin Auth not available:', error instanceof Error ? error.message : error);
+      return null;
+    }
   }
-  return adminAuth!;
+  return adminAuth;
 }
 
 export function getAdminFirestore(): Firestore {
@@ -102,6 +107,9 @@ export function getAdminFirestore(): Firestore {
 export async function verifyIdToken(token: string): Promise<{ uid: string; [key: string]: any }> {
   try {
     const auth = getAdminAuth();
+    if (!auth) {
+      throw new Error('Firebase Admin SDK is not configured. Please set FIREBASE_SERVICE_ACCOUNT_KEY in .env.local');
+    }
     const decodedToken = await auth.verifyIdToken(token);
     console.log('✅ Token verified successfully for user:', decodedToken.uid);
     return decodedToken;

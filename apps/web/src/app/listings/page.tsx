@@ -62,7 +62,8 @@ function ListingsContent() {
           break;
       }
 
-      const response = await fetch(`/api/listings?${params.toString()}`);
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet(`/api/listings?${params.toString()}`, { requireAuth: false });
       const data = await response.json();
 
 
@@ -75,7 +76,7 @@ function ListingsContent() {
       }
       
       // Fetch categories
-      const categoriesResponse = await fetch('/api/categories');
+      const categoriesResponse = await apiGet('/api/categories', { requireAuth: false });
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json();
         setCategories(categoriesData);

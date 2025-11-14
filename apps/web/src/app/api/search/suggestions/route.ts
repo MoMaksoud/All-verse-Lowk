@@ -3,6 +3,7 @@ import { withApi } from "@/lib/withApi";
 import { success } from "@/lib/response";
 import { getAutocompleteSuggestions, trackSearch } from "@/lib/searchAnalytics";
 
+export const runtime = 'nodejs';
 export const dynamic = "force-dynamic";
 export const preferredRegion = 'iad1';
 
@@ -30,4 +31,4 @@ export const GET = withApi(async (req: NextRequest) => {
     count: suggestions.length,
     types: suggestions.map(s => s.type)
   }, { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } });
-});
+}, { requireAuth: false }); // Search suggestions should be public
