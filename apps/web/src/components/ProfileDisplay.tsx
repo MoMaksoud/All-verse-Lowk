@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { User, Phone, Star, Heart, ShoppingBag, DollarSign, Calendar } from 'lucide-react';
+import { User, Phone, Heart, ShoppingBag, DollarSign, Calendar } from 'lucide-react';
 import { Profile } from '@marketplace/types';
 
 interface ProfileDisplayProps {
@@ -12,11 +12,18 @@ interface ProfileDisplayProps {
 export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps) {
   
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return '2025';
+      }
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        year: "numeric"
+      }).format(date);
+    } catch {
+      return '2025';
+    }
   };
 
   const getGenderDisplay = (gender?: string) => {
@@ -68,10 +75,6 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
             <p className="text-gray-300 mb-2">{profile.bio}</p>
           )}
           <div className="flex items-center space-x-4 text-sm text-gray-400">
-            <div className="flex items-center space-x-1">
-              <Star className="w-4 h-4 text-yellow-400" />
-              <span>{profile.rating.toFixed(1)}/5.0</span>
-            </div>
             <div className="flex items-center space-x-1">
               <Calendar className="w-4 h-4" />
               <span>Joined {formatDate(profile.createdAt)}</span>

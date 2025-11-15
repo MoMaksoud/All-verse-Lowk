@@ -28,7 +28,7 @@ function ListingsContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [appliedFilters, setAppliedFilters] = useState<ListingFilters>({});
-  const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'rating'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -52,9 +52,6 @@ function ListingsContent() {
           break;
         case 'price-high':
           params.set('sort', 'priceDesc');
-          break;
-        case 'rating':
-          params.set('sort', 'rating');
           break;
         case 'newest':
         default:
@@ -228,8 +225,7 @@ function ListingsContent() {
                     options={[
                       { value: 'newest', label: 'Newest' },
                       { value: 'price-low', label: 'Price: Low to High' },
-                      { value: 'price-high', label: 'Price: High to Low' },
-                      { value: 'rating', label: 'Rating' }
+                      { value: 'price-high', label: 'Price: High to Low' }
                     ]}
                     placeholder="Sort by"
                     className="min-w-[180px]"

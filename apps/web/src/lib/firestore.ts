@@ -24,7 +24,6 @@ export interface FirestoreProfile {
   age?: number;
   profilePicture?: string;
   phoneNumber?: string;
-  rating: number;
   interestCategories: string[];
   userActivity: 'browse-only' | 'buy-only' | 'sell-only' | 'both-buy-sell';
   budget?: {
@@ -139,7 +138,6 @@ export class ProfileService {
         displayName: profileData.displayName ?? existingProfile?.displayName ?? existingProfile?.username ?? '',
         bio: profileData.bio ?? existingProfile?.bio ?? '',
         createdAt: existingProfile?.createdAt ?? serverTimestamp(),
-        rating: profileData.rating ?? existingProfile?.rating ?? 0,
         interestCategories: profileData.interestCategories ?? existingProfile?.interestCategories ?? [],
         userActivity: profileData.userActivity ?? existingProfile?.userActivity ?? 'both-buy-sell',
         itemConditionPreference: profileData.itemConditionPreference ?? existingProfile?.itemConditionPreference ?? 'both',
@@ -243,7 +241,6 @@ export class ProfileService {
         username: normalizedUsername,
         displayName: userData.displayName || normalizedUsername,
         bio: '',
-        rating: 0,
         interestCategories: [],
         userActivity: 'both-buy-sell',
         itemConditionPreference: 'both',

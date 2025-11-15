@@ -52,6 +52,81 @@ export default function ListingCard({
     return false;
   });
   const [addingToCart, setAddingToCart] = useState(false);
+  
+  // Seller profile state
+  const [sellerProfile, setSellerProfile] = useState<{
+    username?: string;
+    profilePicture?: string;
+    createdAt?: string;
+  } | null>(null);
+
+  // Fetch seller profile when sellerId is available
+  useEffect(() => {
+    if (!sellerId) return;
+
+    const fetchSellerProfile = async () => {
+      try {
+        const { apiGet } = await import('@/lib/api-client');
+        const response = await apiGet(`/api/profile?userId=${sellerId}`, { 
+          requireAuth: false 
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSellerProfile({
+            username: data.data?.username || 'Marketplace User',
+            profilePicture: data.data?.profilePicture || null,
+            createdAt: data.data?.createdAt || null,
+          });
+        } else {
+          // Set default values on error
+          setSellerProfile({
+            username: 'Marketplace User',
+            profilePicture: null,
+            createdAt: null,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching seller profile:', error);
+        // Set default values on error
+        setSellerProfile({
+          username: 'Marketplace User',
+          profilePicture: null,
+          createdAt: null,
+        });
+      }
+    };
+
+    fetchSellerProfile();
+  }, [sellerId]);
+
+  // Helper function to format member since date
+  const formatMemberSince = (timestamp: any) => {
+    if (!timestamp) return "Member since 2025";
+    try {
+      // Handle Firestore Timestamp, ISO string, or Date object
+      let date: Date;
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      } else if (typeof timestamp === 'string') {
+        date = new Date(timestamp);
+      } else {
+        date = new Date(timestamp);
+      }
+      
+      // Validate date
+      if (isNaN(date.getTime())) {
+        return "Member since 2025";
+      }
+      
+      return `Member since ${new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        year: "numeric"
+      }).format(date)}`;
+    } catch {
+      return "Member since 2025";
+    }
+  };
 
   const truncateWords = (text: string, count: number) => {
     const words = text.trim().split(" ");
@@ -195,6 +270,37 @@ export default function ListingCard({
                 {truncateWords(description, 22)}
               </p>
 
+              {/* Seller Info Section */}
+              {sellerId && (
+                <div className="flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1">
+                  <div className="flex-shrink-0">
+                    {sellerProfile?.profilePicture ? (
+                      <Image
+                        src={sellerProfile.profilePicture}
+                        alt={sellerProfile.username || 'Seller'}
+                        width={32}
+                        height={32}
+                        className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/10 flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-white/70">
+                          <path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.33 0-8 2.17-8 4.5V21h16v-2.5c0-2.33-3.67-4.5-8-4.5Z"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-zinc-100 truncate">
+                      {sellerProfile?.username || 'Marketplace User'}
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      {formatMemberSince(sellerProfile?.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
                 <span className="text-blue-400 font-semibold">
                   {typeof price === "number" ? `$${price}` : price}
@@ -273,6 +379,37 @@ export default function ListingCard({
               <p className="mt-1 text-sm text-zinc-300/90">
                 {truncateWords(description, 22)}
               </p>
+
+              {/* Seller Info Section for List Variant */}
+              {sellerId && (
+                <div className="flex items-center gap-3 mt-2 py-2 border-t border-white/5">
+                  <div className="flex-shrink-0">
+                    {sellerProfile?.profilePicture ? (
+                      <Image
+                        src={sellerProfile.profilePicture}
+                        alt={sellerProfile.username || 'Seller'}
+                        width={40}
+                        height={40}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 text-white/70">
+                          <path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.33 0-8 2.17-8 4.5V21h16v-2.5c0-2.33-3.67-4.5-8-4.5Z"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-zinc-100 truncate">
+                      {sellerProfile?.username || 'Marketplace User'}
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      {formatMemberSince(sellerProfile?.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
                 <span className="text-blue-400 font-semibold">

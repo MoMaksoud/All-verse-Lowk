@@ -42,9 +42,16 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
       );
     }
 
+    // Serialize Firestore Timestamps to ISO strings
+    const serializedProfile = {
+      ...profile,
+      createdAt: profile.createdAt?.toDate?.()?.toISOString() || (typeof profile.createdAt === 'string' ? profile.createdAt : new Date().toISOString()),
+      updatedAt: profile.updatedAt?.toDate?.()?.toISOString() || (typeof profile.updatedAt === 'string' ? profile.updatedAt : undefined),
+    };
+
     const response = NextResponse.json({
       success: true,
-      data: profile
+      data: serializedProfile
     });
 
     // Add caching headers for public profiles

@@ -8,7 +8,7 @@ import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import { DefaultAvatar } from '@/components/DefaultAvatar';
 import { Profile } from '@marketplace/types';
-import { User, Star, Settings, Edit, Camera, Shield } from 'lucide-react';
+import { User, Settings, Edit, Camera, Shield } from 'lucide-react';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { Navigation } from '@/components/Navigation';
 
@@ -86,37 +86,31 @@ export default function ProfilePage() {
     }
   };
 
-  const getRatingStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(
-        <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-      );
-    }
-
-    if (hasHalfStar) {
-      stars.push(
-        <Star key="half" className="w-4 h-4 text-yellow-400 fill-current opacity-50" />
-      );
-    }
-
-    const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(
-        <Star key={`empty-${i}`} className="w-4 h-4 text-gray-400" />
-      );
-    }
-
-    return stars;
-  };
-
   const getMemberSince = () => {
-    if (!profile?.createdAt) return 'Recently';
-    const date = new Date(profile.createdAt);
-    return date.getFullYear().toString();
+    if (!profile?.createdAt) return '2025';
+    try {
+      // Handle Firestore Timestamp, ISO string, or Date object
+      let date: Date;
+      if (profile.createdAt && typeof profile.createdAt === 'object' && 'toDate' in profile.createdAt && typeof (profile.createdAt as any).toDate === 'function') {
+        date = (profile.createdAt as any).toDate();
+      } else if (typeof profile.createdAt === 'string') {
+        date = new Date(profile.createdAt);
+      } else {
+        date = new Date(profile.createdAt);
+      }
+      
+      // Validate date
+      if (isNaN(date.getTime())) {
+        return '2025';
+      }
+      
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        year: "numeric"
+      }).format(date);
+    } catch {
+      return '2025';
+    }
   };
 
   if (loading) {
@@ -215,18 +209,6 @@ export default function ProfilePage() {
                         <p className="text-gray-400">
                           {profile.bio || 'No bio added yet.'}
                         </p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Rating</h4>
-                        <div className="flex items-center space-x-2">
-                          <div className="flex items-center space-x-1">
-                            {getRatingStars(profile.rating || 0)}
-                          </div>
-                          <span className="text-sm text-gray-400">
-                            {profile.rating ? profile.rating.toFixed(1) : '0'}/5
-                          </span>
-                        </div>
                       </div>
                     </div>
                   </div>

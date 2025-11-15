@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Phone, Mail, Star, Calendar, Shield, Flag } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Phone, Mail, Calendar, Shield, Flag } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 
@@ -13,8 +13,6 @@ interface UserProfile {
   email: string;
   avatar: string;
   bio: string;
-  rating: number;
-  reviewCount: number;
   memberSince: string;
   isVerified: boolean;
   listings: any[];
@@ -25,7 +23,7 @@ export default function UserProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'listings' | 'reviews'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings'>('listings');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -55,8 +53,6 @@ export default function UserProfilePage() {
           email: '', // Email is not exposed in public profiles
           avatar: profileData.data?.profilePicture || '',
           bio: profileData.data?.bio || '',
-          rating: profileData.data?.rating || 0,
-          reviewCount: 0, // This would need to be calculated from reviews
           memberSince: profileData.data?.createdAt || new Date().toISOString(),
           isVerified: false, // This would need verification logic
           listings: listings.map((listing: any) => ({
@@ -114,12 +110,18 @@ export default function UserProfilePage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return '2025';
+      }
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        year: "numeric"
+      }).format(date);
+    } catch {
+      return '2025';
+    }
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -199,11 +201,6 @@ export default function UserProfilePage() {
 
                 <div className="flex items-center space-x-4 mb-4 text-gray-400">
                   <div className="flex items-center space-x-1">
-                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span className="text-sm">{profile.rating}</span>
-                    <span className="text-sm">({profile.reviewCount} reviews)</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
                     <Calendar className="w-4 h-4" />
                     <span className="text-sm">Member since {formatDate(profile.memberSince)}</span>
                   </div>
@@ -261,84 +258,38 @@ export default function UserProfilePage() {
               >
                 Listings ({profile.listings.length})
               </button>
-              <button
-                onClick={() => setActiveTab('reviews')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'reviews'
-                    ? 'border-accent-500 text-accent-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
-                }`}
-              >
-                Reviews ({profile.reviewCount})
-              </button>
             </div>
           </div>
 
           <div className="p-6">
-            {activeTab === 'listings' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {profile.listings.map((listing) => (
-                  <div
-                    key={listing.id}
-                    onClick={() => router.push(`/listings/${listing.id}`)}
-                    className="bg-dark-700 rounded-lg overflow-hidden cursor-pointer hover:bg-dark-600 transition-colors"
-                  >
-                    <div className="aspect-square relative">
-                      <img
-                        src={listing.photos[0]}
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <h3 className="text-white font-medium mb-2 line-clamp-2">
-                        {listing.title}
-                      </h3>
-                      <p className="text-accent-400 font-semibold">
-                        {formatCurrency(listing.price, listing.currency)}
-                      </p>
-                      <p className="text-gray-400 text-sm mt-1">
-                        Listed {formatDate(listing.createdAt)}
-                      </p>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {profile.listings.map((listing) => (
+                <div
+                  key={listing.id}
+                  onClick={() => router.push(`/listings/${listing.id}`)}
+                  className="bg-dark-700 rounded-lg overflow-hidden cursor-pointer hover:bg-dark-600 transition-colors"
+                >
+                  <div className="aspect-square relative">
+                    <img
+                      src={listing.photos[0]}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Mock Reviews */}
-                {Array.from({ length: 5 }, (_, i) => (
-                  <div key={i} className="border-b border-dark-600 pb-4 last:border-b-0">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <img
-                        src={`https://images.unsplash.com/photo-${15000000 + i}?w=40&h=40&fit=crop&crop=face`}
-                        alt="Reviewer"
-                        className="w-8 h-8 rounded-full"
-                      />
-                      <div>
-                        <p className="text-white text-sm font-medium">User {i + 1}</p>
-                        <div className="flex items-center space-x-1">
-                          {Array.from({ length: 5 }, (_, star) => (
-                            <Star
-                              key={star}
-                              className={`w-3 h-3 ${
-                                star < 4 ? 'text-yellow-500 fill-current' : 'text-gray-600'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-gray-300 text-sm">
-                      Great seller! Fast communication and item was exactly as described. Highly recommend!
+                  <div className="p-4">
+                    <h3 className="text-white font-medium mb-2 line-clamp-2">
+                      {listing.title}
+                    </h3>
+                    <p className="text-accent-400 font-semibold">
+                      {formatCurrency(listing.price, listing.currency)}
                     </p>
-                    <p className="text-gray-500 text-xs mt-2">
-                      {formatDate(new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString())}
+                    <p className="text-gray-400 text-sm mt-1">
+                      Listed {formatDate(listing.createdAt)}
                     </p>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

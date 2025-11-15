@@ -37,7 +37,6 @@ export const ProfileSchema = z.object({
   age: z.number().min(13).max(120).optional(),
   profilePicture: z.string().optional(),
   phoneNumber: z.string().optional(),
-  rating: z.number().min(0).max(5).default(0),
   interestCategories: z.array(z.string()).default([]), // ['electronics', 'home', 'clothing', etc.]
   userActivity: UserActivitySchema.default('both-buy-sell'),
   budget: z.object({

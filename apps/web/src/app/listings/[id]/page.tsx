@@ -44,6 +44,11 @@ export default function ListingDetailPage() {
   const { startChat } = useStartChatFromListing();
   const [listing, setListing] = useState<SimpleListing | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sellerProfile, setSellerProfile] = useState<{
+    username?: string;
+    profilePicture?: string;
+    createdAt?: string;
+  } | null>(null);
   
   // Owner check
   const isOwner = currentUser?.uid && listing?.sellerId && currentUser.uid === listing.sellerId;
@@ -89,6 +94,72 @@ export default function ListingDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Fetch seller profile when listing is loaded
+  useEffect(() => {
+    if (!listing?.sellerId) return;
+
+    const fetchSellerProfile = async () => {
+      try {
+        const { apiGet } = await import('@/lib/api-client');
+        const response = await apiGet(`/api/profile?userId=${listing.sellerId}`, { 
+          requireAuth: false 
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSellerProfile({
+            username: data.data?.username || 'Marketplace User',
+            profilePicture: data.data?.profilePicture || null,
+            createdAt: data.data?.createdAt || null,
+          });
+        } else {
+          setSellerProfile({
+            username: 'Marketplace User',
+            profilePicture: null,
+            createdAt: null,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching seller profile:', error);
+        setSellerProfile({
+          username: 'Marketplace User',
+          profilePicture: null,
+          createdAt: null,
+        });
+      }
+    };
+
+    fetchSellerProfile();
+  }, [listing?.sellerId]);
+
+  // Helper function to format member since date
+  const getMemberSince = () => {
+    if (!sellerProfile?.createdAt) return '2025';
+    try {
+      // Handle Firestore Timestamp, ISO string, or Date object
+      let date: Date;
+      if (sellerProfile.createdAt && typeof sellerProfile.createdAt === 'object' && 'toDate' in sellerProfile.createdAt && typeof (sellerProfile.createdAt as any).toDate === 'function') {
+        date = (sellerProfile.createdAt as any).toDate();
+      } else if (typeof sellerProfile.createdAt === 'string') {
+        date = new Date(sellerProfile.createdAt);
+      } else {
+        date = new Date(sellerProfile.createdAt);
+      }
+      
+      // Validate date
+      if (isNaN(date.getTime())) {
+        return '2025';
+      }
+      
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        year: "numeric"
+      }).format(date);
+    } catch {
+      return '2025';
+    }
+  };
 
   const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -345,11 +416,10 @@ export default function ListingDetailPage() {
                     <div>
                       <SellerInfo
                         seller={{
-                          name: "Marketplace User",
-                          since: "2024",
-                          rating: 4.8,
-                          reviews: 127,
-                          id: listing.sellerId
+                          name: sellerProfile?.username || "Marketplace User",
+                          since: getMemberSince(),
+                          id: listing.sellerId,
+                          profilePicture: sellerProfile?.profilePicture || null,
                         }}
                         onContactClick={() => handleMessageClick()}
                         currentUserId={currentUser?.uid}
