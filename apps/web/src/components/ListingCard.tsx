@@ -53,6 +53,12 @@ export default function ListingCard({
   });
   const [addingToCart, setAddingToCart] = useState(false);
 
+  const truncateWords = (text: string, count: number) => {
+    const words = text.trim().split(" ");
+    if (words.length <= count) return text;
+    return words.slice(0, count).join(" ") + "...";
+  };
+
   const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -182,11 +188,11 @@ export default function ListingCard({
 
             {/* Content */}
             <div className="p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 flex-1 flex flex-col">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-zinc-100 line-clamp-2">
-                {title}
+              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-zinc-100">
+                {truncateWords(title, 10)}
               </h3>
-              <p className="hidden sm:block text-xs sm:text-sm text-zinc-300/90 line-clamp-2 flex-1">
-                {description}
+              <p className="hidden sm:block text-xs sm:text-sm text-zinc-300/90 flex-1">
+                {truncateWords(description, 22)}
               </p>
 
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
@@ -261,11 +267,11 @@ export default function ListingCard({
 
             {/* Content */}
             <div className="flex min-w-0 flex-1 flex-col">
-              <h3 className="text-xl font-semibold text-zinc-100 line-clamp-2">
-                {title}
+              <h3 className="text-xl font-semibold text-zinc-100">
+                {truncateWords(title, 10)}
               </h3>
-              <p className="mt-1 text-sm text-zinc-300/90 line-clamp-3">
-                {description}
+              <p className="mt-1 text-sm text-zinc-300/90">
+                {truncateWords(description, 22)}
               </p>
 
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
