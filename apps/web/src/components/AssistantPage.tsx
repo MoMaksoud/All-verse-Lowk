@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase';
 import { Send, Bot, ShoppingCart, Store, Trash2 } from 'lucide-react';
@@ -19,9 +20,11 @@ export default function AssistantPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'buyer' | 'seller'>('buyer');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const { currentUser } = useAuth();
+  const searchParams = useSearchParams();
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -85,9 +88,8 @@ export default function AssistantPage() {
     setShowDeleteConfirm(false);
   }, []);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading || !currentUser) return;
+  const handleSearch = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim() || isLoading || !currentUser) return;
 
     // Ensure auth is ready and force token refresh before making API call
     if (auth) {
@@ -101,7 +103,7 @@ export default function AssistantPage() {
       }
     }
 
-    const userMessage = input.trim().slice(0, 2000);
+    const userMessage = searchQuery.trim().slice(0, 2000);
     setInput('');
     setIsLoading(true);
 
@@ -161,7 +163,28 @@ export default function AssistantPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, currentUser, mode, messages]);
+  }, [isLoading, currentUser, mode, messages]);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading || !currentUser) return;
+    handleSearch(input.trim());
+  }, [input, isLoading, currentUser, handleSearch]);
+
+  // Read query from URL and auto-trigger search
+  useEffect(() => {
+    const query = searchParams.get('query');
+    if (query && !hasAutoTriggered && currentUser) {
+      const decodedQuery = decodeURIComponent(query);
+      setInput(decodedQuery);
+      setHasAutoTriggered(true);
+      // Auto-trigger search after a small delay to ensure state is set
+      const timeoutId = setTimeout(() => {
+        handleSearch(decodedQuery);
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [searchParams, hasAutoTriggered, currentUser, handleSearch]);
 
   // Show sign-in notice if user is not authenticated
   if (!currentUser) {

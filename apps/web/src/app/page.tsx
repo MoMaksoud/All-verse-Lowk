@@ -256,59 +256,82 @@ export default function HomePage() {
 
       {/* Stats Section */}
       <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="card">
-              <div className="p-6">
-                <div className="text-4xl font-bold text-accent-400 mb-2">
-                  10K+
-                </div>
-                <div className="text-lg text-gray-300">Active Listings</div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="p-6">
-                <div className="text-4xl font-bold text-accent-400 mb-2">
-                  50K+
-                </div>
-                <div className="text-lg text-gray-300">Happy Users</div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="p-6">
-                <div className="text-4xl font-bold text-accent-400 mb-2">
-                  99%
-                </div>
-                <div className="text-lg text-gray-300">Satisfaction Rate</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+
+      {/* Card */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-5">
+        <h3 className="text-2xl font-semibold text-accent-400 mb-1">
+          AI-Driven Platform
+        </h3>
+        <p className="text-base text-gray-300">
+          Smart recommendations and pricing powered by advanced AI
+        </p>
+      </div>
+
+      <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-5">
+        <h3 className="text-2xl font-semibold text-accent-400 mb-1">
+          Growing Community
+        </h3>
+        <p className="text-base text-gray-300">
+          Early users and sellers are joining every day
+        </p>
+      </div>
+
+      <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-5">
+        <h3 className="text-2xl font-semibold text-accent-400 mb-1">
+          Secure & Verified
+        </h3>
+        <p className="text-base text-gray-300">
+          Stripe-powered payments and listing verification
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
 
       {/* CTA Section */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="card-elevated p-12">
-            <div className="flex justify-center mb-6">
-              <Logo size="md" />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Ready to Start Selling?
-            </h2>
-            <p className="text-xl mb-8 text-gray-300">
-              Join thousands of sellers and start earning with AI assistance
-            </p>
-            <Link
-              href="/sell"
-              className="btn btn-primary inline-flex items-center gap-2 text-lg px-8 py-4"
-            >
-              Start Selling
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
+     {/* CTA Section */}
+<section className="py-20">
+  <div className="max-w-4xl mx-auto px-6 text-center">
+
+    <div className="relative rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-xl p-12">
+
+      {/* Accent Line */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[2px] bg-accent-500 rounded-full" />
+
+      {/* Logo */}
+      <div className="flex justify-center mb-4">
+        <div className="flex items-center gap-2 bg-white/10 px-4 py-1 rounded-full border border-white/20">
+          <Logo size="sm" />
         </div>
-      </section>
+      </div>
+
+      {/* Heading */}
+      <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+        Ready to Start Selling?
+      </h2>
+
+      {/* Subtitle */}
+      <p className="text-gray-400 text-lg mb-8">
+        Turn your items into earnings with AI-assisted listing and pricing.
+      </p>
+
+      {/* CTA Button */}
+      <Link
+        href="/sell"
+        className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 transition-all px-8 py-4 rounded-xl text-lg font-medium shadow-lg shadow-accent-500/20"
+      >
+        Start Selling
+        <ArrowRight className="w-5 h-5" />
+      </Link>
+
+    </div>
+  </div>
+</section>
+
 
       {/* Footer */}
       <footer className="border-t border-gray-800/50 bg-gray-900/30 backdrop-blur-sm py-12 mt-16">
