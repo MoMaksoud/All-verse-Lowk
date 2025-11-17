@@ -138,13 +138,22 @@ export default function ListingDetailPage() {
     if (!sellerProfile?.createdAt) return '2025';
     try {
       // Handle Firestore Timestamp, ISO string, or Date object
+      const createdAt = sellerProfile.createdAt;
+      if (!createdAt) return '2025';
+      
       let date: Date;
-      if (sellerProfile.createdAt && typeof sellerProfile.createdAt === 'object' && 'toDate' in sellerProfile.createdAt && typeof (sellerProfile.createdAt as any).toDate === 'function') {
-        date = (sellerProfile.createdAt as any).toDate();
-      } else if (typeof sellerProfile.createdAt === 'string') {
-        date = new Date(sellerProfile.createdAt);
+      // Check if it's a Firestore Timestamp object
+      if (createdAt !== null && typeof createdAt === 'object') {
+        const timestampObj = createdAt as any;
+        if ('toDate' in timestampObj && typeof timestampObj.toDate === 'function') {
+          date = timestampObj.toDate();
+        } else {
+          date = new Date(createdAt as any);
+        }
+      } else if (typeof createdAt === 'string') {
+        date = new Date(createdAt);
       } else {
-        date = new Date(sellerProfile.createdAt);
+        return '2025';
       }
       
       // Validate date
