@@ -6,6 +6,7 @@ import { CreateProfileInput, Gender, ShoppingFrequency, UserActivity, ItemCondit
 import { FileUpload } from '@/components/FileUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import Select from './Select';
+import { formatPhoneNumber } from '@/lib/utils';
 
 interface ProfileSetupFormProps {
   onSubmit: (profileData: CreateProfileInput) => void;
@@ -217,7 +218,10 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
           <input
             type="tel"
             value={formData.phoneNumber || ''}
-            onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+            onChange={(e) => {
+              const formatted = formatPhoneNumber(e.target.value);
+              handleInputChange('phoneNumber', formatted);
+            }}
             placeholder="(555) 123-4567"
             className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
           />

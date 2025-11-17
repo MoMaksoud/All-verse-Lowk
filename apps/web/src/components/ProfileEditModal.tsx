@@ -5,6 +5,7 @@ import { Profile } from '@marketplace/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Save, X, Heart, DollarSign, ShoppingBag } from 'lucide-react';
 import Select from './Select';
+import { formatPhoneNumber } from '@/lib/utils';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -64,7 +65,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         bio: profile.bio || '',
         age: profile.age,
         gender: profile.gender || '',
-        phoneNumber: profile.phoneNumber || '',
+        phoneNumber: profile.phoneNumber ? formatPhoneNumber(profile.phoneNumber) : '',
         interestCategories: profile.interestCategories || [],
         userActivity: profile.userActivity || '',
         budget: profile.budget ? {
@@ -295,8 +296,11 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
               <input
                 type="tel"
                 value={formData.phoneNumber}
-                onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                placeholder="Phone number"
+                onChange={(e) => {
+                  const formatted = formatPhoneNumber(e.target.value);
+                  handleInputChange('phoneNumber', formatted);
+                }}
+                placeholder="(555) 123-4567"
                 className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
               />
             </div>

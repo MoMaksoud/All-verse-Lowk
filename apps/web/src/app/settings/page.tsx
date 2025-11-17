@@ -26,6 +26,7 @@ import {
   updateEmail
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { formatPhoneNumber } from '@/lib/utils';
 
 type SettingsSection = 'account' | 'security' | 'billing';
 
@@ -113,7 +114,11 @@ export default function SettingsPage() {
 
   const handleEditField = (field: string, currentValue: string) => {
     setEditingField(field);
-    setEditValues({ [field]: currentValue || '' });
+    // Format phone number if it's being edited
+    const value = field === 'phoneNumber' && currentValue 
+      ? formatPhoneNumber(currentValue) 
+      : currentValue || '';
+    setEditValues({ [field]: value });
     setError('');
     setSuccess('');
   };
@@ -492,8 +497,11 @@ export default function SettingsPage() {
                   <input
                     type="tel"
                     value={editValues.phoneNumber || ''}
-                    onChange={(e) => setEditValues({ phoneNumber: e.target.value })}
-                    placeholder="+1 (555) 123-4567"
+                    onChange={(e) => {
+                      const formatted = formatPhoneNumber(e.target.value);
+                      setEditValues({ phoneNumber: formatted });
+                    }}
+                    placeholder="(555) 123-4567"
                     className="bg-dark-800 border border-dark-600 text-white px-3 py-1 rounded-lg text-sm w-48"
                     autoFocus
                   />
