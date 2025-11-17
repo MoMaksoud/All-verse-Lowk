@@ -90,13 +90,22 @@ export default function ProfilePage() {
     if (!profile?.createdAt) return '2025';
     try {
       // Handle Firestore Timestamp, ISO string, or Date object
+      const createdAt = profile.createdAt;
+      if (!createdAt) return '2025';
+      
       let date: Date;
-      if (profile.createdAt && typeof profile.createdAt === 'object' && 'toDate' in profile.createdAt && typeof (profile.createdAt as any).toDate === 'function') {
-        date = (profile.createdAt as any).toDate();
-      } else if (typeof profile.createdAt === 'string') {
-        date = new Date(profile.createdAt);
+      // Check if it's a Firestore Timestamp object
+      if (createdAt !== null && typeof createdAt === 'object') {
+        const timestampObj = createdAt as any;
+        if ('toDate' in timestampObj && typeof timestampObj.toDate === 'function') {
+          date = timestampObj.toDate();
+        } else {
+          date = new Date(createdAt as any);
+        }
+      } else if (typeof createdAt === 'string') {
+        date = new Date(createdAt);
       } else {
-        date = new Date(profile.createdAt);
+        return '2025';
       }
       
       // Validate date
