@@ -1,7 +1,5 @@
 {
-  "buildCommand": "pnpm run build",
   "installCommand": "corepack enable && corepack prepare pnpm@8.0.0 --activate && pnpm install",
-  "framework": "nextjs",
-  "rootDirectory": "apps/web"
+  "framework": "nextjs"
 }
 
