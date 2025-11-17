@@ -35,6 +35,9 @@ const nextConfig = {
     },
   },
 
+  // Transpile packages from monorepo
+  transpilePackages: ['@marketplace/types'],
+
   // Experimental features for performance
   experimental: {
     optimizeCss: true,
