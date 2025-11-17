@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm run build",
+  "buildCommand": "cd apps/web && pnpm run build",
   "installCommand": "corepack enable && corepack prepare pnpm@8.0.0 --activate && pnpm install",
   "framework": "nextjs"
 }
