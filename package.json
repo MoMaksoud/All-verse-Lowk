@@ -5,6 +5,7 @@
   "description": "Cross-platform marketplace app with shared UI components",
   "scripts": {
     "build": "turbo run build",
+    "postinstall": "pnpm --filter @marketplace/types build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
