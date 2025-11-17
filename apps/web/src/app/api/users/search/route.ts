@@ -3,6 +3,8 @@ import { withApi } from '@/lib/withApi';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {
     if (!db || !isFirebaseConfigured()) {

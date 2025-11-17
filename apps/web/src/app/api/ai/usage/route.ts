@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { getTokenUsage } from '@/lib/aiUsage';
 
+export const dynamic = 'force-dynamic';
+
 const DAILY_LIMIT = Number(process.env.NEXT_PUBLIC_AI_DAILY_TOKENS || 5000);
 
 export const GET = withApi(async (request: NextRequest & { userId: string }) => {
