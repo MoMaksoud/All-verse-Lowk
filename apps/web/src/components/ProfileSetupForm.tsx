@@ -32,6 +32,7 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
   const [showAgeValidation, setShowAgeValidation] = useState(false);
   const [formData, setFormData] = useState<CreateProfileInput>({
     username: '',
+    displayName: '',
     bio: '',
     gender: undefined,
     age: undefined,
