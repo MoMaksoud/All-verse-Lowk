@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { useChats } from '@/hooks/useChats';
@@ -19,7 +20,7 @@ import { useToast } from '@/contexts/ToastContext';
 export default function MessagesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const { showError, showSuccess } = useToast();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMobileChat, setShowMobileChat] = useState(false);
@@ -102,9 +103,32 @@ export default function MessagesPage() {
     }
   };
 
-  if (chatsLoading) {
+  // Show sign-in prompt if user is not authenticated (don't wait for chats to load)
+  if (!authLoading && !currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-950 flex flex-col">
+        <Navigation />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-300 text-lg mb-6">
+              Sign up to start messaging other users.
+            </p>
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+            >
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading spinner while auth is loading
+  if (authLoading || chatsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
         <LoadingSpinner />
       </div>
     );
