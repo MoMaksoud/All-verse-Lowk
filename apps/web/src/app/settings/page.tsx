@@ -546,7 +546,7 @@ export default function SettingsPage() {
                     className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
-                  <DefaultAvatar size={40} name={currentUser?.displayName || currentUser?.email || 'U'} />
+                  <DefaultAvatar size="md" className="w-10 h-10 text-sm" name={currentUser?.displayName || currentUser?.email || 'U'} />
                 )}
               </div>
               <input
