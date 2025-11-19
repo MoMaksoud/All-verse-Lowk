@@ -37,6 +37,14 @@ export interface FirestoreProfile {
   // Stripe Connect for seller payouts
   stripeConnectAccountId?: string;
   stripeConnectOnboardingComplete?: boolean;
+  // Shipping address for sellers
+  shippingAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+  };
 }
 
 // Firestore service for profiles
@@ -172,6 +180,21 @@ export class ProfileService {
       }
       if (profileData.shoppingFrequency !== undefined || existingProfile?.shoppingFrequency !== undefined) {
         profileToSave.shoppingFrequency = profileData.shoppingFrequency ?? existingProfile?.shoppingFrequency;
+      }
+      if (profileData.shippingAddress !== undefined || existingProfile?.shippingAddress) {
+        const shippingAddress = profileData.shippingAddress ?? existingProfile?.shippingAddress;
+        if (shippingAddress) {
+          // Clean shipping address object - remove undefined properties
+          const cleanShippingAddress: any = {};
+          if (shippingAddress.street !== undefined && shippingAddress.street !== null) cleanShippingAddress.street = shippingAddress.street;
+          if (shippingAddress.city !== undefined && shippingAddress.city !== null) cleanShippingAddress.city = shippingAddress.city;
+          if (shippingAddress.state !== undefined && shippingAddress.state !== null) cleanShippingAddress.state = shippingAddress.state;
+          if (shippingAddress.zip !== undefined && shippingAddress.zip !== null) cleanShippingAddress.zip = shippingAddress.zip;
+          if (shippingAddress.country !== undefined && shippingAddress.country !== null) cleanShippingAddress.country = shippingAddress.country;
+          if (Object.keys(cleanShippingAddress).length > 0) {
+            profileToSave.shippingAddress = cleanShippingAddress;
+          }
+        }
       }
       if (profileData.stripeConnectAccountId !== undefined || existingProfile?.stripeConnectAccountId) {
         profileToSave.stripeConnectAccountId = profileData.stripeConnectAccountId ?? existingProfile?.stripeConnectAccountId;

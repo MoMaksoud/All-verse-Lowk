@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
 import { isCloudUrl } from '@/types/photos';
+import { uploadListingPhotoFile } from '@/lib/storage';
 
 const steps = [
   { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
@@ -62,6 +63,7 @@ export default function SellPage() {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [uploadingLabel, setUploadingLabel] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [priceSuggesting, setPriceSuggesting] = useState(false);
   const [lastPriceSuggestionTime, setLastPriceSuggestionTime] = useState(0);
@@ -82,6 +84,13 @@ export default function SellPage() {
     condition?: string;
     size?: string;
     sizeCategory?: 'clothing' | 'footwear';
+    shipping?: {
+      weight?: string;
+      length?: string;
+      width?: string;
+      height?: string;
+      labelScanUrl?: string;
+    };
   }>({
     title: '',
     description: '',
@@ -91,6 +100,13 @@ export default function SellPage() {
     condition: '',
     size: '',
     sizeCategory: undefined,
+    shipping: {
+      weight: '',
+      length: '',
+      width: '',
+      height: '',
+      labelScanUrl: undefined,
+    },
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -455,7 +471,7 @@ export default function SellPage() {
       setLoading(true);
       
       // First, create the listing without photos
-      const listingData = {
+      const listingData: any = {
         title: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),
@@ -466,6 +482,23 @@ export default function SellPage() {
         isActive: true,
         sellerId: currentUser?.uid || '',
       };
+
+      // Add shipping information if provided
+      if (formData.shipping && (
+        formData.shipping.weight || 
+        formData.shipping.length || 
+        formData.shipping.width || 
+        formData.shipping.height || 
+        formData.shipping.labelScanUrl
+      )) {
+        listingData.shipping = {
+          weight: formData.shipping.weight ? parseFloat(formData.shipping.weight) : undefined,
+          length: formData.shipping.length ? parseFloat(formData.shipping.length) : undefined,
+          width: formData.shipping.width ? parseFloat(formData.shipping.width) : undefined,
+          height: formData.shipping.height ? parseFloat(formData.shipping.height) : undefined,
+          labelScanUrl: formData.shipping.labelScanUrl || undefined,
+        };
+      }
       
       const { apiPost: apiPostListing } = await import('@/lib/api-client');
       const response = await apiPostListing('/api/listings', listingData);
@@ -1123,6 +1156,173 @@ export default function SellPage() {
             )}
 
             {/* Location field removed for MVP */}
+
+            {/* Shipping Information Section */}
+            <div className="mt-8 pt-6 border-t border-zinc-800">
+              <h3 className="text-lg font-semibold text-zinc-100 mb-4">Shipping Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-100 mb-2">
+                    Package Weight (lbs)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.shipping?.weight || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      shipping: {
+                        ...prev.shipping,
+                        weight: e.target.value,
+                      }
+                    }))}
+                    placeholder="0.0"
+                    step="0.1"
+                    min="0"
+                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-100 mb-2">
+                    Package Length (inches)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.shipping?.length || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      shipping: {
+                        ...prev.shipping,
+                        length: e.target.value,
+                      }
+                    }))}
+                    placeholder="0.0"
+                    step="0.1"
+                    min="0"
+                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-100 mb-2">
+                    Package Width (inches)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.shipping?.width || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      shipping: {
+                        ...prev.shipping,
+                        width: e.target.value,
+                      }
+                    }))}
+                    placeholder="0.0"
+                    step="0.1"
+                    min="0"
+                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-100 mb-2">
+                    Package Height (inches)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.shipping?.height || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      shipping: {
+                        ...prev.shipping,
+                        height: e.target.value,
+                      }
+                    }))}
+                    placeholder="0.0"
+                    step="0.1"
+                    min="0"
+                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-zinc-100 mb-2">
+                  Shipping Label Scan
+                </label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="file"
+                    id="label-scan-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !currentUser || !listingId) return;
+                      
+                      try {
+                        setUploadingLabel(true);
+                        const result = await uploadListingPhotoFile({
+                          uid: currentUser.uid,
+                          listingId,
+                          file,
+                        });
+                        setFormData(prev => ({
+                          ...prev,
+                          shipping: {
+                            ...prev.shipping,
+                            labelScanUrl: result.url,
+                          }
+                        }));
+                        addToast('success', 'Label Scan Uploaded', 'Shipping label scan has been uploaded successfully.');
+                      } catch (error) {
+                        console.error('Error uploading label scan:', error);
+                        addToast('error', 'Upload Failed', 'Failed to upload shipping label scan. Please try again.');
+                      } finally {
+                        setUploadingLabel(false);
+                        // Reset the input
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById('label-scan-upload');
+                      input?.click();
+                    }}
+                    disabled={uploadingLabel || loading || !currentUser || !listingId}
+                    className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {formData.shipping?.labelScanUrl ? 'Replace Label Scan' : 'Scan Label'}
+                  </button>
+                  {formData.shipping?.labelScanUrl && (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={formData.shipping.labelScanUrl}
+                        alt="Shipping label scan"
+                        className="w-16 h-16 object-cover rounded-lg border border-zinc-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          shipping: {
+                            ...prev.shipping,
+                            labelScanUrl: undefined,
+                          }
+                        }))}
+                        className="text-red-400 hover:text-red-300 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
               </>
             )}
           </div>

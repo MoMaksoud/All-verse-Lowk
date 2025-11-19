@@ -17,10 +17,13 @@ import {
   Loader2,
   TrendingUp,
   CreditCard,
-  AlertCircle
+  AlertCircle,
+  Truck,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
 
 interface OrderItem {
@@ -101,12 +104,26 @@ const getStatusColor = (status: string) => {
   }
 };
 
+interface ShippingInfo {
+  trackingNumber?: string;
+  labelUrl?: string;
+  carrier?: string;
+  service?: string;
+  rateId?: string;
+  shipmentId?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 export default function SalesPage() {
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSale, setSelectedSale] = useState<Order | null>(null);
   const [stripeAccount, setStripeAccount] = useState<any>(null);
   const [loadingAccount, setLoadingAccount] = useState(true);
+  const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(null);
+  const [loadingShipping, setLoadingShipping] = useState(false);
+  const [generatingLabel, setGeneratingLabel] = useState(false);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -185,6 +202,73 @@ export default function SalesPage() {
     // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [currentUser?.uid]);
+
+  // Fetch shipping info when sale is selected
+  useEffect(() => {
+    if (selectedSale && db && isFirebaseConfigured()) {
+      fetchShippingInfo(selectedSale.id);
+    } else {
+      setShippingInfo(null);
+    }
+  }, [selectedSale]);
+
+  const fetchShippingInfo = async (orderId: string) => {
+    setLoadingShipping(true);
+    try {
+      const shippingRef = collection(db, 'orders', orderId, 'shipping');
+      const snapshot = await getDocs(shippingRef);
+      
+      if (!snapshot.empty) {
+        const shippingData = snapshot.docs[0].data() as ShippingInfo;
+        setShippingInfo(shippingData);
+      } else {
+        setShippingInfo(null);
+      }
+    } catch (error) {
+      console.error('Error fetching shipping info:', error);
+      setShippingInfo(null);
+    } finally {
+      setLoadingShipping(false);
+    }
+  };
+
+  const handleGenerateLabel = async () => {
+    if (!selectedSale) return;
+
+    // Check if order has shipping metadata from payment intent
+    const orderShipping = (selectedSale as any).shipping;
+    if (!orderShipping?.rateId || !orderShipping?.shipmentId) {
+      alert('Shipping rate information not found. Please contact support.');
+      return;
+    }
+
+    setGeneratingLabel(true);
+    try {
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/shipping/create-label', {
+        rateId: orderShipping.rateId,
+        shipmentId: orderShipping.shipmentId,
+        orderId: selectedSale.id,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate shipping label');
+      }
+
+      const data = await response.json();
+      
+      // Refresh shipping info
+      await fetchShippingInfo(selectedSale.id);
+      
+      alert('Shipping label generated successfully!');
+    } catch (error) {
+      console.error('Error generating label:', error);
+      alert(error instanceof Error ? error.message : 'Failed to generate shipping label');
+    } finally {
+      setGeneratingLabel(false);
+    }
+  };
 
   // Fetch Stripe Connect account status
   useEffect(() => {
@@ -538,6 +622,85 @@ export default function SalesPage() {
                       </span>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Shipping Section */}
+              <div>
+                <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                  <Truck className="w-4 h-4" />
+                  Shipping Information
+                </h4>
+                <div className="bg-zinc-800 rounded-xl p-4">
+                  {loadingShipping ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-accent-500 mr-2" />
+                      <span className="text-zinc-400">Loading shipping info...</span>
+                    </div>
+                  ) : shippingInfo?.trackingNumber ? (
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-zinc-400 text-sm">Tracking Number:</span>
+                        <p className="text-white font-medium">{shippingInfo.trackingNumber}</p>
+                      </div>
+                      {shippingInfo.carrier && (
+                        <div>
+                          <span className="text-zinc-400 text-sm">Carrier:</span>
+                          <p className="text-white">{shippingInfo.carrier}</p>
+                        </div>
+                      )}
+                      {shippingInfo.service && (
+                        <div>
+                          <span className="text-zinc-400 text-sm">Service:</span>
+                          <p className="text-white">{shippingInfo.service}</p>
+                        </div>
+                      )}
+                      {shippingInfo.labelUrl && (
+                        <div>
+                          <a
+                            href={shippingInfo.labelUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-accent-400 hover:text-accent-300 transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download Shipping Label
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-zinc-400 text-sm">Delivery Status:</span>
+                        <p className="text-white">In Transit</p>
+                        <p className="text-zinc-400 text-xs mt-1">Tracking updates will appear here</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-zinc-400 text-sm">No shipping label has been generated yet.</p>
+                      {(selectedSale as any).shipping?.rateId && (selectedSale as any).shipping?.shipmentId ? (
+                        <button
+                          onClick={handleGenerateLabel}
+                          disabled={generatingLabel}
+                          className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:bg-zinc-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                        >
+                          {generatingLabel ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Truck className="w-4 h-4" />
+                              Generate Shipping Label
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <p className="text-zinc-500 text-xs">Shipping rate information not available. Please contact support.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

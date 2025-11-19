@@ -3,6 +3,8 @@ import { verifyWebhookSignature, transferToSeller, calculateSellerPayout, PLATFO
 import { firestoreServices } from '@/lib/services/firestore';
 import { ProfileService } from '@/lib/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
+import { sendOrderConfirmationEmail, sendSellerNotificationEmail } from '@/lib/email';
+import { getAdminAuth } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -145,6 +147,69 @@ async function handlePaymentSucceeded(paymentIntent: any) {
     } catch (error) {
       console.error('❌ Error clearing cart:', error);
       // Not critical, continue
+    }
+
+    // Send emails
+    try {
+      const auth = getAdminAuth();
+      const buyerUser = auth ? await auth.getUser(order.buyerId) : null;
+      const buyerProfile = await ProfileService.getProfile(order.buyerId);
+      const buyerEmail = buyerProfile?.email || buyerUser?.email;
+
+      // Send order confirmation email to buyer
+      if (buyerEmail && buyerProfile) {
+        try {
+          await sendOrderConfirmationEmail({
+            orderId: (order as any).id,
+            buyerName: buyerProfile.displayName || 'Customer',
+            buyerEmail: buyerEmail,
+            items: order.items.map(item => ({
+              title: item.title,
+              qty: item.qty,
+              unitPrice: item.unitPrice,
+            })),
+            subtotal: order.subtotal,
+            tax: order.tax,
+            fees: order.fees,
+            total: order.total,
+            shippingAddress: order.shippingAddress,
+          });
+          console.log('✅ Order confirmation email sent to buyer');
+        } catch (emailError) {
+          console.error('❌ Error sending order confirmation email:', emailError);
+        }
+      }
+
+      // Send notification emails to sellers
+      for (const item of order.items) {
+        try {
+          const sellerProfile = await ProfileService.getProfile(item.sellerId);
+          if (sellerProfile) {
+            const sellerUser = auth ? await auth.getUser(item.sellerId) : null;
+            const sellerEmail = sellerProfile.email || sellerUser?.email;
+            
+            if (sellerEmail) {
+              const itemTotal = item.unitPrice * item.qty;
+              await sendSellerNotificationEmail({
+                sellerName: sellerProfile.displayName || 'Seller',
+                sellerEmail: sellerEmail,
+                buyerName: buyerProfile?.displayName || 'Customer',
+                itemTitle: item.title,
+                quantity: item.qty,
+                unitPrice: item.unitPrice,
+                total: itemTotal,
+                orderId: (order as any).id,
+              });
+              console.log(`✅ Seller notification email sent to ${item.sellerId}`);
+            }
+          }
+        } catch (emailError) {
+          console.error(`❌ Error sending seller notification email for item ${item.listingId}:`, emailError);
+        }
+      }
+    } catch (emailError) {
+      console.error('❌ Error sending emails:', emailError);
+      // Don't fail the webhook if emails fail
     }
 
     console.log('✅ Payment processing complete for order:', (order as any).id);

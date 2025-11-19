@@ -40,6 +40,10 @@ export default function SignUp() {
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
   const { signup, signInWithGoogle, isConfigured, currentUser } = useAuth();
   const router = useRouter();
 
@@ -85,7 +89,31 @@ export default function SignUp() {
     try {
       setLoading(true);
       await signup(formData.email.trim(), formData.password, formData.displayName.trim());
-      setShowProfileSetup(true);
+      
+      // Send verification code
+      try {
+        const response = await fetch('/api/auth/send-verification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email.trim(),
+          }),
+        });
+
+        if (response.ok) {
+          setShowVerification(true);
+        } else {
+          console.error('Failed to send verification code');
+          // Still show verification screen, user can resend
+          setShowVerification(true);
+        }
+      } catch (emailError) {
+        console.error('Error sending verification code:', emailError);
+        // Still show verification screen
+        setShowVerification(true);
+      }
     } catch (error: any) {
       // Show the actual error message from Firebase
       const errorMessage = error?.message || 'Failed to create account. Please try again.';
@@ -189,6 +217,69 @@ export default function SignUp() {
     router.push('/');
   }
 
+  async function handleVerifyEmail() {
+    if (!currentUser) return;
+
+    setVerificationError('');
+    setVerifying(true);
+
+    try {
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: verificationCode,
+          email: currentUser.email,
+          userId: currentUser.uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setVerificationError(data.error || 'Verification failed');
+        return;
+      }
+
+      // Email verified successfully
+      setShowVerification(false);
+      setShowProfileSetup(true);
+    } catch (error: any) {
+      setVerificationError('Failed to verify email. Please try again.');
+      console.error('Verification error:', error);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleResendCode() {
+    if (!currentUser) return;
+
+    try {
+      const response = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: currentUser.email,
+        }),
+      });
+
+      if (response.ok) {
+        setVerificationError('');
+        alert('Verification code resent!');
+      } else {
+        setVerificationError('Failed to resend code. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error resending code:', error);
+      setVerificationError('Failed to resend code. Please try again.');
+    }
+  }
+
   async function handleGoogleSignIn() {
     try {
       setError('');
@@ -263,6 +354,65 @@ export default function SignUp() {
                     <li>Create a <code className="bg-gray-700 px-1 rounded">.env.local</code> file with your Firebase credentials</li>
                   </ol>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show email verification after signup
+  if (showVerification && currentUser) {
+    return (
+      <div className="min-h-screen relative overflow-hidden">
+        <DynamicBackground intensity="low" showParticles={true} />
+        <div className="relative z-10 min-h-screen">
+          <Link 
+            href="/" 
+            className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 text-gray-300 hover:text-white px-4 py-2 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 hover:border-gray-600 transition-all duration-200 text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back
+          </Link>
+          <div className="min-h-screen flex items-center justify-center px-4">
+            <div className="max-w-md mx-auto bg-dark-800 rounded-2xl p-8 border border-dark-700">
+              <h2 className="text-2xl font-bold text-white mb-4 text-center">Verify Your Email</h2>
+              <p className="text-gray-400 mb-6 text-center">
+                We've sent a verification code to <strong className="text-white">{currentUser.email}</strong>
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit code"
+                    className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-500 text-center text-2xl tracking-widest"
+                    maxLength={6}
+                  />
+                </div>
+                {verificationError && (
+                  <p className="text-red-400 text-sm">{verificationError}</p>
+                )}
+                <button
+                  onClick={handleVerifyEmail}
+                  disabled={verificationCode.length !== 6 || verifying}
+                  className="w-full bg-accent-500 hover:bg-accent-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {verifying ? 'Verifying...' : 'Verify Email'}
+                </button>
+                <button
+                  onClick={handleResendCode}
+                  className="w-full text-accent-500 hover:text-accent-400 text-sm font-medium"
+                >
+                  Resend Code
+                </button>
               </div>
             </div>
           </div>

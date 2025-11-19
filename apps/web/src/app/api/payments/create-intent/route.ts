@@ -11,7 +11,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
 
     const body = await req.json();
-    const { cartItems, shippingAddress, taxRate = 0.08 } = body;
+    const { cartItems, shippingAddress, selectedShipping, taxRate = 0.08 } = body;
 
     if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
       return NextResponse.json({ error: 'Cart items are required' }, { status: 400 });
@@ -50,22 +50,35 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     }
 
     const tax = subtotal * taxRate;
-    const { fees, total } = calculateTotalWithFees(subtotal, tax);
+    const shippingCost = selectedShipping?.price || 0;
+    const { fees, total } = calculateTotalWithFees(subtotal + shippingCost, tax);
 
-    // Create payment intent with application fee for Stripe Connect
-    // Note: For Connect, we'll use transfers instead of application fees for simplicity
-    const paymentResult = await createPaymentIntent(total, 'usd', {
+    // Prepare metadata for payment intent
+    const metadata: Record<string, string> = {
       userId: req.userId,
       orderType: 'marketplace',
       orderId: '', // Will be set after order creation
-    });
+    };
+
+    // Add shipping metadata if selected
+    if (selectedShipping) {
+      metadata.shippingCarrier = selectedShipping.carrier;
+      metadata.shippingService = selectedShipping.serviceName;
+      metadata.shippingPrice = selectedShipping.price.toString();
+      metadata.shippingRateId = selectedShipping.rateId;
+      metadata.shippingShipmentId = selectedShipping.shipmentId;
+    }
+
+    // Create payment intent with application fee for Stripe Connect
+    // Note: For Connect, we'll use transfers instead of application fees for simplicity
+    const paymentResult = await createPaymentIntent(total, 'usd', metadata);
 
     if (!paymentResult.success) {
       return NextResponse.json({ error: paymentResult.error }, { status: 500 });
     }
 
     // Create order in database
-    const orderData = {
+    const orderData: any = {
       buyerId: req.userId,
       items: orderItems,
       subtotal,
@@ -76,6 +89,17 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       paymentIntentId: paymentResult.paymentIntentId!,
       shippingAddress,
     };
+
+    // Include shipping metadata if available
+    if (selectedShipping) {
+      orderData.shipping = {
+        carrier: selectedShipping.carrier,
+        serviceName: selectedShipping.serviceName,
+        price: selectedShipping.price,
+        rateId: selectedShipping.rateId,
+        shipmentId: selectedShipping.shipmentId,
+      };
+    }
 
     const orderId = await firestoreServices.orders.createOrder(orderData);
 
@@ -94,6 +118,8 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
         // Non-critical, continue
       }
     }
+
+    // Shipping info is already included in orderData, so no need to update again
 
     // Create payment record
     const paymentData: CreatePaymentInput = {

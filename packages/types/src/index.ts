@@ -47,6 +47,13 @@ export const ProfileSchema = z.object({
   shoppingFrequency: ShoppingFrequencySchema.optional(),
   itemConditionPreference: ItemConditionPreferenceSchema.default('both'),
   updatedAt: z.string().optional(),
+  shippingAddress: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip: z.string().optional(),
+    country: z.string().optional(),
+  }).optional(),
 });
 export type Profile = z.infer<typeof ProfileSchema>;
 

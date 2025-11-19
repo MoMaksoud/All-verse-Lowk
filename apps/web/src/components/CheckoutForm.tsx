@@ -11,7 +11,8 @@ import {
   ArrowLeft, 
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  Truck
 } from 'lucide-react';
 
 // Initialize Stripe
@@ -28,6 +29,23 @@ interface CheckoutFormProps {
   cartItems: CartItem[];
   onSuccess: (orderId: string) => void;
   onError: (error: string) => void;
+}
+
+interface ShippingRate {
+  id?: string;
+  serviceName: string;
+  carrier: string;
+  price: number;
+  currency: string;
+  deliveryDays?: number;
+  deliveryDate?: string;
+  deliveryDateGuaranteed?: boolean;
+}
+
+interface SelectedShipping {
+  rate: ShippingRate;
+  shipmentId: string;
+  rateId: string;
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onError }) => {
@@ -48,20 +66,132 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
     subtotal: 0,
     tax: 0,
     fees: 0,
+    shipping: 0,
     total: 0,
   });
 
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
+  const [selectedShipping, setSelectedShipping] = useState<SelectedShipping | null>(null);
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [ratesError, setRatesError] = useState<string | null>(null);
+  const [shipmentId, setShipmentId] = useState<string | null>(null);
+
   useEffect(() => {
     calculateTotals();
-  }, [cartItems]);
+  }, [cartItems, selectedShipping]);
+
+  useEffect(() => {
+    // Fetch shipping rates when ZIP code is entered and valid
+    if (shippingAddress.zip && shippingAddress.zip.length >= 5) {
+      fetchShippingRates();
+    } else {
+      setShippingRates([]);
+      setSelectedShipping(null);
+      setShipmentId(null);
+    }
+  }, [shippingAddress.zip, cartItems]);
 
   const calculateTotals = () => {
     const subtotal = cartItems.reduce((sum, item) => sum + (item.priceAtAdd * item.qty), 0);
     const tax = subtotal * 0.08; // 8% tax
     const fees = subtotal * 0.029 + 0.30; // Stripe fees
-    const total = subtotal + tax + fees;
+    const shipping = selectedShipping?.rate.price || 0;
+    const total = subtotal + tax + fees + shipping;
 
-    setTotals({ subtotal, tax, fees, total });
+    setTotals({ subtotal, tax, fees, shipping, total });
+  };
+
+  const fetchShippingRates = async () => {
+    if (!shippingAddress.zip || shippingAddress.zip.length < 5) {
+      return;
+    }
+
+    setLoadingRates(true);
+    setRatesError(null);
+
+    try {
+      // Fetch listings to get shipping dimensions
+      const { apiGet } = await import('@/lib/api-client');
+      const listings = await Promise.all(
+        cartItems.map(async (item) => {
+          const response = await apiGet(`/api/listings/${item.listingId}`, { requireAuth: false });
+          if (response.ok) {
+            return await response.json();
+          }
+          return null;
+        })
+      );
+
+      // Aggregate shipping dimensions (use first item's shipping or defaults)
+      // For simplicity, we'll use defaults if shipping info is not available
+      // In production, you'd want to aggregate all items properly
+      const firstListing = listings.find(l => l && l.shipping);
+      const shipping = firstListing?.shipping || {
+        weight: 2, // Default 2 lbs
+        length: 12,
+        width: 8,
+        height: 6,
+      };
+
+      // Get real seller ZIP from seller profile
+      // For multi-seller carts, use the first seller's ZIP (can be improved later)
+      const sellerIds = [...new Set(cartItems.map(item => item.sellerId))];
+      let fromZip = '10001'; // Fallback default
+
+      if (sellerIds.length > 0) {
+        try {
+          // Fetch seller profile to get their shipping address
+          const sellerResponse = await apiGet(`/api/profile?userId=${sellerIds[0]}`, { requireAuth: false });
+          if (sellerResponse.ok) {
+            const sellerData = await sellerResponse.json();
+            fromZip = sellerData.data?.shippingAddress?.zip || '10001';
+            
+            if (!sellerData.data?.shippingAddress?.zip) {
+              console.warn('⚠️ Seller does not have shipping address configured. Using default ZIP.');
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching seller address:', error);
+          // Use fallback
+        }
+      }
+
+      // Call shipping rates API
+      const { apiPost } = await import('@/lib/api-client');
+      const ratesResponse = await apiPost('/api/shipping/get-rates', {
+        weight: shipping.weight || 2,
+        length: shipping.length || 12,
+        width: shipping.width || 8,
+        height: shipping.height || 6,
+        fromZip,
+        toZip: shippingAddress.zip,
+      });
+
+      if (!ratesResponse.ok) {
+        const errorData = await ratesResponse.json();
+        throw new Error(errorData.error || 'Failed to fetch shipping rates');
+      }
+
+      const ratesData = await ratesResponse.json();
+      setShippingRates(ratesData.rates || []);
+      setShipmentId(ratesData.shipmentId || null);
+      
+      // Auto-select first (cheapest) rate
+      if (ratesData.rates && ratesData.rates.length > 0 && ratesData.shipmentId) {
+        const firstRate = ratesData.rates[0];
+        setSelectedShipping({
+          rate: firstRate,
+          shipmentId: ratesData.shipmentId,
+          rateId: firstRate.id || '',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching shipping rates:', error);
+      setRatesError(error instanceof Error ? error.message : 'Failed to load shipping rates');
+      setShippingRates([]);
+    } finally {
+      setLoadingRates(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -79,6 +209,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
       const response = await apiPost('/api/payments/create-intent', {
         cartItems,
         shippingAddress,
+        selectedShipping: selectedShipping ? {
+          rateId: selectedShipping.rateId,
+          shipmentId: selectedShipping.shipmentId,
+          carrier: selectedShipping.rate.carrier,
+          serviceName: selectedShipping.rate.serviceName,
+          price: selectedShipping.rate.price,
+        } : null,
       });
 
       const data = await response.json();
@@ -213,6 +350,76 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
         </div>
       </div>
 
+      {/* Shipping Options */}
+      {shippingAddress.zip && shippingAddress.zip.length >= 5 && (
+        <div className="bg-dark-700 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <Truck className="w-5 h-5 mr-2 text-accent-500" />
+            Shipping Options
+          </h3>
+          
+          {loadingRates ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-accent-500 mr-2" />
+              <span className="text-gray-300">Loading shipping rates...</span>
+            </div>
+          ) : ratesError ? (
+            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+              <p className="text-red-400 text-sm">{ratesError}</p>
+            </div>
+          ) : shippingRates.length > 0 ? (
+            <div className="space-y-3">
+              {shippingRates.map((rate, index) => (
+                <label
+                  key={index}
+                  className={`flex items-start p-4 border rounded-lg cursor-pointer transition-all ${
+                    selectedShipping?.rate === rate
+                      ? 'border-accent-500 bg-accent-500/10'
+                      : 'border-dark-500 bg-dark-600 hover:border-dark-400'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="shipping-option"
+                    checked={selectedShipping?.rate === rate}
+                    onChange={() => {
+                      if (shipmentId) {
+                        setSelectedShipping({
+                          rate,
+                          shipmentId,
+                          rateId: rate.id || '',
+                        });
+                      }
+                    }}
+                    className="mt-1 mr-4 w-4 h-4 text-accent-500 focus:ring-accent-500 focus:ring-2"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <span className="font-semibold text-white">{rate.carrier}</span>
+                        <span className="text-gray-400 ml-2">{rate.serviceName}</span>
+                      </div>
+                      <span className="font-semibold text-white">
+                        ${rate.price.toFixed(2)}
+                      </span>
+                    </div>
+                    {rate.deliveryDays && (
+                      <p className="text-sm text-gray-400">
+                        Estimated delivery: {rate.deliveryDays} {rate.deliveryDays === 1 ? 'day' : 'days'}
+                        {rate.deliveryDate && ` (${new Date(rate.deliveryDate).toLocaleDateString()})`}
+                        {rate.deliveryDateGuaranteed && ' • Guaranteed'}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm">No shipping rates available for this address.</p>
+          )}
+        </div>
+      )}
+
       {/* Payment Method */}
       <div className="bg-dark-700 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
@@ -250,6 +457,12 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
             <span>Subtotal</span>
             <span>${totals.subtotal.toFixed(2)}</span>
           </div>
+          {totals.shipping > 0 && (
+            <div className="flex justify-between text-gray-300">
+              <span>Shipping</span>
+              <span>${totals.shipping.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-gray-300">
             <span>Tax</span>
             <span>${totals.tax.toFixed(2)}</span>

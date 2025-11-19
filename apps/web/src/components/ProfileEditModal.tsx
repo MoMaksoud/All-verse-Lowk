@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Profile } from '@marketplace/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Save, X, Heart, DollarSign, ShoppingBag } from 'lucide-react';
+import { User, Save, X, Heart, DollarSign, ShoppingBag, MapPin } from 'lucide-react';
 import Select from './Select';
 import { formatPhoneNumber } from '@/lib/utils';
 
@@ -32,6 +32,13 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     budget: { min: 0, max: 1000, currency: 'USD' },
     shoppingFrequency: '',
     itemConditionPreference: '',
+    shippingAddress: {
+      street: '',
+      city: '',
+      state: '',
+      zip: '',
+      country: 'US',
+    },
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -75,6 +82,13 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         } : { min: 0, max: 1000, currency: 'USD' },
         shoppingFrequency: profile.shoppingFrequency || '',
         itemConditionPreference: profile.itemConditionPreference || '',
+        shippingAddress: {
+          street: profile.shippingAddress?.street || '',
+          city: profile.shippingAddress?.city || '',
+          state: profile.shippingAddress?.state || '',
+          zip: profile.shippingAddress?.zip || '',
+          country: profile.shippingAddress?.country || 'US',
+        },
       });
     }
   }, [profile]);
@@ -124,6 +138,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         budget: formData.budget,
         shoppingFrequency: formData.shoppingFrequency,
         itemConditionPreference: formData.itemConditionPreference,
+        shippingAddress: formData.shippingAddress,
       };
 
       const { apiPut } = await import('@/lib/api-client');
@@ -437,6 +452,86 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                     { value: 'CAD', label: 'CAD' },
                   ]}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Shipping Address (for sellers) */}
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-white flex items-center">
+              <MapPin className="w-5 h-5 mr-2 text-accent-500" />
+              Shipping Address
+              <span className="text-sm text-gray-400 ml-2 font-normal">(Required for sellers)</span>
+            </h3>
+            <p className="text-gray-400 text-sm">This address will be used to calculate accurate shipping rates when buyers purchase your items.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Street Address
+                </label>
+                <input
+                  type="text"
+                  value={formData.shippingAddress.street}
+                  onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, street: e.target.value })}
+                  placeholder="123 Main St"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={formData.shippingAddress.city}
+                  onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, city: e.target.value })}
+                  placeholder="New York"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  State
+                </label>
+                <input
+                  type="text"
+                  value={formData.shippingAddress.state}
+                  onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, state: e.target.value })}
+                  placeholder="NY"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  ZIP Code *
+                </label>
+                <input
+                  type="text"
+                  value={formData.shippingAddress.zip}
+                  onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, zip: e.target.value })}
+                  placeholder="10001"
+                  pattern="\d{5}(-\d{4})?"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Required for accurate shipping rate calculations</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Country
+                </label>
+                <select
+                  value={formData.shippingAddress.country}
+                  onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, country: e.target.value })}
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
+                >
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                </select>
               </div>
             </div>
           </div>
