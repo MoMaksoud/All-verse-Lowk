@@ -1,0 +1,228 @@
+import twilio from 'twilio';
+import sgMail from '@sendgrid/mail';
+
+// Initialize Twilio client
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+
+if (!accountSid || !authToken || !verifyServiceSid) {
+  throw new Error(
+    'Twilio credentials are not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_VERIFY_SERVICE_SID in your .env.local file.'
+  );
+}
+
+const twilioClient = twilio(accountSid, authToken);
+
+// Initialize SendGrid
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
+// Send verification code via email using Twilio Verify
+export async function sendVerificationCode(
+  email: string,
+  channel: 'email' | 'sms' = 'email'
+): Promise<{ success: boolean; error?: string; sid?: string }> {
+  try {
+    const verification = await twilioClient.verify.v2
+      .services(verifyServiceSid)
+      .verifications.create({
+        to: email,
+        channel: channel === 'sms' ? 'sms' : 'email',
+      });
+
+    return {
+      success: true,
+      sid: verification.sid,
+    };
+  } catch (error: any) {
+    console.error('Error sending verification code:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send verification code',
+    };
+  }
+}
+
+// Verify code with Twilio
+export async function verifyCode(
+  email: string,
+  code: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const verificationCheck = await twilioClient.verify.v2
+      .services(verifyServiceSid)
+      .verificationChecks.create({
+        to: email,
+        code: code,
+      });
+
+    if (verificationCheck.status === 'approved') {
+      return { success: true };
+    } else {
+      return {
+        success: false,
+        error: 'Invalid or expired verification code',
+      };
+    }
+  } catch (error: any) {
+    console.error('Error verifying code:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to verify code',
+    };
+  }
+}
+
+// Order confirmation email data interface
+interface OrderConfirmationData {
+  orderId: string;
+  buyerName: string;
+  buyerEmail: string;
+  items: Array<{ title: string; qty: number; unitPrice: number }>;
+  subtotal: number;
+  tax: number;
+  fees: number;
+  total: number;
+  shippingAddress: any;
+}
+
+// Send order confirmation email to buyer
+export async function sendOrderConfirmationEmail(
+  data: OrderConfirmationData
+): Promise<void> {
+  try {
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn('⚠️ SendGrid API key not configured, skipping email');
+      return;
+    }
+
+    const msg = {
+      to: data.buyerEmail,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@allversemarketplace.com',
+      subject: `Order Confirmation - Order #${data.orderId.slice(0, 8)}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Order Confirmation</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 10px 10px 0 0;">
+              <h1 style="background: #4CAF50; color: white; padding: 20px; margin: 0; border-radius: 10px 10px 0 0;">Order Confirmed! 🎉</h1>
+            </div>
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-top: none;">
+              <p style="padding: 20px;">Hi ${data.buyerName},</p>
+              <p style="padding: 0 20px;">Thank you for your order! We've received your payment and your order is being processed.</p>
+              
+              <div style="margin: 20px; padding: 20px; background: #f9f9f9; border-radius: 5px;">
+                <h2 style="margin-top: 0;">Order Details</h2>
+                <p><strong>Order ID:</strong> ${data.orderId.slice(0, 8)}</p>
+                ${data.items
+                  .map(
+                    (item) => `
+                  <p><strong>${item.title}</strong> - Qty: ${item.qty} × $${item.unitPrice.toFixed(2)}</p>
+                `
+                  )
+                  .join('')}
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+                <p><strong>Subtotal:</strong> $${data.subtotal.toFixed(2)}</p>
+                <p><strong>Tax:</strong> $${data.tax.toFixed(2)}</p>
+                <p><strong>Fees:</strong> $${data.fees.toFixed(2)}</p>
+                <p style="font-size: 18px; font-weight: bold;"><strong>Total:</strong> $${data.total.toFixed(2)}</p>
+              </div>
+
+              <p style="padding: 0 20px;">We'll send you another email when your order ships.</p>
+            </div>
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+              <p style="padding: 20px; margin: 0; font-size: 12px; color: #666;">© ${new Date().getFullYear()} AllVerse Marketplace. All rights reserved.</p>
+            </div>
+          </body>
+        </html>
+      `,
+    };
+
+    await sgMail.send(msg);
+    return;
+  } catch (error: any) {
+    console.error('Error sending order confirmation email:', error);
+    return;
+  }
+}
+
+// Seller notification email data interface
+interface SellerNotificationData {
+  sellerName: string;
+  sellerEmail: string;
+  buyerName: string;
+  itemTitle: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  orderId: string;
+}
+
+// Send notification to seller
+export async function sendSellerNotificationEmail(
+  data: SellerNotificationData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn('⚠️ SendGrid API key not configured, skipping email');
+      return { success: false, error: 'SendGrid not configured' };
+    }
+
+    const msg = {
+      to: data.sellerEmail,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@allversemarketplace.com',
+      subject: `New Sale! 🎉 ${data.itemTitle}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>New Sale Notification</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 10px 10px 0 0;">
+              <h1 style="background: #2196F3; color: white; padding: 20px; margin: 0; border-radius: 10px 10px 0 0;">New Sale! 🎉</h1>
+            </div>
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-top: none;">
+              <p style="padding: 20px;">Hi ${data.sellerName},</p>
+              <p style="padding: 0 20px;">Great news! Someone just purchased your item!</p>
+              
+              <div style="margin: 20px; padding: 20px; background: #f9f9f9; border-radius: 5px;">
+                <h2 style="margin-top: 0;">Sale Details</h2>
+                <p><strong>Item:</strong> ${data.itemTitle}</p>
+                <p><strong>Quantity:</strong> ${data.quantity}</p>
+                <p><strong>Unit Price:</strong> $${data.unitPrice.toFixed(2)}</p>
+                <p><strong>Total:</strong> <span style="font-size: 18px; font-weight: bold;">$${data.total.toFixed(2)}</span></p>
+                <p><strong>Buyer:</strong> ${data.buyerName}</p>
+                <p><strong>Order ID:</strong> ${data.orderId.slice(0, 8)}</p>
+              </div>
+
+              <p style="padding: 0 20px;">Please prepare the item for shipment and update the order status.</p>
+            </div>
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
+              <p style="padding: 20px; margin: 0; font-size: 12px; color: #666;">© ${new Date().getFullYear()} AllVerse Marketplace. All rights reserved.</p>
+            </div>
+          </body>
+        </html>
+      `,
+    };
+
+    await sgMail.send(msg);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error sending seller notification email:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send email',
+    };
+  }
+}
+
