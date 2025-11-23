@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 import { verifyWebhookSignature, transferToSeller, calculateSellerPayout, PLATFORM_SERVICE_FEE_PERCENT } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
 import { ProfileService } from '@/lib/firestore';
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function handlePaymentSucceeded(paymentIntent: any) {
+async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   try {
     if (!db || !isFirebaseConfigured()) {
       console.error('❌ Database not initialized');
@@ -218,7 +219,7 @@ async function handlePaymentSucceeded(paymentIntent: any) {
   }
 }
 
-async function handlePaymentFailed(paymentIntent: any) {
+async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   try {
     console.log('Payment failed:', paymentIntent.id);
     
@@ -245,7 +246,7 @@ async function handlePaymentFailed(paymentIntent: any) {
   }
 }
 
-async function handlePaymentCanceled(paymentIntent: any) {
+async function handlePaymentCanceled(paymentIntent: Stripe.PaymentIntent) {
   try {
     console.log('Payment canceled:', paymentIntent.id);
     

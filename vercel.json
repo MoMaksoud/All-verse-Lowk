@@ -1,7 +1,6 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "pnpm build",
-  "installCommand": "corepack enable && corepack prepare pnpm@8.15.0 --activate && pnpm install --no-frozen-lockfile",
-  "rootDirectory": "apps/web"
+  "buildCommand": "pnpm turbo run build --filter=web",
+  "devCommand": "pnpm dev",
+  "installCommand": "pnpm install --no-frozen-lockfile"
 }
 
