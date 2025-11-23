@@ -154,7 +154,7 @@ async function handlePaymentSucceeded(paymentIntent: any) {
       const auth = getAdminAuth();
       const buyerUser = auth ? await auth.getUser(order.buyerId) : null;
       const buyerProfile = await ProfileService.getProfile(order.buyerId);
-      const buyerEmail = buyerProfile?.email || buyerUser?.email;
+      const buyerEmail = buyerUser?.email;
 
       // Send order confirmation email to buyer
       if (buyerEmail && buyerProfile) {
@@ -186,7 +186,7 @@ async function handlePaymentSucceeded(paymentIntent: any) {
           const sellerProfile = await ProfileService.getProfile(item.sellerId);
           if (sellerProfile) {
             const sellerUser = auth ? await auth.getUser(item.sellerId) : null;
-            const sellerEmail = sellerProfile.email || sellerUser?.email;
+            const sellerEmail = sellerUser?.email;
             
             if (sellerEmail) {
               const itemTotal = item.unitPrice * item.qty;

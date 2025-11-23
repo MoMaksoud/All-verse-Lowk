@@ -22,7 +22,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@marketplace/types": ["../../packages/types/src/index.ts"]
+      "@marketplace/types": ["../../packages/types/dist/index"]
     },
     "types": ["node", "react", "react-dom"]
   },

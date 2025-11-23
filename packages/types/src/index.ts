@@ -61,7 +61,6 @@ export const CreateProfileInput = ProfileSchema.omit({
   userId: true,
   createdAt: true,
   updatedAt: true,
-  rating: true,
 });
 export type CreateProfileInput = z.infer<typeof CreateProfileInput>;
 
