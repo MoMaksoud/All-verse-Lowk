@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 import sgMail from '@sendgrid/mail';
 import twilio from 'twilio';
 
@@ -30,15 +30,11 @@ const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@marketplace.com';
 // VERIFICATION CODE FUNCTIONS (Twilio)
 // ============================================================================
 
-export interface SendVerificationCodeResult {
-  success: boolean;
-  error?: string;
-}
-
+// Send verification code via email using Twilio Verify
 export async function sendVerificationCode(
   email: string,
   channel: 'email' | 'sms' = 'email'
-): Promise<SendVerificationCodeResult> {
+): Promise<{ success: boolean; error?: string; sid?: string }> {
   if (!twilioClient || !twilioServiceSid) {
     return {
       success: false,
@@ -49,49 +45,6 @@ export async function sendVerificationCode(
   try {
     const verification = await twilioClient.verify.v2
       .services(twilioServiceSid)
-      .verifications
-      .create({
-        to: email,
-        channel: channel === 'email' ? 'email' : 'sms',
-      });
-
-    if (verification.status === 'pending' || verification.status === 'sent') {
-      return { success: true };
-    }
-
-    return {
-      success: false,
-      error: `Verification failed with status: ${verification.status}`,
-=======
-import twilio from 'twilio';
-import sgMail from '@sendgrid/mail';
-
-// Initialize Twilio client
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
-
-if (!accountSid || !authToken || !verifyServiceSid) {
-  throw new Error(
-    'Twilio credentials are not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_VERIFY_SERVICE_SID in your .env.local file.'
-  );
-}
-
-const twilioClient = twilio(accountSid, authToken);
-
-// Initialize SendGrid
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
-
-// Send verification code via email using Twilio Verify
-export async function sendVerificationCode(
-  email: string,
-  channel: 'email' | 'sms' = 'email'
-): Promise<{ success: boolean; error?: string; sid?: string }> {
-  try {
-    const verification = await twilioClient.verify.v2
-      .services(verifyServiceSid)
       .verifications.create({
         to: email,
         channel: channel === 'sms' ? 'sms' : 'email',
@@ -100,7 +53,6 @@ export async function sendVerificationCode(
     return {
       success: true,
       sid: verification.sid,
->>>>>>> 7bb93c1e272c8fb88c98b6f0db9164e9d170a217
     };
   } catch (error: any) {
     console.error('Error sending verification code:', error);
@@ -111,16 +63,11 @@ export async function sendVerificationCode(
   }
 }
 
-<<<<<<< HEAD
-export interface VerifyCodeResult {
-  success: boolean;
-  error?: string;
-}
-
+// Verify code with Twilio
 export async function verifyCode(
   email: string,
   code: string
-): Promise<VerifyCodeResult> {
+): Promise<{ success: boolean; error?: string }> {
   if (!twilioClient || !twilioServiceSid) {
     return {
       success: false,
@@ -131,40 +78,19 @@ export async function verifyCode(
   try {
     const verificationCheck = await twilioClient.verify.v2
       .services(twilioServiceSid)
-      .verificationChecks
-      .create({
-=======
-// Verify code with Twilio
-export async function verifyCode(
-  email: string,
-  code: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const verificationCheck = await twilioClient.verify.v2
-      .services(verifyServiceSid)
       .verificationChecks.create({
->>>>>>> 7bb93c1e272c8fb88c98b6f0db9164e9d170a217
         to: email,
         code: code,
       });
 
     if (verificationCheck.status === 'approved') {
       return { success: true };
-<<<<<<< HEAD
-    }
-
-    return {
-      success: false,
-      error: 'Invalid or expired verification code',
-    };
-=======
     } else {
       return {
         success: false,
         error: 'Invalid or expired verification code',
       };
     }
->>>>>>> 7bb93c1e272c8fb88c98b6f0db9164e9d170a217
   } catch (error: any) {
     console.error('Error verifying code:', error);
     return {
@@ -174,146 +100,16 @@ export async function verifyCode(
   }
 }
 
-<<<<<<< HEAD
-// ============================================================================
-// ORDER EMAIL FUNCTIONS (SendGrid)
-// ============================================================================
-
-export interface OrderConfirmationEmailParams {
-  orderId: string;
-  buyerName: string;
-  buyerEmail: string;
-  items: Array<{
-    title: string;
-    qty: number;
-    unitPrice: number;
-  }>;
-=======
 // Order confirmation email data interface
 interface OrderConfirmationData {
   orderId: string;
   buyerName: string;
   buyerEmail: string;
   items: Array<{ title: string; qty: number; unitPrice: number }>;
->>>>>>> 7bb93c1e272c8fb88c98b6f0db9164e9d170a217
   subtotal: number;
   tax: number;
   fees: number;
   total: number;
-<<<<<<< HEAD
-  shippingAddress?: {
-    street?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-    country?: string;
-  };
-}
-
-export async function sendOrderConfirmationEmail(
-  params: OrderConfirmationEmailParams
-): Promise<void> {
-  if (!sendgridApiKey) {
-    console.warn('⚠️ SendGrid not configured. Skipping order confirmation email.');
-    return;
-  }
-
-  const itemsList = params.items
-    .map(item => `- ${item.title} (Qty: ${item.qty}) - $${(item.unitPrice * item.qty).toFixed(2)}`)
-    .join('\n');
-
-  const shippingAddressText = params.shippingAddress
-    ? `
-Shipping Address:
-${params.shippingAddress.street || ''}
-${params.shippingAddress.city || ''}, ${params.shippingAddress.state || ''} ${params.shippingAddress.zip || ''}
-${params.shippingAddress.country || ''}
-`
-    : '';
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Order Confirmation</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #4F46E5;">Order Confirmation</h1>
-        <p>Hi ${params.buyerName},</p>
-        <p>Thank you for your order! We've received your payment and your order is being processed.</p>
-        
-        <h2 style="color: #4F46E5; margin-top: 30px;">Order Details</h2>
-        <p><strong>Order ID:</strong> ${params.orderId}</p>
-        
-        <h3 style="margin-top: 20px;">Items:</h3>
-        <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px;">${itemsList}</pre>
-        
-        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
-          <p><strong>Subtotal:</strong> $${params.subtotal.toFixed(2)}</p>
-          <p><strong>Tax:</strong> $${params.tax.toFixed(2)}</p>
-          <p><strong>Fees:</strong> $${params.fees.toFixed(2)}</p>
-          <p style="font-size: 18px; font-weight: bold; margin-top: 10px;">
-            <strong>Total:</strong> $${params.total.toFixed(2)}
-          </p>
-        </div>
-        
-        ${shippingAddressText}
-        
-        <p style="margin-top: 30px;">We'll send you another email when your order ships.</p>
-        <p>If you have any questions, please don't hesitate to contact us.</p>
-        
-        <p style="margin-top: 30px;">Best regards,<br>The Marketplace Team</p>
-      </div>
-    </body>
-    </html>
-  `;
-
-  const text = `
-Order Confirmation
-
-Hi ${params.buyerName},
-
-Thank you for your order! We've received your payment and your order is being processed.
-
-Order Details:
-Order ID: ${params.orderId}
-
-Items:
-${itemsList}
-
-Subtotal: $${params.subtotal.toFixed(2)}
-Tax: $${params.tax.toFixed(2)}
-Fees: $${params.fees.toFixed(2)}
-Total: $${params.total.toFixed(2)}
-
-${shippingAddressText}
-
-We'll send you another email when your order ships.
-If you have any questions, please don't hesitate to contact us.
-
-Best regards,
-The Marketplace Team
-  `;
-
-  try {
-    await sgMail.send({
-      to: params.buyerEmail,
-      from: fromEmail,
-      subject: `Order Confirmation - ${params.orderId}`,
-      text,
-      html,
-    });
-    console.log(`✅ Order confirmation email sent to ${params.buyerEmail}`);
-  } catch (error: any) {
-    console.error('Error sending order confirmation email:', error);
-    throw error;
-  }
-}
-
-export interface SellerNotificationEmailParams {
-=======
   shippingAddress: any;
 }
 
@@ -384,7 +180,6 @@ export async function sendOrderConfirmationEmail(
 
 // Seller notification email data interface
 interface SellerNotificationData {
->>>>>>> 7bb93c1e272c8fb88c98b6f0db9164e9d170a217
   sellerName: string;
   sellerEmail: string;
   buyerName: string;
@@ -394,85 +189,6 @@ interface SellerNotificationData {
   total: number;
   orderId: string;
 }
-
-<<<<<<< HEAD
-export async function sendSellerNotificationEmail(
-  params: SellerNotificationEmailParams
-): Promise<void> {
-  if (!sendgridApiKey) {
-    console.warn('⚠️ SendGrid not configured. Skipping seller notification email.');
-    return;
-  }
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>New Sale Notification</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #10B981;">New Sale! 🎉</h1>
-        <p>Hi ${params.sellerName},</p>
-        <p>Great news! Someone just purchased your item.</p>
-        
-        <h2 style="color: #10B981; margin-top: 30px;">Sale Details</h2>
-        <div style="padding: 15px; background: #f9f9f9; border-radius: 5px; margin-top: 20px;">
-          <p><strong>Item:</strong> ${params.itemTitle}</p>
-          <p><strong>Quantity:</strong> ${params.quantity}</p>
-          <p><strong>Unit Price:</strong> $${params.unitPrice.toFixed(2)}</p>
-          <p style="font-size: 18px; font-weight: bold; margin-top: 10px;">
-            <strong>Total Sale:</strong> $${params.total.toFixed(2)}
-          </p>
-          <p><strong>Buyer:</strong> ${params.buyerName}</p>
-          <p><strong>Order ID:</strong> ${params.orderId}</p>
-        </div>
-        
-        <p style="margin-top: 30px;">Please prepare the item for shipment. You'll receive shipping instructions shortly.</p>
-        
-        <p style="margin-top: 30px;">Best regards,<br>The Marketplace Team</p>
-      </div>
-    </body>
-    </html>
-  `;
-
-  const text = `
-New Sale! 🎉
-
-Hi ${params.sellerName},
-
-Great news! Someone just purchased your item.
-
-Sale Details:
-Item: ${params.itemTitle}
-Quantity: ${params.quantity}
-Unit Price: $${params.unitPrice.toFixed(2)}
-Total Sale: $${params.total.toFixed(2)}
-Buyer: ${params.buyerName}
-Order ID: ${params.orderId}
-
-Please prepare the item for shipment. You'll receive shipping instructions shortly.
-
-Best regards,
-The Marketplace Team
-  `;
-
-  try {
-    await sgMail.send({
-      to: params.sellerEmail,
-      from: fromEmail,
-      subject: `New Sale: ${params.itemTitle}`,
-      text,
-      html,
-    });
-    console.log(`✅ Seller notification email sent to ${params.sellerEmail}`);
-  } catch (error: any) {
-    console.error('Error sending seller notification email:', error);
-    throw error;
-  }
-}
-=======
 // Send notification to seller
 export async function sendSellerNotificationEmail(
   data: SellerNotificationData
@@ -533,5 +249,3 @@ export async function sendSellerNotificationEmail(
     };
   }
 }
-
->>>>>>> 7bb93c1e272c8fb88c98b6f0db9164e9d170a217
