@@ -41,7 +41,7 @@ export async function sendVerificationCode(
       error: 'Twilio service not configured',
     };
   }
-
+//hj
   try {
     const verification = await twilioClient.verify.v2
       .services(twilioServiceSid)
