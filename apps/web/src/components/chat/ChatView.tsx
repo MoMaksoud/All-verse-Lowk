@@ -110,13 +110,13 @@ export function ChatView({
               className={`flex ${message.sender?.id === otherUser?.id ? 'justify-start' : 'justify-end'}`}
             >
               <div
-                className={`max-w-xs lg:max-w-md px-4 py-3 rounded-xl text-sm ${
+                className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm break-words ${
                   message.sender?.id === otherUser?.id
                     ? 'bg-zinc-800/80 border border-zinc-700 text-zinc-100'
                     : 'bg-blue-600 text-white'
                 }`}
               >
-                <p className="text-sm">{message.text}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
                 <p
                   className={`text-xs mt-1 ${
                     message.sender?.id === otherUser?.id

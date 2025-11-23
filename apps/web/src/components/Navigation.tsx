@@ -50,15 +50,27 @@ const Navigation = memo(function Navigation() {
   const { chats } = useChats();
   const { currentChatId, setCurrentChatId } = useChatContext();
 
+  // Track last opened timestamp in state to avoid hydration issues
+  const [lastOpenedTimestamp, setLastOpenedTimestamp] = useState(0);
+
+  // Load last opened timestamp from localStorage (client-side only)
+  useEffect(() => {
+    if (!currentUser?.uid || typeof window === 'undefined') return;
+    
+    try {
+      const lastOpenedMessagesPageAt = localStorage.getItem(`lastOpenedMessagesPageAt_${currentUser.uid}`);
+      setLastOpenedTimestamp(lastOpenedMessagesPageAt ? parseInt(lastOpenedMessagesPageAt, 10) : 0);
+    } catch (error) {
+      console.error('Error reading localStorage:', error);
+      setLastOpenedTimestamp(0);
+    }
+  }, [currentUser?.uid]);
+
   // Calculate total unread messages count (WhatsApp-like: based on timestamps)
   const unreadMessageCount = useMemo(() => {
-    if (!currentUser?.uid || !chats) return 0;
+    if (!currentUser?.uid || !chats || typeof window === 'undefined') return 0;
     
-    // Get when Messages page was last opened
-    const lastOpenedMessagesPageAt = localStorage.getItem(`lastOpenedMessagesPageAt_${currentUser.uid}`);
-    const lastOpenedTimestamp = lastOpenedMessagesPageAt ? parseInt(lastOpenedMessagesPageAt, 10) : 0;
-    
-    // Count chats with messages newer than last time Messages page was opened
+    // Count chats with messages newer than last time Messages page was last opened
     return chats.reduce((total, chat) => {
       if (!chat.lastMessage?.timestamp) return total;
       
@@ -81,7 +93,7 @@ const Navigation = memo(function Navigation() {
       
       return isUnread ? total + 1 : total;
     }, 0);
-  }, [chats, currentUser?.uid]);
+  }, [chats, currentUser?.uid, lastOpenedTimestamp]);
 
   // Fetch cart item count with caching - debounced to reduce API calls
   const fetchCartCount = useCallback(async () => {
@@ -174,9 +186,9 @@ const Navigation = memo(function Navigation() {
   }, [currentUser, showProfileDropdown, profile]);
 
   return (
-    <nav className="glass border-b border-dark-700/50 sticky top-0 z-50">
+    <nav className="glass border-b border-dark-700/50 sticky top-0 z-50 safe-area-top" suppressHydrationWarning>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center">
@@ -606,3 +618,4 @@ const Navigation = memo(function Navigation() {
 });
 
 export { Navigation };
+export default Navigation;

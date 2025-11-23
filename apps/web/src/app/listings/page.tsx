@@ -184,23 +184,23 @@ function ListingsContent() {
     <div className="min-h-screen bg-dark-950">
       <Navigation />
       
-      <div className="mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="flex justify-center mb-4">
+        <div className="mb-6 sm:mb-8 text-center">
+          <div className="flex justify-center mb-3 sm:mb-4">
             <Logo size="md" />
           </div>
-          <h1 className="text-5xl font-bold text-white mb-2">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">
             Browse Listings
           </h1>
-          <p className="text-lg text-gray-400">
+          <p className="text-base sm:text-lg text-gray-400 px-4">
             Discover amazing items with AI-powered recommendations
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* Filters Sidebar */}
-          <div className="lg:w-80">
+          <div className="w-full lg:w-80 flex-shrink-0">
             <ListingFiltersComponent
               filters={appliedFilters}
               categories={categories}
@@ -209,16 +209,16 @@ function ListingsContent() {
           </div>
 
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {/* Toolbar */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="text-sm text-gray-400">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="text-xs sm:text-sm text-gray-400">
                 {listings.length} listings found
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
                 {/* Sort Dropdown */}
-                <div className="flex items-center">
+                <div className="flex items-center flex-1 sm:flex-initial min-w-0">
                   <Select
                     value={sortBy}
                     onChange={(value) => setSortBy(value as typeof sortBy)}
@@ -228,12 +228,12 @@ function ListingsContent() {
                       { value: 'price-high', label: 'Price: High to Low' }
                     ]}
                     placeholder="Sort by"
-                    className="min-w-[180px]"
+                    className="w-full sm:min-w-[180px]"
                   />
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center border border-dark-600 rounded-xl bg-dark-800">
+                <div className="flex items-center border border-dark-600 rounded-xl bg-dark-800 flex-shrink-0">
                   <button
                     onClick={() => setViewMode('grid')}
                     className={`p-2 rounded-l-xl transition-all duration-200 ${
@@ -329,12 +329,12 @@ function ListingsContent() {
                 )}
               </>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-400 text-6xl mb-4">🔍</div>
-                <h3 className="text-lg font-medium text-white mb-2">
+              <div className="text-center py-8 sm:py-12 px-4">
+                <div className="text-gray-400 text-4xl sm:text-6xl mb-3 sm:mb-4">🔍</div>
+                <h3 className="text-base sm:text-lg font-medium text-white mb-1 sm:mb-2">
                   No listings found
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-sm sm:text-base text-gray-400">
                   Try adjusting your filters or search terms
                 </p>
               </div>

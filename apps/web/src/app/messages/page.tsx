@@ -138,17 +138,17 @@ export default function MessagesPage() {
     <div className="min-h-screen bg-zinc-950">
       <Navigation />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="flex justify-center mb-4">
+        <div className="mb-6 sm:mb-8 text-center">
+          <div className="flex justify-center mb-3 sm:mb-4">
             <Logo size="md" />
           </div>
-          <h1 className="text-5xl font-bold text-white mb-2">Messages</h1>
-          <p className="text-lg text-zinc-400">Connect with buyers and sellers</p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">Messages</h1>
+          <p className="text-base sm:text-lg text-zinc-400 px-4">Connect with buyers and sellers</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-200px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]">
           {/* Chat List - Hidden on mobile when chat is open */}
           <div className={`lg:col-span-1 min-h-0 ${showMobileChat ? 'hidden lg:block' : 'block'}`}>
             <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 h-full flex flex-col min-h-0">

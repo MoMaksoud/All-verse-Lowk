@@ -1,6 +1,6 @@
-import { Navigation } from "@/components/Navigation";
+'use client';
 
-export const metadata = { title: "AI Assistant — All Verse GPT" };
+import { Navigation } from '@/components/Navigation';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

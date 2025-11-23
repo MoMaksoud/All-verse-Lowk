@@ -140,24 +140,24 @@ export default function ProfilePage() {
       {/* Navigation */}
       <Navigation />
       
-      <div className="relative z-10 min-h-screen px-4 py-8">
+      <div className="relative z-10 min-h-screen px-4 sm:px-6 py-6 sm:py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-white">Profile</h1>
-            <p className="text-gray-400 mt-2">Manage your account and preferences</p>
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white break-words">Profile</h1>
+            <p className="text-sm sm:text-base text-gray-400 mt-2">Manage your account and preferences</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Main Profile Information */}
             <div className="lg:col-span-2">
-              <div className="bg-dark-800 rounded-2xl p-8 border border-dark-700">
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-xl font-semibold text-white">Profile Information</h2>
-                  <div className="flex items-center space-x-3">
+              <div className="bg-dark-800 rounded-2xl p-4 sm:p-6 md:p-8 border border-dark-700">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+                  <h2 className="text-lg sm:text-xl font-semibold text-white">Profile Information</h2>
+                  <div className="flex items-center space-x-3 w-full sm:w-auto">
                     <button
                       onClick={() => setShowEditModal(true)}
-                      className="flex items-center px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors"
+                      className="flex items-center px-3 py-1.5 sm:px-4 sm:py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors text-sm sm:text-base w-full sm:w-auto justify-center"
                     >
                       <Edit className="w-4 h-4 mr-2" />
                       Edit
@@ -168,13 +168,13 @@ export default function ProfilePage() {
                 {profile ? (
                   <div className="space-y-8">
                     {/* User Identity */}
-                    <div className="flex items-start space-x-6">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                       <div className="relative flex-shrink-0">
                         {profile.profilePicture ? (
                           <img
                             src={profile.profilePicture as any}
                             alt={profile.username}
-                            className="w-20 h-20 rounded-full object-cover"
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover"
                           />
                         ) : (
                           <DefaultAvatar
@@ -185,9 +185,9 @@ export default function ProfilePage() {
                         )}
                         <button
                           onClick={onCameraClick}
-                          className="absolute -bottom-2 -right-2 w-8 h-8 bg-accent-500 hover:bg-accent-600 rounded-full flex items-center justify-center transition-colors"
+                          className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-7 h-7 sm:w-8 sm:h-8 bg-accent-500 hover:bg-accent-600 rounded-full flex items-center justify-center transition-colors"
                         >
-                          <Camera className="w-4 h-4 text-white" />
+                          <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                         </button>
                         <input
                           ref={fileInputRef}
@@ -198,14 +198,14 @@ export default function ProfilePage() {
                         />
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-2xl font-bold text-white mb-1">
+                      <div className="flex-1 min-w-0 text-center sm:text-left">
+                        <h3 className="text-xl sm:text-2xl font-bold text-white mb-1 break-words">
                           {profile.username}
                         </h3>
-                        <p className="text-gray-400 mb-2">
+                        <p className="text-sm sm:text-base text-gray-400 mb-1 sm:mb-2 break-all">
                           {currentUser?.email}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs sm:text-sm text-gray-500">
                           Member since {getMemberSince()}
                         </p>
                       </div>

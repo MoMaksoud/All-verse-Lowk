@@ -351,9 +351,9 @@ export default function ListingCard({
           </div>
         ) : (
           // list variant
-          <div className="flex gap-4 md:gap-5">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-5">
             {/* Image */}
-            <div className="w-44 md:w-56 shrink-0">
+            <div className="w-full sm:w-32 md:w-44 lg:w-56 shrink-0">
               <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526]">
                 {imageUrl ? (
                   <Image
@@ -373,10 +373,10 @@ export default function ListingCard({
 
             {/* Content */}
             <div className="flex min-w-0 flex-1 flex-col">
-              <h3 className="text-xl font-semibold text-zinc-100 line-clamp-2">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-zinc-100 line-clamp-2 break-words">
                 {title}
               </h3>
-              <p className="mt-1 text-sm text-zinc-300/90">
+              <p className="mt-1 text-xs sm:text-sm text-zinc-300/90 break-words">
                 {truncateWords(description, 22)}
               </p>
 

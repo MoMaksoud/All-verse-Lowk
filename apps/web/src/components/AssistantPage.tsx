@@ -206,49 +206,49 @@ export default function AssistantPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] overflow-hidden bg-zinc-950">
-      <main className="flex flex-col h-full max-w-4xl mx-auto px-4 py-4">
+    <div className="h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] overflow-hidden bg-zinc-950">
+      <main className="flex flex-col h-full max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
         {/* Header */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
+        <div className="mb-3 sm:mb-4">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <h1 className="text-2xl font-bold text-white">AI Assistant</h1>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white truncate">AI Assistant</h1>
             </div>
             {messages.length > 0 && (
               <button
                 onClick={handleClearChat}
-                className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors flex-shrink-0"
                 title="Clear conversation"
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             )}
           </div>
 
           {/* Mode Toggle */}
-          <div className="flex bg-zinc-800 rounded-lg p-1 w-fit mx-auto">
+          <div className="flex bg-zinc-800 rounded-lg p-1 w-full sm:w-fit mx-auto">
             <button
               onClick={() => setMode('buyer')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5 sm:gap-2 ${
                 mode === 'buyer' 
                   ? 'bg-blue-600 text-white' 
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              <ShoppingCart className="w-4 h-4" /> Buyer
+              <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" /> <span>Buyer</span>
             </button>
             <button
               onClick={() => setMode('seller')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5 sm:gap-2 ${
                 mode === 'seller' 
                   ? 'bg-blue-600 text-white' 
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              <Store className="w-4 h-4" /> Seller
+              <Store className="w-3 h-3 sm:w-4 sm:h-4" /> <span>Seller</span>
             </button>
           </div>
         </div>
@@ -271,7 +271,7 @@ export default function AssistantPage() {
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] px-4 py-3 rounded-xl text-sm ${
+                      className={`max-w-[85%] sm:max-w-[80%] px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-xs sm:text-sm break-words whitespace-pre-wrap ${
                         msg.role === 'ai'
                           ? 'bg-zinc-800/80 border border-zinc-700 text-zinc-100'
                           : 'bg-blue-600 text-white'
@@ -294,14 +294,14 @@ export default function AssistantPage() {
           </div>
 
           {/* Input Area */}
-          <div className="flex-shrink-0 border-t border-zinc-800 p-4">
-            <form onSubmit={handleSubmit} className="flex gap-2">
+          <div className="flex-shrink-0 border-t border-zinc-800 p-3 sm:p-4 safe-area-bottom">
+            <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-2">
               <textarea
                 ref={taRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={mode === 'buyer' ? 'What are you looking for?' : 'How can I help you sell?'}
-                className="flex-1 resize-none rounded-xl bg-zinc-900/80 text-sm px-4 py-3 outline-none border border-zinc-700 focus:border-blue-600 min-h-[48px] max-h-[120px] text-zinc-100 placeholder:text-zinc-500"
+                className="flex-1 resize-none rounded-xl bg-zinc-900/80 text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-3 outline-none border border-zinc-700 focus:border-blue-600 min-h-[44px] sm:min-h-[48px] max-h-[120px] text-zinc-100 placeholder:text-zinc-500"
                 rows={1}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -313,9 +313,10 @@ export default function AssistantPage() {
               <button
                 type="submit"
                 disabled={isLoading || !input.trim() || !currentUser}
-                className="px-5 py-3 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                className="px-3 sm:px-5 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1 sm:gap-2 flex-shrink-0"
               >
                 <Send className="w-4 h-4" />
+                <span className="hidden sm:inline">Send</span>
               </button>
             </form>
           </div>
@@ -324,20 +325,20 @@ export default function AssistantPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={cancelDeleteChat}>
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-2">Clear Conversation</h3>
-            <p className="text-zinc-400 mb-6">Are you sure you want to clear this conversation? This action cannot be undone.</p>
-            <div className="flex gap-3 justify-end">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={cancelDeleteChat}>
+          <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4 sm:p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Clear Conversation</h3>
+            <p className="text-sm sm:text-base text-zinc-400 mb-4 sm:mb-6">Are you sure you want to clear this conversation? This action cannot be undone.</p>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
               <button
                 onClick={cancelDeleteChat}
-                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium transition-colors"
+                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium transition-colors w-full sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeleteChat}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors"
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors w-full sm:w-auto"
               >
                 Clear
               </button>
