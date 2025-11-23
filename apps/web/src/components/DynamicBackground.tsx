@@ -275,7 +275,7 @@ export function DynamicBackground({
   if (prefersReducedMotion) {
     return (
       <div className={`fixed inset-0 -z-10 ${className}`}>
-        <div className="aurora-static aurora-intensity-low"></div>
+        <div className="aurora-static aurora-intensity-low" style={{ opacity: 1 }}></div>
       </div>
     );
   }

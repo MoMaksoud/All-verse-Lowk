@@ -200,6 +200,11 @@ body {
   overflow-x: hidden;
 }
 
+/* Ensure html also has dark background for mobile */
+html {
+  background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
+}
+
 /* AI Page specific styles - prevent page scrolling */
 .ai-page {
   overflow: hidden;
@@ -323,6 +328,12 @@ select:focus {
 /* Ensure dynamic background is visible on home page */
 .home-page {
   background: transparent !important;
+}
+
+/* Ensure body has dark background on home page even if DynamicBackground doesn't render */
+body.home-page,
+.home-page body {
+  background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%) !important;
 }
 
   /* Test background - more visible blue glow */
@@ -1100,9 +1111,11 @@ select:focus {
     right: 0;
     bottom: 0;
     background: 
-      radial-gradient(ellipse at 20% 20%, rgba(0, 99, 225, 0.2) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(0, 82, 184, 0.2) 0%, transparent 50%),
-      radial-gradient(ellipse at 40% 60%, rgba(0, 65, 143, 0.15) 0%, transparent 50%);
+      radial-gradient(ellipse at 20% 20%, rgba(0, 99, 225, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(0, 82, 184, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 40% 60%, rgba(0, 65, 143, 0.15) 0%, transparent 50%),
+      linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
+    opacity: 1 !important;
   }
 
   /* Performance optimizations */
