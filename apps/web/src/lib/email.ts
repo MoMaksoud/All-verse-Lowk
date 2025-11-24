@@ -109,16 +109,26 @@ export async function sendVerificationEmail(
   verificationUrl: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Check for required SendGrid configuration
     if (!process.env.SENDGRID_API_KEY) {
-      console.warn('⚠️ SendGrid API key not configured, skipping verification email');
-      return { success: false, error: 'SendGrid not configured' };
+      console.error('❌ Missing SENDGRID_API_KEY environment variable');
+      return { success: false, error: 'SendGrid not configured - missing API key' };
     }
 
+    if (!process.env.SENDGRID_FROM_EMAIL) {
+      console.error('❌ Missing SENDGRID_FROM_EMAIL environment variable');
+      return { success: false, error: 'SendGrid not configured - missing from email' };
+    }
+
+    // Ensure SendGrid is initialized
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
     const templateId = process.env.SENDGRID_VERIFICATION_TEMPLATE_ID;
+    const fromEmail = process.env.SENDGRID_FROM_EMAIL;
     
     const msg: any = {
       to,
-      from: process.env.SENDGRID_FROM_EMAIL || 'allversegpt@gmail.com',
+      from: fromEmail,
       dynamic_template_data: {
         verification_url: verificationUrl,
       },
@@ -126,16 +136,47 @@ export async function sendVerificationEmail(
 
     if (templateId) {
       msg.templateId = templateId;
+      console.log('📧 Sending verification email with template:', templateId);
     } else {
-      // Fallback if no template ID
+      // Modern fallback HTML template if no template ID
+      console.log('📧 Sending verification email with fallback HTML template');
       msg.subject = 'Verify Your Email - AllVerse';
-      msg.html = `<p>Click here to verify: <a href="${verificationUrl}">${verificationUrl}</a></p>`;
+      msg.html = `
+        <html>
+          <body style="font-family:Inter,Arial,sans-serif;padding:24px;background:#f5f7fb;">
+            <div style="max-width:480px;margin:auto;background:white;padding:28px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+              <h2 style="margin-bottom:12px;color:#111">Welcome to AllVerse 🎉</h2>
+              <p style="color:#444;font-size:15px;margin-bottom:24px;">
+                Tap the button below to verify your email and activate your account.
+              </p>
+
+              <a href="${verificationUrl}"
+                 style="display:inline-block;background:#0063e1;color:white;padding:12px 18px;
+                 border-radius:8px;text-decoration:none;font-weight:600;">
+                Verify Email
+              </a>
+
+              <p style="font-size:13px;color:#777;margin-top:28px;">
+                If you didn't sign up, you can safely ignore this message.
+              </p>
+
+              <p style="font-size:11px;color:#aaa;margin-top:24px;text-align:center;">
+                © ${new Date().getFullYear()} AllVerse Marketplace. All rights reserved.
+              </p>
+            </div>
+          </body>
+        </html>
+      `;
     }
 
     await sgMail.send(msg);
+    console.log('✅ Verification email sent successfully to:', to);
     return { success: true };
   } catch (error: any) {
-    console.error('Error sending verification email:', error);
+    console.error('❌ Error sending verification email:', error?.message || error);
+    if (error?.response?.body) {
+      console.error('❌ SendGrid error details:', JSON.stringify(error.response.body));
+    }
     return {
       success: false,
       error: error.message || 'Failed to send verification email',
