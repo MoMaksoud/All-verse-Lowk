@@ -20,7 +20,8 @@ function getAdminApp(): App {
     adminApp = existingApps[0];
     adminAuth = getAuth(adminApp);
     adminFirestore = getFirestore(adminApp);
-    adminStorage = getStorage(adminApp);
+    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (adminApp.options.projectId ? `${adminApp.options.projectId}.appspot.com` : undefined);
+    adminStorage = storageBucket ? getStorage(adminApp, storageBucket) : getStorage(adminApp);
     return adminApp;
   }
 
@@ -43,9 +44,12 @@ function getAdminApp(): App {
         throw new Error('Invalid FIREBASE_SERVICE_ACCOUNT_KEY format. Must be valid JSON.');
       }
       
+      const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (projectId || serviceAccountJson.project_id ? `${projectId || serviceAccountJson.project_id}.appspot.com` : undefined);
+      
       adminApp = initializeApp({
         credential: cert(serviceAccountJson),
         projectId: projectId || serviceAccountJson.project_id,
+        storageBucket: storageBucket,
       });
       console.log('✅ Firebase Admin initialized with service account');
     } else {
@@ -58,8 +62,11 @@ function getAdminApp(): App {
       }
       // Use default credentials (for Firebase Cloud Functions or GCP)
       try {
+        const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${projectId}.appspot.com`;
+        
         adminApp = initializeApp({
           projectId: projectId,
+          storageBucket: storageBucket,
         });
         console.log('✅ Firebase Admin initialized with default credentials');
       } catch (defaultError) {
@@ -71,7 +78,8 @@ function getAdminApp(): App {
 
     adminAuth = getAuth(adminApp);
     adminFirestore = getFirestore(adminApp);
-    adminStorage = getStorage(adminApp);
+    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (adminApp.options.projectId ? `${adminApp.options.projectId}.appspot.com` : undefined);
+    adminStorage = storageBucket ? getStorage(adminApp, storageBucket) : getStorage(adminApp);
     return adminApp;
   } catch (error: any) {
     console.error('❌ Firebase Admin initialization failed:', error?.message || error);
@@ -111,7 +119,14 @@ export function getAdminFirestore(): Firestore {
 export function getAdminStorage(): Storage {
   if (!adminStorage) {
     try {
-      getAdminApp();
+      const app = getAdminApp();
+      const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (app.options.projectId ? `${app.options.projectId}.appspot.com` : undefined);
+      
+      if (storageBucket) {
+        adminStorage = getStorage(app, storageBucket);
+      } else {
+        adminStorage = getStorage(app);
+      }
     } catch (error: any) {
       console.error('❌ Failed to initialize Admin Storage:', error?.message || error);
       throw new Error(`Firebase Admin Storage initialization failed: ${error?.message || 'Unknown error'}`);

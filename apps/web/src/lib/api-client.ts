@@ -105,10 +105,13 @@ export async function apiPost(
   body?: any,
   options?: ApiRequestOptions
 ): Promise<Response> {
+  // Don't stringify FormData - let the browser set Content-Type with boundary
+  const bodyData = body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined);
+  
   return apiRequest(url, {
     ...options,
     method: 'POST',
-    body: body ? JSON.stringify(body) : undefined,
+    body: bodyData,
   });
 }
 

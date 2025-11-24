@@ -90,29 +90,39 @@ export default function SignUp() {
       setLoading(true);
       await signup(formData.email.trim(), formData.password, formData.displayName.trim());
       
-      // Send verification code
+      // Wait a moment for auth state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Get the current user from auth state
+      const firebaseUser = auth?.currentUser;
+      if (!firebaseUser) {
+        setError('Failed to get user information. Please try again.');
+        setLoading(false);
+        return;
+      }
+      
+      // Send verification email with token
       try {
-        const response = await fetch('/api/auth/send-verification', {
+        const response = await fetch('/api/auth/send-verification-email', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             email: formData.email.trim(),
+            userId: firebaseUser.uid,
           }),
         });
 
         if (response.ok) {
           setShowVerification(true);
         } else {
-          console.error('Failed to send verification code');
-          // Still show verification screen, user can resend
-          setShowVerification(true);
+          const data = await response.json();
+          setError(data.error || 'Failed to send verification email. Please try again.');
         }
       } catch (emailError) {
-        console.error('Error sending verification code:', emailError);
-        // Still show verification screen
-        setShowVerification(true);
+        console.error('Error sending verification email:', emailError);
+        setError('Failed to send verification email. Please try again.');
       }
     } catch (error: any) {
       // Show the actual error message from Firebase
@@ -141,6 +151,16 @@ export default function SignUp() {
       if (!userId) {
         setError('You must be logged in to create a profile. Please try refreshing the page.');
         setProfileLoading(false);
+        return;
+      }
+
+      // Check if email is verified
+      await firebaseUser.reload();
+      if (!firebaseUser.emailVerified) {
+        setError('Please verify your email address before creating your profile. Check your email for the verification link.');
+        setProfileLoading(false);
+        setShowVerification(true);
+        setShowProfileSetup(false);
         return;
       }
       
@@ -379,39 +399,68 @@ export default function SignUp() {
           </Link>
           <div className="min-h-screen flex items-center justify-center px-4">
             <div className="max-w-md mx-auto bg-dark-800 rounded-2xl p-8 border border-dark-700">
-              <h2 className="text-2xl font-bold text-white mb-4 text-center">Verify Your Email</h2>
-              <p className="text-gray-400 mb-6 text-center">
-                We've sent a verification code to <strong className="text-white">{currentUser.email}</strong>
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Verification Code
-                  </label>
-                  <input
-                    type="text"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Enter 6-digit code"
-                    className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-500 text-center text-2xl tracking-widest"
-                    maxLength={6}
-                  />
+              <div className="text-center mb-6">
+                <div className="inline-block bg-accent-500/20 rounded-full p-4 mb-4">
+                  <svg className="w-12 h-12 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
                 </div>
-                {verificationError && (
-                  <p className="text-red-400 text-sm">{verificationError}</p>
-                )}
+                <h2 className="text-2xl font-bold text-white mb-2">Check Your Email</h2>
+                <p className="text-gray-400 mb-4">
+                  We've sent a verification link to <strong className="text-white">{currentUser.email}</strong>
+                </p>
+                <p className="text-gray-400 text-sm mb-6">
+                  Please click the link in the email to verify your account before continuing.
+                </p>
+              </div>
+              
+              <div className="bg-dark-700/50 rounded-lg p-4 mb-6">
+                <p className="text-gray-300 text-sm">
+                  <strong className="text-white">Note:</strong> You must verify your email before you can create your profile and use the platform.
+                </p>
+              </div>
+
+              <div className="space-y-3">
                 <button
-                  onClick={handleVerifyEmail}
-                  disabled={verificationCode.length !== 6 || verifying}
-                  className="w-full bg-accent-500 hover:bg-accent-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/auth/send-verification-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          email: currentUser.email,
+                          userId: currentUser.uid,
+                        }),
+                      });
+                      if (response.ok) {
+                        alert('Verification email resent!');
+                      } else {
+                        const data = await response.json();
+                        alert(data.error || 'Failed to resend email. Please try again.');
+                      }
+                    } catch (error) {
+                      alert('Failed to resend email. Please try again.');
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors"
                 >
-                  {verifying ? 'Verifying...' : 'Verify Email'}
+                  Resend Verification Email
                 </button>
+                
                 <button
-                  onClick={handleResendCode}
-                  className="w-full text-accent-500 hover:text-accent-400 text-sm font-medium"
+                  onClick={async () => {
+                    // Check if email is verified
+                    await currentUser.reload();
+                    if (currentUser.emailVerified) {
+                      setShowVerification(false);
+                      setShowProfileSetup(true);
+                    } else {
+                      alert('Please verify your email first by clicking the link we sent you.');
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors"
                 >
-                  Resend Code
+                  I've Verified My Email
                 </button>
               </div>
             </div>

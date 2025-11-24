@@ -21,32 +21,32 @@ const toastIcons = {
 
 const toastStyles = {
   success: {
-    bg: 'bg-green-900/90',
-    border: 'border-green-500/20',
+    bg: 'bg-zinc-900',
+    border: 'border border-zinc-800',
     icon: 'text-green-400',
-    title: 'text-green-100',
-    message: 'text-green-200',
+    title: 'text-zinc-100',
+    message: 'text-zinc-400',
   },
   error: {
-    bg: 'bg-red-900/90',
-    border: 'border-red-500/20',
+    bg: 'bg-zinc-900',
+    border: 'border border-zinc-800',
     icon: 'text-red-400',
-    title: 'text-red-100',
-    message: 'text-red-200',
+    title: 'text-zinc-100',
+    message: 'text-zinc-400',
   },
   warning: {
-    bg: 'bg-yellow-900/90',
-    border: 'border-yellow-500/20',
+    bg: 'bg-zinc-900',
+    border: 'border border-zinc-800',
     icon: 'text-yellow-400',
-    title: 'text-yellow-100',
-    message: 'text-yellow-200',
+    title: 'text-zinc-100',
+    message: 'text-zinc-400',
   },
   info: {
-    bg: 'bg-blue-900/90',
-    border: 'border-blue-500/20',
+    bg: 'bg-zinc-900',
+    border: 'border border-zinc-800',
     icon: 'text-blue-400',
-    title: 'text-blue-100',
-    message: 'text-blue-200',
+    title: 'text-zinc-100',
+    message: 'text-zinc-400',
   },
 };
 
@@ -81,15 +81,15 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
   return (
     <div
       className={`
-        fixed top-4 right-4 z-50 max-w-sm w-full
+        w-full
         transform transition-all duration-300 ease-in-out
-        ${isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
+        ${isVisible && !isLeaving ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}
       `}
     >
       <div
         className={`
-          ${styles.bg} ${styles.border} backdrop-blur-sm
-          rounded-2xl p-4 shadow-xl
+          ${styles.bg} ${styles.border}
+          rounded-xl p-4
           flex items-start gap-3
         `}
       >
@@ -125,9 +125,11 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
 // Toast Container Component
 export function ToastContainer({ toasts, onClose }: { toasts: ToastProps[]; onClose: (id: string) => void }) {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
-      {toasts.map((toast) => (
-        <Toast key={toast.id} {...toast} onClose={onClose} />
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 space-y-2 max-w-md w-full mx-4 pointer-events-none">
+      {toasts.map((toast, index) => (
+        <div key={toast.id} className="pointer-events-auto" style={{ marginTop: index > 0 ? '0.5rem' : '0' }}>
+          <Toast {...toast} onClose={onClose} />
+        </div>
       ))}
     </div>
   );

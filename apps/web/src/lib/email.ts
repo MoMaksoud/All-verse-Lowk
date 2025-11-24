@@ -100,6 +100,49 @@ export async function verifyCode(
   }
 }
 
+// ============================================================================
+// EMAIL VERIFICATION WITH TOKEN (SendGrid Template)
+// ============================================================================
+
+export async function sendVerificationEmail(
+  to: string,
+  verificationUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn('⚠️ SendGrid API key not configured, skipping verification email');
+      return { success: false, error: 'SendGrid not configured' };
+    }
+
+    const templateId = process.env.SENDGRID_VERIFICATION_TEMPLATE_ID;
+    
+    const msg: any = {
+      to,
+      from: process.env.SENDGRID_FROM_EMAIL || 'allversegpt@gmail.com',
+      dynamic_template_data: {
+        verification_url: verificationUrl,
+      },
+    };
+
+    if (templateId) {
+      msg.templateId = templateId;
+    } else {
+      // Fallback if no template ID
+      msg.subject = 'Verify Your Email - AllVerse';
+      msg.html = `<p>Click here to verify: <a href="${verificationUrl}">${verificationUrl}</a></p>`;
+    }
+
+    await sgMail.send(msg);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error sending verification email:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send verification email',
+    };
+  }
+}
+
 // Order confirmation email data interface
 interface OrderConfirmationData {
   orderId: string;

@@ -31,12 +31,16 @@ export class GeminiService {
    * @param userMessage - The user's message
    * @param conversationHistory - Previous conversation messages
    * @param listingsContext - Optional database listings context (for buyer mode)
+   * @param mediaUrl - Optional media URL (image or video)
+   * @param mediaType - Optional media type ('image' or 'video')
    */
   static async generateAIResponse(
     role: 'buyer' | 'seller', 
     userMessage: string,
     conversationHistory: any[] = [],
-    listingsContext: string = ''
+    listingsContext: string = '',
+    mediaUrl?: string,
+    mediaType?: 'image' | 'video'
   ): Promise<string> {
     // Define system prompts for each role
     const buyerPrompt = `
@@ -51,6 +55,27 @@ export class GeminiService {
     - If a user asks about something not in the listings, say "I don't see that item in our current listings, but here are similar items..." or "That item isn't currently available, but we have..."
     - If no listings match the query, be honest: "I don't see any listings matching that description right now."
     
+    LISTING RECOMMENDATIONS:
+    - When recommending items from the marketplace, ALWAYS return a JSON object with this exact format:
+      {
+        "message": "Here are the closest items I found:",
+        "type": "listings",
+        "items": [
+          {
+            "title": "Listing Title",
+            "price": 85,
+            "image": "https://image-url.com/image.jpg",
+            "url": "/listing/listing_id"
+          }
+        ]
+      }
+    - Include 2-6 relevant listings from the database context.
+    - Extract the listing ID from the database context (format: "ID: abc123").
+    - Use the actual title, price from the database.
+    - For image URL, use the exact Image URL from the database context.
+    - For url, use the format "/listings/{listing_id}" (note: use "listings" plural, not "listing").
+    - If you cannot find matching listings, return a regular text response instead.
+    
     Core goals:
     - Help buyers quickly discover relevant listings from our ACTUAL database.
     - Provide specific listings with titles, prices, and categories from the database context.
@@ -60,11 +85,11 @@ export class GeminiService {
     Style rules:
     - Keep answers concise: 1-3 short sentences, followed by specific listings from the database.
     - When mentioning listings, include: title, price, category, and condition.
-    - Use plain text only — no emojis, formatting, or bullets.
+    - Use plain text only — no emojis, formatting, or bullets (except for JSON responses).
     - If a query is not about buying or finding items, respond with:
       "This AI is only for helping buyers on AllVerse. Please switch to Seller mode for other questions."
     
-    Always end with a short, friendly call-to-action question.
+    Always end with a short, friendly call-to-action question (unless returning listing recommendations).
     `;
 
 const sellerPrompt = `
@@ -110,12 +135,22 @@ Always end with a short, encouraging call-to-action question.
         const historyText = conversationHistory
           .map((msg: any) => {
             const role = msg.role === 'user' ? 'User' : 'Assistant';
-            return `${role}: ${msg.parts?.[0]?.text || msg.content || ''}`;
+            let content = msg.parts?.[0]?.text || msg.content || '';
+            // Include media info in history
+            if (msg.mediaUrl) {
+              content = `${content}\n[User submitted ${msg.mediaType || 'media'}. URL: ${msg.mediaUrl}]`;
+            }
+            return `${role}: ${content}`;
           })
           .join('\n\n');
         fullPrompt = `${fullPrompt}\n\nPrevious conversation:\n${historyText}\n\nCurrent message:\n${userMessage}`;
       } else {
         fullPrompt = `${fullPrompt}\n\nCurrent message:\n${userMessage}`;
+      }
+
+      // Add media URL to current message if present
+      if (mediaUrl && mediaType) {
+        fullPrompt = `${fullPrompt}\n\n[User submitted ${mediaType}. URL: ${mediaUrl}]`;
       }
 
       console.log('🔵 Calling Gemini generateContent, prompt length:', fullPrompt.length);

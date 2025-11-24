@@ -2,16 +2,26 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase';
-import { Send, Bot, ShoppingCart, Store, Trash2 } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
+import { Send, Bot, ShoppingCart, Store, Trash2, Image as ImageIcon } from 'lucide-react';
 
 interface Message {
   id: string;
   role: 'user' | 'ai';
   content: string;
   timestamp: string; // Changed from Date to string for JSON serialization
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+  type?: 'listings';
+  items?: Array<{
+    title: string;
+    price: number;
+    image: string;
+    url: string;
+  }>;
 }
 
 export default function AssistantPage() {
@@ -21,9 +31,15 @@ export default function AssistantPage() {
   const [mode, setMode] = useState<'buyer' | 'seller'>('buyer');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [pendingMedia, setPendingMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useAuth();
+  const { showError, showSuccess } = useToast();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Auto-scroll to bottom when messages change
@@ -88,8 +104,83 @@ export default function AssistantPage() {
     setShowDeleteConfirm(false);
   }, []);
 
-  const handleSearch = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim() || isLoading || !currentUser) return;
+  const uploadFile = useCallback(async (file: File) => {
+    if (!file || !currentUser) return;
+
+    // Validate file type
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    
+    if (!isImage && !isVideo) {
+      showError('Invalid File', 'Please select an image or video file');
+      return;
+    }
+
+    // Validate file size (max 25MB)
+    if (file.size > 25 * 1024 * 1024) {
+      showError('File Too Large', 'File must be smaller than 25MB');
+      return;
+    }
+
+    setUploadingMedia(true);
+    try {
+      // Upload via server-side API endpoint (bypasses security rules)
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Get auth token for the request
+      if (auth) {
+        await auth.authStateReady();
+        const firebaseUser = auth.currentUser;
+        if (firebaseUser) {
+          await firebaseUser.getIdToken(true);
+        }
+      }
+      
+      const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      // Use fetch directly - browser will set Content-Type automatically for FormData
+      const response = await fetch('/api/upload/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Do NOT set Content-Type - browser will set it with boundary for FormData
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to upload file');
+      }
+
+      const data = await response.json();
+      setPendingMedia({ url: data.url, type: data.type });
+      showSuccess('File Uploaded', 'Your file is ready to send');
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      showError('Upload Failed', error?.message || 'Please try again.');
+    } finally {
+      setUploadingMedia(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [currentUser, showError, showSuccess]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadFile(file);
+    }
+  }, [uploadFile]);
+
+  const handleSearch = useCallback(async (searchQuery: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
+    if ((!searchQuery.trim() && !mediaUrl) || isLoading || !currentUser) return;
 
     // Ensure auth is ready and force token refresh before making API call
     if (auth) {
@@ -106,6 +197,7 @@ export default function AssistantPage() {
     const userMessage = searchQuery.trim().slice(0, 2000);
     setInput('');
     setIsLoading(true);
+    setPendingMedia(null); // Clear pending media after sending
 
     // Add user message immediately
     const userMsg: Message = {
@@ -113,20 +205,32 @@ export default function AssistantPage() {
       role: 'user',
       content: userMessage,
       timestamp: new Date().toISOString(), // Store as ISO string
+      mediaUrl,
+      mediaType,
     };
     
     setMessages(prev => [...prev, userMsg]);
 
     try {
       const { apiPost } = await import('@/lib/api-client');
-      const response = await apiPost('/api/ai/chat', {
+      const requestBody: any = {
         message: userMessage,
         mode,
         conversationHistory: messages.slice(-10).map(m => ({
           role: m.role,
-          content: m.content
+          content: m.content,
+          mediaUrl: m.mediaUrl,
+          mediaType: m.mediaType,
         })),
-      });
+      };
+
+      // Include media if present
+      if (mediaUrl && mediaType) {
+        requestBody.mediaUrl = mediaUrl;
+        requestBody.mediaType = mediaType;
+      }
+
+      const response = await apiPost('/api/ai/chat', requestBody);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -144,12 +248,30 @@ export default function AssistantPage() {
 
       const data = await response.json();
 
-      const aiMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'ai',
-        content: data.response || 'No response received',
-        timestamp: new Date().toISOString(),
-      };
+      // Check if response is a listings format
+      let aiMsg: Message;
+      const responseData = data.response;
+      
+      // Check if response is already in listings format
+      if (responseData && typeof responseData === 'object' && responseData.type === 'listings' && Array.isArray(responseData.items)) {
+        aiMsg = {
+          id: crypto.randomUUID(),
+          role: 'ai',
+          content: responseData.message || 'Here are some items:',
+          timestamp: new Date().toISOString(),
+          type: 'listings',
+          items: responseData.items,
+        };
+      } else {
+        // Regular text response
+        const responseText = typeof responseData === 'string' ? responseData : (responseData?.message || 'No response received');
+        aiMsg = {
+          id: crypto.randomUUID(),
+          role: 'ai',
+          content: responseText,
+          timestamp: new Date().toISOString(),
+        };
+      }
       setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
       console.error('Error:', error);
@@ -167,9 +289,9 @@ export default function AssistantPage() {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !currentUser) return;
-    handleSearch(input.trim());
-  }, [input, isLoading, currentUser, handleSearch]);
+    if ((!input.trim() && !pendingMedia) || isLoading || !currentUser) return;
+    handleSearch(input.trim() || 'User submitted image/video', pendingMedia?.url, pendingMedia?.type);
+  }, [input, isLoading, currentUser, handleSearch, pendingMedia]);
 
   // Read query from URL and auto-trigger search
   useEffect(() => {
@@ -277,7 +399,79 @@ export default function AssistantPage() {
                           : 'bg-blue-600 text-white'
                       }`}
                     >
-                      {msg.content}
+                      {/* Render media preview for user messages */}
+                      {msg.role === 'user' && msg.mediaUrl && (
+                        <div className="mb-2">
+                          {msg.mediaType === 'image' ? (
+                            <img 
+                              src={msg.mediaUrl} 
+                              alt="Uploaded" 
+                              className="rounded-lg max-w-xs max-h-64 object-cover"
+                            />
+                          ) : (
+                            <video 
+                              src={msg.mediaUrl} 
+                              controls 
+                              className="rounded-lg max-w-xs max-h-64"
+                            />
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Render listings */}
+                      {msg.type === 'listings' && msg.items ? (
+                        <div>
+                          {msg.content && <p className="mb-3">{msg.content}</p>}
+                          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+                            {msg.items.map((item, index) => {
+                              // Normalize URL: ensure it starts with / and uses /listings/ (plural) not /listing/
+                              let listingUrl = item.url.startsWith('/') ? item.url : `/${item.url}`;
+                              // Fix route: replace /listing/ with /listings/ if needed
+                              listingUrl = listingUrl.replace(/^\/listing\//, '/listings/');
+                              
+                              // Use data URL SVG as fallback instead of external placeholder
+                              const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23222" width="300" height="300"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+                              
+                              // Only use item.image if it's a valid HTTPS URL
+                              let imageUrl = fallbackImage;
+                              if (item.image && typeof item.image === 'string') {
+                                const trimmed = item.image.trim();
+                                if ((trimmed.startsWith('https://') || trimmed.startsWith('http://')) && trimmed.length > 10) {
+                                  imageUrl = trimmed;
+                                }
+                              }
+                              
+                              return (
+                                <div
+                                  key={index}
+                                  onClick={() => {
+                                    console.log('Navigating to:', listingUrl);
+                                    router.push(listingUrl);
+                                  }}
+                                  className="flex-shrink-0 border border-zinc-800 bg-zinc-900 rounded-xl p-3 hover:bg-zinc-800 transition w-56 cursor-pointer"
+                                >
+                                  <img 
+                                    src={imageUrl}
+                                    alt={item.title}
+                                    className="rounded-lg w-full h-32 object-cover mb-2"
+                                    onError={(e) => {
+                                      // Fallback to data URL if image fails
+                                      (e.target as HTMLImageElement).src = fallbackImage;
+                                    }}
+                                  />
+                                  <h3 className="text-sm font-medium text-zinc-100 mb-1 line-clamp-2">
+                                    {item.title}
+                                  </h3>
+                                  <p className="text-xs text-zinc-400 mb-2">${item.price}</p>
+                                  <span className="text-blue-400 text-xs">View Listing</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <>{msg.content}</>
+                      )}
                     </div>
                   </div>
                 ))
@@ -294,8 +488,74 @@ export default function AssistantPage() {
           </div>
 
           {/* Input Area */}
-          <div className="flex-shrink-0 border-t border-zinc-800 p-3 sm:p-4 safe-area-bottom">
+          <div 
+            className={`flex-shrink-0 border-t border-zinc-800 p-3 sm:p-4 safe-area-bottom ${isDragging ? 'bg-zinc-800/50' : ''}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              const file = e.dataTransfer.files[0];
+              if (file) {
+                uploadFile(file);
+              }
+            }}
+          >
+            {/* Pending media preview */}
+            {pendingMedia && (
+              <div className="mb-2 flex items-center gap-2">
+                {pendingMedia.type === 'image' ? (
+                  <img 
+                    src={pendingMedia.url} 
+                    alt="Preview" 
+                    className="rounded-lg w-16 h-16 object-cover"
+                  />
+                ) : (
+                  <video 
+                    src={pendingMedia.url} 
+                    className="rounded-lg w-16 h-16 object-cover"
+                  />
+                )}
+                <button
+                  onClick={() => setPendingMedia(null)}
+                  className="text-zinc-400 hover:text-white text-xs"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-2">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              
+              {/* Upload button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading || uploadingMedia || !currentUser}
+                className="px-2 sm:px-3 py-2 sm:py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center flex-shrink-0"
+                title="Upload image or video"
+              >
+                {uploadingMedia ? (
+                  <div className="w-4 h-4 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                )}
+              </button>
+              
               <textarea
                 ref={taRef}
                 value={input}
@@ -312,7 +572,7 @@ export default function AssistantPage() {
               />
               <button
                 type="submit"
-                disabled={isLoading || !input.trim() || !currentUser}
+                disabled={isLoading || (!input.trim() && !pendingMedia) || !currentUser}
                 className="px-3 sm:px-5 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1 sm:gap-2 flex-shrink-0"
               >
                 <Send className="w-4 h-4" />

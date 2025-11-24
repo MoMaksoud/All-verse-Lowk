@@ -3,12 +3,109 @@ import { GeminiService } from '@/lib/gemini';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
 import { assertTokenBudget, addUsage } from '@/lib/aiUsage';
 import { withApi } from '@/lib/withApi';
+import { getAdminStorage } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const DAILY_LIMIT = Number(process.env.NEXT_PUBLIC_AI_DAILY_TOKENS || 5000);
 const MAX_OUT_TOKENS = 256;
+
+/**
+ * Fetch the first image from Firebase Storage for a listing
+ * Images are stored at: listing-photos/{userId}/{listingId}/ or listing-photos/{userId}/temp-{userId}-{timestamp}/
+ */
+async function getListingImage(listingId: string, userId?: string, existingImageUrl?: string): Promise<string | null> {
+  // If listing already has a valid image URL, use it
+  if (existingImageUrl && typeof existingImageUrl === 'string') {
+    const trimmed = existingImageUrl.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      console.log(`✅ Using existing image URL for listing ${listingId}`);
+      return trimmed;
+    }
+  }
+  
+  try {
+    const storage = getAdminStorage();
+    const bucket = storage.bucket();
+    
+    const pathsToTry: string[] = [];
+    
+    // Try direct path with userId: listing-photos/{userId}/{listingId}/
+    if (userId) {
+      pathsToTry.push(`listing-photos/${userId}/${listingId}/`);
+    }
+    
+    // Try without userId: listing-photos/{listingId}/
+    pathsToTry.push(`listing-photos/${listingId}/`);
+    
+    // Try temp folder patterns if userId is available
+    if (userId) {
+      pathsToTry.push(`listing-photos/${userId}/temp-${userId}-`);
+    }
+    
+    for (const path of pathsToTry) {
+      try {
+        console.log(`🔍 Searching for images in: ${path}`);
+        
+        // For temp folder pattern, we need to list all folders
+        if (path.includes('/temp-')) {
+          const [allFiles] = await bucket.getFiles({ 
+            prefix: path.substring(0, path.lastIndexOf('/') + 1),
+            maxResults: 100
+          });
+          
+          // Find files in any temp folder for this user
+          const tempFiles = allFiles.filter(file => 
+            file.name.includes('/temp-') && 
+            (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || 
+             file.name.endsWith('.png') || file.name.endsWith('.webp'))
+          );
+          
+          if (tempFiles.length > 0) {
+            const firstFile = tempFiles[0];
+            
+            try {
+              await firstFile.makePublic();
+            } catch (makePublicError: any) {
+              console.log(`ℹ️ Could not make file public (may already be public)`);
+            }
+            
+            const url = `https://storage.googleapis.com/${bucket.name}/${firstFile.name}`;
+            console.log(`✅ Found image in temp folder:`, url);
+            return url;
+          }
+        } else {
+          // Regular path search
+          const [files] = await bucket.getFiles({ prefix: path, maxResults: 1 });
+          
+          if (files && files.length > 0) {
+            const firstFile = files[0];
+            
+            try {
+              await firstFile.makePublic();
+            } catch (makePublicError: any) {
+              console.log(`ℹ️ Could not make file public (may already be public)`);
+            }
+            
+            const url = `https://storage.googleapis.com/${bucket.name}/${firstFile.name}`;
+            console.log(`✅ Found image for listing ${listingId} at ${path}:`, url);
+            return url;
+          }
+        }
+      } catch (pathError: any) {
+        console.log(`⚠️ Error searching in ${path}:`, pathError?.message);
+        continue;
+      }
+    }
+    
+    console.log(`⚠️ No image found for listing ${listingId}`);
+    return null;
+  } catch (err: any) {
+    console.error(`❌ Error fetching image for listing ${listingId}:`, err?.message || err);
+    return null;
+  }
+}
 
 // Enhanced guardrails: Check if query is marketplace-related
 const isOutOfScope = (s: string) => {
@@ -56,8 +153,8 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
     console.log('✅ Gemini API key found');
 
     // Parse request body
-    const { message, mode = 'buyer', conversationHistory = [] } = await request.json();
-    console.log('✅ Request body parsed, message length:', message?.length);
+    const { message, mode = 'buyer', conversationHistory = [], mediaUrl, mediaType } = await request.json();
+    console.log('✅ Request body parsed, message length:', message?.length, 'mediaUrl:', !!mediaUrl);
 
     // 2) Input guards
     if (!message || typeof message !== 'string') {
@@ -104,11 +201,14 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
           role: m?.role === 'user' ? 'user' : 'assistant',
           parts: [{ text: String(m?.content ?? '') }],
           content: String(m?.content ?? ''),
+          mediaUrl: m?.mediaUrl,
+          mediaType: m?.mediaType,
         }))
       : [];
 
     // 6) Fetch listings from database for buyer mode
     let listingsContext = '';
+    let listingsMap: Map<string, any> = new Map();
     if (mode === 'buyer') {
       try {
         console.log('🔵 Fetching listings from database for buyer mode...');
@@ -122,16 +222,37 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
         );
         
         if (allListings.items && allListings.items.length > 0) {
+          // Store listings in a map for later use
+          allListings.items.slice(0, 30).forEach((listing: any) => {
+            const id = (listing as any).id || 'unknown';
+            listingsMap.set(id, listing);
+            // Also log first listing structure for debugging
+            if (listingsMap.size === 1) {
+              console.log('📋 Sample listing structure:', {
+                id: id,
+                title: listing.title,
+                hasImages: !!listing.images,
+                images: listing.images,
+                imagesType: typeof listing.images,
+                imagesIsArray: Array.isArray(listing.images),
+                hasPhotos: !!listing.photos,
+                photos: listing.photos,
+                allKeys: Object.keys(listing)
+              });
+            }
+          });
+          
           // Format listings as context for AI
           const listingsText = allListings.items
             .slice(0, 30) // Limit to 30 most relevant listings to avoid token limits
             .map((listing: any) => {
               const id = (listing as any).id || 'unknown';
-              return `- ${listing.title} ($${listing.price}) - ${listing.category} - ${listing.condition || 'N/A'} condition - ID: ${id}`;
+              const imageUrl = listing.images?.[0] || listing.photos?.[0]?.url || listing.photos?.[0] || null;
+              return `- ${listing.title} ($${listing.price}) - ${listing.category} - ${listing.condition || 'N/A'} condition - Image: ${imageUrl || 'null'} - ID: ${id}`;
             })
             .join('\n');
           
-          listingsContext = `\n\nCurrent available listings in our marketplace:\n${listingsText}\n\nWhen answering buyer questions, reference these actual listings. Only mention listings that exist in the list above. If no listings match the query, say so honestly.`;
+          listingsContext = `\n\nCurrent available listings in our marketplace:\n${listingsText}\n\nWhen answering buyer questions, reference these actual listings. Only mention listings that exist in the list above. If no listings match the query, say so honestly. When returning listing recommendations in JSON format, use the exact Image URL and ID from the listings above. Return format: {"message": "text here", "type": "listings", "items": [{"title": "...", "price": 123, "image": "...", "url": "/listings/id"}]}`;
           console.log(`✅ Loaded ${allListings.items.length} listings for context`);
         } else {
           listingsContext = '\n\nNote: There are currently no active listings in the marketplace.';
@@ -144,14 +265,33 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
       }
     }
 
-    console.log('🔵 Calling Gemini API, mode:', mode);
+    console.log('🔵 Calling Gemini API, mode:', mode, 'hasMedia:', !!mediaUrl);
     const responseText = await GeminiService.generateAIResponse(
       mode === 'seller' ? 'seller' : 'buyer',
       trimmed,
       history,
-      listingsContext // Pass listings context for buyer mode
+      listingsContext, // Pass listings context for buyer mode
+      mediaUrl, // Pass media URL if present
+      mediaType // Pass media type if present
     );
     console.log('✅ Gemini API response received, length:', responseText?.length);
+    
+    // Try to parse response as JSON to check for listings format
+    let parsedResponse: any = null;
+    try {
+      // Try parsing the entire response
+      parsedResponse = JSON.parse(responseText);
+    } catch {
+      // If not valid JSON, try to extract JSON from the response
+      const jsonMatch = responseText.match(/\{[\s\S]*"type"\s*:\s*"listings"[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          parsedResponse = JSON.parse(jsonMatch[0]);
+        } catch {
+          // Not valid JSON, continue with text response
+        }
+      }
+    }
     
     // 8) Reconcile approximate output tokens
     const outputTokens = Math.ceil((responseText || '').length / 4);
@@ -161,6 +301,70 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
     });
 
     console.log('✅ Returning successful response');
+    // If parsed response has listings format, post-process to fetch real images from Firebase Storage
+    if (parsedResponse && parsedResponse.type === 'listings' && Array.isArray(parsedResponse.items)) {
+      console.log(`🔍 Post-processing ${parsedResponse.items.length} listings from AI response`);
+      
+      // Replace image URLs with real Firebase Storage URLs
+      const processedItems = await Promise.all(parsedResponse.items.map(async (item: any) => {
+        // Extract listing ID from URL (format: /listings/abc123 or /listing/abc123)
+        const urlMatch = item.url?.match(/\/(?:listings|listing)\/([^\/]+)/);
+        let listingId = urlMatch ? urlMatch[1] : null;
+        
+        // Try to find listing by ID first
+        let listing = listingId ? listingsMap.get(listingId) : null;
+        
+        // If not found by ID, try to find by title (fallback)
+        if (!listing && item.title) {
+          for (const [id, list] of listingsMap.entries()) {
+            if (list.title === item.title) {
+              listingId = id;
+              listing = list;
+              break;
+            }
+          }
+        }
+        
+        if (listing && listingId) {
+          // Fetch image directly from Firebase Storage
+          // Images are stored at: listing-photos/{listingId}/ or listing-photos/{userId}/{listingId}/
+          const userId = listing.sellerId;
+          const imageUrl = await getListingImage(listingId, userId, listing.images?.[0]);
+          
+          console.log(`✅ Processed listing ${listingId}:`, {
+            title: listing.title,
+            price: listing.price,
+            hasImage: !!imageUrl,
+            imageUrl: imageUrl
+          });
+          
+          return {
+            title: listing.title,
+            price: listing.price,
+            image: imageUrl, // Real Firebase Storage URL or null - NO placeholder
+            url: `/listings/${listingId}`
+          };
+        } else {
+          console.log(`⚠️ Listing not found for:`, {
+            url: item.url,
+            listingId: listingId,
+            title: item.title,
+            availableIds: Array.from(listingsMap.keys()).slice(0, 3)
+          });
+          
+          // Return original item but with null image (no placeholder)
+          return {
+            title: item.title,
+            price: item.price,
+            image: null, // NO placeholder - frontend handles null
+            url: item.url || '/listings'
+          };
+        }
+      }));
+      
+      parsedResponse.items = processedItems;
+      return NextResponse.json({ response: parsedResponse, success: true });
+    }
     return NextResponse.json({ response: responseText, success: true });
 
   } catch (error: any) {
