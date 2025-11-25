@@ -10,7 +10,7 @@ All Verse GPT is an **AI-driven marketplace platform** that reimagines how comme
 - **A real marketplace ecosystem** drives buying, selling, messaging, and payments.  
 - **Scalable, modern technology** (Next.js, Firebase, Stripe, Gemini AI) supports growth and reliability.
 
-We’re actively developing core features like real-time chat, secure authentication, Stripe Checkout, seller payouts, and AI-powered tools that make listing and discovery easier.
+We’ve now launched our platform at **https://allversegpt.com**, where the core experience is live and continuously improving.
 
 ## 💡 Why We Exist  
 Today’s marketplaces often feel outdated or impersonal. We believe commerce should feel **intelligent, transparent, and human-centered**. By combining AI with social design, we aim to create a marketplace that’s not only efficient but also **engaging and trustworthy**.  
@@ -33,4 +33,4 @@ We’d love to connect with collaborators, mentors, and anyone excited about the
 
 ---
 
-✨ *All Verse GPT is currently in development. Stay tuned as we keep building and releasing updates.*  
+✨ *Stay tuned as we keep building and releasing updates.*  
