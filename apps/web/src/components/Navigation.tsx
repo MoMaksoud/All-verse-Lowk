@@ -291,24 +291,28 @@ const Navigation = memo(function Navigation() {
 
                   {/* Profile Dropdown Menu */}
                   {showProfileDropdown && (
-                    <div className="absolute right-0 mt-2 w-64 bg-dark-800 rounded-lg shadow-xl border border-dark-600 py-2 z-50">
+                    <div className="absolute right-0 mt-2 w-64 bg-dark-800 rounded-xl shadow-xl border border-dark-600 overflow-hidden z-50">
                       {/* Profile Header */}
-                      <div className="px-4 py-3 border-b border-dark-600">
+                      <div className="px-4 py-3 border-b border-dark-600 bg-dark-800">
                         <div className="flex items-center space-x-3">
                           {(profile?.profilePicture || currentUser?.photoURL) ? (
-                            <img
-                              src={(profile?.profilePicture || currentUser?.photoURL) as string}
-                              alt={currentUser?.displayName || 'Avatar'}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
-                              <DefaultAvatar
-                                name={currentUser?.displayName || undefined}
-                                email={currentUser?.email || undefined}
-                                size="md"
+                            <div className="flex-shrink-0">
+                              <img
+                                src={(profile?.profilePicture || currentUser?.photoURL) as string}
+                                alt={currentUser?.displayName || 'Avatar'}
+                                className="w-10 h-10 rounded-full object-cover aspect-square"
                               />
-                            </Suspense>
+                            </div>
+                          ) : (
+                            <div className="flex-shrink-0">
+                              <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
+                                <DefaultAvatar
+                                  name={currentUser?.displayName || undefined}
+                                  email={currentUser?.email || undefined}
+                                  size="md"
+                                />
+                              </Suspense>
+                            </div>
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">
@@ -322,59 +326,59 @@ const Navigation = memo(function Navigation() {
                       </div>
 
                       {/* Menu Items */}
-                      <div className="py-2">
+                      <div className="py-1">
                         <Link
                           href="/profile"
-                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <UserCircle className="w-4 h-4 mr-3" />
+                          <UserCircle className="w-4 h-4 mr-3 flex-shrink-0" />
                           View Profile
                         </Link>
                         <Link
                           href="/settings"
-                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <Settings className="w-4 h-4 mr-3" />
+                          <Settings className="w-4 h-4 mr-3 flex-shrink-0" />
                           Settings
                         </Link>
                         <Link
                           href="/my-listings"
-                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <List className="w-4 h-4 mr-3" />
+                          <List className="w-4 h-4 mr-3 flex-shrink-0" />
                           My Listings
                         </Link>
                         <Link
                           href="/orders"
-                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <Package className="w-4 h-4 mr-3" />
+                          <Package className="w-4 h-4 mr-3 flex-shrink-0" />
                           My Orders
                         </Link>
                         <Link
                           href="/sales"
-                          className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <TrendingUp className="w-4 h-4 mr-3" />
+                          <TrendingUp className="w-4 h-4 mr-3 flex-shrink-0" />
                           My Sales
                         </Link>
                       </div>
 
                       {/* Logout */}
-                      <div className="border-t border-dark-600 pt-2">
+                      <div className="border-t border-dark-600">
                         <button
                           onClick={() => {
                             handleLogout();
                             setShowProfileDropdown(false);
                           }}
-                          className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          className="flex items-center w-full px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                         >
-                          <LogOut className="w-4 h-4 mr-3" />
+                          <LogOut className="w-4 h-4 mr-3 flex-shrink-0" />
                           Logout
                         </button>
                       </div>
