@@ -45,12 +45,14 @@ export async function GET(req: NextRequest) {
       direction: sort === 'priceAsc' ? 'asc' as const : 'desc' as const,
     };
 
-    // Increase limit for keyword searches to ensure we have enough data to search through
-    const effectiveLimit = filters.keyword ? Math.max(limit * 3, 50) : limit;
+    // Fetch a large batch to ensure we have all items for client-side pagination
+    // Firestore limit is 1000, so we'll fetch up to that many
+    // We always fetch from page 1 since we'll paginate client-side after filtering
+    const fetchLimit = 1000;
     
     const paginationOptions = {
-      page,
-      limit: effectiveLimit,
+      page: 1, // Always fetch from page 1 since we'll paginate client-side
+      limit: fetchLimit,
     };
 
     const result = await firestoreServices.listings.searchListings(filters, sortOptions, paginationOptions);

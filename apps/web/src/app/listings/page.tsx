@@ -66,7 +66,7 @@ function ListingsContent() {
 
       if (response.ok) {
         setListings(data.data || []);
-        setTotalPages(Math.ceil((data.total || 0) / 12));
+        setTotalPages(Math.ceil((data.pagination?.total || 0) / 9));
       } else {
         setListings([]);
         setTotalPages(1);

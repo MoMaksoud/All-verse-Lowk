@@ -188,16 +188,16 @@ const Navigation = memo(function Navigation() {
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50 safe-area-top" suppressHydrationWarning>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2 sm:gap-4">
           {/* Logo */}
-          <div className="flex items-center flex-shrink-0">
-            <Link href="/" className="flex items-center">
+          <div className="flex items-center flex-shrink-0 min-w-0">
+            <Link href="/" className="flex items-center flex-shrink-0">
               <Logo size="md" />
             </Link>
           </div>
 
           {/* Desktop Navigation - Centered */}
-          <div className="hidden md:flex items-center space-x-6 flex-1 justify-center">
+          <div className="hidden md:flex items-center space-x-4 sm:space-x-6 flex-1 justify-center min-w-0 px-2">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isMessages = item.name === 'Messages';
@@ -215,7 +215,7 @@ const Navigation = memo(function Navigation() {
                     }
                   }}
                   prefetch={true}
-                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 ${
+                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-2 sm:px-3 py-2 whitespace-nowrap flex-shrink-0 ${
                     pathname === item.href
                       ? 'text-accent-400 bg-dark-700/50'
                       : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
@@ -234,7 +234,7 @@ const Navigation = memo(function Navigation() {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center space-x-3 flex-shrink-0">
+          <div className="hidden lg:flex items-center space-x-2 flex-shrink-0 min-w-0">
             {currentUser ? (
               <>
                 {/* Favorites Heart */}
@@ -266,10 +266,10 @@ const Navigation = memo(function Navigation() {
                   <Plus className="w-4 h-4" />
                   Sell
                 </Link>
-                <div className="relative" ref={dropdownRef}>
+                <div className="relative flex-shrink-0" ref={dropdownRef}>
                   <button
                     onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                    className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2"
+                    className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2 flex-shrink-0"
                   >
                     {(profile?.profilePicture || currentUser?.photoURL) ? (
                       <img
@@ -291,7 +291,7 @@ const Navigation = memo(function Navigation() {
 
                   {/* Profile Dropdown Menu */}
                   {showProfileDropdown && (
-                    <div className="absolute right-0 mt-2 w-64 bg-dark-800 rounded-xl shadow-xl border border-dark-600 overflow-hidden z-50">
+                    <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-dark-800 rounded-xl shadow-xl border border-dark-600 overflow-hidden z-[100]">
                       {/* Profile Header */}
                       <div className="px-4 py-3 border-b border-dark-600 bg-dark-800">
                         <div className="flex items-center space-x-3">
@@ -405,7 +405,7 @@ const Navigation = memo(function Navigation() {
           </div>
 
           {/* Tablet Actions - Show fewer items */}
-          <div className="hidden md:flex lg:hidden items-center space-x-3 flex-shrink-0">
+          <div className="hidden md:flex lg:hidden items-center space-x-2 flex-shrink-0 min-w-0">
             {currentUser ? (
               <>
                 <button 
@@ -455,11 +455,12 @@ const Navigation = memo(function Navigation() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex-shrink-0">
+          <div className="md:hidden flex-shrink-0 ml-2">
             <button
               type="button"
-              className="btn-ghost p-2 rounded-xl"
+              className="btn-ghost p-2 rounded-xl flex-shrink-0"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
                 <X className="w-6 h-6" />
@@ -472,7 +473,7 @@ const Navigation = memo(function Navigation() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden glass rounded-xl mt-2 mb-4">
+          <div className="md:hidden glass rounded-xl mt-2 mb-4 relative z-40 overflow-y-auto max-h-[calc(100vh-120px)]">
             <div className="px-4 py-3 space-y-2">
               {navigation.map((item) => {
                 const Icon = item.icon;

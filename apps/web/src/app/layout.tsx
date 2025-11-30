@@ -42,8 +42,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full dark" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans h-full dark`} suppressHydrationWarning>
-        <div className="min-h-screen">
+      <body className={`${inter.variable} font-sans h-full dark overflow-x-hidden`} suppressHydrationWarning>
+        <div className="min-h-screen w-full overflow-x-hidden">
           <ErrorBoundary>
             <AuthProvider>
               <ToastProvider>
