@@ -100,6 +100,19 @@ export default function ListingCard({
     fetchSellerProfile();
   }, [sellerId]);
 
+  // Helper function to format price with commas
+  const formatPrice = (price: string | number): string => {
+    if (typeof price === 'number') {
+      return `$${price.toLocaleString()}`;
+    }
+    // If it's a string, try to parse it
+    const numPrice = parseFloat(price.toString().replace(/[^0-9.-]+/g, ''));
+    if (!isNaN(numPrice)) {
+      return `$${numPrice.toLocaleString()}`;
+    }
+    return price.toString(); // Fallback to original if parsing fails
+  };
+
   // Helper function to format member since date
   const formatMemberSince = (timestamp: any) => {
     if (!timestamp) return "Member since 2025";
@@ -303,7 +316,7 @@ export default function ListingCard({
 
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
                 <span className="text-blue-400 font-semibold">
-                  {typeof price === "number" ? `$${price}` : price}
+                  {formatPrice(price)}
                 </span>
                 <span className="hidden sm:inline text-zinc-400">•</span>
                 <span className="hidden sm:inline text-zinc-300/90 text-xs truncate">{category}</span>
@@ -413,7 +426,7 @@ export default function ListingCard({
 
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
                 <span className="text-blue-400 font-semibold">
-                  {typeof price === "number" ? `$${price}` : price}
+                  {formatPrice(price)}
                 </span>
                 <span className="text-zinc-400">•</span>
                 <span className="text-zinc-300/90">{category}</span>
