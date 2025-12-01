@@ -17,14 +17,36 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'All-Verse GPT - AI Marketplace',
-  description: 'A modern AI-powered marketplace for buying and selling with intelligent assistance.',
+  title: 'AllVerse GPT | AI Platform to Find the Best Items Online',
+  description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
   keywords: ['AI', 'marketplace', 'GPT', 'buy', 'sell', 'intelligent'],
   authors: [{ name: 'All-Verse Team' }],
   icons: {
-    icon: '/logo.jpg',
-    shortcut: '/logo.jpg',
-    apple: '/logo.jpg',
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
+  openGraph: {
+    title: 'AllVerse GPT | AI Platform to Find the Best Items Online',
+    description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
+    url: 'https://allversegpt.com',
+    siteName: 'AllVerse GPT',
+    images: [
+      {
+        url: '/logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'AllVerse GPT AI Marketplace',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AllVerse GPT | AI Platform to Find the Best Items Online',
+    description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
+    images: ['/logo.png'],
   },
 };
 

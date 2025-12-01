@@ -24,7 +24,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
       {/* Logo Image */}
       <div className={`relative`}>
         <Image
-          src="/logo.jpg"
+          src="/logo.png"
           alt="ALL VERSE GPT"
           width={iconSizes[size].width}
           height={iconSizes[size].height}
