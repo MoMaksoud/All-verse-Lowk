@@ -136,48 +136,57 @@ export default function HomePage() {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div 
-              className="card hover:scale-105 transition-transform duration-200 cursor-pointer group"
-              onClick={() => router.push('/ai')}
+            <button
+              onClick={() => router.push('/chat')}
+              className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
             >
               <div className="p-4 sm:p-6 text-center">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
                   <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Smart Chat</h3>
                 <p className="text-gray-400 text-xs sm:text-sm px-2">AI-powered conversations with sellers</p>
               </div>
-            </div>
+            </button>
             
-            <div className="card hover:scale-105 transition-transform duration-200 cursor-pointer group">
+            <button
+              onClick={() => router.push('/offers')}
+              className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
+            >
               <div className="p-4 sm:p-6 text-center">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
                   <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Instant Offers</h3>
                 <p className="text-gray-400 text-xs sm:text-sm px-2">Make offers with AI assistance</p>
               </div>
-            </div>
+            </button>
             
-            <div className="card hover:scale-105 transition-transform duration-200 cursor-pointer group">
+            <button
+              onClick={() => router.push('/pricing')}
+              className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
+            >
               <div className="p-4 sm:p-6 text-center">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
                   <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Smart Pricing</h3>
                 <p className="text-gray-400 text-xs sm:text-sm px-2">AI-suggested fair prices</p>
               </div>
-            </div>
+            </button>
             
-            <div className="card hover:scale-105 transition-transform duration-200 cursor-pointer group">
+            <button
+              onClick={() => router.push('/discover')}
+              className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
+            >
               <div className="p-4 sm:p-6 text-center">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
                   <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Smart Discovery</h3>
                 <p className="text-gray-400 text-xs sm:text-sm px-2">Find exactly what you need</p>
               </div>
-            </div>
+            </button>
           </div>
         </div>
       </section>
