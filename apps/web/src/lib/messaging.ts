@@ -19,13 +19,31 @@ export const startChatFromListing = async (
   router?: any
 ): Promise<string | null> => {
   try {
+    // Validate required fields
+    if (!options.listingId || typeof options.listingId !== 'string' || options.listingId.trim() === '') {
+      console.error('Invalid listingId provided:', options.listingId);
+      showError('Invalid listing', 'Please try again.');
+      return null;
+    }
+
+    if (!options.sellerId || typeof options.sellerId !== 'string' || options.sellerId.trim() === '') {
+      console.error('Invalid sellerId provided:', options.sellerId);
+      showError('Invalid seller', 'Please try again.');
+      return null;
+    }
+
     // Create or get existing chat
     const chatId = await firestoreServices.chats.getOrCreateChat(currentUserId, options.sellerId);
     
-    // If there's an initial message, send it
-    if (options.initialMessage) {
-      await firestoreServices.chats.sendMessage(chatId, currentUserId, options.initialMessage);
-    }
+    // Always send an initial message with listing context to attach the listing reference
+    // If no initial message provided, use a default one
+    const messageText = options.initialMessage || `Hi! I'm interested in "${options.listingTitle}"`;
+    
+    // Ensure listingId is trimmed and valid before sending
+    const validListingId = options.listingId.trim();
+    await firestoreServices.chats.sendMessage(chatId, currentUserId, messageText, validListingId);
+    
+    console.log('✅ Chat started with listing context:', { chatId, listingId: validListingId });
     
     // Navigate to messages page with chatId if router is provided
     if (router) {
@@ -34,7 +52,7 @@ export const startChatFromListing = async (
     
     return chatId;
   } catch (error) {
-    console.error('Error starting chat:', error);
+    console.error('❌ Error starting chat:', error);
     showError('Failed to start chat', 'Please try again later.');
     return null;
   }

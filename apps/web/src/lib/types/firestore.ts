@@ -192,6 +192,7 @@ export interface FirestoreMessage {
   text: string;
   timestamp: Timestamp;
   readBy?: string[];
+  listingId?: string; // Optional reference to a listing when message is about a specific item
 }
 
 export interface CreateMessageInput {

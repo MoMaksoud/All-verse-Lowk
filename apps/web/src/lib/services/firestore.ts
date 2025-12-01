@@ -668,7 +668,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   }
 
   // Send a message
-  async sendMessage(chatId: string, senderId: string, text: string): Promise<string> {
+  async sendMessage(chatId: string, senderId: string, text: string, listingId?: string): Promise<string> {
     // Check if chat exists and if recipient is deleted
     const chatDoc = await this.getDoc(chatId);
     if (!chatDoc.exists()) {
@@ -686,13 +686,25 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     }
     
     const messageRef = doc(collection(db, this.collectionName, chatId, 'messages'));
+    
+    // Validate listingId if provided
+    const validListingId = listingId && typeof listingId === 'string' && listingId.trim() !== '' 
+      ? listingId.trim() 
+      : undefined;
+    
     const messageData: FirestoreMessage = {
       chatId,
       senderId,
       text,
       timestamp: serverTimestamp() as Timestamp,
       readBy: [senderId], // Sender has read their own message
+      ...(validListingId && { listingId: validListingId }), // Include listingId if valid
     };
+    
+    // Log for debugging (remove in production if needed)
+    if (validListingId) {
+      console.log('📦 Message sent with listing context:', { chatId, listingId: validListingId });
+    }
     
     await setDoc(messageRef, messageData);
     
