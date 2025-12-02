@@ -294,19 +294,26 @@ export default function MyListingsPage() {
                 <Card key={listing.id} className="group hover:scale-[1.02] transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10">
                   {/* Image */}
                   <div className="relative aspect-[4/3] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl overflow-hidden mb-4 group-hover:rounded-2xl transition-all duration-300">
-                    {listing.photos && listing.photos.length > 0 ? (
-                      <Image
-                        src={listing.photos[0]}
-                        alt={listing.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = 'https://via.placeholder.com/400x300/1e293b/64748b?text=No+Image';
-                        }}
-                      />
-                    ) : (
+                    {listing.photos && listing.photos.length > 0 ? (() => {
+                      const photoSrc = listing.photos[0];
+                      // Safe URL validation: enforce valid format for Next.js Image
+                      const imgSrc = photoSrc?.startsWith("/") ? photoSrc
+                        : photoSrc?.startsWith("http") ? photoSrc
+                        : "/default-avatar.png";
+                      return (
+                        <Image
+                          src={imgSrc}
+                          alt={listing.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://via.placeholder.com/400x300/1e293b/64748b?text=No+Image';
+                          }}
+                        />
+                      );
+                    })() : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900">
                         <div className="text-center text-zinc-400 group-hover:text-zinc-300 transition-colors">
                           <Package className="w-12 h-12 mx-auto mb-2 opacity-60" />

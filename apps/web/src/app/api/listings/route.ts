@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CreateListingInput } from "@/lib/types/firestore";
 import { withApi } from "@/lib/withApi";
+import { Timestamp } from "firebase/firestore";
 
 // Import firestore services dynamically to avoid webpack issues
 async function getFirestoreServices() {
@@ -137,14 +138,12 @@ export async function GET(req: NextRequest) {
           bValue = b.price;
         } else {
           // createdAt sorting
-          const aTime = a.createdAt && typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
-            ? (a.createdAt as any).toDate().getTime() 
-            : (a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt as string).getTime());
-          const bTime = b.createdAt && typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
-            ? (b.createdAt as any).toDate().getTime() 
-            : (b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt as string).getTime());
-          aValue = aTime || 0;
-          bValue = bTime || 0;
+          const aDateValue = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : a.createdAt instanceof Date ? a.createdAt : null;
+          const bDateValue = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : b.createdAt instanceof Date ? b.createdAt : null;
+          const aTime = aDateValue ? aDateValue.getTime() : 0;
+          const bTime = bDateValue ? bDateValue.getTime() : 0;
+          aValue = aTime;
+          bValue = bTime;
         }
         
         if (sortDirection === 'asc') {
@@ -153,19 +152,24 @@ export async function GET(req: NextRequest) {
           return bValue - aValue;
         }
       })
-      .map(listing => ({
-        id: (listing as any).id,
-        title: listing.title,
-        description: listing.description,
-        price: listing.price,
-        category: listing.category,
-        photos: listing.images || [],
-        createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-        updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-        sellerId: listing.sellerId,
-        // Treat items with inventory === 0 as sold even if sold field is not set
-        sold: listing.sold === true || listing.inventory === 0,
-      }));
+      .map(listing => {
+        const createdAtValue = listing.createdAt instanceof Timestamp ? listing.createdAt.toDate().toISOString() : listing.createdAt instanceof Date ? listing.createdAt.toISOString() : null;
+        const updatedAtValue = listing.updatedAt instanceof Timestamp ? listing.updatedAt.toDate().toISOString() : listing.updatedAt instanceof Date ? listing.updatedAt.toISOString() : null;
+        
+        return {
+          id: (listing as any).id,
+          title: listing.title,
+          description: listing.description,
+          price: listing.price,
+          category: listing.category,
+          photos: listing.images || [],
+          createdAt: createdAtValue || new Date().toISOString(),
+          updatedAt: updatedAtValue || new Date().toISOString(),
+          sellerId: listing.sellerId,
+          // Treat items with inventory === 0 as sold even if sold field is not set
+          sold: listing.sold === true || listing.inventory === 0,
+        };
+      });
 
     // Apply pagination after filtering and sorting
     const startIndex = (page - 1) * limit;

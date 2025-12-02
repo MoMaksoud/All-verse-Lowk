@@ -40,6 +40,12 @@ export function ProfilePicture({
 }: ProfilePictureProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure client-only rendering to prevent hydration mismatches
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Get the correct profile picture source using utility function
   const profilePictureSource = React.useMemo(() => {
@@ -50,8 +56,12 @@ export function ProfilePicture({
     });
   }, [currentUser, userProfilePic, src]);
 
-  // Convert storage path to URL if needed (handle both paths and URLs)
+  // Safe URL validation: enforce valid format for Next.js Image
+  // Always return default on server to prevent hydration mismatch
   const imageUrl = React.useMemo(() => {
+    // On server, always return default to ensure consistent rendering
+    if (!isMounted) return '/default-avatar.png';
+    
     if (!profilePictureSource) return '/default-avatar.png';
     
     // If it's already a URL (Google photo), use it as-is
@@ -64,10 +74,17 @@ export function ProfilePicture({
       return profilePictureSource;
     }
     
-    // Convert storage path to URL, then normalize for Next.js Image
+    // For storage paths that don't start with "/" or "http", convert to full URL
+    // This handles Firebase Storage paths like "users/.../profile/..."
     const url = storagePathToUrl(profilePictureSource);
-    return normalizeImageSrc(url) || '/default-avatar.png';
-  }, [profilePictureSource]);
+    
+    // If storagePathToUrl returns empty or invalid, fallback to default
+    if (!url || url === '' || (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/'))) {
+      return '/default-avatar.png';
+    }
+    
+    return url;
+  }, [profilePictureSource, isMounted]);
 
   // Reset error state when profile picture source changes
   React.useEffect(() => {

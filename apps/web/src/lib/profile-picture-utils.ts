@@ -21,24 +21,33 @@ export function getProfilePictureSource({
   userProfilePic,
   profilePicture,
 }: GetProfilePictureSourceOptions): string | null {
-  // Check if user is authenticated via Google provider
-  const isGoogleUser = currentUser?.providerData.some(
-    provider => provider.providerId === 'google.com'
-  );
-
-  // For Google users, prioritize user.photoURL (always latest from Google)
-  if (isGoogleUser && currentUser?.photoURL) {
-    return currentUser.photoURL;
+  // Always prioritize currentUser.photoURL from auth.currentUser (always latest)
+  // This ensures we always read directly from Firebase Auth, not cached state
+  if (currentUser?.photoURL) {
+    const photoURL = currentUser.photoURL;
+    // Validate URL format: must start with "/" or "http"
+    if (photoURL.startsWith('/') || photoURL.startsWith('http://') || photoURL.startsWith('https://')) {
+      return photoURL;
+    }
+    // If invalid format, fall through to other sources
   }
 
   // Use stored profilePic from users collection if available
   if (userProfilePic) {
-    return userProfilePic;
+    // Validate URL format
+    if (userProfilePic.startsWith('/') || userProfilePic.startsWith('http://') || userProfilePic.startsWith('https://')) {
+      return userProfilePic;
+    }
+    // If invalid format, fall through to other sources
   }
 
   // Fallback to profilePicture from profiles collection
   if (profilePicture) {
-    return profilePicture;
+    // Validate URL format
+    if (profilePicture.startsWith('/') || profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
+      return profilePicture;
+    }
+    // If invalid format, fall through to default
   }
 
   // Final fallback to default avatar

@@ -152,17 +152,24 @@ export default function ListingDetailPage() {
       if (!createdAt) return '2025';
       
       let date: Date;
-      // Check if it's a Firestore Timestamp object
+      // Safe conversion: check for Timestamp, then Date, then string
       if (createdAt !== null && typeof createdAt === 'object') {
         const timestampObj = createdAt as any;
         if ('toDate' in timestampObj && typeof timestampObj.toDate === 'function') {
           date = timestampObj.toDate();
+        } else if (createdAt instanceof Date) {
+          date = createdAt;
         } else {
-          date = new Date(createdAt as any);
+          // Invalid object, cannot convert
+          return '2025';
         }
       } else if (typeof createdAt === 'string') {
         date = new Date(createdAt);
       } else {
+        return '2025';
+      }
+      
+      if (!date || isNaN(date.getTime())) {
         return '2025';
       }
       

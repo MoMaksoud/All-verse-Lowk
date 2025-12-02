@@ -43,6 +43,7 @@ const Navigation = memo(function Navigation() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -52,6 +53,11 @@ const Navigation = memo(function Navigation() {
 
   // Track last opened timestamp in state to avoid hydration issues
   const [lastOpenedTimestamp, setLastOpenedTimestamp] = useState(0);
+
+  // Ensure client-only rendering to prevent hydration mismatches
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Load last opened timestamp from localStorage (client-side only)
   useEffect(() => {
@@ -67,8 +73,9 @@ const Navigation = memo(function Navigation() {
   }, [currentUser?.uid]);
 
   // Calculate total unread messages count (WhatsApp-like: based on timestamps)
+  // Only calculate on client to prevent hydration mismatch
   const unreadMessageCount = useMemo(() => {
-    if (!currentUser?.uid || !chats || typeof window === 'undefined') return 0;
+    if (!isMounted || !currentUser?.uid || !chats || typeof window === 'undefined') return 0;
     
     // Count chats with messages newer than last time Messages page was last opened
     return chats.reduce((total, chat) => {
@@ -93,7 +100,7 @@ const Navigation = memo(function Navigation() {
       
       return isUnread ? total + 1 : total;
     }, 0);
-  }, [chats, currentUser?.uid, lastOpenedTimestamp]);
+  }, [chats, currentUser?.uid, lastOpenedTimestamp, isMounted]);
 
   // Fetch cart item count with caching - debounced to reduce API calls
   const fetchCartCount = useCallback(async () => {
@@ -195,12 +202,12 @@ const Navigation = memo(function Navigation() {
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50 safe-area-top h-[64px] flex items-center justify-between px-6 py-2 w-full">
       {/* Logo */}
-      <Link href="/" className="flex items-center flex-shrink-0">
+      <Link href="/" className="flex items-center shrink-0">
         <Logo size="md" />
       </Link>
 
       {/* Desktop Navigation - Centered */}
-      <div className="hidden md:flex items-center gap-2 flex-1 justify-center min-w-0 px-2">
+      <div className="hidden md:flex items-center gap-6 flex-1 justify-center min-w-0 px-2">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isMessages = item.name === 'Messages';
@@ -226,7 +233,7 @@ const Navigation = memo(function Navigation() {
                 >
                   <Icon className="w-4 h-4" />
                   {item.name}
-                  {showBadge && (
+                  {isMounted && showBadge && (
                     <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                       {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
                     </span>
@@ -237,9 +244,9 @@ const Navigation = memo(function Navigation() {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center gap-2 flex-shrink-0 min-w-0">
+          <div className="hidden lg:flex items-center shrink-0 min-w-0">
             {currentUser ? (
-              <>
+              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
                 {/* Favorites Heart */}
                 <button 
                   onClick={() => router.push('/favorites')}
@@ -255,7 +262,7 @@ const Navigation = memo(function Navigation() {
                   className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  {cartItemCount > 0 && (
+                  {isMounted && cartItemCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                       {cartItemCount > 99 ? '99+' : cartItemCount}
                     </span>
@@ -264,37 +271,27 @@ const Navigation = memo(function Navigation() {
                 
                 <Link
                   href="/sell"
-                  className="btn btn-primary flex items-center gap-2"
+                  className="btn btn-primary flex items-center gap-2 px-5 py-2.5 text-sm"
                 >
                   <Plus className="w-4 h-4" />
                   Sell
                 </Link>
-                <div className="relative flex-shrink-0" ref={dropdownRef}>
+                <div className="relative shrink-0" ref={dropdownRef}>
                   <button
                     onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                    className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2 flex-shrink-0"
+                    className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2 shrink-0"
                   >
-                    {(profile?.profilePicture || currentUser?.photoURL) ? (
-                      <img
-                        src={(profile?.profilePicture || currentUser?.photoURL) as string}
+                    <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
+                      <ProfilePicture
+                        src={(profile?.profilePicture || currentUser?.photoURL) as string | null}
                         alt={currentUser?.displayName || 'Avatar'}
-                        className="w-8 h-8 rounded-full object-cover"
-                        width={64}
-                        height={64}
+                        name={currentUser?.displayName || undefined}
+                        email={currentUser?.email || undefined}
+                        size="sm"
+                        currentUser={currentUser}
+                        userProfilePic={userProfilePic}
                       />
-                    ) : (
-                      <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
-                        <ProfilePicture
-                          src={null}
-                          alt={currentUser?.displayName || 'Avatar'}
-                          name={currentUser?.displayName || undefined}
-                          email={currentUser?.email || undefined}
-                          size="sm"
-                          currentUser={currentUser}
-                          userProfilePic={userProfilePic}
-                        />
-                      </Suspense>
-                    )}
+                    </Suspense>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
                   </button>
 
@@ -388,9 +385,9 @@ const Navigation = memo(function Navigation() {
                     </div>
                   )}
                 </div>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
                 <Link
                   href="/signin"
                   className="btn-ghost px-4 py-2 rounded-xl hover:bg-dark-700/50"
@@ -403,14 +400,14 @@ const Navigation = memo(function Navigation() {
                 >
                   Sign Up
                 </Link>
-              </>
+              </div>
             )}
           </div>
 
           {/* Tablet Actions - Show fewer items */}
-          <div className="hidden md:flex lg:hidden items-center space-x-2 flex-shrink-0 min-w-0">
+          <div className="hidden md:flex lg:hidden items-center shrink-0 min-w-0">
             {currentUser ? (
-              <>
+              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
                 <button 
                   onClick={() => router.push('/favorites')}
                   className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
@@ -424,7 +421,7 @@ const Navigation = memo(function Navigation() {
                   className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  {cartItemCount > 0 && (
+                  {isMounted && cartItemCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
                       {cartItemCount > 99 ? '99+' : cartItemCount}
                     </span>
@@ -433,14 +430,14 @@ const Navigation = memo(function Navigation() {
                 
                 <Link
                   href="/sell"
-                  className="btn btn-primary flex items-center gap-1 px-3 py-2 text-sm"
+                  className="btn btn-primary flex items-center gap-1 px-5 py-2.5 text-sm"
                 >
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Sell</span>
                 </Link>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
                 <Link
                   href="/signin"
                   className="btn-ghost px-3 py-2 text-sm rounded-xl hover:bg-dark-700/50"
@@ -453,7 +450,7 @@ const Navigation = memo(function Navigation() {
                 >
                   Sign Up
                 </Link>
-              </>
+              </div>
             )}
           </div>
 
@@ -535,7 +532,7 @@ const Navigation = memo(function Navigation() {
                         className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
                       >
                         <ShoppingCart className="w-5 h-5" />
-                        Cart {cartItemCount > 0 && `(${cartItemCount})`}
+                        Cart {isMounted && cartItemCount > 0 && `(${cartItemCount})`}
                       </button>
                     </>
                   ) : (
