@@ -137,11 +137,13 @@ export async function GET(req: NextRequest) {
           aValue = a.price;
           bValue = b.price;
         } else {
-          // createdAt sorting
-          const aDateValue = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : a.createdAt instanceof Date ? a.createdAt : null;
-          const bDateValue = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : b.createdAt instanceof Date ? b.createdAt : null;
-          const aTime = aDateValue ? aDateValue.getTime() : 0;
-          const bTime = bDateValue ? bDateValue.getTime() : 0;
+          // createdAt sorting - safe conversion without nested instanceof
+          const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : (a.createdAt instanceof Date ? a.createdAt : null);
+          const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : (b.createdAt instanceof Date ? b.createdAt : null);
+          
+          const aTime = aDate?.getTime?.() ?? 0;
+          const bTime = bDate?.getTime?.() ?? 0;
+          
           aValue = aTime;
           bValue = bTime;
         }
