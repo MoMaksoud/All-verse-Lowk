@@ -29,7 +29,33 @@ export async function GET(req: NextRequest) {
     const max = url.searchParams.get('max') ? Number(url.searchParams.get('max')) : undefined;
     const page = Number(url.searchParams.get('page')) || 1;
     const limit = Number(url.searchParams.get('limit')) || 20;
-    const sort = url.searchParams.get('sort') || 'recent';
+    const sort = url.searchParams.get('sort') || 'newest';
+
+    // Map sort options to database fields
+    let sortField: string;
+    let sortDirection: 'asc' | 'desc';
+    
+    switch (sort) {
+      case 'low-to-high':
+        sortField = 'price';
+        sortDirection = 'asc';
+        break;
+      case 'high-to-low':
+        sortField = 'price';
+        sortDirection = 'desc';
+        break;
+      case 'newest':
+        sortField = 'createdAt';
+        sortDirection = 'desc';
+        break;
+      case 'oldest':
+        sortField = 'createdAt';
+        sortDirection = 'asc';
+        break;
+      default:
+        sortField = 'createdAt';
+        sortDirection = 'desc';
+    }
 
     const filters = {
       keyword: q,
@@ -39,28 +65,18 @@ export async function GET(req: NextRequest) {
       maxPrice: max,
     };
 
-
     const sortOptions = {
-      field: sort === 'priceAsc' || sort === 'priceDesc' ? 'price' : 'createdAt',
-      direction: sort === 'priceAsc' ? 'asc' as const : 'desc' as const,
+      field: sortField,
+      direction: sortDirection,
     };
 
-    // Fetch a large batch to ensure we have all items for client-side pagination
-    // Firestore limit is 1000, so we'll fetch up to that many
-    // We always fetch from page 1 since we'll paginate client-side after filtering
-    const fetchLimit = 1000;
-    
-    const paginationOptions = {
-      page: 1, // Always fetch from page 1 since we'll paginate client-side
-      limit: fetchLimit,
-    };
-
-    const result = await firestoreServices.listings.searchListings(filters, sortOptions, paginationOptions);
+    // Fetch ALL listings with filters and sorting applied at database level
+    // Then apply keyword filtering (client-side, as Firestore doesn't support full-text search)
+    // Then paginate
+    const result = await firestoreServices.listings.searchListings(filters, sortOptions);
       
-    // Apply client-side filtering for features not supported by Firestore
+    // Apply keyword search (client-side, as Firestore doesn't support full-text search)
     let filteredData = [...result.items];
-    
-    // Apply keyword search (client-side filtering)
     if (filters.keyword) {
       const keyword = filters.keyword.toLowerCase();
       filteredData = filteredData.filter(listing => 
@@ -68,8 +84,8 @@ export async function GET(req: NextRequest) {
         listing.description.toLowerCase().includes(keyword)
       );
     }
-    
-    // Transform FirestoreListing to SimpleListing format and filter out placeholder listings
+
+    // Filter out placeholder listings and old sold listings
     const transformedItems = filteredData
       .filter(listing => {
         // Filter out placeholder listings
@@ -81,21 +97,18 @@ export async function GET(req: NextRequest) {
 
         // Filter out sold listings older than 2 days
         if (listing.soldAt) {
-          // Handle Firestore Timestamp - check if it has toDate method
           let soldDate: Date;
           if (listing.soldAt && typeof listing.soldAt === 'object' && 'toDate' in listing.soldAt && typeof (listing.soldAt as any).toDate === 'function') {
             soldDate = (listing.soldAt as any).toDate();
           } else if (listing.soldAt instanceof Date) {
             soldDate = listing.soldAt;
           } else {
-            // If it's a number (timestamp) or string, convert it via unknown first
             soldDate = new Date(listing.soldAt as unknown as string | number);
           }
           
           const twoDaysAgo = new Date();
           twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
           
-          // If sold more than 2 days ago, hide it from marketplace
           if (soldDate < twoDaysAgo) {
             return false;
           }
@@ -104,7 +117,7 @@ export async function GET(req: NextRequest) {
         return true;
       })
       .map(listing => ({
-        id: (listing as any).id, // FirestoreListing & { id: string }
+        id: (listing as any).id,
         title: listing.title,
         description: listing.description,
         price: listing.price,
@@ -115,7 +128,7 @@ export async function GET(req: NextRequest) {
         sellerId: listing.sellerId,
       }));
 
-    // Apply final pagination to return the correct number of results
+    // Apply pagination after filtering and sorting
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
     const paginatedItems = transformedItems.slice(startIndex, endIndex);
@@ -130,7 +143,6 @@ export async function GET(req: NextRequest) {
       },
     });
     
-    // Add caching headers with shorter TTL
     response.headers.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
     return response;
   } catch (error) {

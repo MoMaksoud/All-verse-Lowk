@@ -45,17 +45,17 @@ function ListingsContent() {
       params.set('page', currentPage.toString());
       params.set('limit', '9'); // Reduced from 12 to 9 for faster loading
     
-      // Add sort parameter
+      // Add sort parameter - map to new sort options
       switch (sortBy) {
         case 'price-low':
-          params.set('sort', 'priceAsc');
+          params.set('sort', 'low-to-high');
           break;
         case 'price-high':
-          params.set('sort', 'priceDesc');
+          params.set('sort', 'high-to-low');
           break;
         case 'newest':
         default:
-          params.set('sort', 'recent');
+          params.set('sort', 'newest');
           break;
       }
 

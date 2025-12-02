@@ -113,6 +113,13 @@ export default function ListingDetailPage() {
             profilePicture: data.data?.profilePicture || null,
             createdAt: data.data?.createdAt || null,
           });
+        } else if (response.status === 404) {
+          // Profile not found - silently handle (expected for users without profiles)
+          setSellerProfile({
+            username: 'Marketplace User',
+            profilePicture: null,
+            createdAt: null,
+          });
         } else {
           setSellerProfile({
             username: 'Marketplace User',
@@ -121,7 +128,10 @@ export default function ListingDetailPage() {
           });
         }
       } catch (error) {
-        console.error('Error fetching seller profile:', error);
+        // Only log non-404 errors
+        if (error instanceof Error && !error.message.includes('404')) {
+          console.warn('Error fetching seller profile:', error);
+        }
         setSellerProfile({
           username: 'Marketplace User',
           profilePicture: null,

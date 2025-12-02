@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ExternalLink, DollarSign } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
+import { normalizeImageSrc } from '@/lib/image-utils';
 
 interface ListingPreviewCardProps {
   listingId: string;
@@ -122,11 +123,12 @@ export function ListingPreviewCard({ listingId, className = '', onError }: Listi
         <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-zinc-900">
           {listing.photos?.[0] ? (
             <Image
-              src={listing.photos[0]}
+              src={normalizeImageSrc(listing.photos[0])}
               alt={listing.title}
               width={80}
               height={80}
-              className="w-full h-full object-cover"
+              className="object-cover rounded-lg"
+              style={{ width: 'auto', height: 'auto' }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs">

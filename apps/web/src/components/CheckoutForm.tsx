@@ -149,9 +149,15 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
             if (!sellerData.data?.shippingAddress?.zip) {
               console.warn('⚠️ Seller does not have shipping address configured. Using default ZIP.');
             }
+          } else if (sellerResponse.status === 404) {
+            // Profile not found - silently use fallback (expected for users without profiles)
+            // Use fallback ZIP
           }
         } catch (error) {
-          console.error('Error fetching seller address:', error);
+          // Only log non-404 errors
+          if (error instanceof Error && !error.message.includes('404')) {
+            console.warn('Error fetching seller address:', error);
+          }
           // Use fallback
         }
       }

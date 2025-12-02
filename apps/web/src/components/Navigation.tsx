@@ -194,17 +194,15 @@ const Navigation = memo(function Navigation() {
 
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50 safe-area-top" suppressHydrationWarning>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16 gap-2 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-4 py-2">
+        <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center flex-shrink-0 min-w-0">
-            <Link href="/" className="flex items-center flex-shrink-0">
-              <Logo size="md" />
-            </Link>
-          </div>
+          <Link href="/">
+            <Logo size="md" />
+          </Link>
 
           {/* Desktop Navigation - Centered */}
-          <div className="hidden md:flex items-center space-x-4 sm:space-x-6 flex-1 justify-center min-w-0 px-2">
+          <div className="hidden md:flex items-center gap-3 flex-1 justify-center min-w-0 px-2">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isMessages = item.name === 'Messages';
@@ -222,7 +220,7 @@ const Navigation = memo(function Navigation() {
                     }
                   }}
                   prefetch={true}
-                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-2 sm:px-3 py-2 whitespace-nowrap flex-shrink-0 ${
+                  className={`relative flex items-center gap-3 text-sm font-medium transition-all duration-200 rounded-xl px-2 sm:px-3 py-2 whitespace-nowrap flex-shrink-0 ${
                     pathname === item.href
                       ? 'text-accent-400 bg-dark-700/50'
                       : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
@@ -241,7 +239,7 @@ const Navigation = memo(function Navigation() {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center space-x-2 flex-shrink-0 min-w-0">
+          <div className="hidden lg:flex items-center gap-3 flex-shrink-0 min-w-0">
             {currentUser ? (
               <>
                 {/* Favorites Heart */}

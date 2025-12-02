@@ -9,6 +9,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
 import { MessageInputModal } from '@/components/MessageInputModal';
 import { ProfilePicture } from '@/components/ProfilePicture';
+import { normalizeImageSrc } from '@/lib/image-utils';
 
 type Props = {
   variant: "grid" | "list";
@@ -81,8 +82,15 @@ export default function ListingCard({
             profilePicture: data.data?.profilePicture || null,
             createdAt: data.data?.createdAt || null,
           });
+        } else if (response.status === 404) {
+          // Profile not found - silently handle (expected for users without profiles)
+          setSellerProfile({
+            username: 'Marketplace User',
+            profilePicture: null,
+            createdAt: null,
+          });
         } else {
-          // Set default values on error
+          // Set default values on other errors
           setSellerProfile({
             username: 'Marketplace User',
             profilePicture: null,
@@ -90,7 +98,10 @@ export default function ListingCard({
           });
         }
       } catch (error) {
-        console.error('Error fetching seller profile:', error);
+        // Only log non-404 errors
+        if (error instanceof Error && !error.message.includes('404')) {
+          console.warn('Error fetching seller profile:', error);
+        }
         // Set default values on error
         setSellerProfile({
           username: 'Marketplace User',
@@ -276,11 +287,12 @@ export default function ListingCard({
             <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526]">
               {imageUrl ? (
                 <Image
-                  src={imageUrl}
+                  src={normalizeImageSrc(imageUrl)}
                   alt={title}
                   width={800}
                   height={800}
-                  className="h-full w-full object-cover"
+                  className="object-cover rounded-lg"
+                  style={{ width: 'auto', height: 'auto' }}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-zinc-500 text-xs">
@@ -377,11 +389,12 @@ export default function ListingCard({
               <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526]">
                 {imageUrl ? (
                   <Image
-                    src={imageUrl}
+                    src={normalizeImageSrc(imageUrl)}
                     alt={title}
                     width={800}
                     height={450}
-                    className="h-full w-full object-cover"
+                    className="object-cover rounded-lg"
+                    style={{ width: 'auto', height: 'auto' }}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-zinc-500">

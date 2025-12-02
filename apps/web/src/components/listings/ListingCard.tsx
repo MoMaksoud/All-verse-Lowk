@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { normalizeImageSrc } from '@/lib/image-utils';
 
 type Listing = {
   id: string;
@@ -31,11 +32,11 @@ function ListingCardComponent({ listing, view = "comfortable" }: Props) {
       {/* Image */}
       <div className="relative w-full aspect-square overflow-hidden rounded-t-xl sm:rounded-t-2xl bg-zinc-100 dark:bg-zinc-800">
         <Image
-          src={listing.imageUrl}
+          src={normalizeImageSrc(listing.imageUrl)}
           alt={listing.title}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+          className="object-cover rounded-lg"
           priority={false}
         />
         {/* Subtle gradient overlay on hover */}

@@ -9,35 +9,54 @@ export const revalidate = 15; // Cache for 15 seconds
 export const GET = withApi(async (request: NextRequest & { userId?: string }) => {
   try {
     const { searchParams } = new URL(request.url);
+    // Read seller ID from query param userId
     const requestedUserId = searchParams.get('userId');
+    
+    // Log incoming userId before querying database
+    console.log('Profile API: Incoming request - userId query param:', requestedUserId, 'authenticated userId:', request.userId);
     
     // Use requestedUserId if provided (for public profiles), otherwise use authenticated userId
     const userId = requestedUserId || request.userId;
     
-    // Check if a token was provided but failed verification
-    const authHeader = request.headers.get('authorization');
-    const tokenProvided = authHeader && authHeader.startsWith('Bearer ');
-    
-    if (!userId) {
-      // If a token was provided but userId is missing, it means auth failed - return 401
-      if (tokenProvided) {
-        return NextResponse.json(
-          { error: 'Unauthorized', message: 'Invalid or expired authentication token' },
-          { status: 401 }
-        );
-      }
-      // Otherwise, return 400 for missing userId when no auth was attempted
+    // Validate userId - return 400 if missing (not 404)
+    if (!userId || (typeof userId === 'string' && userId.trim().length === 0)) {
+      console.warn('Profile API: Missing or empty userId');
+      // Return 400 for missing userId, not 404
       return NextResponse.json(
-        { error: 'User ID is required. Please provide userId query parameter or authenticate.' },
+        { 
+          error: 'User ID is required', 
+          message: 'Please provide userId query parameter or authenticate.' 
+        },
         { status: 400 }
       );
     }
-
-    const profile = await ProfileService.getProfile(userId);
     
-    if (!profile) {
+    // Log the userId being used for database query
+    console.log('Profile API: Fetching profile from database for userId:', userId);
+
+    let profile;
+    try {
+      profile = await ProfileService.getProfile(userId);
+    } catch (error) {
+      // Log error and return handled JSON error message instead of throwing
+      console.error('Profile API: Error fetching profile from database:', error);
       return NextResponse.json(
-        { error: 'Profile not found' },
+        { 
+          error: 'Failed to fetch profile',
+          message: 'An error occurred while fetching the profile. Please try again later.'
+        },
+        { status: 500 }
+      );
+    }
+    
+    // If user is not found, return JSON error instead of crashing component
+    if (!profile) {
+      console.warn('Profile API: Profile not found for userId:', userId);
+      return NextResponse.json(
+        { 
+          error: 'Profile not found',
+          message: `No profile found for user ID: ${userId}`
+        },
         { status: 404 }
       );
     }

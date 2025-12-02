@@ -239,15 +239,13 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
 
   async searchListings(
     filters: SearchFilters,
-    sortOptions?: SortOptions,
-    paginationOptions?: PaginationOptions
+    sortOptions?: SortOptions
   ): Promise<PaginatedResult<FirestoreListing>> {
     let q = query(this.getCollection());
 
-    // Apply database-level filters for better performance
+    // Apply database-level filters BEFORE sorting
     q = query(q, where('isActive', '==', filters.isActive !== false));
     
-    // Add database-level filters (requires composite indexes)
     if (filters.category) {
       q = query(q, where('category', '==', filters.category));
     }
@@ -264,20 +262,23 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
       q = query(q, where('price', '<=', filters.maxPrice));
     }
 
-    // Apply sorting at database level
+    // Apply sorting at database level BEFORE pagination
     const sortField = sortOptions?.field || 'createdAt';
     const sortDirection = sortOptions?.direction || 'desc';
     q = query(q, orderBy(sortField, sortDirection));
 
-    // Apply pagination
-    if (paginationOptions) {
-      q = this.createPaginationQuery(q, paginationOptions) as any;
-    }
-
+    // Fetch ALL matching listings (Firestore limit is 1000, but we'll handle pagination in API route)
+    // Note: For larger datasets, consider implementing cursor-based pagination
     const docs = await this.getDocs(q);
-    const results = this.createPaginatedResult<FirestoreListing>(docs, paginationOptions || { page: 1, limit: 20 });
-
-    return results;
+    
+    // Return all items (pagination will be applied in API route after keyword filtering)
+    return {
+      items: docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreListing & { id: string })),
+      total: docs.length,
+      page: 1,
+      limit: docs.length,
+      hasMore: false,
+    };
   }
 
   async updateInventory(id: string, quantitySold: number): Promise<void> {

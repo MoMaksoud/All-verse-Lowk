@@ -34,6 +34,12 @@ export default function UserProfilePage() {
         const { apiGet } = await import('@/lib/api-client');
         const profileResponse = await apiGet(`/api/profile?userId=${params.userId}`, { requireAuth: false });
 
+        if (profileResponse.status === 404) {
+          // Profile not found - set profile to null (expected for users without profiles)
+          setProfile(null);
+          return;
+        }
+
         if (!profileResponse.ok) {
           throw new Error('Failed to fetch profile');
         }
@@ -67,7 +73,10 @@ export default function UserProfilePage() {
 
         setProfile(userProfile);
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        // Only log non-404 errors
+        if (error instanceof Error && !error.message.includes('404')) {
+          console.warn('Error fetching profile:', error);
+        }
         setProfile(null);
       } finally {
         setLoading(false);

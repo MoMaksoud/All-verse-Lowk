@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { DefaultAvatar } from './DefaultAvatar';
 import { storagePathToUrl } from '@/lib/storage-utils';
+import { normalizeImageSrc } from '@/lib/image-utils';
 
 interface ProfilePictureProps {
   src?: string | null;
@@ -41,8 +42,9 @@ export function ProfilePicture({
     if (src.startsWith('http://') || src.startsWith('https://')) {
       return src;
     }
-    // Convert storage path to URL
-    return storagePathToUrl(src);
+    // Convert storage path to URL, then normalize for Next.js Image
+    const url = storagePathToUrl(src);
+    return normalizeImageSrc(url);
   }, [src]);
 
   // Reset error state when src changes
@@ -72,7 +74,8 @@ export function ProfilePicture({
         alt={alt}
         width={size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}
         height={size === 'sm' ? 32 : size === 'md' ? 48 : size === 'lg' ? 64 : 80}
-        className="rounded-full object-cover w-full h-full"
+        className="object-cover rounded-lg"
+        style={{ width: 'auto', height: 'auto' }}
         onError={() => {
           setImageError(true);
           setImageLoading(false);
@@ -81,7 +84,6 @@ export function ProfilePicture({
           setImageLoading(false);
         }}
         unoptimized // Render original asset without Next.js optimization, cropping, or transparency forcing
-        style={{ objectFit: 'cover' }} // Ensure no forced cropping
       />
       {imageLoading && (
         <div className="absolute inset-0 bg-gray-700 rounded-full animate-pulse" />

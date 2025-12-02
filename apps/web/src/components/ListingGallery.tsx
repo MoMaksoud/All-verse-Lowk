@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { normalizeImageSrc } from '@/lib/image-utils';
 
 interface ListingGalleryProps {
   photos: string[];
@@ -74,11 +75,11 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
       {/* Main Image */}
       <div className="relative aspect-[4/3] w-full bg-zinc-900 rounded-xl overflow-hidden">
         <Image
-          src={safePhotos[activeIndex]}
+          src={normalizeImageSrc(safePhotos[activeIndex])}
           alt={`${title} - Image ${activeIndex + 1}`}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover"
+          className="object-cover rounded-lg"
           priority={activeIndex === 0}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
@@ -132,11 +133,12 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
               aria-label={`View image ${index + 1}`}
             >
               <Image
-                src={photo}
+                src={normalizeImageSrc(photo)}
                 alt={`${title} thumbnail ${index + 1}`}
                 width={80}
                 height={80}
-                className="w-full h-full object-cover"
+                className="object-cover rounded-lg"
+                style={{ width: 'auto', height: 'auto' }}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = '/images/placeholder.png';
