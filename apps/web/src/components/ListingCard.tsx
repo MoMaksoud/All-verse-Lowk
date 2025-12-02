@@ -7,6 +7,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
+import { MessageInputModal } from '@/components/MessageInputModal';
+import { ProfilePicture } from '@/components/ProfilePicture';
 
 type Props = {
   variant: "grid" | "list";
@@ -40,6 +42,7 @@ export default function ListingCard({
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
   const { startChat } = useStartChatFromListing();
+  const [showMessageModal, setShowMessageModal] = useState(false);
   const [isFavorited, setIsFavorited] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -201,19 +204,30 @@ export default function ListingCard({
       return;
     }
 
+    // Open message input modal instead of auto-sending
+    setShowMessageModal(true);
+  }, [currentUser, sellerId, showError]);
+
+  const handleSendMessage = useCallback(async (messageText: string) => {
+    if (!currentUser || !sellerId) return;
+
     try {
       await startChat({
         listingId: id,
         sellerId: sellerId,
         listingTitle: title,
         listingPrice: typeof price === 'number' ? price : parseFloat(price.toString().replace(/[^0-9.-]+/g, '')),
+        initialMessage: messageText,
+        navigateToChat: false, // Don't auto-navigate, let user decide
       });
+      showSuccess('Message sent!', 'Your message has been sent to the seller.');
       onChat?.();
     } catch (error) {
-      console.error('Error starting chat:', error);
-      showError('Failed to start conversation');
+      console.error('Error sending message:', error);
+      showError('Failed to send message', 'Please try again.');
+      throw error; // Re-throw so modal can handle it
     }
-  }, [currentUser, sellerId, id, title, price, startChat, showError, onChat]);
+  }, [currentUser, sellerId, id, title, price, startChat, showSuccess, showError, onChat]);
 
   const handleFavoriteClick = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -248,8 +262,9 @@ export default function ListingCard({
   }, [currentUser, id, showSuccess, showError, onFav]);
 
   return (
-    <Link href={`/listings/${id}`} className="block">
-      <article
+    <>
+      <Link href={`/listings/${id}`} className="block">
+        <article
         className={clsx(
           "rounded-3xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
           variant === "grid" ? "overflow-hidden" : "p-4 md:p-5"
@@ -287,21 +302,13 @@ export default function ListingCard({
               {sellerId && (
                 <div className="flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1">
                   <div className="flex-shrink-0">
-                    {sellerProfile?.profilePicture ? (
-                      <Image
-                        src={sellerProfile.profilePicture}
-                        alt={sellerProfile.username || 'Seller'}
-                        width={32}
-                        height={32}
-                        className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/10 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-white/70">
-                          <path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.33 0-8 2.17-8 4.5V21h16v-2.5c0-2.33-3.67-4.5-8-4.5Z"/>
-                        </svg>
-                      </div>
-                    )}
+                    <ProfilePicture
+                      src={sellerProfile?.profilePicture}
+                      alt={sellerProfile?.username || 'Seller'}
+                      name={sellerProfile?.username}
+                      size="sm"
+                      className="w-6 h-6 sm:w-8 sm:h-8"
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs sm:text-sm font-medium text-zinc-100 truncate">
@@ -397,21 +404,13 @@ export default function ListingCard({
               {sellerId && (
                 <div className="flex items-center gap-3 mt-2 py-2 border-t border-white/5">
                   <div className="flex-shrink-0">
-                    {sellerProfile?.profilePicture ? (
-                      <Image
-                        src={sellerProfile.profilePicture}
-                        alt={sellerProfile.username || 'Seller'}
-                        width={40}
-                        height={40}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" className="w-5 h-5 text-white/70">
-                          <path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.33 0-8 2.17-8 4.5V21h16v-2.5c0-2.33-3.67-4.5-8-4.5Z"/>
-                        </svg>
-                      </div>
-                    )}
+                    <ProfilePicture
+                      src={sellerProfile?.profilePicture}
+                      alt={sellerProfile?.username || 'Seller'}
+                      name={sellerProfile?.username}
+                      size="md"
+                      className="w-8 h-8"
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-zinc-100 truncate">
@@ -473,7 +472,18 @@ export default function ListingCard({
             </div>
           </div>
         )}
-      </article>
-    </Link>
+        </article>
+      </Link>
+
+      {/* Message Input Modal - Outside Link to avoid event propagation issues */}
+      {currentUser && sellerId && (
+        <MessageInputModal
+          isOpen={showMessageModal}
+          onClose={() => setShowMessageModal(false)}
+          onSubmit={handleSendMessage}
+          listingTitle={title}
+        />
+      )}
+    </>
   );
 }

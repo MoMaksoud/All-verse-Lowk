@@ -25,6 +25,7 @@ interface AuthContextType {
   isConfigured: boolean;
   userProfile: any | null;
   isEmailVerified: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -110,6 +111,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return signOut(auth);
   }, [isConfigured]);
 
+  const refreshProfile = useCallback(async () => {
+    if (!currentUser?.uid || !isFirebaseConfigured()) {
+      return;
+    }
+    try {
+      const profile = await ProfileService.getProfile(currentUser.uid);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error refreshing user profile:', error);
+    }
+  }, [currentUser?.uid]);
+
   useEffect(() => {
     if (!auth || !isConfigured) {
       setLoading(false);
@@ -153,7 +166,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isConfigured,
     userProfile,
     isEmailVerified: currentUser?.emailVerified || false,
-  }), [currentUser, loading, userProfile, isConfigured, signup, login, signInWithGoogle, logout]);
+    refreshProfile,
+  }), [currentUser, loading, userProfile, isConfigured, signup, login, signInWithGoogle, logout, refreshProfile]);
 
   return (
     <AuthContext.Provider value={value}>

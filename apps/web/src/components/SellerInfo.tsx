@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { ProfilePicture } from './ProfilePicture';
 
 interface SellerInfoProps {
   seller?: {
@@ -21,21 +21,13 @@ export function SellerInfo({ seller, onContactClick, currentUserId }: SellerInfo
     <section className="rounded-2xl border border-white/5 bg-[#1b2230] text-white overflow-hidden">
       {/* Top: avatar + name */}
       <div className="flex items-center gap-4 p-4 sm:p-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 overflow-hidden">
-          {seller?.profilePicture ? (
-            <Image
-              src={seller.profilePicture}
-              alt={seller.name || 'Seller'}
-              width={48}
-              height={48}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <svg viewBox="0 0 24 24" className="h-6 w-6 text-white/70">
-              <path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.33 0-8 2.17-8 4.5V21h16v-2.5c0-2.33-3.67-4.5-8-4.5Z"/>
-            </svg>
-          )}
-        </div>
+        <ProfilePicture
+          src={seller?.profilePicture}
+          alt={seller?.name || 'Seller'}
+          name={seller?.name}
+          size="lg"
+          className="w-12 h-12"
+        />
 
         <div className="min-w-0">
           <div className="flex items-center gap-2">

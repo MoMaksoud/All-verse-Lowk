@@ -9,6 +9,7 @@ export interface StartChatFromListingOptions {
   listingTitle: string;
   listingPrice: number;
   initialMessage?: string;
+  navigateToChat?: boolean; // Optional: control whether to navigate after sending
 }
 
 export const startChatFromListing = async (
@@ -35,18 +36,19 @@ export const startChatFromListing = async (
     // Create or get existing chat
     const chatId = await firestoreServices.chats.getOrCreateChat(currentUserId, options.sellerId);
     
-    // Always send an initial message with listing context to attach the listing reference
+    // Send user's input text directly without alteration
     // If no initial message provided, use a default one
     const messageText = options.initialMessage || `Hi! I'm interested in "${options.listingTitle}"`;
     
-    // Ensure listingId is trimmed and valid before sending
+    // Only include listingId in payload (not listingTitle/listingPrice)
+    // Seller will fetch listing from Firestore on mount
     const validListingId = options.listingId.trim();
     await firestoreServices.chats.sendMessage(chatId, currentUserId, messageText, validListingId);
     
     console.log('✅ Chat started with listing context:', { chatId, listingId: validListingId });
     
-    // Navigate to messages page with chatId if router is provided
-    if (router) {
+    // Navigate to messages page with chatId if router is provided and navigation is enabled
+    if (router && options.navigateToChat !== false) {
       router.push(`/messages?chatId=${chatId}`);
     }
     

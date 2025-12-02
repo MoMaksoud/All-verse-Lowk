@@ -58,24 +58,18 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       throw new Error(`Storage upload failed: ${uploadError?.message || 'Unknown error'}`);
     }
     
-    const photoUrl = result.url;
+    // Use storage path as the source of truth (not URL)
+    const photoPath = result.path; // Storage path: users/{userId}/profile/{filename}
     
-    // Extract file path from URL for tracking
-    let photoPath = '';
-    try {
-      const url = new URL(photoUrl);
-      const pathMatch = url.pathname.match(/\/o\/(.+)\?/);
-      photoPath = pathMatch ? decodeURIComponent(pathMatch[1]) : '';
-    } catch (urlError) {
-      console.warn('⚠️ Could not extract path from URL:', urlError);
-    }
+    // Generate URL from path for response (but don't store URL in profile)
+    const photoUrl = result.url;
 
     // Save photo metadata to Firestore
     try {
       const photoData: ProfilePhotoUpload = {
         userId: req.userId,
-        photoUrl,
-        photoPath,
+        photoUrl, // Keep URL for metadata/backwards compatibility
+        photoPath, // Store path as primary reference
         uploadedAt: new Date() as any, // Will be converted to Timestamp in service
       };
 
@@ -86,11 +80,13 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       // Don't fail the whole request if metadata save fails - the photo is already uploaded
     }
 
-    // Update user profile/user doc with new photo URL
+    // Update user profile/user doc with storage PATH (not URL) as source of truth
     try {
+      // Store path in profile - this is the single source of truth
+      await ProfileService.saveProfile(req.userId, { profilePicture: photoPath });
+      // Also update Firebase Auth user photoURL for backwards compatibility
       await firestoreServices.users.updateUser(req.userId, { photoURL: photoUrl });
-      await ProfileService.saveProfile(req.userId, { profilePicture: photoUrl });
-      console.log('✅ User profile updated with new photo URL');
+      console.log('✅ User profile updated with storage path:', photoPath);
     } catch (profileError: any) {
       console.error('❌ Failed to update user profile:', profileError);
       // Don't fail the whole request if profile update fails - the photo is already uploaded

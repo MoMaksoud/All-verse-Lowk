@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, User } from 'lucide-react';
 import { apiGet } from '@/lib/api-client';
+import { ProfilePicture } from './ProfilePicture';
 
 interface User {
   userId: string;
@@ -138,17 +139,13 @@ export function UserSearchModal({ isOpen, onClose, onSelectUser }: UserSearchMod
               onClick={() => handleSelectUser(user)}
               className="w-full p-4 hover:bg-white/5 transition-colors flex items-center gap-3 border-b border-dark-border last:border-0"
             >
-              {user.profilePicture ? (
-                <img
-                  src={user.profilePicture}
-                  alt={user.displayName}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-                  <User className="w-5 h-5 text-gray-400" />
-                </div>
-              )}
+              <ProfilePicture
+                src={user.profilePicture}
+                alt={user.displayName}
+                name={user.displayName}
+                size="md"
+                className="w-10 h-10"
+              />
               <div className="flex-1 text-left">
                 <div className="text-white font-medium">@{user.username}</div>
                 {user.displayName !== user.username && (

@@ -26,21 +26,23 @@ export class AdminStorageService {
       
       console.log('📤 Admin Storage: Uploading to path:', path);
       
-      // Convert File to Buffer for server-side upload
+      // Convert File to Buffer for server-side upload - preserve raw bytes exactly as received
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       
-      // Upload to Firebase Storage using Admin SDK
+      // Upload raw file bytes directly to Firebase Storage - no processing, conversion, or edits
       const fileRef = bucket.file(path);
       await fileRef.save(buffer, {
         metadata: {
-          contentType: file.type,
+          contentType: file.type, // Preserve original MIME type exactly
+          cacheControl: 'public, max-age=31536000',
           metadata: {
             userId,
             userEmail,
             uploadedAt: new Date().toISOString(),
             category: 'profile-picture',
             originalFileName: file.name,
+            originalMimeType: file.type, // Track original MIME type
             fileSize: file.size.toString(),
           },
         },

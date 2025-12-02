@@ -129,6 +129,7 @@ export function useChatMessages(chatId: string | null) {
       setSending(true);
       setError(null);
       
+      // Send user input text directly without alteration (no trim beyond whitespace)
       await firestoreServices.chats.sendMessage(chatId, currentUser.uid, text.trim());
     } catch (error) {
       console.error('Error sending message:', error);

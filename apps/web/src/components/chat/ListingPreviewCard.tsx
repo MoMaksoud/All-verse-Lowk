@@ -9,9 +9,10 @@ import { SimpleListing } from '@marketplace/types';
 interface ListingPreviewCardProps {
   listingId: string;
   className?: string;
+  onError?: () => void;
 }
 
-export function ListingPreviewCard({ listingId, className = '' }: ListingPreviewCardProps) {
+export function ListingPreviewCard({ listingId, className = '', onError }: ListingPreviewCardProps) {
   const [listing, setListing] = useState<SimpleListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -22,6 +23,7 @@ export function ListingPreviewCard({ listingId, className = '' }: ListingPreview
         console.warn('ListingPreviewCard: Invalid listingId provided');
         setError(true);
         setLoading(false);
+        onError?.();
         return;
       }
 
@@ -40,29 +42,44 @@ export function ListingPreviewCard({ listingId, className = '' }: ListingPreview
           } else {
             console.warn('ListingPreviewCard: Invalid listing data received', data);
             setError(true);
+            onError?.();
           }
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('ListingPreviewCard: Failed to fetch listing', {
-            status: response.status,
-            listingId,
-            error: errorData
-          });
+          // Log error once, then call onError callback if provided
+          if (response.status === 404) {
+            // Only log 404 once to avoid spam
+            if (!error) {
+              console.warn('ListingPreviewCard: Listing not found', listingId);
+            }
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('ListingPreviewCard: Failed to fetch listing', {
+              status: response.status,
+              listingId,
+              error: errorData
+            });
+          }
           setError(true);
+          onError?.();
         }
       } catch (err) {
-        console.error('ListingPreviewCard: Error fetching listing', {
-          listingId,
-          error: err instanceof Error ? err.message : 'Unknown error'
-        });
+        // Only log error once to avoid spam
+        if (!error) {
+          console.error('ListingPreviewCard: Error fetching listing', {
+            listingId,
+            error: err instanceof Error ? err.message : 'Unknown error'
+          });
+        }
         setError(true);
+        onError?.();
       } finally {
         setLoading(false);
       }
     };
 
     fetchListing();
-  }, [listingId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listingId]); // Only depend on listingId - onError is a callback prop
 
   const formatPrice = (price: string | number): string => {
     if (typeof price === 'number') {

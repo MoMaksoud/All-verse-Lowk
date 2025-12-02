@@ -53,9 +53,11 @@ export function ResourcePreloader() {
               if ('saveData' in navigator && navigator.saveData) slow = true;
               if (slow) return;
 
+              // Only prefetch routes that exist and don't require auth
               var routesPhase1 = ['/listings'];
               var routesPhase2 = ['/ai', '/messages'];
-              var routesPhase3 = ['/settings', '/profile', '/cart'];
+              // Removed /profile and /settings from prefetch - they require auth and cause 404s
+              var routesPhase3 = ['/cart'];
 
               function prefetchRoute(href){
                 if (!href) return;

@@ -29,7 +29,7 @@ import { Profile } from '@marketplace/types';
 import { useChats } from '@/hooks/useChats';
 
 // Lazy load heavy components
-const DefaultAvatar = lazy(() => import('./DefaultAvatar').then(module => ({ default: module.DefaultAvatar })));
+const ProfilePicture = lazy(() => import('./ProfilePicture').then(module => ({ default: module.ProfilePicture })));
 
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
@@ -46,7 +46,7 @@ const Navigation = memo(function Navigation() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, userProfile } = useAuth();
   const { chats } = useChats();
   const { currentChatId, setCurrentChatId } = useChatContext();
 
@@ -144,26 +144,33 @@ const Navigation = memo(function Navigation() {
   }, []);
 
   // Fetch profile data for avatar - only when dropdown is opened
+  // Use userProfile from AuthContext instead of fetching to avoid 404 errors
   useEffect(() => {
     if (!showProfileDropdown || profile || !currentUser?.uid) return;
     
+    // Prefer userProfile from AuthContext (already loaded) to avoid unnecessary API calls
+    if (userProfile) {
+      setProfile(userProfile);
+      return;
+    }
+    
+    // Only fetch if userProfile is not available in context
     const fetchProfile = async () => {
       try {
         // Wait a bit to ensure auth token is ready
         await new Promise(resolve => setTimeout(resolve, 100));
         
         const { apiGet } = await import('@/lib/api-client');
-        // Use default requireAuth: true since dropdown only shows for authenticated users
         const response = await apiGet('/api/profile');
         
-        // Silently handle errors - profile might not exist yet or auth might be in progress
+        // Silently handle 404 - profile might not exist yet (expected scenario)
         if (!response.ok) {
-          // Don't log 400/401/404 errors as they're expected scenarios
-          // 400: Missing userId (shouldn't happen if auth is working)
-          // 401: Invalid/expired token (user needs to re-authenticate)
-          // 404: Profile doesn't exist yet (user needs to create profile)
-          if (response.status !== 400 && response.status !== 401 && response.status !== 404) {
-            console.error('Error fetching profile:', response.status);
+          // Don't log 404 errors - profile doesn't exist yet is expected
+          if (response.status !== 404) {
+            // Only log non-404 errors
+            if (response.status !== 400 && response.status !== 401) {
+              console.error('Error fetching profile:', response.status);
+            }
           }
           return;
         }
@@ -174,16 +181,16 @@ const Navigation = memo(function Navigation() {
           setProfile(result.data);
         }
       } catch (error) {
-        // Silently handle errors - don't spam console with expected errors
-        // Only log unexpected errors
-        if (error instanceof Error && !error.message.includes('fetch')) {
+        // Silently handle errors - don't spam console
+        // Only log unexpected errors (not network/fetch errors)
+        if (error instanceof Error && !error.message.includes('fetch') && !error.message.includes('404')) {
           console.error('Error fetching profile:', error);
         }
       }
     };
 
     fetchProfile();
-  }, [currentUser, showProfileDropdown, profile]);
+  }, [currentUser, showProfileDropdown, profile, userProfile]);
 
   return (
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50 safe-area-top" suppressHydrationWarning>
@@ -295,25 +302,17 @@ const Navigation = memo(function Navigation() {
                       {/* Profile Header */}
                       <div className="px-4 py-3 border-b border-dark-600 bg-dark-800">
                         <div className="flex items-center space-x-3">
-                          {(profile?.profilePicture || currentUser?.photoURL) ? (
-                            <div className="flex-shrink-0">
-                              <img
-                                src={(profile?.profilePicture || currentUser?.photoURL) as string}
+                          <div className="flex-shrink-0">
+                            <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
+                              <ProfilePicture
+                                src={profile?.profilePicture || userProfile?.profilePicture}
                                 alt={currentUser?.displayName || 'Avatar'}
-                                className="w-10 h-10 rounded-full object-cover aspect-square"
+                                name={currentUser?.displayName || undefined}
+                                email={currentUser?.email || undefined}
+                                size="md"
                               />
-                            </div>
-                          ) : (
-                            <div className="flex-shrink-0">
-                              <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
-                                <DefaultAvatar
-                                  name={currentUser?.displayName || undefined}
-                                  email={currentUser?.email || undefined}
-                                  size="md"
-                                />
-                              </Suspense>
-                            </div>
-                          )}
+                            </Suspense>
+                          </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">
                               {currentUser.displayName || "User"}
@@ -563,21 +562,15 @@ const Navigation = memo(function Navigation() {
               {currentUser && (
                 <div className="pt-4 border-t border-dark-600">
                   <div className="flex items-center px-3 py-3">
-                    {(profile?.profilePicture || currentUser?.photoURL) ? (
-                      <img
-                        src={(profile?.profilePicture || currentUser?.photoURL) as string}
+                    <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
+                      <ProfilePicture
+                        src={profile?.profilePicture || userProfile?.profilePicture}
                         alt={currentUser?.displayName || 'Avatar'}
-                        className="w-8 h-8 rounded-full object-cover"
+                        name={currentUser?.displayName || undefined}
+                        email={currentUser?.email || undefined}
+                        size="sm"
                       />
-                    ) : (
-                      <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
-                        <DefaultAvatar
-                          name={currentUser?.displayName || undefined}
-                          email={currentUser?.email || undefined}
-                          size="sm"
-                        />
-                      </Suspense>
-                    )}
+                    </Suspense>
                     <div className="ml-3">
                       <div className="text-base font-medium text-white">
                         {currentUser.displayName || "User"}

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { DynamicBackground } from '@/components/DynamicBackground';
-import { DefaultAvatar } from '@/components/DefaultAvatar';
+import { ProfilePicture } from '@/components/ProfilePicture';
 import { 
   ArrowLeft, 
   User, 
@@ -32,7 +32,7 @@ type SettingsSection = 'account' | 'security' | 'billing';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>('account');
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, refreshProfile, userProfile } = useAuth();
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -236,7 +236,14 @@ export default function SettingsPage() {
       }
       const data = await resp.json();
       
-      setProfile((p: any) => p ? { ...p, profilePicture: data.photoUrl } : p);
+      // Use storage path as the source of truth (photoPath takes precedence over photoUrl)
+      const profilePicturePath = data.photoPath || data.photoUrl;
+      
+      setProfile((p: any) => p ? { ...p, profilePicture: profilePicturePath } : p);
+      
+      // Refresh profile from AuthContext to update global state
+      await refreshProfile();
+      
       setSuccess('Profile picture updated successfully');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -302,10 +309,10 @@ export default function SettingsPage() {
   };
 
   const renderAccountManagement = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-white mb-2">Personal Details</h2>
-        <p className="text-gray-400 mb-4">Manage your personal information and profile details</p>
+        <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Personal Details</h2>
+        <p className="text-sm sm:text-base text-gray-400 mb-4">Manage your personal information and profile details</p>
       </div>
 
       {error && (
@@ -320,21 +327,21 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {/* Username */}
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <User className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Username</h3>
-                <p className="text-gray-400 text-sm">Your unique username (like @username)</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Username</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Your unique username (like @username)</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {editingField === 'username' ? (
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-col">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                  <div className="flex flex-col flex-1 sm:flex-initial">
                     <input
                       type="text"
                       value={editValues.username || ''}
@@ -342,34 +349,36 @@ export default function SettingsPage() {
                         const value = e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, '');
                         setEditValues({ username: value });
                       }}
-                      className="bg-dark-800 border border-dark-600 text-white px-3 py-1 rounded-lg text-sm w-48"
+                      className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48"
                       placeholder="username"
                       maxLength={30}
                       autoFocus
                     />
                     <span className="text-xs text-gray-500 mt-1">@{editValues.username || 'username'}</span>
                   </div>
-                  <button
-                    onClick={() => handleSaveField('username')}
-                    disabled={saving}
-                    className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                    className="text-gray-400 hover:text-gray-300 disabled:opacity-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSaveField('username')}
+                      disabled={saving}
+                      className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm px-2 py-1"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={saving}
+                      className="text-gray-400 hover:text-gray-300 disabled:opacity-50 p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <span className="text-white mr-2">@{profile?.username || 'not set'}</span>
+                  <span className="text-white text-sm sm:text-base mr-2 truncate">@{profile?.username || 'not set'}</span>
                   <button 
                     onClick={() => handleEditField('username', profile?.username || '')}
-                    className="text-accent-500 hover:text-accent-400"
+                    className="text-accent-500 hover:text-accent-400 flex-shrink-0"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -380,48 +389,50 @@ export default function SettingsPage() {
         </div>
 
         {/* Display Name */}
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <User className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Display Name</h3>
-                <p className="text-gray-400 text-sm">Your public display name (can be reused)</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Display Name</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Your public display name (can be reused)</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {editingField === 'displayName' ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                   <input
                     type="text"
                     value={editValues.displayName || ''}
                     onChange={(e) => setEditValues({ displayName: e.target.value })}
-                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1 rounded-lg text-sm w-48"
+                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48"
                     placeholder="Your name"
                     maxLength={100}
                     autoFocus
                   />
-                  <button
-                    onClick={() => handleSaveField('displayName')}
-                    disabled={saving}
-                    className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                    className="text-gray-400 hover:text-gray-300 disabled:opacity-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSaveField('displayName')}
+                      disabled={saving}
+                      className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm px-2 py-1"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={saving}
+                      className="text-gray-400 hover:text-gray-300 disabled:opacity-50 p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <span className="text-white mr-2">{profile?.displayName || currentUser?.displayName || 'Not set'}</span>
+                  <span className="text-white text-sm sm:text-base mr-2 truncate">{profile?.displayName || currentUser?.displayName || 'Not set'}</span>
                   <button 
                     onClick={() => handleEditField('displayName', profile?.displayName || currentUser?.displayName || '')}
-                    className="text-accent-500 hover:text-accent-400"
+                    className="text-accent-500 hover:text-accent-400 flex-shrink-0"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -432,46 +443,48 @@ export default function SettingsPage() {
         </div>
 
         {/* Email */}
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Mail className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Email Address</h3>
-                <p className="text-gray-400 text-sm">Your account email address</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <Mail className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Email Address</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Your account email address</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {editingField === 'email' ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                   <input
                     type="email"
                     value={editValues.email || ''}
                     onChange={(e) => setEditValues({ email: e.target.value })}
-                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1 rounded-lg text-sm w-48"
+                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48"
                     autoFocus
                   />
-                  <button
-                    onClick={() => handleSaveField('email')}
-                    disabled={saving}
-                    className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                    className="text-gray-400 hover:text-gray-300 disabled:opacity-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSaveField('email')}
+                      disabled={saving}
+                      className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm px-2 py-1"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={saving}
+                      className="text-gray-400 hover:text-gray-300 disabled:opacity-50 p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <span className="text-white mr-2">{currentUser?.email || 'Not set'}</span>
+                  <span className="text-white text-sm sm:text-base mr-2 truncate">{currentUser?.email || 'Not set'}</span>
                   <button 
                     onClick={() => handleEditField('email', currentUser?.email || '')}
-                    className="text-accent-500 hover:text-accent-400"
+                    className="text-accent-500 hover:text-accent-400 flex-shrink-0"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -482,18 +495,18 @@ export default function SettingsPage() {
         </div>
 
         {/* Phone Number */}
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Smartphone className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Phone Number</h3>
-                <p className="text-gray-400 text-sm">Add a phone number for account recovery</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <Smartphone className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Phone Number</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Add a phone number for account recovery</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {editingField === 'phoneNumber' ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                   <input
                     type="tel"
                     value={editValues.phoneNumber || ''}
@@ -502,30 +515,32 @@ export default function SettingsPage() {
                       setEditValues({ phoneNumber: formatted });
                     }}
                     placeholder="(555) 123-4567"
-                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1 rounded-lg text-sm w-48"
+                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48"
                     autoFocus
                   />
-                  <button
-                    onClick={() => handleSaveField('phoneNumber')}
-                    disabled={saving}
-                    className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                    className="text-gray-400 hover:text-gray-300 disabled:opacity-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSaveField('phoneNumber')}
+                      disabled={saving}
+                      className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm px-2 py-1"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={saving}
+                      className="text-gray-400 hover:text-gray-300 disabled:opacity-50 p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <span className="text-white mr-2">{profile?.phoneNumber || 'Not set'}</span>
+                  <span className="text-white text-sm sm:text-base mr-2 truncate">{profile?.phoneNumber || 'Not set'}</span>
                   <button 
                     onClick={() => handleEditField('phoneNumber', profile?.phoneNumber || '')}
-                    className="text-accent-500 hover:text-accent-400"
+                    className="text-accent-500 hover:text-accent-400 flex-shrink-0"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -536,27 +551,24 @@ export default function SettingsPage() {
         </div>
 
         {/* Profile Picture */}
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <User className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Profile Picture</h3>
-                <p className="text-gray-400 text-sm">Update your profile photo</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Profile Picture</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Update your profile photo</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                {profile?.profilePicture ? (
-                  <img 
-                    src={profile.profilePicture} 
-                    alt="Profile" 
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <DefaultAvatar size="md" className="w-10 h-10 text-sm" name={currentUser?.displayName || currentUser?.email || 'U'} />
-                )}
-              </div>
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <ProfilePicture
+                src={profile?.profilePicture || userProfile?.profilePicture}
+                alt="Profile"
+                name={currentUser?.displayName || undefined}
+                email={currentUser?.email || undefined}
+                size="md"
+                className="w-10 h-10"
+              />
               <input
                 ref={fileInputRef}
                 type="file"
@@ -567,7 +579,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={saving}
-                className="text-accent-500 hover:text-accent-400 disabled:opacity-50 flex items-center gap-2"
+                className="text-accent-500 hover:text-accent-400 disabled:opacity-50 flex items-center gap-2 text-sm sm:text-base"
               >
                 <Camera className="w-4 h-4" />
                 {saving ? 'Uploading...' : 'Change'}
@@ -580,10 +592,10 @@ export default function SettingsPage() {
   );
 
   const renderSecurityLogin = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-white mb-2">Security & Login</h2>
-        <p className="text-gray-400 mb-4">Manage your account security and login settings</p>
+        <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Security & Login</h2>
+        <p className="text-sm sm:text-base text-gray-400 mb-4">Manage your account security and login settings</p>
       </div>
 
       {passwordError && (
@@ -598,36 +610,36 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Lock className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Password</h3>
-                <p className="text-gray-400 text-sm">Change your account password</p>
+      <div className="space-y-3 sm:space-y-4">
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <Lock className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Password</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Change your account password</p>
               </div>
             </div>
             <button 
               onClick={() => setShowPasswordModal(true)}
-              className="text-accent-500 hover:text-accent-400"
+              className="text-accent-500 hover:text-accent-400 flex-shrink-0 self-start sm:self-auto"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Shield className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Two-Factor Authentication</h3>
-                <p className="text-gray-400 text-sm">Add an extra layer of security</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <Shield className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Two-Factor Authentication</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Add an extra layer of security</p>
               </div>
             </div>
-            <div className="flex items-center">
-              <span className="text-yellow-400 text-sm mr-2">Coming Soon</span>
+            <div className="flex items-center flex-shrink-0">
+              <span className="text-yellow-400 text-xs sm:text-sm mr-2">Coming Soon</span>
               <button className="text-accent-500 hover:text-accent-400 opacity-50 cursor-not-allowed">
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -635,18 +647,18 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Trash2 className="w-5 h-5 text-red-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Delete Account</h3>
-                <p className="text-gray-400 text-sm">Permanently delete your account and data</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <Trash2 className="w-5 h-5 text-red-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Delete Account</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Permanently delete your account and data</p>
               </div>
             </div>
             <button 
               onClick={() => setShowDeleteConfirm(true)}
-              className="text-red-500 hover:text-red-400"
+              className="text-red-500 hover:text-red-400 flex-shrink-0 self-start sm:self-auto"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -663,55 +675,55 @@ export default function SettingsPage() {
   );
 
   const renderBilling = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-white mb-2">Billing & Payments</h2>
-        <p className="text-gray-400 mb-4">View your earnings and spending</p>
+        <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Billing & Payments</h2>
+        <p className="text-sm sm:text-base text-gray-400 mb-4">View your earnings and spending</p>
       </div>
 
-      <div className="space-y-4">
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <CreditCard className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Total Earnings</h3>
-                <p className="text-gray-400 text-sm">Money earned from sales</p>
+      <div className="space-y-3 sm:space-y-4">
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <CreditCard className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Total Earnings</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Money earned from sales</p>
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink-0">
               <span className="text-green-400 text-sm mr-2">$0.00</span>
               <span className="text-gray-500 text-xs">(Coming Soon)</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <CreditCard className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Total Spending</h3>
-                <p className="text-gray-400 text-sm">Money spent on purchases</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <CreditCard className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Total Spending</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">Money spent on purchases</p>
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink-0">
               <span className="text-red-400 text-sm mr-2">$0.00</span>
               <span className="text-gray-500 text-xs">(Coming Soon)</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-dark-700 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <CreditCard className="w-5 h-5 text-accent-500 mr-3" />
-              <div>
-                <h3 className="text-white font-medium">Payment History</h3>
-                <p className="text-gray-400 text-sm">View your past transactions</p>
+        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center min-w-0 flex-1">
+              <CreditCard className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-white font-medium text-sm sm:text-base">Payment History</h3>
+                <p className="text-gray-400 text-xs sm:text-sm">View your past transactions</p>
               </div>
             </div>
-            <button className="text-accent-500 hover:text-accent-400 opacity-50 cursor-not-allowed">
+            <button className="text-accent-500 hover:text-accent-400 opacity-50 cursor-not-allowed flex-shrink-0">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -734,13 +746,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-x-hidden w-full max-w-screen">
       <DynamicBackground intensity="low" showParticles={true} />
       
-      <div className="relative z-10 min-h-screen px-4 py-8">
-        <div className="max-w-7xl mx-auto">
+      <div className="relative z-10 min-h-screen w-full px-4 sm:px-6 py-6 sm:py-8">
+        <div className="w-full max-w-screen mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
             <button
               onClick={() => router.back()}
               className="flex items-center text-gray-400 hover:text-white transition-colors"
@@ -751,12 +763,12 @@ export default function SettingsPage() {
           </div>
 
           {/* Main Content */}
-          <div className="flex gap-8">
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
             {/* Sidebar */}
-            <div className="w-80 flex-shrink-0">
-              <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700">
-                <div className="mb-6">
-                  <h1 className="text-5xl font-bold text-white">Settings</h1>
+            <div className="w-full lg:w-80 flex-shrink-0">
+              <div className="bg-dark-800 rounded-2xl p-4 sm:p-6 border border-dark-700">
+                <div className="mb-4 sm:mb-6">
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">Settings</h1>
                 </div>
 
                 <nav className="space-y-2">
@@ -766,16 +778,16 @@ export default function SettingsPage() {
                       <button
                         key={section.id}
                         onClick={() => setActiveSection(section.id)}
-                        className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors text-left ${
+                        className={`w-full flex items-center px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors text-left ${
                           activeSection === section.id
                             ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
                             : 'text-gray-300 hover:text-white hover:bg-dark-700/50'
                         }`}
                       >
-                        <Icon className="w-5 h-5 mr-3" />
-                        <div>
-                          <div className="font-medium">{section.name}</div>
-                          <div className="text-xs text-gray-400">{section.description}</div>
+                        <Icon className="w-5 h-5 mr-2 sm:mr-3 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm sm:text-base truncate">{section.name}</div>
+                          <div className="text-xs text-gray-400 hidden sm:block">{section.description}</div>
                         </div>
                       </button>
                     );
@@ -785,8 +797,8 @@ export default function SettingsPage() {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1">
-              <div className="bg-dark-800 rounded-2xl p-8 border border-dark-700">
+            <div className="flex-1 min-w-0">
+              <div className="bg-dark-800 rounded-2xl p-4 sm:p-6 lg:p-8 border border-dark-700">
                 {loadingProfile && activeSection === 'account' ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="text-gray-400">Loading...</div>

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { MessageWithUser } from '@/hooks/useChatMessages';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { ListingPreviewCard } from '@/components/chat/ListingPreviewCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ChatViewProps {
   chatId: string;
@@ -33,6 +34,37 @@ export function ChatView({
   otherUser 
 }: ChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { currentUser } = useAuth();
+  const [listingIdFromMessages, setListingIdFromMessages] = useState<string | null>(null);
+  const [listingLoadError, setListingLoadError] = useState(false);
+
+  // Extract listingId from first message that has it (for seller context)
+  // Only show listing card if current user is the seller (otherUser is the buyer)
+  const isSeller = useMemo(() => {
+    return currentUser?.uid && otherUser?.id && messages.some(msg => 
+      msg.sender?.id === otherUser.id && msg.listingId
+    );
+  }, [currentUser?.uid, otherUser?.id, messages]);
+
+  useEffect(() => {
+    // Find first message with listingId from buyer (otherUser)
+    const buyerMessageWithListing = messages.find(msg => 
+      msg.sender?.id === otherUser?.id && 
+      msg.listingId && 
+      typeof msg.listingId === 'string' && 
+      msg.listingId.trim() !== ''
+    );
+    
+    if (buyerMessageWithListing?.listingId) {
+      const listingId = buyerMessageWithListing.listingId.trim();
+      if (listingId !== listingIdFromMessages) {
+        setListingIdFromMessages(listingId);
+        setListingLoadError(false); // Reset error when listingId changes
+      }
+    } else {
+      setListingIdFromMessages(null);
+    }
+  }, [messages, otherUser?.id, listingIdFromMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -95,6 +127,23 @@ export function ChatView({
         </div>
       </div>
 
+      {/* Listing Context Card - Show above conversation for seller when buyer sends message with listingId */}
+      {isSeller && listingIdFromMessages && !listingLoadError && (
+        <div className="px-4 pt-4 pb-2 border-b border-zinc-800">
+          <div className="text-xs text-zinc-400 mb-2">Item in conversation:</div>
+          <ListingPreviewCard 
+            listingId={listingIdFromMessages}
+            onError={() => {
+              // Log error once and set flag to prevent repeated logs
+              if (!listingLoadError) {
+                console.warn('Failed to load listing for chat context:', listingIdFromMessages);
+                setListingLoadError(true);
+              }
+            }}
+          />
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
         {messages.length === 0 ? (
@@ -106,24 +155,12 @@ export function ChatView({
           </div>
         ) : (
           messages.map((message) => {
-            // Validate listingId exists and is a non-empty string
-            const hasValidListingId = message.listingId && 
-              typeof message.listingId === 'string' && 
-              message.listingId.trim() !== '';
-            
             return (
               <div
                 key={message.id}
                 className={`flex flex-col gap-2 ${message.sender?.id === otherUser?.id ? 'items-start' : 'items-end'}`}
               >
-                {/* Listing Preview Card - shown above message if listingId exists and is valid */}
-                {hasValidListingId && (
-                  <div className={`max-w-[85%] sm:max-w-xs lg:max-w-md`}>
-                    <ListingPreviewCard listingId={message.listingId!} />
-                  </div>
-                )}
-                
-                {/* Message Bubble */}
+                {/* Message Bubble - send text directly without alteration */}
                 <div
                   className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm break-words ${
                     message.sender?.id === otherUser?.id

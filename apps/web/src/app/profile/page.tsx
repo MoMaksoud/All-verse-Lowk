@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
-import { DefaultAvatar } from '@/components/DefaultAvatar';
+import { ProfilePicture } from '@/components/ProfilePicture';
 import { Profile } from '@marketplace/types';
 import { User, Settings, Edit, Camera, Shield } from 'lucide-react';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { currentUser } = useAuth();
+  const { currentUser, refreshProfile, userProfile } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -76,8 +76,15 @@ export default function ProfilePage() {
       });
       if (!resp.ok) throw new Error('Upload failed');
       const data = await resp.json();
-      // Optimistically update local profile
-      setProfile((p) => p ? { ...p, profilePicture: data.photoUrl } as any : p);
+      
+      // Use storage path as the source of truth (photoPath takes precedence over photoUrl)
+      const profilePicturePath = data.photoPath || data.photoUrl;
+      
+      // Refresh profile from AuthContext to get updated profilePicture
+      await refreshProfile();
+      
+      // Also update local state for immediate UI update (using path)
+      setProfile((p) => p ? { ...p, profilePicture: profilePicturePath } as any : p);
     } catch (err) {
       console.error('Profile photo upload failed:', err);
     } finally {
@@ -134,21 +141,21 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-x-hidden w-full max-w-screen">
       <DynamicBackground intensity="low" showParticles={true} />
       
       {/* Navigation */}
       <Navigation />
       
-      <div className="relative z-10 min-h-screen px-4 sm:px-6 py-6 sm:py-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="relative z-10 min-h-screen w-full px-4 sm:px-6 py-6 sm:py-8">
+        <div className="w-full max-w-screen mx-auto">
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white break-words">Profile</h1>
             <p className="text-sm sm:text-base text-gray-400 mt-2">Manage your account and preferences</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {/* Main Profile Information */}
             <div className="lg:col-span-2">
               <div className="bg-dark-800 rounded-2xl p-4 sm:p-6 md:p-8 border border-dark-700">
@@ -170,19 +177,13 @@ export default function ProfilePage() {
                     {/* User Identity */}
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                       <div className="relative flex-shrink-0">
-                        {profile.profilePicture ? (
-                          <img
-                            src={profile.profilePicture as any}
-                            alt={profile.username}
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover"
-                          />
-                        ) : (
-                          <DefaultAvatar
-                            name={profile.username}
-                            email={currentUser?.email || undefined}
-                            size="xl"
-                          />
-                        )}
+                        <ProfilePicture
+                          src={profile.profilePicture || userProfile?.profilePicture}
+                          alt={profile.username}
+                          name={profile.username}
+                          email={currentUser?.email}
+                          size="xl"
+                        />
                         <button
                           onClick={onCameraClick}
                           className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-7 h-7 sm:w-8 sm:h-8 bg-accent-500 hover:bg-accent-600 rounded-full flex items-center justify-center transition-colors"

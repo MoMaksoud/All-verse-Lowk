@@ -3,6 +3,7 @@
 import React from 'react';
 import { User, Phone, Heart, ShoppingBag, DollarSign, Calendar } from 'lucide-react';
 import { Profile } from '@marketplace/types';
+import { ProfilePicture } from './ProfilePicture';
 
 interface ProfileDisplayProps {
   profile: Profile;
@@ -58,17 +59,13 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
   return (
     <div className={`bg-dark-800 rounded-2xl p-6 border border-dark-700 ${className}`}>
       <div className="flex items-start space-x-4 mb-6">
-        <div className="w-20 h-20 bg-dark-700 rounded-full flex items-center justify-center overflow-hidden">
-          {profile.profilePicture ? (
-            <img
-              src={profile.profilePicture}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <User className="w-10 h-10 text-gray-400" />
-          )}
-        </div>
+        <ProfilePicture
+          src={profile.profilePicture}
+          alt={profile.username}
+          name={profile.username}
+          size="xl"
+          className="w-20 h-20"
+        />
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-white mb-1">{profile.username}</h2>
           {profile.bio && (
