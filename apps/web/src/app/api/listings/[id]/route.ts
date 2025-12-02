@@ -43,7 +43,7 @@ export const GET = withApi(async (
       createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: listing.sellerId,
-      sold: listing.sold === true || listing.inventory === 0,
+      sold: (listing.sold ?? false) === true || listing.inventory === 0,
     };
 
     return success(simpleListing);
@@ -95,7 +95,7 @@ export const PUT = withApi(async (
       createdAt: updatedListing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: updatedListing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: updatedListing.sellerId,
-      sold: updatedListing.sold === true || updatedListing.inventory === 0,
+      sold: (updatedListing.sold ?? false) === true || updatedListing.inventory === 0,
     };
 
     return success(simpleListing);

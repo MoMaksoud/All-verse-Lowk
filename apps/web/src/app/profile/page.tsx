@@ -128,8 +128,8 @@ export default function ProfilePage() {
         const timestampObj = createdAt as any;
         if ('toDate' in timestampObj && typeof timestampObj.toDate === 'function') {
           date = timestampObj.toDate();
-        } else if (createdAt instanceof Date) {
-          date = createdAt;
+        } else if (timestampObj instanceof Date) {
+          date = timestampObj;
         } else {
           // Invalid object, cannot convert
           return '2025';

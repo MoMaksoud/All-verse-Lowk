@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Check if item is sold (either explicitly marked or inventory is 0)
-        const isSold = listing.sold === true || listing.inventory === 0;
+        const isSold = (listing.sold ?? false) === true || listing.inventory === 0;
 
         // Filter out sold listings older than 3 days
         if (isSold && listing.soldAt) {
@@ -117,8 +117,8 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => {
         // Sort by sold status first (unsold items first), then by selected sort field
         // Treat items with inventory === 0 as sold even if sold field is not set
-        const aSold = (a.sold === true || a.inventory === 0) ? 1 : 0;
-        const bSold = (b.sold === true || b.inventory === 0) ? 1 : 0;
+        const aSold = ((a.sold ?? false) === true || a.inventory === 0) ? 1 : 0;
+        const bSold = ((b.sold ?? false) === true || b.inventory === 0) ? 1 : 0;
         if (aSold !== bSold) {
           return aSold - bSold; // 0 (unsold) comes before 1 (sold)
         }
@@ -185,7 +185,7 @@ export async function GET(req: NextRequest) {
           updatedAt: updatedAt,
           sellerId: listing.sellerId,
           // Treat items with inventory === 0 as sold even if sold field is not set
-          sold: listing.sold === true || listing.inventory === 0,
+          sold: (listing.sold ?? false) === true || listing.inventory === 0,
         };
       });
 

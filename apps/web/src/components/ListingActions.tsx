@@ -24,7 +24,7 @@ export function ListingActions({
   isOwner = false
 }: ListingActionsProps) {
   // Guard: Don't render purchase UI if sold (check both sold flag and inventory)
-  const isSold = listing.sold === true || listing.inventory === 0;
+  const isSold = (listing.sold ?? false) === true || listing.inventory === 0;
   if (isSold && !isOwner) {
     return (
       <div className="space-y-4">

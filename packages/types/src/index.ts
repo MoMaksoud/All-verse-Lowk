@@ -76,6 +76,7 @@ export type SimpleListing = {
   updatedAt: string; // ISO
   sellerId?: string;
   condition?: 'new' | 'like-new' | 'good' | 'fair' | 'poor';
+  sold?: boolean;
 };
 
 export type SimpleListingCreate = {
