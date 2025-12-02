@@ -178,6 +178,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     console.log('📦 Shipment created, rates available:', shipment.rates?.length || 0);
 
     // Transform EasyPost rates to our format
+    // Note: EasyPost API returns rates pre-sorted, so no client-side sorting needed
     const rates: ShippingRate[] = (shipment.rates || []).map((rate: EasyPostRate) => ({
       id: rate.id, // Include EasyPost rate ID for purchasing
       serviceName: rate.service || 'Standard',
@@ -188,9 +189,6 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       deliveryDate: rate.delivery_date || undefined,
       deliveryDateGuaranteed: rate.delivery_date_guaranteed || false,
     }));
-
-    // Sort rates by price (lowest first)
-    rates.sort((a, b) => a.price - b.price);
 
     console.log('📦 Returning', rates.length, 'shipping rates');
 

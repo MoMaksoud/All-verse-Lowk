@@ -15,15 +15,14 @@ export function Logo({ size = 'md', className = '' }: LogoProps) {
   const dimensions = sizeMap[size];
   
   return (
-    <section className={`h-[48px] w-[48px] flex items-center justify-center shrink-0 ${className}`}>
-      <Image
-        src="/logo.png"
-        alt="ALL VERSE GPT"
-        width={dimensions.width}
-        height={dimensions.height}
-        unoptimized={true}
-        className="object-contain rounded-lg"
-      />
-    </section>
+    <Image
+      src="/logo.png"
+      alt="ALL VERSE GPT"
+      width={dimensions.width}
+      height={dimensions.height}
+      unoptimized={true}
+      className="object-contain rounded-lg"
+      style={{ width: "auto", height: "auto" }}
+    />
   );
 }
