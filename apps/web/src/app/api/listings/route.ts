@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CreateListingInput } from "@/lib/types/firestore";
 import { withApi } from "@/lib/withApi";
-import { Timestamp } from "firebase/firestore";
 
 // Import firestore services dynamically to avoid webpack issues
 async function getFirestoreServices() {
@@ -105,7 +104,8 @@ export async function GET(req: NextRequest) {
         // Filter out sold listings older than 3 days
         if (isSold && listing.soldAt) {
           // Safe date conversion: check for toDate method first, then Date instance
-          const soldDate = listing.soldAt?.toDate ? listing.soldAt.toDate() : (listing.soldAt instanceof Date ? listing.soldAt : null);
+          const soldAtValue = listing.soldAt as any;
+          const soldDate = soldAtValue?.toDate ? soldAtValue.toDate() : (soldAtValue && typeof soldAtValue === 'object' && soldAtValue instanceof Date ? soldAtValue : null);
           
           if (soldDate && soldDate < threeDaysAgo) {
             return false;
@@ -132,8 +132,11 @@ export async function GET(req: NextRequest) {
           bValue = b.price;
         } else {
           // createdAt sorting - safe conversion without nested instanceof
-          const aDate = a.createdAt?.toDate ? a.createdAt.toDate() : (a.createdAt instanceof Date ? a.createdAt : null);
-          const bDate = b.createdAt?.toDate ? b.createdAt.toDate() : (b.createdAt instanceof Date ? b.createdAt : null);
+          const aCreatedAt = a.createdAt as any;
+          const bCreatedAt = b.createdAt as any;
+          
+          const aDate = aCreatedAt?.toDate ? aCreatedAt.toDate() : (aCreatedAt && typeof aCreatedAt === 'object' && aCreatedAt instanceof Date ? aCreatedAt : null);
+          const bDate = bCreatedAt?.toDate ? bCreatedAt.toDate() : (bCreatedAt && typeof bCreatedAt === 'object' && bCreatedAt instanceof Date ? bCreatedAt : null);
           
           const aTime = aDate?.getTime?.() ?? 0;
           const bTime = bDate?.getTime?.() ?? 0;
@@ -150,12 +153,15 @@ export async function GET(req: NextRequest) {
       })
       .map(listing => {
         // Safe date normalization: check for toDate method first, then Date instance
-        const createdAtDate = listing.createdAt?.toDate ? listing.createdAt.toDate() : (listing.createdAt instanceof Date ? listing.createdAt : null);
-        const updatedAtDate = listing.updatedAt?.toDate ? listing.updatedAt.toDate() : (listing.updatedAt instanceof Date ? listing.updatedAt : null);
+        const createdAtValue = listing.createdAt as any;
+        const updatedAtValue = listing.updatedAt as any;
+        
+        const createdAtDate = createdAtValue?.toDate ? createdAtValue.toDate() : (createdAtValue && typeof createdAtValue === 'object' && createdAtValue instanceof Date ? createdAtValue : null);
+        const updatedAtDate = updatedAtValue?.toDate ? updatedAtValue.toDate() : (updatedAtValue && typeof updatedAtValue === 'object' && updatedAtValue instanceof Date ? updatedAtValue : null);
         
         // Convert to ISO strings or use fallback
-        const createdAtValue = createdAtDate?.toISOString?.() || new Date().toISOString();
-        const updatedAtValue = updatedAtDate?.toISOString?.() || new Date().toISOString();
+        const createdAt = createdAtDate?.toISOString?.() || new Date().toISOString();
+        const updatedAt = updatedAtDate?.toISOString?.() || new Date().toISOString();
         
         // Normalize image paths: ensure all photos are valid URLs or default to placeholder
         const normalizedPhotos = (listing.images || []).map((photo: string) => {
@@ -175,8 +181,8 @@ export async function GET(req: NextRequest) {
           price: listing.price,
           category: listing.category,
           photos: normalizedPhotos.length > 0 ? normalizedPhotos : ['/default-avatar.png'],
-          createdAt: createdAtValue,
-          updatedAt: updatedAtValue,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
           sellerId: listing.sellerId,
           // Treat items with inventory === 0 as sold even if sold field is not set
           sold: listing.sold === true || listing.inventory === 0,

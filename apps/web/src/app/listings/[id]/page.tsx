@@ -151,30 +151,21 @@ export default function ListingDetailPage() {
       const createdAt = sellerProfile.createdAt;
       if (!createdAt) return '2025';
       
-      let date: Date;
-      // Safe conversion: check for Timestamp, then Date, then string
-      if (createdAt !== null && typeof createdAt === 'object') {
-        const timestampObj = createdAt as any;
-        if ('toDate' in timestampObj && typeof timestampObj.toDate === 'function') {
-          date = timestampObj.toDate();
-        } else if (createdAt instanceof Date) {
-          date = createdAt;
-        } else {
-          // Invalid object, cannot convert
-          return '2025';
+      // Safe date conversion: check for toDate method first, then Date instance, then string
+      const createdAtValue = createdAt as any;
+      let date: Date | null = null;
+      
+      if (createdAtValue && typeof createdAtValue === 'object') {
+        if (createdAtValue?.toDate && typeof createdAtValue.toDate === 'function') {
+          date = createdAtValue.toDate();
+        } else if (createdAtValue instanceof Date) {
+          date = createdAtValue;
         }
-      } else if (typeof createdAt === 'string') {
-        date = new Date(createdAt);
-      } else {
-        return '2025';
+      } else if (typeof createdAtValue === 'string') {
+        date = new Date(createdAtValue);
       }
       
       if (!date || isNaN(date.getTime())) {
-        return '2025';
-      }
-      
-      // Validate date
-      if (isNaN(date.getTime())) {
         return '2025';
       }
       
