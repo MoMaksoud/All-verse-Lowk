@@ -170,7 +170,19 @@ export class UsersService extends BaseFirestoreService<FirestoreUser> {
   }
 
   async updateUser(uid: string, updates: UpdateUserInput): Promise<void> {
-    await this.updateDoc(uid, updates);
+    // Always use setDoc with merge: true to ensure document exists
+    // This prevents crashes if document doesn't exist
+    const docRef = this.getDocRef(uid);
+    await setDoc(docRef, {
+      profilePic: updates.profilePic || updates.photoURL || '/default-avatar.png',
+      listingsCount: 0,
+      salesCount: 0,
+      reviewsCount: 0,
+      displayName: updates.displayName || 'User',
+      role: updates.role || 'buyer',
+      ...updates,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
   }
 
   async deleteUser(uid: string): Promise<void> {
@@ -294,10 +306,11 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
       isActive: newInventory > 0,
     };
 
-    // Mark as sold if inventory reaches 0 (but keep isActive true for 2 days)
+    // Mark as sold if inventory reaches 0 (but keep isActive true for 3 days)
     if (newInventory === 0) {
+      updates.sold = true;
       updates.soldAt = serverTimestamp();
-      updates.isActive = true; // Keep active for 2 days, then filter out
+      updates.isActive = true; // Keep active for 3 days, then filter out
     }
 
     await this.updateDoc(id, updates);

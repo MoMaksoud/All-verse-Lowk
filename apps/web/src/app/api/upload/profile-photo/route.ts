@@ -84,8 +84,11 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     try {
       // Store path in profile - this is the single source of truth
       await ProfileService.saveProfile(req.userId, { profilePicture: photoPath });
-      // Also update Firebase Auth user photoURL for backwards compatibility
-      await firestoreServices.users.updateUser(req.userId, { photoURL: photoUrl });
+      // Also update users collection profilePic field (for non-Google users or as fallback)
+      await firestoreServices.users.updateUser(req.userId, { 
+        photoURL: photoUrl,
+        profilePic: photoUrl, // Store URL in users collection for consistency
+      });
       console.log('✅ User profile updated with storage path:', photoPath);
     } catch (profileError: any) {
       console.error('❌ Failed to update user profile:', profileError);

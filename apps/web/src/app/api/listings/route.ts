@@ -85,7 +85,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Filter out placeholder listings and old sold listings
+    // Filter out placeholder listings and old sold listings (older than 3 days)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    
     const transformedItems = filteredData
       .filter(listing => {
         // Filter out placeholder listings
@@ -95,8 +98,11 @@ export async function GET(req: NextRequest) {
           return false;
         }
 
-        // Filter out sold listings older than 2 days
-        if (listing.soldAt) {
+        // Check if item is sold (either explicitly marked or inventory is 0)
+        const isSold = listing.sold === true || listing.inventory === 0;
+
+        // Filter out sold listings older than 3 days
+        if (isSold && listing.soldAt) {
           let soldDate: Date;
           if (listing.soldAt && typeof listing.soldAt === 'object' && 'toDate' in listing.soldAt && typeof (listing.soldAt as any).toDate === 'function') {
             soldDate = (listing.soldAt as any).toDate();
@@ -106,15 +112,46 @@ export async function GET(req: NextRequest) {
             soldDate = new Date(listing.soldAt as unknown as string | number);
           }
           
-          const twoDaysAgo = new Date();
-          twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-          
-          if (soldDate < twoDaysAgo) {
+          if (soldDate < threeDaysAgo) {
             return false;
           }
         }
 
         return true;
+      })
+      .sort((a, b) => {
+        // Sort by sold status first (unsold items first), then by selected sort field
+        // Treat items with inventory === 0 as sold even if sold field is not set
+        const aSold = (a.sold === true || a.inventory === 0) ? 1 : 0;
+        const bSold = (b.sold === true || b.inventory === 0) ? 1 : 0;
+        if (aSold !== bSold) {
+          return aSold - bSold; // 0 (unsold) comes before 1 (sold)
+        }
+        
+        // Then sort by the selected field
+        let aValue: number;
+        let bValue: number;
+        
+        if (sortField === 'price') {
+          aValue = a.price;
+          bValue = b.price;
+        } else {
+          // createdAt sorting
+          const aTime = a.createdAt && typeof a.createdAt === 'object' && 'toDate' in a.createdAt 
+            ? (a.createdAt as any).toDate().getTime() 
+            : (a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt as string).getTime());
+          const bTime = b.createdAt && typeof b.createdAt === 'object' && 'toDate' in b.createdAt 
+            ? (b.createdAt as any).toDate().getTime() 
+            : (b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt as string).getTime());
+          aValue = aTime || 0;
+          bValue = bTime || 0;
+        }
+        
+        if (sortDirection === 'asc') {
+          return aValue - bValue;
+        } else {
+          return bValue - aValue;
+        }
       })
       .map(listing => ({
         id: (listing as any).id,
@@ -126,6 +163,8 @@ export async function GET(req: NextRequest) {
         createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         sellerId: listing.sellerId,
+        // Treat items with inventory === 0 as sold even if sold field is not set
+        sold: listing.sold === true || listing.inventory === 0,
       }));
 
     // Apply pagination after filtering and sorting

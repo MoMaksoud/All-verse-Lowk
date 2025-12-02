@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProfileService } from '@/lib/firestore';
 import { withApi } from '@/lib/withApi';
+import { firestoreServices } from '@/lib/services/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,14 +21,12 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
     // Use requestedUserId if provided (for public profiles), otherwise use authenticated userId
     const userId = requestedUserId || request.userId;
     
-    // Validate userId - return 400 if missing (not 404)
+    // Validate userId - return 400 if missing
     if (!userId || (typeof userId === 'string' && userId.trim().length === 0)) {
       console.warn('Profile API: Missing or empty userId');
-      // Return 400 for missing userId, not 404
       return NextResponse.json(
         { 
-          error: 'User ID is required', 
-          message: 'Please provide userId query parameter or authenticate.' 
+          error: 'UserId missing but handled'
         },
         { status: 400 }
       );
@@ -49,13 +50,29 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
       );
     }
     
-    // If user is not found, return JSON error instead of crashing component
+    // If user is not found, create placeholder user doc and return handled JSON
     if (!profile) {
       console.warn('Profile API: Profile not found for userId:', userId);
+      
+      // Ensure user document exists in users collection with default avatar
+      try {
+        const userDocRef = doc(db, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (!userDocSnap.exists()) {
+          await setDoc(userDocRef, { 
+            profilePic: '/default-avatar.png' 
+          }, { merge: true });
+        }
+      } catch (userDocError) {
+        console.error('Profile API: Error ensuring user doc exists:', userDocError);
+        // Continue even if user doc creation fails
+      }
+      
       return NextResponse.json(
         { 
-          error: 'Profile not found',
-          message: `No profile found for user ID: ${userId}`
+          error: 'User not found, placeholder returned',
+          userId: userId
         },
         { status: 404 }
       );

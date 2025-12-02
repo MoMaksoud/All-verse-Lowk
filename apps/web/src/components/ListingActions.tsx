@@ -1,7 +1,7 @@
 import { DollarSign, MessageCircle, Edit, Trash2 } from "lucide-react";
 
 interface ListingActionsProps {
-  listing: { id: string; title: string; price: number };
+  listing: { id: string; title: string; price: number; sold?: boolean };
   onBuyNow: () => void;
   onSuggestPrice: () => void;
   onMessageSeller: () => void;
@@ -23,6 +23,20 @@ export function ListingActions({
   suggestingPrice = false,
   isOwner = false
 }: ListingActionsProps) {
+  // Guard: Don't render purchase UI if sold
+  if (listing.sold === true && !isOwner) {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-zinc-200 font-medium">Actions</h3>
+        <div className="text-center">
+          <div className="text-3xl font-bold text-zinc-100 mb-1">
+            ${listing.price.toLocaleString()}
+          </div>
+          <div className="text-lg font-semibold text-red-400 mt-4">SOLD</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

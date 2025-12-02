@@ -32,6 +32,7 @@ export const GET = withApi(async (
     }
 
     // Transform FirestoreListing to SimpleListing format
+    // Treat items with inventory === 0 as sold even if sold field is not set
     const simpleListing = {
       id: (listing as any).id, // FirestoreListing & { id: string }
       title: listing.title,
@@ -42,6 +43,7 @@ export const GET = withApi(async (
       createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: listing.sellerId,
+      sold: listing.sold === true || listing.inventory === 0,
     };
 
     return success(simpleListing);
@@ -82,6 +84,7 @@ export const PUT = withApi(async (
     }
     
     // Transform to SimpleListing format
+    // Treat items with inventory === 0 as sold even if sold field is not set
     const simpleListing = {
       id: (updatedListing as any).id,
       title: updatedListing.title,
@@ -92,6 +95,7 @@ export const PUT = withApi(async (
       createdAt: updatedListing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: updatedListing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: updatedListing.sellerId,
+      sold: updatedListing.sold === true || updatedListing.inventory === 0,
     };
 
     return success(simpleListing);

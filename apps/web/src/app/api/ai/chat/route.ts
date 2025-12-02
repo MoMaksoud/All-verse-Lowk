@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GeminiService } from '@/lib/gemini';
-import { checkRateLimit, getIp } from '@/lib/rateLimit';
 import { assertTokenBudget, addUsage } from '@/lib/aiUsage';
 import { withApi } from '@/lib/withApi';
 import { getAdminStorage } from '@/lib/firebase-admin';
@@ -136,7 +135,17 @@ async function getFirestoreServices() {
   }
 }
 
-export const POST = withApi(async (request: NextRequest & { userId: string }) => {
+export const POST = withApi(async (request: NextRequest & { userId?: string }) => {
+  // Validate userId - return handled JSON error if missing
+  if (!request.userId || typeof request.userId !== 'string' || request.userId.trim().length === 0) {
+    console.warn('⚠️ AI Chat request missing or invalid userId');
+    return NextResponse.json({
+      response: 'Authentication required. Please sign in to use AI chat.',
+      success: false,
+      error: 'User ID is required'
+    }, { status: 401 });
+  }
+  
   console.log('🔵 AI Chat request received for user:', request.userId);
   
   try {
@@ -217,7 +226,7 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
         // Fetch active listings (limit to 50 most recent for context)
         const allListings = await firestoreServices.listings.searchListings(
           { isActive: true },
-          { field: 'createdAt', direction: 'desc' }
+          { field: 'createdAt', direction: 'desc' as const }
         );
         
         if (allListings.items && allListings.items.length > 0) {

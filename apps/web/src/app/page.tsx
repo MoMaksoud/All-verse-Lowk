@@ -247,6 +247,7 @@ export default function HomePage() {
                     condition={listing.condition}
                     imageUrl={listing.photos?.[0] || null}
                     sellerId={listing.sellerId}
+                    sold={(listing as any).sold}
                   />
                 </Suspense>
               ))

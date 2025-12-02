@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { ProfileService } from '@/lib/firestore';
+import { firestoreServices } from '@/lib/services/firestore';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -24,6 +25,7 @@ interface AuthContextType {
   loading: boolean;
   isConfigured: boolean;
   userProfile: any | null;
+  userProfilePic: string | null; // From users collection profilePic field
   isEmailVerified: boolean;
   refreshProfile: () => Promise<void>;
 }
@@ -37,6 +39,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
+  const [userProfilePic, setUserProfilePic] = useState<string | null>(null); // From users collection profilePic field
   const [loading, setLoading] = useState(true);
   const isConfigured = !!isFirebaseConfigured();
 
@@ -89,7 +92,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      return result.user;
+      const user = result.user;
+      
+      // Save Google photoURL to users collection profilePic field
+      if (user.photoURL && isFirebaseConfigured()) {
+        try {
+          await firestoreServices.users.updateUser(user.uid, {
+            profilePic: user.photoURL,
+          });
+          console.log('✅ Saved Google profile picture to users collection');
+        } catch (error) {
+          console.error('Error saving Google profile picture:', error);
+          // Continue even if save fails
+        }
+      }
+      
+      return user;
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed. Please try again.');
@@ -118,10 +136,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const profile = await ProfileService.getProfile(currentUser.uid);
       setUserProfile(profile);
+      
+      // For Google users, update profilePic in users collection if photoURL changed
+      const isGoogleUser = currentUser.providerData.some(provider => provider.providerId === 'google.com');
+      if (isGoogleUser && currentUser.photoURL) {
+        try {
+          await firestoreServices.users.updateUser(currentUser.uid, {
+            profilePic: currentUser.photoURL,
+          });
+        } catch (error) {
+          console.error('Error updating Google profile picture:', error);
+        }
+      }
     } catch (error) {
       console.error('Error refreshing user profile:', error);
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, currentUser?.photoURL, currentUser?.providerData]);
 
   useEffect(() => {
     if (!auth || !isConfigured) {
@@ -137,17 +167,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           // Only try to get profile if Firebase is configured
           if (isFirebaseConfigured()) {
+            // Check if user is authenticated via Google provider
+            const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
+            
+            // If Google user, save/update photoURL to users collection profilePic field
+            if (isGoogleUser && user.photoURL) {
+              try {
+                await firestoreServices.users.updateUser(user.uid, {
+                  profilePic: user.photoURL,
+                });
+                setUserProfilePic(user.photoURL);
+                console.log('✅ Updated Google profile picture in users collection');
+              } catch (error) {
+                console.error('Error updating Google profile picture:', error);
+                // Continue even if update fails
+              }
+            } else {
+              // For non-Google users, fetch profilePic from users collection
+              try {
+                const userDoc = await firestoreServices.users.getUser(user.uid);
+                setUserProfilePic(userDoc?.profilePic || null);
+              } catch (error) {
+                console.error('Error fetching user profilePic:', error);
+                setUserProfilePic(null);
+              }
+            }
+            
             const profile = await ProfileService.getProfile(user.uid);
             setUserProfile(profile);
           } else {
             setUserProfile(null);
+            setUserProfilePic(null);
           }
         } catch (error) {
           console.error('Error loading user profile:', error);
           setUserProfile(null);
+          setUserProfilePic(null);
         }
       } else {
         setUserProfile(null);
+        setUserProfilePic(null);
       }
       
       setLoading(false);
@@ -165,9 +224,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     isConfigured,
     userProfile,
+    userProfilePic,
     isEmailVerified: currentUser?.emailVerified || false,
     refreshProfile,
-  }), [currentUser, loading, userProfile, isConfigured, signup, login, signInWithGoogle, logout, refreshProfile]);
+  }), [currentUser, loading, userProfile, userProfilePic, isConfigured, signup, login, signInWithGoogle, logout, refreshProfile]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -32,7 +32,7 @@ type SettingsSection = 'account' | 'security' | 'billing';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>('account');
-  const { currentUser, logout, refreshProfile, userProfile } = useAuth();
+  const { currentUser, logout, refreshProfile, userProfile, userProfilePic } = useAuth();
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -568,6 +568,8 @@ export default function SettingsPage() {
                 email={currentUser?.email || undefined}
                 size="md"
                 className="w-10 h-10"
+                currentUser={currentUser}
+                userProfilePic={userProfilePic}
               />
               <input
                 ref={fileInputRef}

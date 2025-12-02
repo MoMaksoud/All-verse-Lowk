@@ -12,17 +12,17 @@ const sizeMap = {
 };
 
 export function Logo({ size = 'md', className = '' }: LogoProps) {
-  const dimensions = sizeMap[size];
-  
   return (
-    <Image
-      src="/logo.png"
-      alt="ALL VERSE GPT"
-      width={dimensions.width}
-      height={dimensions.height}
-      unoptimized={true}
-      className="object-contain rounded-lg"
-      style={{ width: "auto", height: "auto" }}
-    />
+    <div className={`flex items-center gap-2 ${className}`}>
+      <Image
+        src="/logo.png"
+        alt="ALL VERSE GPT"
+        width={40}
+        height={40}
+        unoptimized={true}
+        className="object-contain rounded-lg"
+      />
+      <span className="font-bold text-white leading-tight">ALL VERSE GPT</span>
+    </div>
   );
 }

@@ -417,17 +417,29 @@ export default function ListingDetailPage() {
 
                   {/* Actions Box */}
                   <div>
-                    <ListingActions
-                      listing={listing}
-                      onBuyNow={() => addToCart()}
-                      onSuggestPrice={() => handleSuggestPrice()}
-                      onMessageSeller={() => handleMessageClick()}
-                      onEditListing={() => router.push(`/listings/${listing.id}/edit`)}
-                      onDeleteListing={() => setShowDeleteModal(true)}
-                      addingToCart={addingToCart}
-                      suggestingPrice={priceSuggestionLoading}
-                      isOwner={isOwner}
-                    />
+                    {listing.sold === true && !isOwner ? (
+                      <div className="space-y-4">
+                        <h3 className="text-zinc-200 font-medium">Actions</h3>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-zinc-100 mb-1">
+                            ${listing.price.toLocaleString()}
+                          </div>
+                          <div className="text-lg font-semibold text-red-400 mt-4">SOLD</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <ListingActions
+                        listing={listing}
+                        onBuyNow={() => addToCart()}
+                        onSuggestPrice={() => handleSuggestPrice()}
+                        onMessageSeller={() => handleMessageClick()}
+                        onEditListing={() => router.push(`/listings/${listing.id}/edit`)}
+                        onDeleteListing={() => setShowDeleteModal(true)}
+                        addingToCart={addingToCart}
+                        suggestingPrice={priceSuggestionLoading}
+                        isOwner={isOwner}
+                      />
+                    )}
                   </div>
 
                   {/* Seller Information */}

@@ -8,6 +8,7 @@ export interface FirestoreUser {
   username?: string;
   email?: string;
   photoURL?: string;
+  profilePic?: string; // Google profile picture URL stored in users collection
   phone?: string;
   role: 'buyer' | 'seller' | 'admin';
   createdAt: Timestamp;
@@ -28,6 +29,7 @@ export interface UpdateUserInput {
   username?: string;
   email?: string;
   photoURL?: string;
+  profilePic?: string; // Google profile picture URL
   phone?: string;
   role?: 'buyer' | 'seller' | 'admin';
 }
@@ -46,6 +48,7 @@ export interface FirestoreListing {
   sellerId: string;
   inventory: number;
   isActive: boolean;
+  sold?: boolean; // Whether the listing has been sold
   soldAt?: Timestamp; // When the listing was sold
   createdAt: Timestamp;
   updatedAt: Timestamp;

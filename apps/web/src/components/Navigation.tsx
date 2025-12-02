@@ -46,7 +46,7 @@ const Navigation = memo(function Navigation() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, logout, userProfile } = useAuth();
+  const { currentUser, logout, userProfile, userProfilePic } = useAuth();
   const { chats } = useChats();
   const { currentChatId, setCurrentChatId } = useChatContext();
 
@@ -193,15 +193,14 @@ const Navigation = memo(function Navigation() {
   }, [currentUser, showProfileDropdown, profile, userProfile]);
 
   return (
-    <nav className="glass border-b border-dark-700/50 sticky top-0 z-50 safe-area-top">
-      <div className="flex items-center justify-between px-6 py-2 w-full h-[64px]">
-        {/* Logo */}
-        <Link href="/" className="h-[48px] w-[48px] flex items-center justify-center shrink-0">
-          <Logo size="md" />
-        </Link>
+    <nav className="glass border-b border-dark-700/50 sticky top-0 z-50 safe-area-top h-[64px] flex items-center justify-between px-6 py-2 w-full">
+      {/* Logo */}
+      <Link href="/" className="flex items-center flex-shrink-0">
+        <Logo size="md" />
+      </Link>
 
-        {/* Desktop Navigation - Centered */}
-        <div className="hidden md:flex items-center gap-4 flex-1 justify-center min-w-0 px-2">
+      {/* Desktop Navigation - Centered */}
+      <div className="hidden md:flex items-center gap-2 flex-1 justify-center min-w-0 px-2">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isMessages = item.name === 'Messages';
@@ -219,7 +218,7 @@ const Navigation = memo(function Navigation() {
                     }
                   }}
                   prefetch={true}
-                  className={`relative flex items-center gap-4 text-sm font-medium transition-all duration-200 rounded-xl px-2 sm:px-3 py-2 whitespace-nowrap flex-shrink-0 ${
+                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 whitespace-nowrap flex-shrink-0 ${
                     pathname === item.href
                       ? 'text-accent-400 bg-dark-700/50'
                       : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
@@ -238,7 +237,7 @@ const Navigation = memo(function Navigation() {
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center gap-4 flex-shrink-0 min-w-0">
+          <div className="hidden lg:flex items-center gap-2 flex-shrink-0 min-w-0">
             {currentUser ? (
               <>
                 {/* Favorites Heart */}
@@ -280,6 +279,8 @@ const Navigation = memo(function Navigation() {
                         src={(profile?.profilePicture || currentUser?.photoURL) as string}
                         alt={currentUser?.displayName || 'Avatar'}
                         className="w-8 h-8 rounded-full object-cover"
+                        width={64}
+                        height={64}
                       />
                     ) : (
                       <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
@@ -289,6 +290,8 @@ const Navigation = memo(function Navigation() {
                           name={currentUser?.displayName || undefined}
                           email={currentUser?.email || undefined}
                           size="sm"
+                          currentUser={currentUser}
+                          userProfilePic={userProfilePic}
                         />
                       </Suspense>
                     )}
@@ -309,6 +312,8 @@ const Navigation = memo(function Navigation() {
                                 name={currentUser?.displayName || undefined}
                                 email={currentUser?.email || undefined}
                                 size="md"
+                                currentUser={currentUser}
+                                userProfilePic={userProfilePic}
                               />
                             </Suspense>
                           </div>
@@ -467,9 +472,8 @@ const Navigation = memo(function Navigation() {
               )}
             </button>
           </div>
-        </div>
 
-        {/* Mobile Navigation */}
+      {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden glass rounded-xl mt-2 mb-4 relative z-40 overflow-y-auto max-h-[calc(100vh-120px)]">
             <div className="px-4 py-3 space-y-2">
@@ -568,6 +572,8 @@ const Navigation = memo(function Navigation() {
                         name={currentUser?.displayName || undefined}
                         email={currentUser?.email || undefined}
                         size="sm"
+                        currentUser={currentUser}
+                        userProfilePic={userProfilePic}
                       />
                     </Suspense>
                     <div className="ml-3">

@@ -9,6 +9,7 @@ type Item = {
   condition?: string;
   imageUrl?: string | null;
   sellerId?: string;
+  sold?: boolean;
 };
 
 export default function ListingCollection({
@@ -33,6 +34,7 @@ export default function ListingCollection({
             condition={item.condition}
             imageUrl={item.imageUrl}
             sellerId={item.sellerId}
+            sold={item.sold}
           />
         ))}
       </div>

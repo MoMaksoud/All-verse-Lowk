@@ -16,15 +16,37 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [stats, setStats] = useState({ listingsCount: 0, salesCount: 0, reviewsCount: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { currentUser, refreshProfile, userProfile } = useAuth();
+  const { currentUser, refreshProfile, userProfile, userProfilePic } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (currentUser?.uid) {
       fetchProfile();
+      fetchStats();
     }
   }, [currentUser]);
+
+  const fetchStats = async () => {
+    if (!currentUser?.uid) return;
+    
+    try {
+      const { apiGet } = await import('@/lib/api-client');
+      const response = await apiGet('/api/profile/stats');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setStats({
+          listingsCount: data.listingsCount || 0,
+          salesCount: data.salesCount || 0,
+          reviewsCount: data.reviewsCount || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile stats:', error);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -183,6 +205,8 @@ export default function ProfilePage() {
                           name={profile.username}
                           email={currentUser?.email}
                           size="xl"
+                          currentUser={currentUser}
+                          userProfilePic={userProfilePic}
                         />
                         <button
                           onClick={onCameraClick}
@@ -249,15 +273,15 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Listings</span>
-                    <span className="text-white font-semibold">0</span>
+                    <span className="text-white font-semibold">{stats.listingsCount}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Sales</span>
-                    <span className="text-white font-semibold">0</span>
+                    <span className="text-white font-semibold">{stats.salesCount}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Reviews</span>
-                    <span className="text-white font-semibold">0</span>
+                    <span className="text-white font-semibold">{stats.reviewsCount}</span>
                   </div>
                 </div>
               </div>

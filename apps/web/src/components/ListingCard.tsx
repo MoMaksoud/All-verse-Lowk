@@ -21,6 +21,7 @@ type Props = {
   condition?: string;
   imageUrl?: string | null;
   sellerId?: string;
+  sold?: boolean;
   onAddToCart?: () => void;
   onChat?: () => void;
   onFav?: () => void;
@@ -36,6 +37,7 @@ export default function ListingCard({
   condition,
   imageUrl,
   sellerId,
+  sold = false,
   onAddToCart,
   onChat,
   onFav,
@@ -351,33 +353,39 @@ export default function ListingCard({
 
               {/* Actions */}
               <div className="mt-2 sm:mt-3">
-                <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-[#0E1526] px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
-                  <button 
-                    onClick={handleAddToCart}
-                    disabled={addingToCart}
-                    className="p-1 sm:p-1.5 lg:p-2 hover:opacity-80 disabled:opacity-50"
-                  >
-                    <ShoppingCart className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-zinc-200" />
-                  </button>
-                  <button 
-                    onClick={handleChatClick}
-                    className="p-1 sm:p-1.5 lg:p-2 hover:opacity-80"
-                  >
-                    <MessageSquare className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-zinc-200" />
-                  </button>
-                  <button 
-                    onClick={handleFavoriteClick}
-                    className={clsx(
-                      "p-1 sm:p-1.5 lg:p-2 hover:opacity-80",
-                      isFavorited ? "text-red-500" : "text-zinc-200"
-                    )}
-                  >
-                    <Heart className={clsx(
-                      "h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5",
-                      isFavorited ? "fill-current" : ""
-                    )} />
-                  </button>
-                </div>
+                {sold ? (
+                  <div className="flex items-center justify-center rounded-xl sm:rounded-2xl border border-red-500/30 bg-red-500/10 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                    <span className="text-sm sm:text-base font-semibold text-red-400">SOLD</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-[#0E1526] px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                    <button 
+                      onClick={handleAddToCart}
+                      disabled={addingToCart}
+                      className="p-1 sm:p-1.5 lg:p-2 hover:opacity-80 disabled:opacity-50"
+                    >
+                      <ShoppingCart className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-zinc-200" />
+                    </button>
+                    <button 
+                      onClick={handleChatClick}
+                      className="p-1 sm:p-1.5 lg:p-2 hover:opacity-80"
+                    >
+                      <MessageSquare className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-zinc-200" />
+                    </button>
+                    <button 
+                      onClick={handleFavoriteClick}
+                      className={clsx(
+                        "p-1 sm:p-1.5 lg:p-2 hover:opacity-80",
+                        isFavorited ? "text-red-500" : "text-zinc-200"
+                      )}
+                    >
+                      <Heart className={clsx(
+                        "h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5",
+                        isFavorited ? "fill-current" : ""
+                      )} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

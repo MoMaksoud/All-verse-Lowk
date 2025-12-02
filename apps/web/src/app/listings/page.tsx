@@ -271,7 +271,8 @@ function ListingsContent() {
                       category: listing.category,
                       condition: listing.condition,
                       imageUrl: listing.photos?.[0] || null,
-                      sellerId: listing.sellerId
+                      sellerId: listing.sellerId,
+                      sold: (listing as any).sold
                     }))}
                     view="grid"
                   />
@@ -285,7 +286,8 @@ function ListingsContent() {
                       category: listing.category,
                       condition: listing.condition,
                       imageUrl: listing.photos?.[0] || null,
-                      sellerId: listing.sellerId
+                      sellerId: listing.sellerId,
+                      sold: (listing as any).sold
                     }))}
                     view="list"
                   />
