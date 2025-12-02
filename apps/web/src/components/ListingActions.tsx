@@ -1,7 +1,7 @@
 import { DollarSign, MessageCircle, Edit, Trash2 } from "lucide-react";
 
 interface ListingActionsProps {
-  listing: { id: string; title: string; price: number; sold?: boolean };
+  listing: { id: string; title: string; price: number; sold?: boolean; inventory?: number };
   onBuyNow: () => void;
   onSuggestPrice: () => void;
   onMessageSeller: () => void;
@@ -23,8 +23,9 @@ export function ListingActions({
   suggestingPrice = false,
   isOwner = false
 }: ListingActionsProps) {
-  // Guard: Don't render purchase UI if sold
-  if (listing.sold === true && !isOwner) {
+  // Guard: Don't render purchase UI if sold (check both sold flag and inventory)
+  const isSold = listing.sold === true || listing.inventory === 0;
+  if (isSold && !isOwner) {
     return (
       <div className="space-y-4">
         <h3 className="text-zinc-200 font-medium">Actions</h3>

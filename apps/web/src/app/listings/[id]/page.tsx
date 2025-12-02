@@ -424,7 +424,7 @@ export default function ListingDetailPage() {
 
                   {/* Actions Box */}
                   <div>
-                    {listing.sold === true && !isOwner ? (
+                    {(listing.sold === true || listing.inventory === 0) && !isOwner ? (
                       <div className="space-y-4">
                         <h3 className="text-zinc-200 font-medium">Actions</h3>
                         <div className="text-center">

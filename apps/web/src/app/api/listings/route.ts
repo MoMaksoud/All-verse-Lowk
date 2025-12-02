@@ -104,16 +104,10 @@ export async function GET(req: NextRequest) {
 
         // Filter out sold listings older than 3 days
         if (isSold && listing.soldAt) {
-          let soldDate: Date;
-          if (listing.soldAt && typeof listing.soldAt === 'object' && 'toDate' in listing.soldAt && typeof (listing.soldAt as any).toDate === 'function') {
-            soldDate = (listing.soldAt as any).toDate();
-          } else if (listing.soldAt instanceof Date) {
-            soldDate = listing.soldAt;
-          } else {
-            soldDate = new Date(listing.soldAt as unknown as string | number);
-          }
+          // Safe date conversion: check for toDate method first, then Date instance
+          const soldDate = listing.soldAt?.toDate ? listing.soldAt.toDate() : (listing.soldAt instanceof Date ? listing.soldAt : null);
           
-          if (soldDate < threeDaysAgo) {
+          if (soldDate && soldDate < threeDaysAgo) {
             return false;
           }
         }
@@ -155,8 +149,24 @@ export async function GET(req: NextRequest) {
         }
       })
       .map(listing => {
-        const createdAtValue = listing.createdAt instanceof Timestamp ? listing.createdAt.toDate().toISOString() : listing.createdAt instanceof Date ? listing.createdAt.toISOString() : null;
-        const updatedAtValue = listing.updatedAt instanceof Timestamp ? listing.updatedAt.toDate().toISOString() : listing.updatedAt instanceof Date ? listing.updatedAt.toISOString() : null;
+        // Safe date normalization: check for toDate method first, then Date instance
+        const createdAtDate = listing.createdAt?.toDate ? listing.createdAt.toDate() : (listing.createdAt instanceof Date ? listing.createdAt : null);
+        const updatedAtDate = listing.updatedAt?.toDate ? listing.updatedAt.toDate() : (listing.updatedAt instanceof Date ? listing.updatedAt : null);
+        
+        // Convert to ISO strings or use fallback
+        const createdAtValue = createdAtDate?.toISOString?.() || new Date().toISOString();
+        const updatedAtValue = updatedAtDate?.toISOString?.() || new Date().toISOString();
+        
+        // Normalize image paths: ensure all photos are valid URLs or default to placeholder
+        const normalizedPhotos = (listing.images || []).map((photo: string) => {
+          if (!photo || typeof photo !== 'string') return '/default-avatar.png';
+          // If it starts with / or http, use as-is
+          if (photo.startsWith('/') || photo.startsWith('http://') || photo.startsWith('https://')) {
+            return photo;
+          }
+          // Otherwise, use default placeholder
+          return '/default-avatar.png';
+        });
         
         return {
           id: (listing as any).id,
@@ -164,9 +174,9 @@ export async function GET(req: NextRequest) {
           description: listing.description,
           price: listing.price,
           category: listing.category,
-          photos: listing.images || [],
-          createdAt: createdAtValue || new Date().toISOString(),
-          updatedAt: updatedAtValue || new Date().toISOString(),
+          photos: normalizedPhotos.length > 0 ? normalizedPhotos : ['/default-avatar.png'],
+          createdAt: createdAtValue,
+          updatedAt: updatedAtValue,
           sellerId: listing.sellerId,
           // Treat items with inventory === 0 as sold even if sold field is not set
           sold: listing.sold === true || listing.inventory === 0,

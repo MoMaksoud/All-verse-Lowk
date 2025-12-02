@@ -22,6 +22,7 @@ type Props = {
   imageUrl?: string | null;
   sellerId?: string;
   sold?: boolean;
+  inventory?: number;
   onAddToCart?: () => void;
   onChat?: () => void;
   onFav?: () => void;
@@ -38,6 +39,7 @@ export default function ListingCard({
   imageUrl,
   sellerId,
   sold = false,
+  inventory,
   onAddToCart,
   onChat,
   onFav,
@@ -287,20 +289,22 @@ export default function ListingCard({
           <div className="flex flex-col h-full">
             {/* Image */}
             <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526]">
-              {imageUrl ? (
-                <Image
-                  src={normalizeImageSrc(imageUrl)}
-                  alt={title}
-                  width={800}
-                  height={800}
-                  className="object-cover rounded-lg"
-                  style={{ width: 'auto', height: 'auto' }}
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-zinc-500 text-xs">
-                  No Image
-                </div>
-              )}
+              {(() => {
+                // Safe image URL validation: ensure valid format for Next.js Image
+                const imgSrc = imageUrl?.startsWith("/") ? imageUrl
+                  : imageUrl?.startsWith("http") ? imageUrl
+                  : "/default-avatar.png";
+                return (
+                  <Image
+                    src={imgSrc}
+                    alt={title}
+                    width={800}
+                    height={800}
+                    className="object-cover rounded-lg"
+                    style={{ width: 'auto', height: 'auto' }}
+                  />
+                );
+              })()}
             </div>
 
             {/* Content */}
@@ -353,7 +357,7 @@ export default function ListingCard({
 
               {/* Actions */}
               <div className="mt-2 sm:mt-3">
-                {sold ? (
+                {sold || inventory === 0 ? (
                   <div className="flex items-center justify-center rounded-xl sm:rounded-2xl border border-red-500/30 bg-red-500/10 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
                     <span className="text-sm sm:text-base font-semibold text-red-400">SOLD</span>
                   </div>
@@ -395,20 +399,22 @@ export default function ListingCard({
             {/* Image */}
             <div className="w-full sm:w-32 md:w-44 lg:w-56 shrink-0">
               <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526]">
-                {imageUrl ? (
-                  <Image
-                    src={normalizeImageSrc(imageUrl)}
-                    alt={title}
-                    width={800}
-                    height={450}
-                    className="object-cover rounded-lg"
-                    style={{ width: 'auto', height: 'auto' }}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-zinc-500">
-                    No Image
-                  </div>
-                )}
+                {(() => {
+                  // Safe image URL validation: ensure valid format for Next.js Image
+                  const imgSrc = imageUrl?.startsWith("/") ? imageUrl
+                    : imageUrl?.startsWith("http") ? imageUrl
+                    : "/default-avatar.png";
+                  return (
+                    <Image
+                      src={imgSrc}
+                      alt={title}
+                      width={800}
+                      height={450}
+                      className="object-cover rounded-lg"
+                      style={{ width: 'auto', height: 'auto' }}
+                    />
+                  );
+                })()}
               </div>
             </div>
 
