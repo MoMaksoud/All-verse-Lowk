@@ -217,8 +217,7 @@ export const POST = withApi(async (request: NextRequest & { userId: string }) =>
         // Fetch active listings (limit to 50 most recent for context)
         const allListings = await firestoreServices.listings.searchListings(
           { isActive: true },
-          { field: 'createdAt', direction: 'desc' },
-          { page: 1, limit: 50 }
+          { field: 'createdAt', direction: 'desc' }
         );
         
         if (allListings.items && allListings.items.length > 0) {
