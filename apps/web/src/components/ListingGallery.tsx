@@ -17,7 +17,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
   className = '',
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const safePhotos = photos?.length ? photos : ['/images/placeholder.png'];
+  const safePhotos = photos?.length ? photos : ['/default-avatar.png'];
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -75,7 +75,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
       {/* Main Image */}
       <div className="relative aspect-[4/3] w-full bg-zinc-900 rounded-xl overflow-hidden">
         <Image
-          src={normalizeImageSrc(safePhotos[activeIndex])}
+          src={normalizeImageSrc(safePhotos[activeIndex]) || '/default-avatar.png'}
           alt={`${title} - Image ${activeIndex + 1}`}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -83,7 +83,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
           priority={activeIndex === 0}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = '/images/placeholder.png';
+            target.src = '/default-avatar.png';
           }}
         />
         
@@ -125,7 +125,7 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
             <button
               key={`${photo}-${index}`}
               onClick={() => setActiveIndex(index)}
-              className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+              className={`shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
                 index === activeIndex 
                   ? 'border-accent-500 ring-2 ring-accent-500/50' 
                   : 'border-zinc-700 hover:border-zinc-600'
@@ -133,15 +133,14 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
               aria-label={`View image ${index + 1}`}
             >
               <Image
-                src={normalizeImageSrc(photo)}
+                src={normalizeImageSrc(photo) || '/default-avatar.png'}
                 alt={`${title} thumbnail ${index + 1}`}
                 width={80}
                 height={80}
                 className="object-cover rounded-lg"
-                style={{ width: 'auto', height: 'auto' }}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = '/images/placeholder.png';
+                  target.src = '/default-avatar.png';
                 }}
               />
             </button>

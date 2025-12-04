@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import Image from 'next/image';
 import { User } from 'firebase/auth';
 import { DefaultAvatar } from './DefaultAvatar';
@@ -27,7 +27,21 @@ const sizeClasses = {
   xl: 'w-20 h-20',
 };
 
-export function ProfilePicture({
+const sizeToPixels: Record<NonNullable<ProfilePictureProps['size']>, number> = {
+  sm: 32,
+  md: 48,
+  lg: 64,
+  xl: 80,
+};
+
+const sizeToPx: Record<NonNullable<ProfilePictureProps['size']>, string> = {
+  sm: '32px',
+  md: '48px',
+  lg: '64px',
+  xl: '80px',
+};
+
+export const ProfilePicture = memo(function ProfilePicture({
   src,
   alt = 'Profile',
   name,
@@ -40,13 +54,6 @@ export function ProfilePicture({
 }: ProfilePictureProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
-
-  // Ensure client-only rendering to prevent hydration mismatches
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   // Get the correct profile picture source using utility function
   const profilePictureSource = React.useMemo(() => {
     return getProfilePictureSource({
@@ -57,11 +64,7 @@ export function ProfilePicture({
   }, [currentUser, userProfilePic, src]);
 
   // Safe URL validation: enforce valid format for Next.js Image
-  // Always return default on server to prevent hydration mismatch
   const imageUrl = React.useMemo(() => {
-    // On server, always return default to ensure consistent rendering
-    if (!isMounted) return '/default-avatar.png';
-    
     if (!profilePictureSource) return '/default-avatar.png';
     
     // If it's already a URL (Google photo), use it as-is
@@ -84,13 +87,28 @@ export function ProfilePicture({
     }
     
     return url;
-  }, [profilePictureSource, isMounted]);
+  }, [profilePictureSource]);
 
   // Reset error state when profile picture source changes
   React.useEffect(() => {
     setImageError(false);
     setImageLoading(true);
   }, [profilePictureSource]);
+
+  // Memoize className normalization and dimensions to prevent render-phase computation
+  const containerClasses = React.useMemo(() => {
+    const normalizedCustomClass = (className || '')
+      .replace(/\bflex-shrink-0\b/g, 'shrink-0')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return `shrink-0 relative overflow-hidden rounded-full ${normalizedCustomClass}`.trim();
+  }, [className]);
+  
+  // Memoize pixel dimensions for Image component
+  const dimensions = React.useMemo(() => ({
+    width: sizeToPixels[size],
+    height: sizeToPixels[size],
+  }), [size]);
 
   // Show fallback if fallbackOnly is true, or if there's an error loading the image
   // If imageUrl is the default avatar path, try to load it as an image first
@@ -107,17 +125,17 @@ export function ProfilePicture({
       />
     );
   }
-
-  // Use consistent 64x64 dimensions for all avatars (circle constraint)
-  const avatarSize = 64;
   
   return (
-    <div className={`${sizeClasses[size]} ${className} relative flex-shrink-0`}>
+    <div 
+      className={containerClasses}
+      style={{ width: dimensions.width, height: dimensions.height }}
+    >
       <Image
         src={imageUrl}
         alt={alt}
-        width={avatarSize}
-        height={avatarSize}
+        width={dimensions.width}
+        height={dimensions.height}
         className="rounded-full object-cover"
         onError={() => {
           setImageError(true);
@@ -127,11 +145,15 @@ export function ProfilePicture({
           setImageLoading(false);
         }}
         unoptimized
+        priority={size === 'sm' || size === 'md'}
       />
       {imageLoading && (
-        <div className="absolute inset-0 bg-gray-700 rounded-full animate-pulse" />
+        <div 
+          className="absolute inset-0 bg-gray-700 animate-pulse rounded-full" 
+          style={{ width: dimensions.width, height: dimensions.height }}
+        />
       )}
     </div>
   );
-}
+});
 

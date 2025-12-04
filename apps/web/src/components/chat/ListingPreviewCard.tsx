@@ -120,15 +120,17 @@ export function ListingPreviewCard({ listingId, className = '', onError }: Listi
     >
       <div className="flex gap-3 p-3">
         {/* Listing Image */}
-        <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-zinc-900">
+        <div className="shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-zinc-900 relative">
           {listing.photos?.[0] ? (
             <Image
-              src={normalizeImageSrc(listing.photos[0])}
+              src={
+                normalizeImageSrc(listing.photos[0]) ||
+                '/default-avatar.png'
+              }
               alt={listing.title}
-              width={80}
-              height={80}
-              className="object-cover rounded-lg"
-              style={{ width: 'auto', height: 'auto' }}
+              fill
+              sizes="80px"
+              className="object-cover"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs">
@@ -143,7 +145,7 @@ export function ListingPreviewCard({ listingId, className = '', onError }: Listi
             <h4 className="text-sm font-semibold text-white line-clamp-2 flex-1">
               {listing.title}
             </h4>
-            <ExternalLink className="w-4 h-4 text-zinc-400 flex-shrink-0 mt-0.5" />
+            <ExternalLink className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
           </div>
           
           <div className="flex items-center gap-2 mb-1">

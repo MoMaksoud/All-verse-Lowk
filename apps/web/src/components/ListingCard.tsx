@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, MessageSquare, Heart } from "lucide-react";
 import clsx from "clsx";
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
@@ -28,7 +28,7 @@ type Props = {
   onFav?: () => void;
 };
 
-export default function ListingCard({
+function ListingCard({
   variant,
   id,
   title,
@@ -68,7 +68,7 @@ export default function ListingCard({
     createdAt?: string;
   } | null>(null);
 
-  // Fetch seller profile when sellerId is available
+  // Fetch seller profile when sellerId is available - using useEffect (no render-phase updates)
   useEffect(() => {
     if (!sellerId) return;
 
@@ -87,14 +87,14 @@ export default function ListingCard({
             createdAt: data.data?.createdAt || null,
           });
         } else if (response.status === 404) {
-          // Profile not found - silently handle (expected for users without profiles)
+          // Profile not found - expected behavior, use fallback
           setSellerProfile({
             username: 'Marketplace User',
             profilePicture: null,
             createdAt: null,
           });
         } else {
-          // Set default values on other errors
+          // Set fallback on other errors
           setSellerProfile({
             username: 'Marketplace User',
             profilePicture: null,
@@ -102,11 +102,7 @@ export default function ListingCard({
           });
         }
       } catch (error) {
-        // Only log non-404 errors
-        if (error instanceof Error && !error.message.includes('404')) {
-          console.warn('Error fetching seller profile:', error);
-        }
-        // Set default values on error
+        // Silently set fallback - fetch errors are expected
         setSellerProfile({
           username: 'Marketplace User',
           profilePicture: null,
@@ -276,6 +272,9 @@ export default function ListingCard({
     }
   }, [currentUser, id, showSuccess, showError, onFav]);
 
+  const listingImageSrc =
+    normalizeImageSrc(imageUrl || '') || '/default-avatar.png';
+
   return (
     <>
       <Link href={`/listings/${id}`} className="block">
@@ -288,20 +287,15 @@ export default function ListingCard({
         {variant === "grid" ? (
           <div className="flex flex-col h-full">
             {/* Image */}
-            <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526]">
+            <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
               {(() => {
-                // Safe image URL validation: ensure valid format for Next.js Image
-                const imgSrc = imageUrl?.startsWith("/") ? imageUrl
-                  : imageUrl?.startsWith("http") ? imageUrl
-                  : "/default-avatar.png";
                 return (
                   <Image
-                    src={imgSrc}
+                    src={listingImageSrc}
                     alt={title}
-                    width={800}
-                    height={800}
-                    className="object-cover rounded-lg"
-                    style={{ width: 'auto', height: 'auto' }}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover"
                   />
                 );
               })()}
@@ -319,13 +313,12 @@ export default function ListingCard({
               {/* Seller Info Section */}
               {sellerId && (
                 <div className="flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1">
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <ProfilePicture
                       src={sellerProfile?.profilePicture}
                       alt={sellerProfile?.username || 'Seller'}
                       name={sellerProfile?.username}
                       size="sm"
-                      className="w-6 h-6 sm:w-8 sm:h-8"
                     />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -398,20 +391,15 @@ export default function ListingCard({
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-5">
             {/* Image */}
             <div className="w-full sm:w-32 md:w-44 lg:w-56 shrink-0">
-              <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526]">
+              <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
                 {(() => {
-                  // Safe image URL validation: ensure valid format for Next.js Image
-                  const imgSrc = imageUrl?.startsWith("/") ? imageUrl
-                    : imageUrl?.startsWith("http") ? imageUrl
-                    : "/default-avatar.png";
                   return (
                     <Image
-                      src={imgSrc}
+                      src={listingImageSrc}
                       alt={title}
-                      width={800}
-                      height={450}
-                      className="object-cover rounded-lg"
-                      style={{ width: 'auto', height: 'auto' }}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 40vw"
+                      className="object-cover"
                     />
                   );
                 })()}
@@ -430,13 +418,12 @@ export default function ListingCard({
               {/* Seller Info Section for List Variant */}
               {sellerId && (
                 <div className="flex items-center gap-3 mt-2 py-2 border-t border-white/5">
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <ProfilePicture
                       src={sellerProfile?.profilePicture}
                       alt={sellerProfile?.username || 'Seller'}
                       name={sellerProfile?.username}
                       size="md"
-                      className="w-8 h-8"
                     />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -514,3 +501,6 @@ export default function ListingCard({
     </>
   );
 }
+
+// Export memoized version for better performance
+export default memo(ListingCard);

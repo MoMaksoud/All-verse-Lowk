@@ -39,13 +39,14 @@ const navigation = [
 ];
 
 const Navigation = memo(function Navigation() {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
+  const [resolvedPathname, setResolvedPathname] = useState(pathname);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
   const router = useRouter();
   const { currentUser, logout, userProfile, userProfilePic } = useAuth();
   const { chats } = useChats();
@@ -58,6 +59,10 @@ const Navigation = memo(function Navigation() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    setResolvedPathname(pathname);
+  }, [pathname]);
 
   // Load last opened timestamp from localStorage (client-side only)
   useEffect(() => {
@@ -225,8 +230,8 @@ const Navigation = memo(function Navigation() {
                     }
                   }}
                   prefetch={true}
-                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 whitespace-nowrap flex-shrink-0 ${
-                    pathname === item.href
+                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 whitespace-nowrap shrink-0 ${
+                    resolvedPathname === item.href
                       ? 'text-accent-400 bg-dark-700/50'
                       : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
                   }`}
@@ -301,7 +306,7 @@ const Navigation = memo(function Navigation() {
                       {/* Profile Header */}
                       <div className="px-4 py-3 border-b border-dark-600 bg-dark-800">
                         <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0">
+                          <div className="shrink-0">
                             <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
                               <ProfilePicture
                                 src={profile?.profilePicture || userProfile?.profilePicture}
@@ -332,7 +337,7 @@ const Navigation = memo(function Navigation() {
                           className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <UserCircle className="w-4 h-4 mr-3 flex-shrink-0" />
+                          <UserCircle className="w-4 h-4 mr-3 shrink-0" />
                           View Profile
                         </Link>
                         <Link
@@ -340,7 +345,7 @@ const Navigation = memo(function Navigation() {
                           className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <Settings className="w-4 h-4 mr-3 flex-shrink-0" />
+                          <Settings className="w-4 h-4 mr-3 shrink-0" />
                           Settings
                         </Link>
                         <Link
@@ -348,7 +353,7 @@ const Navigation = memo(function Navigation() {
                           className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <List className="w-4 h-4 mr-3 flex-shrink-0" />
+                          <List className="w-4 h-4 mr-3 shrink-0" />
                           My Listings
                         </Link>
                         <Link
@@ -356,7 +361,7 @@ const Navigation = memo(function Navigation() {
                           className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <Package className="w-4 h-4 mr-3 flex-shrink-0" />
+                          <Package className="w-4 h-4 mr-3 shrink-0" />
                           My Orders
                         </Link>
                         <Link
@@ -364,7 +369,7 @@ const Navigation = memo(function Navigation() {
                           className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
-                          <TrendingUp className="w-4 h-4 mr-3 flex-shrink-0" />
+                          <TrendingUp className="w-4 h-4 mr-3 shrink-0" />
                           My Sales
                         </Link>
                       </div>
@@ -378,7 +383,7 @@ const Navigation = memo(function Navigation() {
                           }}
                           className="flex items-center w-full px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                         >
-                          <LogOut className="w-4 h-4 mr-3 flex-shrink-0" />
+                          <LogOut className="w-4 h-4 mr-3 shrink-0" />
                           Logout
                         </button>
                       </div>
@@ -455,10 +460,10 @@ const Navigation = memo(function Navigation() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex-shrink-0 ml-2">
+          <div className="md:hidden shrink-0 ml-2">
             <button
               type="button"
-              className="btn-ghost p-2 rounded-xl flex-shrink-0"
+              className="btn-ghost p-2 rounded-xl shrink-0"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -486,10 +491,11 @@ const Navigation = memo(function Navigation() {
                     href={item.href}
                     prefetch={true}
                     className={`relative flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                      pathname === item.href
+                      resolvedPathname === item.href
                         ? 'text-accent-400 bg-dark-700/50'
                         : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
                     }`}
+                    suppressHydrationWarning
                     onClick={() => {
                       setMobileMenuOpen(false);
                       // When clicking Messages tab, set currentChatId to null (not inside a chat)
