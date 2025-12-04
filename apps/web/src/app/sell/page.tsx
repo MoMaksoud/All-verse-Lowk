@@ -1031,7 +1031,7 @@ export default function SellPage() {
                   return (
                     <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
                       <div className="flex items-start gap-3">
-                        <div className="h-5 w-5 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div className="h-5 w-5 rounded-full bg-yellow-500 flex items-center justify-center shrink-0 mt-0.5">
                           <span className="text-xs text-black font-bold">!</span>
                         </div>
                         <div>
@@ -1342,7 +1342,7 @@ export default function SellPage() {
               
               <div className="flex gap-6">
                 {photoUrls && photoUrls.length > 0 && (
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <img
                       src={photoUrls[0]}
                       alt="Item preview"

@@ -200,7 +200,7 @@ function ListingsContent() {
 
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* Filters Sidebar */}
-          <div className="w-full lg:w-80 flex-shrink-0">
+          <div className="w-full lg:w-80 shrink-0">
             <ListingFiltersComponent
               filters={appliedFilters}
               categories={categories}
@@ -233,7 +233,7 @@ function ListingsContent() {
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center border border-dark-600 rounded-xl bg-dark-800 flex-shrink-0">
+                <div className="flex items-center border border-dark-600 rounded-xl bg-dark-800 shrink-0">
                   <button
                     onClick={() => setViewMode('grid')}
                     className={`p-2 rounded-l-xl transition-all duration-200 ${

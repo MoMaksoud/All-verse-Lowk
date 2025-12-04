@@ -115,15 +115,16 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }
           >
             <div className="flex items-start space-x-3">
               {/* Avatar */}
-              <div className="flex-shrink-0 relative">
+              <div className="w-10 h-10 overflow-hidden rounded-full shrink-0">
                 {chat.otherUser?.photoURL ? (
                   <img
                     src={chat.otherUser.photoURL}
                     alt={chat.otherUser.name}
-                    className="w-10 h-10 rounded-full object-cover"
+                    className="w-full h-full object-cover"
+                    style={{ width: "auto", height: "auto" }}
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+                  <div className="w-full h-full bg-blue-600/20 flex items-center justify-center">
                     <User className="w-5 h-5 text-blue-400" />
                   </div>
                 )}

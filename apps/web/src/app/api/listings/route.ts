@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     const condition = url.searchParams.get('condition') || undefined;
     const min = url.searchParams.get('min') ? Number(url.searchParams.get('min')) : undefined;
     const max = url.searchParams.get('max') ? Number(url.searchParams.get('max')) : undefined;
+    const sellerId = url.searchParams.get('sellerId') || undefined;
     const page = Number(url.searchParams.get('page')) || 1;
     const limit = Number(url.searchParams.get('limit')) || 20;
     const sort = url.searchParams.get('sort') || 'newest';
@@ -57,12 +58,17 @@ export async function GET(req: NextRequest) {
         sortDirection = 'desc';
     }
 
+    // When filtering by sellerId (profile page), show all listings including inactive ones
     const filters = {
       keyword: q,
       category: category,
       condition: condition,
       minPrice: min,
       maxPrice: max,
+      sellerId: sellerId,
+      // For profile pages, don't filter by isActive (show all listings)
+      // For general browsing, only show active listings
+      isActive: sellerId ? undefined : true,
     };
 
     const sortOptions = {
@@ -86,8 +92,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Filter out placeholder listings and old sold listings (older than 3 days)
+    // BUT: When filtering by sellerId (profile page), show ALL listings including sold ones
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const isProfileView = !!sellerId; // If sellerId is provided, this is a profile page view
     
     const transformedItems = filteredData
       .filter(listing => {
@@ -101,8 +109,9 @@ export async function GET(req: NextRequest) {
         // Check if item is sold (either explicitly marked or inventory is 0)
         const isSold = (listing.sold ?? false) === true || listing.inventory === 0;
 
-        // Filter out sold listings older than 3 days
-        if (isSold && listing.soldAt) {
+        // Filter out sold listings older than 3 days ONLY if NOT viewing a profile
+        // On profile pages, show all listings including sold ones
+        if (!isProfileView && isSold && listing.soldAt) {
           // Safe date conversion: check for toDate method first, then Date instance
           const soldAtValue = listing.soldAt as any;
           const soldDate = soldAtValue?.toDate ? soldAtValue.toDate() : (soldAtValue && typeof soldAtValue === 'object' && soldAtValue instanceof Date ? soldAtValue : null);

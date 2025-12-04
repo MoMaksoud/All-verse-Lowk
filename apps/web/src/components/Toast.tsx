@@ -94,7 +94,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
         `}
       >
         {/* Icon */}
-        <div className="flex-shrink-0 mt-0.5">
+        <div className="shrink-0 mt-0.5">
           <Icon className={`h-5 w-5 ${styles.icon}`} />
         </div>
 
@@ -113,7 +113,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="flex-shrink-0 text-zinc-400 hover:text-white transition-colors"
+          className="shrink-0 text-zinc-400 hover:text-white transition-colors"
         >
           <X className="h-4 w-4" />
         </button>

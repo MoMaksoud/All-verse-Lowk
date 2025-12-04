@@ -101,17 +101,20 @@ export function ChatView({
     <div className="flex flex-col h-full">
       {/* Chat Header - Hidden on mobile (shown in Messages page) */}
       <div className="hidden lg:flex items-center space-x-3 p-4 border-b border-zinc-800 bg-zinc-900/50">
-        {otherUser?.photoURL ? (
-          <img
-            src={otherUser.photoURL}
-            alt={otherUser.name}
-            className="w-8 h-8 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
-            <User className="w-4 h-4 text-blue-400" />
-          </div>
-        )}
+        <div className="w-8 h-8 overflow-hidden rounded-full">
+          {otherUser?.photoURL ? (
+            <img
+              src={otherUser.photoURL}
+              alt={otherUser.name}
+              className="w-full h-full object-cover"
+              style={{ width: "auto", height: "auto" }}
+            />
+          ) : (
+            <div className="w-full h-full bg-blue-600/20 flex items-center justify-center">
+              <User className="w-4 h-4 text-blue-400" />
+            </div>
+          )}
+        </div>
         <div>
           <h2 className="text-lg font-medium text-white">
             {otherUser?.name || 'Unknown User'}
@@ -187,7 +190,7 @@ export function ChatView({
       </div>
 
       {/* Message Input */}
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <MessageInput
           onSendMessage={onSendMessage}
           disabled={sending}

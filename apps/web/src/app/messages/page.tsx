@@ -152,7 +152,7 @@ export default function MessagesPage() {
           {/* Chat List - Hidden on mobile when chat is open */}
           <div className={`lg:col-span-1 min-h-0 ${showMobileChat ? 'hidden lg:block' : 'block'}`}>
             <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 h-full flex flex-col min-h-0">
-              <div className="p-4 border-b border-zinc-800 flex-shrink-0 flex items-center justify-between">
+              <div className="p-4 border-b border-zinc-800 shrink-0 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Conversations</h2>
                 <button
                   onClick={() => setShowUserSearch(true)}
@@ -192,7 +192,14 @@ export default function MessagesPage() {
                     </button>
                     <div className="flex items-center gap-2">
                       {otherUser?.photoURL && (
-                        <img src={otherUser.photoURL} alt="" className="w-8 h-8 rounded-full" />
+                        <div className="w-8 h-8 overflow-hidden rounded-full">
+                          <img 
+                            src={otherUser.photoURL} 
+                            alt="" 
+                            className="w-full h-full object-cover"
+                            style={{ width: "auto", height: "auto" }}
+                          />
+                        </div>
                       )}
                       <span className="font-medium text-white">{otherUser?.name || 'Chat'}</span>
                     </div>

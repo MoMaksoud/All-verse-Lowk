@@ -5,6 +5,15 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
+  // Explicitly exclude static assets and Next.js internal routes
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/static/') ||
+    pathname.includes('.') && !pathname.startsWith('/api/')
+  ) {
+    return NextResponse.next();
+  }
+  
   // Only apply middleware to API routes
   if (!pathname.startsWith('/api/')) {
     return NextResponse.next();

@@ -256,7 +256,10 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
     let q = query(this.getCollection());
 
     // Apply database-level filters BEFORE sorting
-    q = query(q, where('isActive', '==', filters.isActive !== false));
+    // Only filter by isActive if explicitly set (undefined means show all)
+    if (filters.isActive !== undefined) {
+      q = query(q, where('isActive', '==', filters.isActive));
+    }
     
     if (filters.category) {
       q = query(q, where('category', '==', filters.category));

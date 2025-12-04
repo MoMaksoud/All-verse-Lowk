@@ -334,7 +334,7 @@ export default function AssistantPage() {
         <div className="mb-3 sm:mb-4">
           <div className="flex items-center justify-between mb-2 gap-2">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white truncate">AI Assistant</h1>
@@ -342,7 +342,7 @@ export default function AssistantPage() {
             {messages.length > 0 && (
               <button
                 onClick={handleClearChat}
-                className="p-1.5 sm:p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors flex-shrink-0"
+                className="p-1.5 sm:p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
                 title="Clear conversation"
               >
                 <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -448,7 +448,7 @@ export default function AssistantPage() {
                                     console.log('Navigating to:', listingUrl);
                                     router.push(listingUrl);
                                   }}
-                                  className="flex-shrink-0 border border-zinc-800 bg-zinc-900 rounded-xl p-3 hover:bg-zinc-800 transition w-56 cursor-pointer"
+                                  className="shrink-0 border border-zinc-800 bg-zinc-900 rounded-xl p-3 hover:bg-zinc-800 transition w-56 cursor-pointer"
                                 >
                                   <img 
                                     src={imageUrl}
@@ -489,7 +489,7 @@ export default function AssistantPage() {
 
           {/* Input Area */}
           <div 
-            className={`flex-shrink-0 border-t border-zinc-800 p-3 sm:p-4 safe-area-bottom ${isDragging ? 'bg-zinc-800/50' : ''}`}
+            className={`shrink-0 border-t border-zinc-800 p-3 sm:p-4 safe-area-bottom ${isDragging ? 'bg-zinc-800/50' : ''}`}
             onDragOver={(e) => {
               e.preventDefault();
               setIsDragging(true);
@@ -546,7 +546,7 @@ export default function AssistantPage() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading || uploadingMedia || !currentUser}
-                className="px-2 sm:px-3 py-2 sm:py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center flex-shrink-0"
+                className="px-2 sm:px-3 py-2 sm:py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center shrink-0"
                 title="Upload image or video"
               >
                 {uploadingMedia ? (
@@ -573,7 +573,7 @@ export default function AssistantPage() {
               <button
                 type="submit"
                 disabled={isLoading || (!input.trim() && !pendingMedia) || !currentUser}
-                className="px-3 sm:px-5 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1 sm:gap-2 flex-shrink-0"
+                className="px-3 sm:px-5 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1 sm:gap-2 shrink-0"
               >
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">Send</span>

@@ -64,7 +64,6 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
           alt={profile.username}
           name={profile.username}
           size="xl"
-          className="w-20 h-20"
         />
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-white mb-1">{profile.username}</h2>

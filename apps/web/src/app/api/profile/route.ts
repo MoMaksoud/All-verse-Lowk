@@ -15,15 +15,11 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
     // Read seller ID from query param userId
     const requestedUserId = searchParams.get('userId');
     
-    // Log incoming userId before querying database
-    console.log('Profile API: Incoming request - userId query param:', requestedUserId, 'authenticated userId:', request.userId);
-    
     // Use requestedUserId if provided (for public profiles), otherwise use authenticated userId
     const userId = requestedUserId || request.userId;
     
     // Validate userId - return 400 if missing
     if (!userId || (typeof userId === 'string' && userId.trim().length === 0)) {
-      console.warn('Profile API: Missing or empty userId');
       return NextResponse.json(
         { 
           error: 'UserId missing but handled'
@@ -31,9 +27,6 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
         { status: 400 }
       );
     }
-    
-    // Log the userId being used for database query
-    console.log('Profile API: Fetching profile from database for userId:', userId);
 
     let profile;
     try {
@@ -50,10 +43,9 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
       );
     }
     
-    // If user is not found, create placeholder user doc and return handled JSON
+    // If user is not found, create placeholder user doc and return 404 (expected behavior)
     if (!profile) {
-      console.warn('Profile API: Profile not found for userId:', userId);
-      
+      // Silently handle - 404 is expected for users without profiles
       // Ensure user document exists in users collection with default avatar
       try {
         const userDocRef = doc(db, 'users', userId);
@@ -65,13 +57,12 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
           }, { merge: true });
         }
       } catch (userDocError) {
-        console.error('Profile API: Error ensuring user doc exists:', userDocError);
-        // Continue even if user doc creation fails
+        // Silent fail - this is not critical
       }
       
       return NextResponse.json(
         { 
-          error: 'User not found, placeholder returned',
+          error: 'Profile not found',
           userId: userId
         },
         { status: 404 }
@@ -85,10 +76,11 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
       updatedAt: profile.updatedAt?.toDate?.()?.toISOString() || (typeof profile.updatedAt === 'string' ? profile.updatedAt : undefined),
     };
 
+    // Return 200 with profile data
     const response = NextResponse.json({
       success: true,
       data: serializedProfile
-    });
+    }, { status: 200 });
 
     // Add caching headers for public profiles
     if (requestedUserId) {

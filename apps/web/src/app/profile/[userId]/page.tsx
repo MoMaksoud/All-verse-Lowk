@@ -1,148 +1,107 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Phone, Mail, Calendar, Shield, Flag } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { ArrowLeft, Calendar } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { Logo } from '@/components/Logo';
+import { ListingCard } from '@/components/listings/ListingCard';
+import { normalizeImageSrc } from '@/lib/image-utils';
+import { SimpleListing } from '@marketplace/types';
 
 interface UserProfile {
   id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  bio: string;
-  memberSince: string;
-  isVerified: boolean;
-  listings: any[];
+  username: string;
+  displayName?: string;
+  profilePicture?: string;
+  bio?: string;
+  createdAt?: string;
 }
 
 export default function UserProfilePage() {
   const params = useParams();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'listings'>('listings');
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
+      if (!params.userId) return;
+      
       try {
         setLoading(true);
+        const { apiGet } = await import('@/lib/api-client');
         
         // Fetch user profile
-        const { apiGet } = await import('@/lib/api-client');
         const profileResponse = await apiGet(`/api/profile?userId=${params.userId}`, { requireAuth: false });
-
-        if (profileResponse.status === 404) {
-          // Profile not found - set profile to null (expected for users without profiles)
-          setProfile(null);
-          return;
-        }
-
-        if (!profileResponse.ok) {
-          throw new Error('Failed to fetch profile');
-        }
-
-        const profileData = await profileResponse.json();
         
-        // Fetch user's listings
-        // Note: my-listings requires auth, so we can't fetch other users' listings this way
-        // This should be changed to a public endpoint or removed
-        // For now, skip fetching listings for other users since my-listings requires auth
-        let listings = [];
-
-        // Transform profile data to match UserProfile interface
-        const userProfile: UserProfile = {
-          id: params.userId as string,
-          name: profileData.data?.username || 'Unknown User',
-          email: '', // Email is not exposed in public profiles
-          avatar: profileData.data?.profilePicture || '',
-          bio: profileData.data?.bio || '',
-          memberSince: profileData.data?.createdAt || new Date().toISOString(),
-          isVerified: false, // This would need verification logic
-          listings: listings.map((listing: any) => ({
-            id: listing.id,
-            title: listing.title,
-            price: listing.price,
-            currency: 'USD',
-            photos: listing.photos || [],
-            createdAt: listing.createdAt,
-          })),
-        };
-
-        setProfile(userProfile);
-      } catch (error) {
-        // Only log non-404 errors
-        if (error instanceof Error && !error.message.includes('404')) {
-          console.warn('Error fetching profile:', error);
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          setProfile({
+            id: params.userId as string,
+            username: profileData.data?.username || 'User',
+            displayName: profileData.data?.displayName,
+            profilePicture: profileData.data?.profilePicture,
+            bio: profileData.data?.bio,
+            createdAt: profileData.data?.createdAt,
+          });
+        } else if (profileResponse.status === 404) {
+          // Profile not found - create minimal profile
+          setProfile({
+            id: params.userId as string,
+            username: 'User',
+          });
         }
-        setProfile(null);
+        
+        // Fetch user's listings - query listings collection where sellerId == userId
+        const listingsResponse = await apiGet(`/api/listings?sellerId=${params.userId}&limit=100`, { requireAuth: false });
+        
+        if (listingsResponse.ok) {
+          const listingsData = await listingsResponse.json();
+          // API returns { data: [...], pagination: {...} }
+          const fetchedListings = (listingsData.data || []) as SimpleListing[];
+          setListings(fetchedListings);
+        } else {
+          const errorData = await listingsResponse.json().catch(() => ({}));
+          console.warn('Failed to fetch listings:', listingsResponse.status, errorData);
+          setListings([]);
+        }
+      } catch (error) {
+        console.warn('Error fetching profile data:', error);
+        setProfile({
+          id: params.userId as string,
+          username: 'User',
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    if (params.userId) {
-      fetchProfile();
-    }
+    fetchData();
   }, [params.userId]);
 
-  const handleMessage = () => {
-    router.push(`/messages?user=${profile?.id}`);
-  };
-
-  const handleCall = () => {
-    showToast('Initiating call...', 'success');
-  };
-
-  const handleEmail = () => {
-    showToast('Opening email client...', 'success');
-  };
-
-  const handleReport = () => {
-    showToast('Report submitted', 'success');
-  };
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      toast.remove();
-    }, 3000);
-  };
-
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return '2025';
-      }
+      if (isNaN(date.getTime())) return '';
       return new Intl.DateTimeFormat("en-US", {
         month: "short",
         year: "numeric"
       }).format(date);
     } catch {
-      return '2025';
+      return '';
     }
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
+  const handleProfileClick = () => {
+    router.push(`/profile/${params.userId}`);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-500"></div>
       </div>
     );
@@ -150,10 +109,10 @@ export default function UserProfilePage() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Profile Not Found</h1>
-          <p className="text-gray-600">The user profile you're looking for doesn't exist.</p>
+          <h1 className="text-2xl font-bold text-white mb-2">Profile Not Found</h1>
+          <p className="text-gray-400">The user profile you're looking for doesn't exist.</p>
         </div>
       </div>
     );
@@ -163,143 +122,98 @@ export default function UserProfilePage() {
     <div className="min-h-screen bg-dark-950">
       <Navigation />
       
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-400 hover:text-white mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back
-          </button>
-          
-          <div className="flex justify-center mb-4">
-            <Logo size="md" />
-          </div>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Back
+        </button>
 
         {/* Profile Header */}
-        <div className="card mb-8">
-          <div className="p-8">
-            <div className="flex items-start space-x-6">
-              {/* Avatar */}
-              <div className="relative">
-                <img
-                  src={profile.avatar}
-                  alt={profile.name}
-                  className="w-24 h-24 rounded-full object-cover"
-                />
-                {profile.isVerified && (
-                  <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1">
-                    <Shield className="w-4 h-4 text-white" />
+        <div className="bg-dark-800 rounded-2xl p-6 mb-8">
+          <div className="flex items-start space-x-6">
+            {/* Avatar - clickable */}
+            <button 
+              onClick={handleProfileClick}
+              className="shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-full"
+              type="button"
+              aria-label="View profile"
+            >
+              <div className="w-20 h-20 overflow-hidden rounded-full bg-dark-700">
+                {profile.profilePicture ? (
+                  <Image
+                    src={normalizeImageSrc(profile.profilePicture)}
+                    alt={profile.username}
+                    width={80}
+                    height={80}
+                    className="object-cover rounded-full"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white text-2xl font-semibold">
+                    {profile.username.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
+            </button>
 
-              {/* Profile Info */}
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-2xl font-bold text-white">{profile.name}</h1>
-                  {profile.isVerified && (
-                    <span className="bg-blue-500/20 text-blue-400 text-xs px-2 py-1 rounded-full">
-                      Verified
-                    </span>
-                  )}
+            {/* Profile Info */}
+            <div className="flex-1 min-w-0">
+              {/* Name - clickable */}
+              <button
+                onClick={handleProfileClick}
+                className="cursor-pointer hover:text-accent-400 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
+                type="button"
+              >
+                <h1 className="text-2xl font-bold text-white mb-2">
+                  {profile.displayName || profile.username}
+                </h1>
+              </button>
+
+              {profile.createdAt && (
+                <div className="flex items-center space-x-1 text-gray-400 mb-3">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm">Member since {formatDate(profile.createdAt)}</span>
                 </div>
+              )}
 
-                <div className="flex items-center space-x-4 mb-4 text-gray-400">
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="w-4 h-4" />
-                    <span className="text-sm">Member since {formatDate(profile.memberSince)}</span>
-                  </div>
-                </div>
-
-                <p className="text-gray-300 mb-6">{profile.bio}</p>
-
-                {/* Action Buttons */}
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={handleMessage}
-                    className="btn btn-primary flex items-center space-x-2"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Message</span>
-                  </button>
-                  <button
-                    onClick={handleCall}
-                    className="btn btn-outline flex items-center space-x-2"
-                  >
-                    <Phone className="w-4 h-4" />
-                    <span>Call</span>
-                  </button>
-                  <button
-                    onClick={handleEmail}
-                    className="btn btn-outline flex items-center space-x-2"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>Email</span>
-                  </button>
-                  <button
-                    onClick={handleReport}
-                    className="btn btn-ghost text-red-400 hover:text-red-300 flex items-center space-x-2"
-                  >
-                    <Flag className="w-4 h-4" />
-                    <span>Report</span>
-                  </button>
-                </div>
-              </div>
+              {profile.bio && (
+                <p className="text-gray-300 mb-4">{profile.bio}</p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="card">
-          <div className="border-b border-dark-600">
-            <div className="flex space-x-8 px-6">
-              <button
-                onClick={() => setActiveTab('listings')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'listings'
-                    ? 'border-accent-500 text-accent-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300'
-                }`}
-              >
-                Listings ({profile.listings.length})
-              </button>
+        {/* Listings Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-white mb-4">
+            Listings ({listings.length})
+          </h2>
+          
+          {listings.length === 0 ? (
+            <div className="bg-dark-800 rounded-2xl p-8 text-center">
+              <p className="text-gray-400">No listings found.</p>
             </div>
-          </div>
-
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {profile.listings.map((listing) => (
-                <div
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {listings.map((listing) => (
+                <ListingCard
                   key={listing.id}
-                  onClick={() => router.push(`/listings/${listing.id}`)}
-                  className="bg-dark-700 rounded-lg overflow-hidden cursor-pointer hover:bg-dark-600 transition-colors"
-                >
-                  <div className="aspect-square relative">
-                    <img
-                      src={listing.photos[0]}
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-white font-medium mb-2 line-clamp-2">
-                      {listing.title}
-                    </h3>
-                    <p className="text-accent-400 font-semibold">
-                      {formatCurrency(listing.price, listing.currency)}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">
-                      Listed {formatDate(listing.createdAt)}
-                    </p>
-                  </div>
-                </div>
+                  listing={{
+                    id: listing.id,
+                    title: listing.title,
+                    price: listing.price,
+                    imageUrl: listing.photos?.[0] || '/default-avatar.png',
+                    createdAt: listing.createdAt,
+                  }}
+                  view="comfortable"
+                />
               ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

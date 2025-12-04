@@ -105,8 +105,12 @@ export default function ProfilePage() {
       // Refresh profile from AuthContext to get updated profilePicture
       await refreshProfile();
       
-      // Also update local state for immediate UI update (using path)
-      setProfile((p) => p ? { ...p, profilePicture: profilePicturePath } as any : p);
+      // Fetch fresh profile data from server with cache-busted URL
+      await fetchProfile();
+      
+      // Also update local state for immediate UI update with cache-busted URL
+      const cacheBustedUrl = profilePicturePath ? `${profilePicturePath}?t=${Date.now()}` : profilePicturePath;
+      setProfile((p) => p ? { ...p, profilePicture: cacheBustedUrl } as any : p);
     } catch (err) {
       console.error('Profile photo upload failed:', err);
     } finally {
@@ -205,7 +209,7 @@ export default function ProfilePage() {
                   <div className="space-y-8">
                     {/* User Identity */}
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-                      <div className="relative flex-shrink-0">
+                      <div className="relative shrink-0">
                         <ProfilePicture
                           src={profile.profilePicture || userProfile?.profilePicture}
                           alt={profile.username}

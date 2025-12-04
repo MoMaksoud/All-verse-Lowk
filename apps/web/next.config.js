@@ -75,10 +75,20 @@ const nextConfig = {
   },
 
   // Generate unique build ID for cache busting
+  // Only use timestamp in production builds, use stable ID in dev
   generateBuildId: async () => {
-    // Use BUILD_ID from environment or generate from timestamp
-    // This ensures cache invalidation on new builds
+    // In development, use a stable build ID so static assets don't change
+    // This prevents asset URL changes that cause 404s
+    if (process.env.NODE_ENV === 'development') {
+      return 'dev-build';
+    }
+    // In production, use BUILD_ID from environment or generate from timestamp
     return process.env.BUILD_ID || `build-${Date.now()}`;
+  },
+  
+  // Ensure static files are served correctly
+  async rewrites() {
+    return [];
   },
 
   // Webpack optimizations

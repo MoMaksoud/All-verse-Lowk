@@ -45,7 +45,7 @@ export function PriceSuggestionModal({ isOpen, onClose, suggestion, loading = fa
               {/* Suggestion */}
               <div className="bg-zinc-800 rounded-xl p-4">
                 <div className="flex items-start gap-3">
-                  <Lightbulb className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <Lightbulb className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" />
                   <div>
                     <h4 className="text-zinc-100 font-medium mb-2">Market Analysis</h4>
                     <div className="text-zinc-300 whitespace-pre-line leading-relaxed">
@@ -58,7 +58,7 @@ export function PriceSuggestionModal({ isOpen, onClose, suggestion, loading = fa
               {/* Tips */}
               <div className="bg-zinc-800 rounded-xl p-4">
                 <div className="flex items-start gap-3">
-                  <TrendingUp className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <TrendingUp className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
                   <div>
                     <h4 className="text-zinc-100 font-medium mb-2">Pricing Tips</h4>
                     <ul className="text-zinc-300 space-y-1 text-sm">
