@@ -202,13 +202,6 @@ export default function TermsPage() {
               </p>
             </section>
 
-            {/* Legal Disclaimer */}
-            <div className="mt-8 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <p className="text-yellow-200 text-sm leading-relaxed text-center">
-                This document is a general informational template and does not constitute legal advice. You should consult with a qualified attorney to review and customize these Terms for your specific business and applicable laws.
-              </p>
-            </div>
-
             {/* Contact Information */}
             <div className="mt-8 p-6 bg-white/5 rounded-lg border border-white/10">
               <h3 className="text-lg font-semibold text-white mb-3">Contact Information</h3>
