@@ -159,27 +159,26 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             }}
             onFocus={() => setShowSuggestions(true)}
             placeholder="Ask our AI anything..."
-            className="w-full pl-12 pr-12 py-4 glass-clear-dark border border-white/20 rounded-2xl text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50 transition-all duration-200 placeholder-transition"
+            className="w-full pl-12 pr-32 py-4 glass-clear-dark border border-white/20 rounded-2xl text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50 transition-all duration-200 placeholder-transition"
           />
-          {query && (
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+            {query && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
             <button
-              type="button"
-              onClick={clearSearch}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              type="submit"
+              className="bg-accent-500/80 hover:bg-accent-600/90 backdrop-blur-md text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 border border-accent-400/30"
             >
-              <X className="w-5 h-5" />
+              <Bot className="w-4 h-4" />
+              <span className="hidden sm:inline">Ask AI</span>
             </button>
-          )}
-        </div>
-        
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-          <button
-            type="submit"
-            className="bg-accent-500/80 hover:bg-accent-600/90 backdrop-blur-md text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 border border-accent-400/30"
-          >
-            <Bot className="w-4 h-4" />
-            Ask AI
-          </button>
+          </div>
         </div>
       </form>
 
@@ -256,10 +255,10 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                 </div>
                 <div className="space-y-1">
                   {recentSearches.map((search, index) => (
-                    <button
+                    <div
                       key={index}
+                      className="w-full text-left px-3 py-2 rounded-lg bg-dark-700/50 hover:bg-dark-600 transition-all duration-200 group border border-transparent hover:border-dark-500 cursor-pointer"
                       onClick={() => handleSuggestionClick(search)}
-                      className="w-full text-left px-3 py-2 rounded-lg bg-dark-700/50 hover:bg-dark-600 transition-all duration-200 group border border-transparent hover:border-dark-500"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -273,7 +272,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                           <X className="w-3 h-3 text-gray-400 hover:text-red-400" />
                         </button>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>

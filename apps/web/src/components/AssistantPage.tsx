@@ -30,7 +30,6 @@ export default function AssistantPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<'buyer' | 'seller'>('buyer');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [hasAutoTriggered, setHasAutoTriggered] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [pendingMedia, setPendingMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -293,20 +292,14 @@ export default function AssistantPage() {
     handleSearch(input.trim() || 'User submitted image/video', pendingMedia?.url, pendingMedia?.type);
   }, [input, isLoading, currentUser, handleSearch, pendingMedia]);
 
-  // Read query from URL and auto-trigger search
+  // Read query from URL and populate input field
   useEffect(() => {
     const query = searchParams.get('query');
-    if (query && !hasAutoTriggered && currentUser) {
+    if (query) {
       const decodedQuery = decodeURIComponent(query);
       setInput(decodedQuery);
-      setHasAutoTriggered(true);
-      // Auto-trigger search after a small delay to ensure state is set
-      const timeoutId = setTimeout(() => {
-        handleSearch(decodedQuery);
-      }, 100);
-      return () => clearTimeout(timeoutId);
     }
-  }, [searchParams, hasAutoTriggered, currentUser, handleSearch]);
+  }, [searchParams]);
 
   // Show sign-in notice if user is not authenticated
   if (!currentUser) {
