@@ -59,6 +59,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
+  colorScheme: 'dark', // Tell browser it's a dark site, but no specific color
 };
 
 export default function RootLayout({
@@ -69,7 +70,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        {/* Let status bar be transparent by default - no theme-color */}
+        {/* Explicitly set transparent theme-color for mobile browsers */}
+        <meta name="color-scheme" content="dark" />
       </head>
       <body className={`${inter.variable} font-sans h-full overflow-x-hidden`} suppressHydrationWarning>
         <div className="min-h-screen w-full max-w-screen overflow-x-hidden">
