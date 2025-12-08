@@ -35,11 +35,11 @@ service cloud.firestore {
       }
     }
 
-    // Default allow rule for all other collections (until 2025-12-06)
+    // Default allow rule for all other collections (extended to 2026-01-31)
     // This allows the client SDK to work in API routes
     // Server-side API routes should use Admin SDK which bypasses rules
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2025, 12, 6);
+      allow read, write: if request.time < timestamp.date(2026, 1, 31);
     }
   }
 }

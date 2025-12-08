@@ -101,7 +101,7 @@ export default function SignUp() {
         return;
       }
       
-      // Send verification email with token
+      // Try to send verification email, but don't block signup if it fails
       try {
         const response = await fetch('/api/auth/send-verification-email', {
           method: 'POST',
@@ -118,11 +118,14 @@ export default function SignUp() {
           setShowVerification(true);
         } else {
           const data = await response.json();
-          setError(data.error || 'Failed to send verification email. Please try again.');
+          console.warn('Verification email failed:', data.error);
+          // Skip verification and go straight to profile setup
+          setShowProfileSetup(true);
         }
       } catch (emailError) {
-        console.error('Error sending verification email:', emailError);
-        setError('Failed to send verification email. Please try again.');
+        console.warn('Error sending verification email:', emailError);
+        // Skip verification and go straight to profile setup
+        setShowProfileSetup(true);
       }
     } catch (error: any) {
       // Show the actual error message from Firebase
@@ -154,15 +157,9 @@ export default function SignUp() {
         return;
       }
 
-      // Check if email is verified
+      // Email verification is now optional - skip this check
+      // Users can create their profile immediately after signup
       await firebaseUser.reload();
-      if (!firebaseUser.emailVerified) {
-        setError('Please verify your email address before creating your profile. Check your email for the verification link.');
-        setProfileLoading(false);
-        setShowVerification(true);
-        setShowProfileSetup(false);
-        return;
-      }
       
       // Force token refresh before making the API call (especially important for Google sign-in)
       if (firebaseUser) {
