@@ -27,8 +27,8 @@ export const metadata: Metadata = {
     apple: '/logo.png',
   },
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'transparent' },
-    { media: '(prefers-color-scheme: dark)', color: 'transparent' },
+    { media: '(prefers-color-scheme: light)', color: '#020617' },
+    { media: '(prefers-color-scheme: dark)', color: '#020617' },
   ],
   appleWebApp: {
     capable: true,
@@ -63,8 +63,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  viewportFit: 'cover',
-  themeColor: 'transparent', // Transparent/translucent browser chrome
+  viewportFit: 'cover', // Ensures content extends to edges and under notch/status bar
+  themeColor: '#020617', // Deep dark blue matching gradient
   colorScheme: 'dark',
 };
 
@@ -79,7 +79,9 @@ export default function RootLayout({
         {/* iOS PWA - Transparent/Translucent Status Bar */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="theme-color" content="transparent" />
+        {/* Match the dark gradient background */}
+        <meta name="theme-color" content="#020617" />
+        <meta name="msapplication-navbutton-color" content="#020617" />
       </head>
       <body className={`${inter.variable} font-sans h-full dark overflow-x-hidden`} suppressHydrationWarning>
         <div className="min-h-screen w-full max-w-screen overflow-x-hidden">
