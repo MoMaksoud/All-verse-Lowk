@@ -26,13 +26,8 @@ export const metadata: Metadata = {
     shortcut: '/logo.png',
     apple: '/logo.png',
   },
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#020617' },
-    { media: '(prefers-color-scheme: dark)', color: '#020617' },
-  ],
+  // No themeColor - let status bar be transparent by default
   appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent', // Makes iOS status bar translucent
     title: 'AllVerse GPT',
   },
   openGraph: {
@@ -63,8 +58,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  viewportFit: 'cover', // Ensures content extends to edges and under notch/status bar
-  themeColor: '#020617', // Deep dark blue matching gradient
+  viewportFit: 'cover',
   colorScheme: 'dark',
 };
 
@@ -76,11 +70,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full dark" suppressHydrationWarning>
       <head>
-        {/* iOS PWA - Let theme-color control the appearance */}
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        {/* Match the dark gradient background */}
-        <meta name="theme-color" content="#020617" />
-        <meta name="msapplication-navbutton-color" content="#020617" />
+        {/* Let status bar be transparent by default - no theme-color */}
       </head>
       <body className={`${inter.variable} font-sans h-full dark overflow-x-hidden`} suppressHydrationWarning>
         <div className="min-h-screen w-full max-w-screen overflow-x-hidden">
