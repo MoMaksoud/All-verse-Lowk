@@ -1585,29 +1585,83 @@ export default function SellPage() {
     <div className="min-h-screen bg-dark-950">
       <Navigation />
       
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 lg:py-16">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
         {/* Header Hero */}
-        <header className="text-center space-y-3 mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300">
-            <img src="/logo.png" alt="" className="object-cover rounded-xl" style={{ width: "auto", height: "auto" }} />
-            ALL VERSE GPT
+        <header className="text-center space-y-4 sm:space-y-3 mb-8 sm:mb-10">
+          {/* Mobile: Large Logo */}
+          <div className="flex justify-center mb-4 sm:mb-0">
+            <div className="w-40 h-40 sm:w-32 sm:h-32 lg:hidden relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-2xl"></div>
+              <div className="relative w-full h-full rounded-full bg-dark-800/80 border border-dark-700/50 backdrop-blur-sm flex items-center justify-center">
+                <Logo size="xl" />
+              </div>
+            </div>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-100">Sell Your Item</h1>
-          <p className="text-sm sm:text-base text-zinc-300 leading-7">Upload a photo and let AI do the work for you</p>
+          
+          {/* Desktop: Small Logo Badge */}
+          <div className="hidden lg:inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300">
+            <Logo size="sm" />
+            <span>ALL VERSE GPT</span>
+          </div>
+          
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-100 px-4">Sell Your Item</h1>
+          <p className="text-base sm:text-sm lg:text-base text-zinc-300 leading-7 px-4">Upload a photo and let AI do the work for you</p>
         </header>
 
         {/* Stepper */}
-        <div className="mb-10">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-2">
+        <div className="mb-8 sm:mb-10">
+          {/* Mobile: Show only first 3 steps prominently */}
+          <div className="lg:hidden space-y-3 max-w-sm mx-auto">
+            {steps.slice(0, 3).map((step) => {
+              const Icon = step.icon;
+              const isActive = currentStep === step.id;
+              const isCompleted = currentStep > step.id;
+              
+              return (
+                <div 
+                  key={step.id} 
+                  className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-blue-600/20 border-2 border-blue-500' 
+                      : isCompleted 
+                        ? 'bg-zinc-800/40 border border-blue-500/30' 
+                        : 'bg-zinc-800/20 border border-zinc-700'
+                  }`}
+                >
+                  <div 
+                    className={`flex items-center justify-center w-12 h-12 rounded-full shrink-0 ${
+                      isActive 
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50' 
+                        : isCompleted 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-zinc-700 text-zinc-400'
+                    }`}
+                  >
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-base font-semibold ${
+                      isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-400'
+                    }`}>
+                      {step.title}
+                    </div>
+                    <div className="text-sm text-zinc-400">{step.description}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: Horizontal stepper */}
+          <div className="hidden lg:flex items-center justify-center gap-2">
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;
-              const isUpcoming = currentStep < step.id;
               
               return (
                 <div key={step.id} className="flex items-center">
-                  <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+                  <div className="flex flex-row items-center gap-3">
                     <div 
                       className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-200 ${
                         isActive 
@@ -1620,7 +1674,7 @@ export default function SellPage() {
                     >
                       <Icon className="w-5 h-5" />
                     </div>
-                    <div className="text-center sm:text-left">
+                    <div className="text-left">
                       <div className={`text-sm font-medium ${
                         isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-500'
                       }`}>
@@ -1630,7 +1684,7 @@ export default function SellPage() {
                     </div>
                   </div>
                   {index < steps.length - 1 && (
-                    <div className={`hidden sm:block w-12 h-0.5 mx-4 transition-all duration-200 ${
+                    <div className={`w-12 h-0.5 mx-4 transition-all duration-200 ${
                       isCompleted ? 'bg-blue-500' : 'bg-zinc-800'
                     }`} />
                   )}

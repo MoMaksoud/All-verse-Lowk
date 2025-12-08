@@ -205,6 +205,7 @@ const Navigation = memo(function Navigation() {
   }, [currentUser, showProfileDropdown, profile, userProfile]);
 
   return (
+    <>
     <nav className="glass border-b border-dark-700/50 sticky top-0 z-50 safe-area-top h-[64px] flex items-center justify-between px-6 py-2 w-full">
       {/* Logo */}
       <Link href="/" className="flex items-center shrink-0">
@@ -474,11 +475,25 @@ const Navigation = memo(function Navigation() {
               )}
             </button>
           </div>
+    </nav>
 
-      {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden glass rounded-xl mt-2 mb-4 relative z-40 overflow-y-auto max-h-[calc(100vh-120px)]">
-            <div className="px-4 py-3 space-y-2">
+      {/* Mobile Navigation - Full Screen Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 bg-dark-900/95 backdrop-blur-lg z-[60] overflow-y-auto">
+          <div className="px-4 pt-6 pb-3 space-y-2">
+            {/* Header with Logo and Close Button */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Logo size="md" />
+              </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="btn-ghost p-2 rounded-xl"
+                aria-label="Close menu"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
               {navigation.map((item) => {
                 const Icon = item.icon;
                 const isMessages = item.name === 'Messages';
@@ -642,11 +657,11 @@ const Navigation = memo(function Navigation() {
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+            )}
           </div>
-        )}
-    </nav>
+        </div>
+      )}
+    </>
   );
 });
 
