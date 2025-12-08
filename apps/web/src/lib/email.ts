@@ -128,7 +128,14 @@ export async function sendVerificationEmail(
     
     const msg: any = {
       to,
-      from: fromEmail,
+      from: {
+        email: fromEmail,
+        name: 'AllVerse Team'
+      },
+      replyTo: {
+        email: 'support@allversegpt.com',
+        name: 'AllVerse Support'
+      },
       dynamic_template_data: {
         verification_url: verificationUrl,
       },
@@ -140,30 +147,78 @@ export async function sendVerificationEmail(
     } else {
       // Modern fallback HTML template if no template ID
       console.log('📧 Sending verification email with fallback HTML template');
-      msg.subject = 'Verify Your Email - AllVerse';
+      msg.subject = 'Welcome to AllVerse - Please Verify Your Email';
+      msg.text = `Welcome to AllVerse!\n\nPlease verify your email address by clicking this link: ${verificationUrl}\n\nThis link will expire in 24 hours.\n\nIf you didn't create an account, please ignore this email.\n\nBest regards,\nThe AllVerse Team`;
       msg.html = `
-        <html>
-          <body style="font-family:Inter,Arial,sans-serif;padding:24px;background:#f5f7fb;">
-            <div style="max-width:480px;margin:auto;background:white;padding:28px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.06);">
-              <h2 style="margin-bottom:12px;color:#111">Welcome to AllVerse 🎉</h2>
-              <p style="color:#444;font-size:15px;margin-bottom:24px;">
-                Tap the button below to verify your email and activate your account.
-              </p>
-
-              <a href="${verificationUrl}"
-                 style="display:inline-block;background:#0063e1;color:white;padding:12px 18px;
-                 border-radius:8px;text-decoration:none;font-weight:600;">
-                Verify Email
-              </a>
-
-              <p style="font-size:13px;color:#777;margin-top:28px;">
-                If you didn't sign up, you can safely ignore this message.
-              </p>
-
-              <p style="font-size:11px;color:#aaa;margin-top:24px;text-align:center;">
-                © ${new Date().getFullYear()} AllVerse Marketplace. All rights reserved.
-              </p>
-            </div>
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Verify Your Email</title>
+          </head>
+          <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f5f7fb;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f7fb;padding:40px 20px;">
+              <tr>
+                <td align="center">
+                  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                      <td style="padding:40px 40px 20px;text-align:center;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Welcome to AllVerse! 🎉</h1>
+                      </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding:40px;">
+                        <p style="margin:0 0 20px;color:#333333;font-size:16px;line-height:1.6;">
+                          Hi there!
+                        </p>
+                        <p style="margin:0 0 20px;color:#333333;font-size:16px;line-height:1.6;">
+                          Thank you for joining AllVerse. To complete your registration and start exploring our marketplace, please verify your email address.
+                        </p>
+                        
+                        <!-- Button -->
+                        <table width="100%" cellpadding="0" cellspacing="0" style="margin:30px 0;">
+                          <tr>
+                            <td align="center">
+                              <a href="${verificationUrl}" style="display:inline-block;background-color:#667eea;color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:8px;font-weight:600;font-size:16px;">Verify My Email</a>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <p style="margin:20px 0 0;color:#666666;font-size:14px;line-height:1.6;">
+                          Or copy and paste this link into your browser:
+                        </p>
+                        <p style="margin:10px 0 20px;color:#667eea;font-size:13px;word-break:break-all;">
+                          ${verificationUrl}
+                        </p>
+                        
+                        <p style="margin:30px 0 0;color:#999999;font-size:13px;line-height:1.6;">
+                          This verification link will expire in 24 hours for security reasons.
+                        </p>
+                        <p style="margin:10px 0 0;color:#999999;font-size:13px;line-height:1.6;">
+                          If you didn't create an account with AllVerse, you can safely ignore this email.
+                        </p>
+                      </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding:30px 40px;background-color:#f8f9fa;border-top:1px solid #e9ecef;">
+                        <p style="margin:0;color:#6c757d;font-size:12px;line-height:1.6;text-align:center;">
+                          © ${new Date().getFullYear()} AllVerse Marketplace. All rights reserved.
+                        </p>
+                        <p style="margin:10px 0 0;color:#6c757d;font-size:12px;line-height:1.6;text-align:center;">
+                          Need help? Contact us at <a href="mailto:support@allversegpt.com" style="color:#667eea;text-decoration:none;">support@allversegpt.com</a>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `;
@@ -209,7 +264,14 @@ export async function sendOrderConfirmationEmail(
 
     const msg = {
       to: data.buyerEmail,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@allversemarketplace.com',
+      from: {
+        email: process.env.SENDGRID_FROM_EMAIL || 'hello@allversegpt.com',
+        name: 'AllVerse Team'
+      },
+      replyTo: {
+        email: 'support@allversegpt.com',
+        name: 'AllVerse Support'
+      },
       subject: `Order Confirmation - Order #${data.orderId.slice(0, 8)}`,
       html: `
         <!DOCTYPE html>
@@ -285,7 +347,14 @@ export async function sendSellerNotificationEmail(
 
     const msg = {
       to: data.sellerEmail,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@allversemarketplace.com',
+      from: {
+        email: process.env.SENDGRID_FROM_EMAIL || 'hello@allversegpt.com',
+        name: 'AllVerse Team'
+      },
+      replyTo: {
+        email: 'support@allversegpt.com',
+        name: 'AllVerse Support'
+      },
       subject: `New Sale! 🎉 ${data.itemTitle}`,
       html: `
         <!DOCTYPE html>
