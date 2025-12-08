@@ -136,6 +136,7 @@ export async function sendVerificationEmail(
         email: 'support@allversegpt.com',
         name: 'AllVerse Support'
       },
+      subject: 'Welcome to AllVerse - Please Verify Your Email', // Always set subject as fallback
       dynamic_template_data: {
         verification_url: verificationUrl,
       },
@@ -143,6 +144,7 @@ export async function sendVerificationEmail(
 
     if (templateId) {
       msg.templateId = templateId;
+      // Template will override subject if defined, but we have a fallback
       console.log('📧 Sending verification email with template:', templateId);
     } else {
       // Modern fallback HTML template if no template ID
