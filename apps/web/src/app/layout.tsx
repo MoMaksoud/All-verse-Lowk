@@ -76,9 +76,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full dark" suppressHydrationWarning>
       <head>
-        {/* iOS PWA - Transparent/Translucent Status Bar */}
+        {/* iOS PWA - Let theme-color control the appearance */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         {/* Match the dark gradient background */}
         <meta name="theme-color" content="#020617" />
         <meta name="msapplication-navbutton-color" content="#020617" />
