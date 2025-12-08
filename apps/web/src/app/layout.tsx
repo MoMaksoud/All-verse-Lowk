@@ -27,12 +27,12 @@ export const metadata: Metadata = {
     apple: '/logo.png',
   },
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#09090b' },
-    { media: '(prefers-color-scheme: dark)', color: '#09090b' },
+    { media: '(prefers-color-scheme: light)', color: 'transparent' },
+    { media: '(prefers-color-scheme: dark)', color: 'transparent' },
   ],
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'black-translucent', // Makes iOS status bar translucent
     title: 'AllVerse GPT',
   },
   openGraph: {
@@ -64,7 +64,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
-  themeColor: '#09090b',
+  themeColor: 'transparent', // Transparent/translucent browser chrome
   colorScheme: 'dark',
 };
 
