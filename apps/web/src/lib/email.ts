@@ -142,10 +142,12 @@ export async function sendVerificationEmail(
       },
     };
 
-    if (templateId) {
+    // Note: Only use templateId if you've configured a subject in the SendGrid template
+    // Otherwise, remove SENDGRID_VERIFICATION_TEMPLATE_ID from env to use the HTML below
+    if (templateId && templateId.trim().length > 0) {
       msg.templateId = templateId;
-      // Template will override subject if defined, but we have a fallback
-      console.log('📧 Sending verification email with template:', templateId);
+      console.log('📧 Sending verification email with SendGrid template:', templateId);
+      console.log('⚠️  Make sure your template has a subject line configured!');
     } else {
       // Modern fallback HTML template if no template ID
       console.log('📧 Sending verification email with fallback HTML template');
