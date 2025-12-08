@@ -75,6 +75,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full dark" suppressHydrationWarning>
+      <head>
+        {/* iOS PWA - Transparent/Translucent Status Bar */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="transparent" />
+      </head>
       <body className={`${inter.variable} font-sans h-full dark overflow-x-hidden`} suppressHydrationWarning>
         <div className="min-h-screen w-full max-w-screen overflow-x-hidden">
           <ErrorBoundary>
