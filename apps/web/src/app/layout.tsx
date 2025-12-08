@@ -59,7 +59,6 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
-  colorScheme: 'dark',
 };
 
 export default function RootLayout({
@@ -68,11 +67,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full dark" suppressHydrationWarning>
+    <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         {/* Let status bar be transparent by default - no theme-color */}
       </head>
-      <body className={`${inter.variable} font-sans h-full dark overflow-x-hidden`} suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans h-full overflow-x-hidden`} suppressHydrationWarning>
         <div className="min-h-screen w-full max-w-screen overflow-x-hidden">
           <ErrorBoundary>
             <AuthProvider>

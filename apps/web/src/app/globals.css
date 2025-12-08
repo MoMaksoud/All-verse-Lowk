@@ -193,7 +193,6 @@
   }
   
 body {
-  background: #09090b;
   background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
   color: #ffffff;
   min-height: 100vh;
@@ -203,7 +202,6 @@ body {
 
 /* Ensure html also has dark background for mobile */
 html {
-  background: #09090b;
   background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
 }
 
