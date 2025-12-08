@@ -26,6 +26,15 @@ export const metadata: Metadata = {
     shortcut: '/logo.png',
     apple: '/logo.png',
   },
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#09090b' },
+    { media: '(prefers-color-scheme: dark)', color: '#09090b' },
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'AllVerse GPT',
+  },
   openGraph: {
     title: 'AllVerse GPT | AI Platform to Find the Best Items Online',
     description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
@@ -55,6 +64,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
+  themeColor: '#09090b',
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({
