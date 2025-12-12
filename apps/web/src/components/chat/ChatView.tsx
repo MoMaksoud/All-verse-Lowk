@@ -5,7 +5,7 @@ import { MessageWithUser } from '@/hooks/useChatMessages';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { ListingPreviewCard } from '@/components/chat/ListingPreviewCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { User } from 'lucide-react';
+import { ProfilePicture } from '@/components/ProfilePicture';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ChatViewProps {
@@ -101,20 +101,12 @@ export function ChatView({
     <div className="flex flex-col h-full">
       {/* Chat Header - Hidden on mobile (shown in Messages page) */}
       <div className="hidden lg:flex items-center space-x-3 p-4 border-b border-zinc-800 bg-zinc-900/50">
-        <div className="w-8 h-8 overflow-hidden rounded-full">
-          {otherUser?.photoURL ? (
-            <img
-              src={otherUser.photoURL}
-              alt={otherUser.name}
-              className="w-full h-full object-cover"
-              style={{ width: "auto", height: "auto" }}
-            />
-          ) : (
-            <div className="w-full h-full bg-blue-600/20 flex items-center justify-center">
-              <User className="w-4 h-4 text-blue-400" />
-            </div>
-          )}
-        </div>
+        <ProfilePicture
+          src={otherUser?.photoURL}
+          alt={otherUser?.name || 'Unknown User'}
+          name={otherUser?.name}
+          size="sm"
+        />
         <div>
           <h2 className="text-lg font-medium text-white">
             {otherUser?.name || 'Unknown User'}

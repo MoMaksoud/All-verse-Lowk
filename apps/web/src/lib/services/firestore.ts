@@ -174,7 +174,7 @@ export class UsersService extends BaseFirestoreService<FirestoreUser> {
     // This prevents crashes if document doesn't exist
     const docRef = this.getDocRef(uid);
     await setDoc(docRef, {
-      profilePic: updates.profilePic || updates.photoURL || '/default-avatar.png',
+      profilePic: updates.profilePic || updates.photoURL || '/logo.png',
       listingsCount: 0,
       salesCount: 0,
       reviewsCount: 0,

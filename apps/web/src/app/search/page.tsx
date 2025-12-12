@@ -161,18 +161,18 @@ function SearchContent() {
       <div className="relative py-6 border-b border-dark-700/50">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-              {mounted && query ? `Search Results for "${query}"` : 'Search Results'}
-            </h1>
-            <p className="text-gray-400">
-              {!mounted || !query
-                ? 'Loading...'
-                : loading
-                ? 'Searching across marketplaces...'
-                : results
-                ? `Found ${(results.externalResults?.length || 0) + (results.internalResults?.length || 0)} results`
-                : 'No results found'}
-            </p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            {mounted && query ? `Search Results for "${query}"` : 'Search Results'}
+          </h1>
+          <p className="text-gray-400">
+            {!mounted || !query
+              ? 'Loading...'
+              : loading
+              ? 'Searching across marketplaces...'
+              : results
+              ? `Found ${(results.externalResults?.length || 0) + (results.internalResults?.length || 0)} results`
+              : 'No results found'}
+          </p>
           </div>
         </div>
       </div>
@@ -242,7 +242,7 @@ function SearchContent() {
                   Showing results from Amazon, eBay, Walmart, and more
                 </p>
               </div>
-              <ExternalResultsSection results={results.externalResults} />
+            <ExternalResultsSection results={results.externalResults} />
             </div>
           )}
 

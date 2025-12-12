@@ -50,8 +50,8 @@ export function getProfilePictureSource({
     // If invalid format, fall through to default
   }
 
-  // Final fallback to default avatar
-  return '/default-avatar.png';
+  // Final fallback to AllVerse logo
+  return '/logo.png';
 }
 
 /**
@@ -60,13 +60,13 @@ export function getProfilePictureSource({
  */
 export function normalizeProfilePictureSrc(src: string | null | undefined): string {
   if (!src || typeof src !== 'string') {
-    return '/default-avatar.png';
+    return '/logo.png';
   }
 
   const trimmed = src.trim();
   
   if (trimmed === '') {
-    return '/default-avatar.png';
+    return '/logo.png';
   }
   
   // External URLs (Google photos) are returned as-is

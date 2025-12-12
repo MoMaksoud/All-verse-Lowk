@@ -65,7 +65,7 @@ export const ProfilePicture = memo(function ProfilePicture({
 
   // Safe URL validation: enforce valid format for Next.js Image
   const imageUrl = React.useMemo(() => {
-    if (!profilePictureSource) return '/default-avatar.png';
+    if (!profilePictureSource) return '/logo.png';
     
     // If it's already a URL (Google photo), use it as-is
     if (profilePictureSource.startsWith('http://') || profilePictureSource.startsWith('https://')) {
@@ -83,7 +83,7 @@ export const ProfilePicture = memo(function ProfilePicture({
     
     // If storagePathToUrl returns empty or invalid, fallback to default
     if (!url || url === '' || (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/'))) {
-      return '/default-avatar.png';
+      return '/logo.png';
     }
     
     return url;
@@ -111,8 +111,8 @@ export const ProfilePicture = memo(function ProfilePicture({
   }), [size]);
 
   // Show fallback if fallbackOnly is true, or if there's an error loading the image
-  // If imageUrl is the default avatar path, try to load it as an image first
-  const showFallback = fallbackOnly || (imageError && imageUrl !== '/default-avatar.png');
+  // If imageUrl is the logo path, try to load it as an image first
+  const showFallback = fallbackOnly || (imageError && imageUrl !== '/logo.png');
 
   // If no image URL or fallback only, show default avatar
   if (showFallback || !imageUrl || imageUrl === '') {

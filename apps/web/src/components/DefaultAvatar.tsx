@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface DefaultAvatarProps {
   name?: string;
@@ -9,58 +10,32 @@ interface DefaultAvatarProps {
 
 export function DefaultAvatar({ name, email, size = 'md', className = '' }: DefaultAvatarProps) {
   const sizeClasses = {
-    sm: 'w-8 h-8 text-sm',
-    md: 'w-12 h-12 text-base',
-    lg: 'w-16 h-16 text-lg',
-    xl: 'w-20 h-20 text-xl',
+    sm: 'w-8 h-8',
+    md: 'w-12 h-12',
+    lg: 'w-16 h-16',
+    xl: 'w-20 h-20',
   };
 
-  // Get initials from name or email
-  const getInitials = () => {
-    if (name) {
-      return name
-        .split(' ')
-        .map(word => word.charAt(0))
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    
-    if (email) {
-      return email.charAt(0).toUpperCase();
-    }
-    
-    return 'U';
-  };
-
-  // Generate a consistent color based on name/email
-  const getAvatarColor = () => {
-    const text = name || email || 'default';
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-      hash = text.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    const colors = [
-      'bg-red-500',
-      'bg-blue-500', 
-      'bg-green-500',
-      'bg-yellow-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-teal-500',
-    ];
-    
-    return colors[Math.abs(hash) % colors.length];
+  const sizeToPixels = {
+    sm: 32,
+    md: 48,
+    lg: 64,
+    xl: 80,
   };
 
   return (
     <div 
-      className={`${sizeClasses[size]} ${getAvatarColor()} rounded-full flex items-center justify-center text-white font-semibold ${className}`}
+      className={`${sizeClasses[size]} rounded-full flex items-center justify-center bg-white overflow-hidden ${className}`}
       title={name || email || 'User'}
     >
-      {getInitials()}
+      <Image
+        src="/logo.png"
+        alt="AllVerse Logo"
+        width={sizeToPixels[size]}
+        height={sizeToPixels[size]}
+        className="object-contain p-1"
+        unoptimized
+      />
     </div>
   );
 }

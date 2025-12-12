@@ -325,33 +325,33 @@ function ListingCard({
               <div className="flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1 min-h-[3.5rem]">
                 {sellerId ? (
                   <>
-                    <div className="shrink-0">
-                      {sellerProfile?.profilePicture && sellerProfile.profilePicture.trim().length > 0 && (sellerProfile.profilePicture.startsWith('http') || sellerProfile.profilePicture.startsWith('/uploads')) ? (
-                        <ProfilePicture
-                          src={sellerProfile.profilePicture}
-                          alt={sellerProfile?.username || 'Seller'}
-                          name={sellerProfile?.username}
-                          size="sm"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                          <span className="text-white text-xs font-semibold">
-                            {sellerProfile?.username?.slice(0, 2).toUpperCase() || 'U'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-medium text-zinc-100 truncate">
-                        {sellerProfile?.username || 'Marketplace User'}
-                      </p>
-                      <p className="text-xs text-zinc-400">
-                        {formatMemberSince(sellerProfile?.createdAt)}
-                      </p>
-                    </div>
+                  <div className="shrink-0">
+                    {sellerProfile?.profilePicture && sellerProfile.profilePicture.trim().length > 0 && (sellerProfile.profilePicture.startsWith('http') || sellerProfile.profilePicture.startsWith('/uploads')) ? (
+                      <ProfilePicture
+                        src={sellerProfile.profilePicture}
+                        alt={sellerProfile?.username || 'Seller'}
+                        name={sellerProfile?.username}
+                        size="sm"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <span className="text-white text-xs font-semibold">
+                          {sellerProfile?.username?.slice(0, 2).toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-zinc-100 truncate">
+                      {sellerProfile?.username || 'Marketplace User'}
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      {formatMemberSince(sellerProfile?.createdAt)}
+                    </p>
+                  </div>
                   </>
                 ) : null}
-              </div>
+                </div>
 
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm min-h-[1.5rem]">
                 <span className="text-blue-400 font-semibold">
@@ -440,20 +440,12 @@ function ListingCard({
               {sellerId && (
                 <div className="flex items-center gap-3 mt-2 py-2 border-t border-white/5">
                   <div className="shrink-0">
-                    {sellerProfile?.profilePicture && sellerProfile.profilePicture.trim().length > 0 && (sellerProfile.profilePicture.startsWith('http') || sellerProfile.profilePicture.startsWith('/uploads')) ? (
-                      <ProfilePicture
-                        src={sellerProfile.profilePicture}
-                        alt={sellerProfile?.username || 'Seller'}
-                        name={sellerProfile?.username}
-                        size="md"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">
-                          {sellerProfile?.username?.slice(0, 2).toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    )}
+                    <ProfilePicture
+                      src={sellerProfile?.profilePicture}
+                      alt={sellerProfile?.username || 'Seller'}
+                      name={sellerProfile?.username}
+                      size="md"
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-zinc-100 truncate">

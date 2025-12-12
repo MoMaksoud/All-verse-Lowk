@@ -53,7 +53,7 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
         
         if (!userDocSnap.exists()) {
           await setDoc(userDocRef, { 
-            profilePic: '/default-avatar.png' 
+            profilePic: '/logo.png' 
           }, { merge: true });
         }
       } catch (userDocError) {

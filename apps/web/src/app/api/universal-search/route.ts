@@ -123,15 +123,15 @@ async function searchInternalListings(query: string): Promise<InternalResult[]> 
     snapshot.forEach((doc) => {
       const data = doc.data();
       allListings.push({
-        id: doc.id,
-        title: data.title,
-        price: Number(data.price) || 0,
-        description: data.description,
-        photos: data.images || [],
-        category: data.category,
-        condition: data.condition || 'good',
-        sellerId: data.sellerId,
-      });
+          id: doc.id,
+          title: data.title,
+          price: Number(data.price) || 0,
+          description: data.description,
+          photos: data.images || [],
+          category: data.category,
+          condition: data.condition || 'good',
+          sellerId: data.sellerId,
+        });
     });
 
     console.log(`📦 Loaded ${allListings.length} internal listings for Gemini search`);
@@ -468,7 +468,7 @@ async function searchExternalInternet(query: string): Promise<ExternalResult[]> 
       // PRIORITY 1: Google Shopping search via SerpAPI
       const params = new URLSearchParams({
         engine: 'google_shopping',
-        q: query,
+          q: query,
         api_key: serpApiKey,
         num: '20', // Fetch more to ensure diverse sources
         gl: 'us',
