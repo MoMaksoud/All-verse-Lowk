@@ -303,44 +303,57 @@ function ListingCard({
 
             {/* Content */}
             <div className="p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 flex-1 flex flex-col">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-zinc-100 line-clamp-2">
+              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-zinc-100" style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}>
                 {title}
               </h3>
-              <p className="hidden sm:block text-xs sm:text-sm text-zinc-300/90 flex-1">
-                {truncateWords(description, 22)}
+              <p className="hidden sm:block text-xs sm:text-sm text-zinc-300/90" style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {description}
               </p>
 
-              {/* Seller Info Section */}
-              {sellerId && (
-                <div className="flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1">
-                  <div className="shrink-0">
-                    {sellerProfile?.profilePicture && sellerProfile.profilePicture.trim().length > 0 && (sellerProfile.profilePicture.startsWith('http') || sellerProfile.profilePicture.startsWith('/uploads')) ? (
-                      <ProfilePicture
-                        src={sellerProfile.profilePicture}
-                        alt={sellerProfile?.username || 'Seller'}
-                        name={sellerProfile?.username}
-                        size="sm"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-white text-xs font-semibold">
-                          {sellerProfile?.username?.slice(0, 2).toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm font-medium text-zinc-100 truncate">
-                      {sellerProfile?.username || 'Marketplace User'}
-                    </p>
-                    <p className="text-xs text-zinc-400">
-                      {formatMemberSince(sellerProfile?.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Seller Info Section - Fixed height */}
+              <div className="flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1 min-h-[3.5rem]">
+                {sellerId ? (
+                  <>
+                    <div className="shrink-0">
+                      {sellerProfile?.profilePicture && sellerProfile.profilePicture.trim().length > 0 && (sellerProfile.profilePicture.startsWith('http') || sellerProfile.profilePicture.startsWith('/uploads')) ? (
+                        <ProfilePicture
+                          src={sellerProfile.profilePicture}
+                          alt={sellerProfile?.username || 'Seller'}
+                          name={sellerProfile?.username}
+                          size="sm"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                          <span className="text-white text-xs font-semibold">
+                            {sellerProfile?.username?.slice(0, 2).toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-zinc-100 truncate">
+                        {sellerProfile?.username || 'Marketplace User'}
+                      </p>
+                      <p className="text-xs text-zinc-400">
+                        {formatMemberSince(sellerProfile?.createdAt)}
+                      </p>
+                    </div>
+                  </>
+                ) : null}
+              </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm min-h-[1.5rem]">
                 <span className="text-blue-400 font-semibold">
                   {formatPrice(price)}
                 </span>
@@ -356,8 +369,8 @@ function ListingCard({
                 ) : null}
               </div>
 
-              {/* Actions */}
-              <div className="mt-2 sm:mt-3">
+              {/* Actions - Fixed height */}
+              <div className="mt-auto pt-2 sm:pt-3">
                 {sold || inventory === 0 ? (
                   <div className="flex items-center justify-center rounded-xl sm:rounded-2xl border border-red-500/30 bg-red-500/10 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
                     <span className="text-sm sm:text-base font-semibold text-red-400">SOLD</span>
