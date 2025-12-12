@@ -117,7 +117,7 @@ function SearchContent() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="hidden sm:block p-2 hover:bg-white/10 rounded-lg transition-colors"
               title="Back to Home"
             >
               <ArrowLeft className="w-5 h-5 text-gray-400" />
@@ -125,21 +125,21 @@ function SearchContent() {
             
             <form onSubmit={handleSearch} className="flex-1">
               <div className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl overflow-hidden hover:border-accent-500/50 transition-all">
-                <div className="pl-4">
-                  <Search className="w-5 h-5 text-white" />
+                <div className="pl-3 sm:pl-4">
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
                 <input
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search for products..."
-                  className="flex-1 bg-transparent text-white placeholder-white/60 px-4 py-3 outline-none"
+                  className="flex-1 bg-transparent text-white placeholder-white/60 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base outline-none"
                   autoComplete="off"
                 />
                 <button
                   type="submit"
                   disabled={!searchInput.trim()}
-                  className="m-2 px-6 py-2 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all"
+                  className="m-1.5 sm:m-2 px-4 sm:px-6 py-1.5 sm:py-2 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm sm:text-base font-semibold rounded-lg transition-all"
                 >
                   Search
                 </button>
@@ -148,7 +148,7 @@ function SearchContent() {
 
             <Link
               href="/"
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="hidden sm:block p-2 hover:bg-white/10 rounded-lg transition-colors"
               title="Home"
             >
               <Home className="w-5 h-5 text-gray-400" />
@@ -159,19 +159,21 @@ function SearchContent() {
 
       {/* Search Header - Always render to prevent hydration mismatch */}
       <div className="relative py-6 border-b border-dark-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            {mounted && query ? `Search Results for "${query}"` : 'Search Results'}
-          </h1>
-          <p className="text-gray-400">
-            {!mounted || !query
-              ? 'Loading...'
-              : loading
-              ? 'Searching across marketplaces...'
-              : results
-              ? `Found ${(results.externalResults?.length || 0) + (results.internalResults?.length || 0)} results`
-              : 'No results found'}
-          </p>
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              {mounted && query ? `Search Results for "${query}"` : 'Search Results'}
+            </h1>
+            <p className="text-gray-400">
+              {!mounted || !query
+                ? 'Loading...'
+                : loading
+                ? 'Searching across marketplaces...'
+                : results
+                ? `Found ${(results.externalResults?.length || 0) + (results.internalResults?.length || 0)} results`
+                : 'No results found'}
+            </p>
+          </div>
         </div>
       </div>
 
