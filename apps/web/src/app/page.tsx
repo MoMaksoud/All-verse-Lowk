@@ -16,9 +16,9 @@ import { useOptimizedFetch } from '@/hooks/useOptimizedFetch';
 
 // Optimized imports - use dynamic imports for heavy components
 import ListingCard from '@/components/ListingCard';
-import { SearchBar } from '@/components/SearchBar';
 import { AIWidget } from '@/components/AIWidget';
 import { DynamicBackground } from '@/components/DynamicBackground';
+import { UniversalSearchHero } from '@/components/search/UniversalSearchHero';
 
 export default function HomePage() {
   const isHomeRoute = useRouteGuard();
@@ -96,32 +96,8 @@ export default function HomePage() {
       
       <Navigation />
       
-      {/* Hero Section */}
-      <section className="relative py-12 sm:py-16 md:py-20 lg:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="mb-6 sm:mb-8">
-              <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-accent-500/10 border border-accent-500/20 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 mb-4 sm:mb-6 backdrop-blur-sm text-xs sm:text-sm">
-                <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-accent-400" />
-                <span className="text-accent-400 font-medium">Powered by Advanced AI</span>
-                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-accent-400 animate-pulse" />
-              </div>
-              
-               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 text-gradient drop-shadow-lg px-2 break-words">
-                 Hi, Welcome to ALL VERSE GPT
-               </h1>
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 text-white max-w-3xl mx-auto drop-shadow-lg px-4" style={{textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'}}>
-                Your intelligent marketplace assistant. Ask our AI anything and get instant, smart responses that guide you to exactly what you need.
-              </p>
-            </div>
-            <div className="relative">
-              <Suspense fallback={<SkeletonSearchBar />}>
-                <SearchBar className="max-w-2xl mx-auto drop-shadow-lg" />
-              </Suspense>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Universal Search Hero Section */}
+      <UniversalSearchHero />
 
       {/* AI Action Cards */}
       <section className="py-12 sm:py-16">
