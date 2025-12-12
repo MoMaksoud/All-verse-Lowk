@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'AllVerse GPT | AI Platform to Find the Best Items Online',
+  title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
   description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
   keywords: ['AI', 'marketplace', 'GPT', 'buy', 'sell', 'intelligent'],
   authors: [{ name: 'All-Verse Team' }],
@@ -28,10 +28,10 @@ export const metadata: Metadata = {
   },
   // No themeColor - let status bar be transparent by default
   appleWebApp: {
-    title: 'AllVerse GPT',
+    title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
   },
   openGraph: {
-    title: 'AllVerse GPT | AI Platform to Find the Best Items Online',
+    title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
     description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
     url: 'https://allversegpt.com',
     siteName: 'AllVerse GPT',
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AllVerse GPT | AI Platform to Find the Best Items Online',
+    title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
     description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
     images: ['/logo.png'],
   },
