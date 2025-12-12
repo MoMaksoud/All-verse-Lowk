@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { ListingCard } from '@/components/listings/ListingCard';
+import { ProfilePicture } from '@/components/ProfilePicture';
 import { normalizeImageSrc } from '@/lib/image-utils';
 import { SimpleListing } from '@marketplace/types';
 
@@ -142,22 +143,12 @@ export default function UserProfilePage() {
               type="button"
               aria-label="View profile"
             >
-              <div className="w-20 h-20 overflow-hidden rounded-full bg-dark-700">
-                {profile.profilePicture ? (
-                  <Image
-                    src={normalizeImageSrc(profile.profilePicture)}
-                    alt={profile.username}
-                    width={80}
-                    height={80}
-                    className="object-cover rounded-full"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white text-2xl font-semibold">
-                    {profile.username.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
+              <ProfilePicture
+                src={profile.profilePicture}
+                alt={profile.username}
+                name={profile.username}
+                size="xl"
+              />
             </button>
 
             {/* Profile Info */}
