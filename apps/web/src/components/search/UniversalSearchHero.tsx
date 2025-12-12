@@ -30,7 +30,7 @@ export function UniversalSearchHero() {
               Find Anything, Anywhere
             </h1>
             <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 text-white max-w-3xl mx-auto drop-shadow-lg px-4" style={{textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'}}>
-              Search across Amazon, eBay, Etsy, and All Verse GPT marketplace with AI-powered insights
+              One search. Every marketplace. AI-powered insights that help you buy smarter.
             </p>
           </div>
 

@@ -71,7 +71,7 @@ function ProductCard({ result, hasPrice }: { result: ExternalResult; hasPrice: b
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 right-3">
           <span className="text-xs px-2 py-1 bg-black/60 backdrop-blur-sm text-white rounded-full border border-white/10">
             {result.source}
           </span>

@@ -14,6 +14,7 @@ interface InternalResult {
   category: string;
   condition: string;
   sellerId: string;
+  isMatched?: boolean;
 }
 
 interface InternalResultsSectionProps {
@@ -41,7 +42,11 @@ export function InternalResultsSection({ results, loading }: InternalResultsSect
               <Link
                 key={result.id}
                 href={`/listings/${result.id}`}
-                className="group bg-white/5 backdrop-blur-lg border border-white/10 hover:border-accent-500/50 rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-accent-500/10"
+                className={`group bg-white/5 backdrop-blur-lg rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] ${
+                  result.isMatched
+                    ? 'border-2 border-yellow-500/50 shadow-xl shadow-yellow-500/20 hover:border-yellow-500/70'
+                    : 'border border-white/10 hover:border-accent-500/50 hover:shadow-xl hover:shadow-accent-500/10'
+                }`}
               >
                 <div className="aspect-square bg-dark-900/50 overflow-hidden relative">
                   <Image
@@ -51,7 +56,12 @@ export function InternalResultsSection({ results, loading }: InternalResultsSect
                     unoptimized
                     className="object-cover w-full h-full rounded-xl transition-transform duration-300 group-hover:scale-105"
                   />
-                  <div className="absolute top-3 left-3">
+                  <div className="absolute top-3 right-3 flex flex-col gap-2">
+                    {result.isMatched && (
+                      <span className="text-xs px-2 py-1 bg-yellow-500/90 text-black font-bold rounded-full border border-yellow-400 shadow-lg animate-pulse">
+                        ⭐ BEST MATCH
+                      </span>
+                    )}
                     <span className="text-xs px-2 py-1 bg-green-500/20 text-green-200 rounded-full border border-green-500/30">
                       AVGPT
                     </span>
@@ -68,9 +78,16 @@ export function InternalResultsSection({ results, loading }: InternalResultsSect
                   </p>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-accent-400">
-                      ${result.price.toFixed(2)}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-lg font-bold text-accent-400">
+                        ${result.price.toFixed(2)}
+                      </span>
+                      {result.isMatched && (
+                        <span className="text-xs text-yellow-400 font-medium">
+                          Competitive Price
+                        </span>
+                      )}
+                    </div>
                     
                     <div className="flex items-center gap-2">
                       <button className="p-1.5 hover:bg-white/5 rounded-lg transition-colors" aria-label="Favorite">

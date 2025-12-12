@@ -214,14 +214,34 @@ function SearchContent() {
             />
           )}
 
-          {/* External Results */}
-          {results.externalResults && results.externalResults.length > 0 && (
-            <ExternalResultsSection results={results.externalResults} />
+          {/* Internal Results - AllVerse GPT Marketplace FIRST */}
+          {results.internalResults && results.internalResults.length > 0 && (
+            <div>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  AllVerse GPT Marketplace
+                </h2>
+                <p className="text-gray-400">
+                  From our community
+                </p>
+              </div>
+              <InternalResultsSection results={results.internalResults} />
+            </div>
           )}
 
-          {/* Internal Results */}
-          {results.internalResults && results.internalResults.length > 0 && (
-            <InternalResultsSection results={results.internalResults} />
+          {/* External Results - Other Marketplaces SECOND */}
+          {results.externalResults && results.externalResults.length > 0 && (
+            <div>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  From Other Marketplaces
+                </h2>
+                <p className="text-gray-400">
+                  Showing results from Amazon, eBay, Walmart, and more
+                </p>
+              </div>
+              <ExternalResultsSection results={results.externalResults} />
+            </div>
           )}
 
           {/* No Results State */}
