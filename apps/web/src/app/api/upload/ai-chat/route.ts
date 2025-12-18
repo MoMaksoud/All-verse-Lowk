@@ -8,33 +8,25 @@ export const dynamic = 'force-dynamic';
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
     const formData = await req.formData();
-    const file = formData.get('file');
+    const file = formData.get('file') as File | null;
     
     if (!file) {
       return NextResponse.json({ error: 'File is required' }, { status: 400 });
     }
 
-    // Log file type for debugging
-    console.log('📤 Upload file type:', typeof file, file instanceof File, file instanceof Blob);
-
-    // Handle React Native FormData format - type might be undefined
-    // Infer content type from filename or default to image/jpeg
+    // Handle file type - File objects from web, but React Native sends different format
     let contentType = 'image/jpeg';
     let fileName = 'photo.jpg';
     let fileSize = 0;
 
-    if (file instanceof File) {
+    // Check if it's a File object (web)
+    if (file && typeof file === 'object' && 'name' in file && 'size' in file && 'type' in file) {
       // Web File object
-      contentType = file.type || 'image/jpeg';
-      fileName = file.name || 'photo.jpg';
-      fileSize = file.size || 0;
-    } else if (file instanceof Blob) {
-      // Blob object (React Native)
-      contentType = file.type || 'image/jpeg';
-      fileSize = file.size || 0;
+      contentType = (file.type || 'image/jpeg').toString();
+      fileName = (file.name || 'photo.jpg').toString();
+      fileSize = Number(file.size || 0);
     } else {
-      // React Native FormData - file might be a string (URI) or object
-      // Try to get properties safely
+      // React Native FormData - file might be a plain object
       const fileObj = file as any;
       if (fileObj && typeof fileObj === 'object') {
         contentType = String(fileObj?.type || fileObj?.mimeType || 'image/jpeg');
