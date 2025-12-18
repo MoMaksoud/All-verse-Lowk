@@ -56,22 +56,28 @@ export default function ProfilePage() {
       // Send auth token to get current user's profile
       const response = await apiGet('/api/profile');
 
+      // 404 is expected for new users without a profile yet
       if (response.status === 404) {
         setProfile(null);
         return;
       }
 
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
+        console.error('Failed to fetch profile:', response.status);
+        setProfile(null);
+        return;
       }
 
       const result = await response.json();
       
       if (result.success) {
         setProfile(result.data);
+      } else {
+        setProfile(null);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      // Only log unexpected errors (not 404s)
+      console.error('Unexpected error fetching profile:', error);
       setProfile(null);
     } finally {
       setLoading(false);
