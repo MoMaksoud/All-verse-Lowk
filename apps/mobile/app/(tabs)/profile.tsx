@@ -91,36 +91,43 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = async () => {
-    console.log('Sign out button pressed');
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Cancel', 
+          style: 'cancel' 
+        },
         {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('Starting sign out process...');
+              // Clear local state first
+              setProfile(null);
+              setListings([]);
+              
+              // Sign out from Firebase
               const { error } = await signOut();
-              console.log('Sign out result:', { error });
               
               if (error) {
                 console.error('Sign out failed:', error);
                 Alert.alert('Error', 'Failed to sign out. Please try again.');
-              } else {
-                console.log('Sign out successful, clearing state...');
-                // Clear local state
-                setProfile(null);
-                setListings([]);
-                // Navigate to sign in
-                console.log('Navigating to sign in...');
-                router.replace('/auth/signin');
+                return;
               }
-            } catch (error) {
+              
+              // Navigate to sign in screen
+              // Use replace to prevent going back
+              router.replace('/auth/signin');
+            } catch (error: any) {
               console.error('Sign out error:', error);
-              Alert.alert('Error', 'An unexpected error occurred while signing out.');
+              // Even if there's an error, try to navigate to sign in
+              try {
+                router.replace('/auth/signin');
+              } catch (navError) {
+                Alert.alert('Error', 'An unexpected error occurred. Please restart the app.');
+              }
             }
           },
         },
