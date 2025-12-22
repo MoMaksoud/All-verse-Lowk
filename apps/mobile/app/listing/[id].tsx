@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -47,6 +47,7 @@ export default function ListingDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const imageScrollViewRef = useRef<any>(null);
 
   useEffect(() => {
     if (id) {
@@ -166,27 +167,65 @@ export default function ListingDetailScreen() {
       <ScrollView style={styles.scrollView}>
         {/* Image Gallery */}
         <View style={styles.imageContainer}>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={(event) => {
-              const index = Math.round(event.nativeEvent.contentOffset.x / width);
-              setCurrentImageIndex(index);
-            }}
-            scrollEventThrottle={16}
-          >
-            {(listing.photos && listing.photos.length > 0 ? listing.photos : [null]).map(
-              (photo, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: normalizeImageUrl(photo) }}
-                  style={styles.image}
-                  resizeMode="cover"
-                />
-              )
+          <View style={styles.imageWrapper}>
+            <ScrollView
+              ref={imageScrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={(event) => {
+                const index = Math.round(event.nativeEvent.contentOffset.x / (width - 40));
+                setCurrentImageIndex(index);
+              }}
+              scrollEventThrottle={16}
+            >
+              {(listing.photos && listing.photos.length > 0 ? listing.photos : [null]).map(
+                (photo, index) => (
+                  <Image
+                    key={index}
+                    source={{ uri: normalizeImageUrl(photo) }}
+                    style={styles.image}
+                    resizeMode="cover"
+                  />
+                )
+              )}
+            </ScrollView>
+            
+            {/* Navigation Arrows - Only show if multiple images */}
+            {listing.photos && listing.photos.length > 1 && (
+              <>
+                {currentImageIndex > 0 && (
+                  <TouchableOpacity
+                    style={[styles.navArrow, styles.navArrowLeft]}
+                    onPress={() => {
+                      const newIndex = currentImageIndex - 1;
+                      imageScrollViewRef.current?.scrollTo({
+                        x: newIndex * (width - 40),
+                        animated: true,
+                      });
+                    }}
+                  >
+                    <Ionicons name="chevron-back" size={24} color="#fff" />
+                  </TouchableOpacity>
+                )}
+                {currentImageIndex < listing.photos.length - 1 && (
+                  <TouchableOpacity
+                    style={[styles.navArrow, styles.navArrowRight]}
+                    onPress={() => {
+                      const newIndex = currentImageIndex + 1;
+                      imageScrollViewRef.current?.scrollTo({
+                        x: newIndex * (width - 40),
+                        animated: true,
+                      });
+                    }}
+                  >
+                    <Ionicons name="chevron-forward" size={24} color="#fff" />
+                  </TouchableOpacity>
+                )}
+              </>
             )}
-          </ScrollView>
+          </View>
+          
           {listing.photos && listing.photos.length > 1 && (
             <View style={styles.pagination}>
               {listing.photos.map((_, index) => (
@@ -312,11 +351,37 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  imageWrapper: {
+    position: 'relative',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   image: {
-    width: width,
-    height: width * 0.85,
+    width: width - 40,
+    height: (width - 40) * 0.85,
     backgroundColor: '#0E1526',
+  },
+  navArrow: {
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -20 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  navArrowLeft: {
+    left: 10,
+  },
+  navArrowRight: {
+    right: 10,
   },
   pagination: {
     position: 'absolute',

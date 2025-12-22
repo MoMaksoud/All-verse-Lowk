@@ -70,8 +70,9 @@ export default function SellScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      // Use MediaTypeOptions for compatibility (deprecated but still works)
-      // TODO: Update to MediaType when expo-image-picker is updated
+      // Note: MediaTypeOptions is deprecated but MediaType is not available in expo-image-picker ~17.0.10
+      // Using MediaTypeOptions is the correct API for this version
+      // @ts-ignore - MediaTypeOptions is deprecated but still the correct API for this version
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
       quality: 0.8,
@@ -96,44 +97,122 @@ export default function SellScreen() {
 
     try {
       setAiAnalyzing(true);
+      console.log('🔵 [AI Analysis] Starting analysis with', photos.length, 'photos');
       
       // Upload photos first using ai-chat endpoint (temporary uploads for AI analysis)
       const uploadedUrls: string[] = [];
-      for (const photoUri of photos) {
-        const formData = new FormData();
-        formData.append('file', {
-          uri: photoUri,
-          type: 'image/jpeg',
-          name: 'photo.jpg',
-        } as any);
+      for (let i = 0; i < photos.length; i++) {
+        const photoUri = photos[i];
+        try {
+          console.log(`🔵 [AI Analysis] Uploading photo ${i + 1}/${photos.length}:`, photoUri);
+          
+          // Convert React Native file URI to Blob for web API compatibility
+          console.log('🔵 [AI Analysis] Fetching photo URI to convert to blob...');
+          const response = await fetch(photoUri);
+          console.log('🔵 [AI Analysis] Fetch response status:', response.status, response.ok);
+          
+          if (!response.ok) {
+            console.error('❌ [AI Analysis] Failed to fetch photo URI:', response.status, response.statusText);
+            continue;
+          }
+          
+          const blob = await response.blob();
+          console.log('🔵 [AI Analysis] Blob created, size:', blob.size, 'type:', blob.type);
+          
+          const formData = new FormData();
+          // Create a File-like object that web API can handle
+          formData.append('file', blob, 'photo.jpg');
+          console.log('🔵 [AI Analysis] FormData created, posting to /api/upload/ai-chat...');
 
-        const uploadResponse = await apiClient.post('/api/upload/ai-chat', formData, true);
-        if (uploadResponse.ok) {
-          const uploadData = await uploadResponse.json();
-          uploadedUrls.push(uploadData.url);
-        } else {
-          const errorData = await uploadResponse.json().catch(() => ({}));
-          console.error('Upload failed:', errorData);
+          const uploadResponse = await apiClient.post('/api/upload/ai-chat', formData, true);
+          console.log('🔵 [AI Analysis] Upload response status:', uploadResponse.status, uploadResponse.ok);
+          
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json();
+            console.log('✅ [AI Analysis] Upload successful:', uploadData);
+            if (uploadData.url) {
+              uploadedUrls.push(uploadData.url);
+              console.log('✅ [AI Analysis] Added URL to list:', uploadData.url);
+            } else {
+              console.warn('⚠️ [AI Analysis] Upload response missing URL:', uploadData);
+            }
+          } else {
+            const errorText = await uploadResponse.text();
+            console.error('❌ [AI Analysis] Upload failed:', {
+              status: uploadResponse.status,
+              statusText: uploadResponse.statusText,
+              body: errorText,
+            });
+            try {
+              const errorData = JSON.parse(errorText);
+              console.error('❌ [AI Analysis] Upload error details:', errorData);
+            } catch (e) {
+              console.error('❌ [AI Analysis] Could not parse error response as JSON');
+            }
+          }
+        } catch (uploadError: any) {
+          console.error('❌ [AI Analysis] Error converting/uploading file:', {
+            error: uploadError,
+            message: uploadError?.message,
+            stack: uploadError?.stack,
+            photoIndex: i,
+            photoUri: photoUri,
+          });
         }
       }
       
+      console.log('🔵 [AI Analysis] Upload complete. Uploaded URLs:', uploadedUrls);
+      console.log('🔵 [AI Analysis] Total uploaded:', uploadedUrls.length, 'out of', photos.length);
+      
       if (uploadedUrls.length === 0) {
-        throw new Error('Failed to upload photos');
+        const errorMsg = 'Failed to upload photos. Check console for details.';
+        console.error('❌ [AI Analysis]', errorMsg);
+        throw new Error(errorMsg);
       }
 
       // Call AI analysis
-      const response = await apiClient.post('/api/ai/analyze-product', {
+      const analysisPayload = {
         imageUrls: uploadedUrls,
-      }, true);
+      };
+      console.log('🔵 [AI Analysis] Calling /api/ai/analyze-product with payload:', {
+        ...analysisPayload,
+        imageUrls: uploadedUrls.length + ' URLs',
+      });
+      
+      const response = await apiClient.post('/api/ai/analyze-product', analysisPayload, true);
+      console.log('🔵 [AI Analysis] Analysis response status:', response.status, response.ok);
+      console.log('🔵 [AI Analysis] Analysis response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.ok) {
-        const result = await response.json();
+        const responseText = await response.text();
+        console.log('🔵 [AI Analysis] Analysis response body (raw):', responseText);
+        
+        let result;
+        try {
+          result = JSON.parse(responseText);
+          console.log('✅ [AI Analysis] Analysis response parsed:', result);
+        } catch (parseError) {
+          console.error('❌ [AI Analysis] Failed to parse response as JSON:', parseError);
+          throw new Error('Invalid JSON response from AI analysis');
+        }
+        
         // Handle both response formats: { analysis } or { success, analysis }
         const analysis = result.analysis || result;
+        console.log('🔵 [AI Analysis] Extracted analysis:', analysis);
         
         if (!analysis) {
+          console.error('❌ [AI Analysis] No analysis data in response:', result);
           throw new Error('No analysis data received');
         }
+        
+        console.log('✅ [AI Analysis] Analysis successful:', {
+          hasTitle: !!analysis.title,
+          hasDescription: !!analysis.description,
+          hasCategory: !!analysis.category,
+          hasCondition: !!analysis.condition,
+          hasPrice: !!analysis.suggestedPrice,
+          missingInfo: analysis.missingInfo?.length || 0,
+        });
         
         setAiAnalysis(analysis);
         setTitle(analysis.title || '');
@@ -144,22 +223,44 @@ export default function SellScreen() {
 
         // Check for missing info
         if (analysis.missingInfo && analysis.missingInfo.length > 0) {
+          console.log('🔵 [AI Analysis] Missing info detected, going to questions step');
           const questions = convertMissingInfoToQuestions(analysis.missingInfo);
           setMissingInfoQuestions(questions);
           setCurrentQuestionIndex(0);
           setCurrentStep(3); // Go to questions step
         } else {
+          console.log('🔵 [AI Analysis] No missing info, going to review step');
           setCurrentStep(4); // Go to review step
         }
       } else {
-        throw new Error('AI analysis failed');
+        const errorText = await response.text();
+        console.error('❌ [AI Analysis] Analysis request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        try {
+          const errorData = JSON.parse(errorText);
+          console.error('❌ [AI Analysis] Error details:', errorData);
+          throw new Error(errorData.message || errorData.error || `AI analysis failed (${response.status})`);
+        } catch (parseError) {
+          throw new Error(`AI analysis failed: ${response.status} ${response.statusText}`);
+        }
       }
-    } catch (error) {
-      console.error('Error analyzing with AI:', error);
-      Alert.alert('Error', 'AI analysis failed. You can still fill in details manually.');
+    } catch (error: any) {
+      console.error('❌ [AI Analysis] Error analyzing with AI:', {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+      });
+      
+      const errorMessage = error?.message || 'AI analysis failed. You can still fill in details manually.';
+      Alert.alert('Error', errorMessage);
       setCurrentStep(4); // Allow manual editing
     } finally {
       setAiAnalyzing(false);
+      console.log('🔵 [AI Analysis] Analysis process completed');
     }
   };
 
@@ -319,20 +420,24 @@ export default function SellScreen() {
       // Note: These will be moved to listing-photos endpoint after listing is created
       const uploadedUrls: string[] = [];
       for (const photoUri of photos) {
-        const formData = new FormData();
-        formData.append('file', {
-          uri: photoUri,
-          type: 'image/jpeg',
-          name: 'photo.jpg',
-        } as any);
+        try {
+          // Convert React Native file URI to Blob for web API compatibility
+          const response = await fetch(photoUri);
+          const blob = await response.blob();
+          
+          const formData = new FormData();
+          formData.append('file', blob, 'photo.jpg');
 
-        const uploadResponse = await apiClient.post('/api/upload/ai-chat', formData, true);
-        if (uploadResponse.ok) {
-          const uploadData = await uploadResponse.json();
-          uploadedUrls.push(uploadData.url);
-        } else {
-          const errorData = await uploadResponse.json().catch(() => ({}));
-          console.error('Upload failed:', errorData);
+          const uploadResponse = await apiClient.post('/api/upload/ai-chat', formData, true);
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json();
+            uploadedUrls.push(uploadData.url);
+          } else {
+            const errorData = await uploadResponse.json().catch(() => ({}));
+            console.error('Upload failed:', errorData);
+          }
+        } catch (uploadError) {
+          console.error('Error converting/uploading file:', uploadError);
         }
       }
       
@@ -354,6 +459,7 @@ export default function SellScreen() {
       }, true);
 
       if (response.ok) {
+        const listingData = await response.json();
         Alert.alert('Success', 'Listing created successfully!', [
           {
             text: 'OK',
@@ -366,7 +472,8 @@ export default function SellScreen() {
               setCategory('');
               setCondition('');
               setCurrentStep(1);
-              router.push('/(tabs)/profile');
+              // Redirect to marketplace (home/search page)
+              router.replace('/(tabs)/search');
             },
           },
         ]);
@@ -408,28 +515,51 @@ export default function SellScreen() {
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Upload Your Item Photos</Text>
-            <Text style={styles.stepSubtitle}>Take or select photos of your item</Text>
+            <Text style={styles.stepSubtitle}>
+              Take or select photos of your item. You can upload up to 10 photos.
+            </Text>
 
             <View style={styles.photosContainer}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {photos.map((photo, index) => (
-                  <View key={index} style={styles.photoWrapper}>
-                    <Image source={{ uri: photo }} style={styles.photo} />
-                    <TouchableOpacity
-                      style={styles.removePhotoButton}
-                      onPress={() => removePhoto(index)}
-                    >
-                      <Ionicons name="close-circle" size={24} color="#ef4444" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                {photos.length < 10 && (
-                  <TouchableOpacity style={styles.addPhotoButton} onPress={pickImages}>
-                    <Ionicons name="camera-outline" size={32} color="rgba(255, 255, 255, 0.6)" />
-                    <Text style={styles.addPhotoText}>Add Photo</Text>
+              {photos.length === 0 ? (
+                <View style={styles.centerPhotoContainer}>
+                  <TouchableOpacity style={styles.addPhotoButtonLarge} onPress={pickImages}>
+                    <Ionicons name="camera-outline" size={48} color="rgba(96, 165, 250, 0.8)" />
+                    <Text style={styles.addPhotoTextLarge}>Tap to Upload</Text>
+                    <Text style={styles.addPhotoSubtext}>or select from gallery</Text>
                   </TouchableOpacity>
-                )}
-              </ScrollView>
+                  <View style={styles.uploadInfo}>
+                    <Text style={styles.uploadInfoText}>
+                      Supported formats: PNG, JPG, WebP
+                    </Text>
+                    <Text style={styles.uploadInfoText}>
+                      Maximum file size: 10MB per photo
+                    </Text>
+                    <Text style={styles.uploadInfoText}>
+                      Up to 10 photos allowed
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {photos.map((photo, index) => (
+                    <View key={index} style={styles.photoWrapper}>
+                      <Image source={{ uri: photo }} style={styles.photo} />
+                      <TouchableOpacity
+                        style={styles.removePhotoButton}
+                        onPress={() => removePhoto(index)}
+                      >
+                        <Ionicons name="close-circle" size={24} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {photos.length < 10 && (
+                    <TouchableOpacity style={styles.addPhotoButton} onPress={pickImages}>
+                      <Ionicons name="camera-outline" size={32} color="rgba(255, 255, 255, 0.6)" />
+                      <Text style={styles.addPhotoText}>Add Photo</Text>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+              )}
             </View>
 
             <TouchableOpacity
@@ -446,6 +576,15 @@ export default function SellScreen() {
       case 2: // AI Analysis
         return (
           <View style={styles.stepContent}>
+            {currentStep > 1 && (
+              <TouchableOpacity
+                style={styles.stepBackButton}
+                onPress={() => setCurrentStep(currentStep - 1)}
+              >
+                <Ionicons name="chevron-back" size={20} color="#60a5fa" />
+                <Text style={styles.stepBackButtonText}>Back</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.iconContainer}>
               <Ionicons name="bulb-outline" size={48} color="#60a5fa" />
             </View>
@@ -482,6 +621,22 @@ export default function SellScreen() {
 
         return (
           <View style={styles.stepContent}>
+            {currentStep > 1 && (
+              <TouchableOpacity
+                style={styles.stepBackButton}
+                onPress={() => {
+                  if (currentQuestionIndex > 0) {
+                    setCurrentQuestionIndex(currentQuestionIndex - 1);
+                    setCurrentAnswer(userAnswers[missingInfoQuestions[currentQuestionIndex - 1].field] || '');
+                  } else {
+                    setCurrentStep(2);
+                  }
+                }}
+              >
+                <Ionicons name="chevron-back" size={20} color="#60a5fa" />
+                <Text style={styles.stepBackButtonText}>Back</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.questionHeader}>
               <Ionicons name="chatbubbles-outline" size={32} color="#60a5fa" />
               <Text style={styles.questionProgress}>
@@ -554,6 +709,23 @@ export default function SellScreen() {
       case 4: // Review & Edit
         return (
           <ScrollView style={styles.stepContent}>
+            {currentStep > 1 && (
+              <TouchableOpacity
+                style={styles.stepBackButton}
+                onPress={() => {
+                  // Go back to previous step (either step 3 if questions exist, or step 2)
+                  if (missingInfoQuestions.length > 0) {
+                    setCurrentStep(3);
+                    setCurrentQuestionIndex(missingInfoQuestions.length - 1);
+                  } else {
+                    setCurrentStep(2);
+                  }
+                }}
+              >
+                <Ionicons name="chevron-back" size={20} color="#60a5fa" />
+                <Text style={styles.stepBackButtonText}>Back</Text>
+              </TouchableOpacity>
+            )}
             <Text style={styles.stepTitle}>Review & Edit</Text>
             <Text style={styles.stepSubtitle}>Review the details and make any adjustments</Text>
 
@@ -677,39 +849,27 @@ export default function SellScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Enhanced Header with Logo */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../assets/icon.png')} 
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>Sell Your Item</Text>
-            <Text style={styles.subtitle}>Upload a photo and let AI do the work</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Card moved to top */}
+        <View style={styles.headerCard}>
+          <View style={styles.headerContent}>
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../../assets/icon.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.title}>Sell Your Item</Text>
+              <Text style={styles.subtitle}>Upload a photo and let AI do the work</Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
         {renderStepContent()}
       </ScrollView>
 
-      {/* Navigation Buttons */}
-      {currentStep > 1 && currentStep !== 3 && (
-        <View style={styles.navigationButtons}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => setCurrentStep(currentStep - 1)}
-          >
-            <Ionicons name="arrow-back" size={20} color="rgba(255, 255, 255, 0.7)" />
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -717,104 +877,162 @@ export default function SellScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#0f1b2e',
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 0,
     paddingBottom: 40,
   },
-  header: {
+  headerCard: {
     backgroundColor: '#0B1220',
-    paddingTop: 12,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(96, 165, 250, 0.2)',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 20,
+    marginBottom: 32,
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.3)',
+    shadowColor: '#60a5fa',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
   logoContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(96, 165, 250, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.3)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(96, 165, 250, 0.4)',
   },
   logo: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
   },
   headerText: {
     flex: 1,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  stepContent: {
-    gap: 20,
-  },
-  stepTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    textAlign: 'center',
+    marginBottom: 6,
+    letterSpacing: 0.3,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 20,
+  },
+  stepContent: {
+    gap: 24,
+  },
+  stepTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'left',
+    marginBottom: 8,
   },
   stepSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
-    textAlign: 'center',
-    marginBottom: 12,
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'left',
+    marginBottom: 24,
+    lineHeight: 22,
   },
   iconContainer: {
     alignItems: 'center',
     marginBottom: 12,
   },
   photosContainer: {
-    marginVertical: 20,
+    marginVertical: 8,
+  },
+  centerPhotoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: 20,
   },
   photoWrapper: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: 16,
   },
   photo: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
+    width: 140,
+    height: 140,
+    borderRadius: 16,
     backgroundColor: '#0B1220',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   removePhotoButton: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: -6,
+    right: -6,
+    backgroundColor: '#0f1b2e',
+    borderRadius: 12,
+    padding: 2,
   },
   addPhotoButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
+    width: 140,
+    height: 140,
+    borderRadius: 16,
     backgroundColor: '#0B1220',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(96, 165, 250, 0.3)',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
+  },
+  addPhotoButtonLarge: {
+    width: 200,
+    height: 200,
+    borderRadius: 20,
+    backgroundColor: '#0B1220',
+    borderWidth: 2.5,
+    borderColor: 'rgba(96, 165, 250, 0.4)',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 24,
   },
   addPhotoText: {
-    fontSize: 12,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+  },
+  addPhotoTextLarge: {
+    fontSize: 18,
+    color: '#60a5fa',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  addPhotoSubtext: {
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '400',
+  },
+  uploadInfo: {
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  uploadInfoText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
   },
   analyzingContainer: {
     alignItems: 'center',
@@ -835,21 +1053,28 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#60a5fa',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 18,
     paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
+    shadowColor: '#60a5fa',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
   buttonDisabled: {
     opacity: 0.6,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    shadowOpacity: 0,
   },
   secondaryButton: {
     backgroundColor: 'transparent',
@@ -962,21 +1187,19 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: '#fff',
   },
-  navigationButtons: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  backButton: {
+  stepBackButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
-  backButtonText: {
+  stepBackButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#60a5fa',
+    marginLeft: 4,
   },
   emptyState: {
     flex: 1,

@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../../lib/api/client';
 import ListingCard from '../../components/ListingCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -46,23 +47,118 @@ interface ExternalListing {
   reviewsCount?: number;
 }
 
+interface Listing {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  condition?: string;
+  photos?: string[];
+  sellerId?: string;
+  sold?: boolean;
+  inventory?: number;
+}
+
+const RECENT_SEARCHES_KEY = 'recent_searches';
+const MAX_RECENT_SEARCHES = 5;
+
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ q?: string }>();
   const [searchQuery, setSearchQuery] = useState(params.q || '');
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
 
   useEffect(() => {
+    loadRecentSearches();
     if (params.q) {
       performSearch(params.q);
+    } else {
+      fetchListings();
     }
   }, [params.q]);
+
+  useEffect(() => {
+    if (searchQuery.length === 0) {
+      setShowRecentSearches(true);
+    } else {
+      setShowRecentSearches(false);
+    }
+  }, [searchQuery]);
+
+  const loadRecentSearches = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
+      if (stored) {
+        setRecentSearches(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading recent searches:', error);
+    }
+  };
+
+  const saveRecentSearch = async (query: string) => {
+    if (!query.trim()) return;
+    
+    try {
+      const stored = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
+      let searches: string[] = stored ? JSON.parse(stored) : [];
+      
+      // Remove if already exists
+      searches = searches.filter(s => s.toLowerCase() !== query.toLowerCase());
+      
+      // Add to beginning
+      searches.unshift(query);
+      
+      // Limit to MAX_RECENT_SEARCHES
+      searches = searches.slice(0, MAX_RECENT_SEARCHES);
+      
+      await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+      setRecentSearches(searches);
+    } catch (error) {
+      console.error('Error saving recent search:', error);
+    }
+  };
+
+  const clearRecentSearches = async () => {
+    try {
+      await AsyncStorage.removeItem(RECENT_SEARCHES_KEY);
+      setRecentSearches([]);
+    } catch (error) {
+      console.error('Error clearing recent searches:', error);
+    }
+  };
+
+  const fetchListings = async () => {
+    try {
+      setListingsLoading(true);
+      const response = await apiClient.get('/api/listings');
+      const data = await response.json();
+      
+      if (response.ok && data.data && Array.isArray(data.data)) {
+        setListings(data.data);
+      } else if (response.ok && data.data?.items) {
+        setListings(data.data.items);
+      }
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+    } finally {
+      setListingsLoading(false);
+    }
+  };
 
   const performSearch = async (query: string) => {
     if (!query.trim()) return;
 
     try {
       setLoading(true);
+      setResults(null);
+      await saveRecentSearch(query);
+      
       const response = await apiClient.get(
         `/api/universal-search?q=${encodeURIComponent(query)}`
       );
@@ -86,12 +182,19 @@ export default function SearchScreen() {
   const handleSearch = () => {
     if (searchQuery.trim()) {
       performSearch(searchQuery);
+      setShowRecentSearches(false);
     }
+  };
+
+  const handleRecentSearchPress = (query: string) => {
+    setSearchQuery(query);
+    performSearch(query);
+    setShowRecentSearches(false);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Search Bar */}
+      {/* Search Bar at top */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.5)" />
@@ -104,13 +207,49 @@ export default function SearchScreen() {
             onSubmitEditing={handleSearch}
             returnKeyType="search"
             autoFocus
+            onFocus={() => setShowRecentSearches(true)}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity onPress={() => {
+              setSearchQuery('');
+              setShowRecentSearches(true);
+            }}>
               <Ionicons name="close-circle" size={20} color="rgba(255, 255, 255, 0.5)" />
             </TouchableOpacity>
           )}
         </View>
+        
+        {/* Recent Searches */}
+        {showRecentSearches && recentSearches.length > 0 && (
+          <View style={styles.recentSearchesContainer}>
+            <View style={styles.recentSearchesHeader}>
+              <Text style={styles.recentSearchesTitle}>Recent Searches</Text>
+              <TouchableOpacity onPress={clearRecentSearches}>
+                <Text style={styles.clearButton}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+            {recentSearches.map((search, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.recentSearchItem}
+                onPress={() => handleRecentSearchPress(search)}
+              >
+                <Ionicons name="time-outline" size={18} color="rgba(255, 255, 255, 0.6)" />
+                <Text style={styles.recentSearchText}>{search}</Text>
+                <TouchableOpacity
+                  onPress={async () => {
+                    const updated = recentSearches.filter((_, i) => i !== index);
+                    await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+                    setRecentSearches(updated);
+                  }}
+                  style={styles.removeButton}
+                >
+                  <Ionicons name="close" size={16} color="rgba(255, 255, 255, 0.5)" />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {loading ? (
@@ -219,13 +358,49 @@ export default function SearchScreen() {
             )}
         </ScrollView>
       ) : (
-        <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
-          <Text style={styles.emptyText}>Search across all marketplaces</Text>
-          <Text style={styles.emptySubtext}>
-            One search. Every marketplace. AI-powered insights.
-          </Text>
-        </View>
+        <ScrollView style={styles.results}>
+          {listingsLoading ? (
+            <LoadingSpinner message="Loading listings..." />
+          ) : listings.length > 0 ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>AllVerse GPT Marketplace</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>AVGPT</Text>
+                </View>
+              </View>
+              <Text style={styles.sectionSubtitle}>
+                {listings.length} listing{listings.length !== 1 ? 's' : ''} available
+              </Text>
+              <View style={styles.listingsGrid}>
+                {listings.map((listing) => (
+                  <ListingCard
+                    key={listing.id}
+                    id={listing.id}
+                    title={listing.title}
+                    description={listing.description}
+                    price={listing.price}
+                    category={listing.category}
+                    condition={listing.condition}
+                    imageUrl={listing.photos?.[0]}
+                    sellerId={listing.sellerId}
+                    sold={listing.sold}
+                    inventory={listing.inventory}
+                    variant="grid"
+                  />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+              <Text style={styles.emptyText}>Search across all marketplaces</Text>
+              <Text style={styles.emptySubtext}>
+                One search. Every marketplace. AI-powered insights.
+              </Text>
+            </View>
+          )}
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -234,13 +409,57 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#0f1b2e',
   },
   searchContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    position: 'relative',
+    zIndex: 10,
+  },
+  recentSearchesContainer: {
+    marginTop: 12,
+    backgroundColor: '#0B1220',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
+    maxHeight: 300,
+  },
+  recentSearchesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  recentSearchesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  clearButton: {
+    fontSize: 13,
+    color: '#60a5fa',
+    fontWeight: '600',
+  },
+  recentSearchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  recentSearchText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#fff',
+    marginLeft: 10,
+  },
+  removeButton: {
+    padding: 4,
   },
   searchBar: {
     flexDirection: 'row',

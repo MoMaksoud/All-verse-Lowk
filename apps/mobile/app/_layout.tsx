@@ -36,6 +36,8 @@ export default function RootLayout() {
           options={{ 
             title: 'Listing Details',
             headerShown: true,
+            headerBackTitle: 'Home',
+            headerBackTitleVisible: true,
           }} 
         />
         <Stack.Screen 

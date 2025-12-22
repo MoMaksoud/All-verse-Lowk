@@ -8,14 +8,16 @@ import {
   TouchableOpacity,
   TextInput,
   Dimensions,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { Image } from 'expo-image';
 import { apiClient } from '../../lib/api/client';
 import ListingCard from '../../components/ListingCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
+
+const logoSource = require('../../assets/icon.png');
 
 const { width } = Dimensions.get('window');
 
@@ -97,6 +99,18 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        {/* Header - Now part of scrollable content */}
+        <View style={styles.scrollableHeader}>
+          <View style={styles.headerContent}>
+            <Image 
+              source={logoSource} 
+              style={styles.headerLogo}
+              contentFit="contain"
+            />
+            <Text style={styles.headerTitle}>ALL VERSE GPT</Text>
+          </View>
+        </View>
+
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.badge}>
@@ -257,7 +271,7 @@ export default function HomeScreen() {
               <Image 
                 source={require('../../assets/icon.png')} 
                 style={styles.ctaLogo}
-                resizeMode="contain"
+                contentFit="contain"
               />
             </View>
             <Text style={styles.ctaTitle}>Ready to Start Selling?</Text>
@@ -281,16 +295,38 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#0f1b2e',
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 10,
+    paddingTop: 10,
+  },
+  scrollableHeader: {
+    paddingTop: 20,
+    paddingBottom: 8,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerLogo: {
+    width: 28,
+    height: 28,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 0.5,
   },
   logoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 16,
+    paddingTop: 0,
     paddingBottom: 8,
     paddingHorizontal: 20,
     gap: 8,
@@ -307,8 +343,8 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 32,
+    paddingTop: 8,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   badge: {

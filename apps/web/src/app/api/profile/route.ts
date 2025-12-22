@@ -43,9 +43,9 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
       );
     }
     
-    // If user is not found, create placeholder user doc and return 404 (expected behavior)
+    // If user is not found, create placeholder user doc and return 200 with null (expected behavior)
     if (!profile) {
-      // Silently handle - 404 is expected for users without profiles
+      // Silently handle - missing profile is a valid state, not an error
       // Ensure user document exists in users collection with default avatar
       try {
         const userDocRef = doc(db, 'users', userId);
@@ -60,13 +60,11 @@ export const GET = withApi(async (request: NextRequest & { userId?: string }) =>
         // Silent fail - this is not critical
       }
       
-      return NextResponse.json(
-        { 
-          error: 'Profile not found',
-          userId: userId
-        },
-        { status: 404 }
-      );
+      // Return 200 with null data instead of 404 - missing profile is a valid state
+      return NextResponse.json({
+        success: true,
+        data: null
+      }, { status: 200 });
     }
 
     // Serialize Firestore Timestamps to ISO strings

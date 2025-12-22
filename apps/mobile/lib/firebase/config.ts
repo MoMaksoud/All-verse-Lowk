@@ -1,88 +1,80 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Firebase configuration
-// These should match your web app's Firebase config
+// Import auth functions separately to avoid initialization issues
+import { 
+  getAuth,
+  initializeAuth,
+  browserLocalPersistence,
+  Auth,
+  getReactNativePersistence,
+} from 'firebase/auth';
+
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 
-    (process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ? 
-      `${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com` : 
-      undefined),
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Validate Firebase configuration
-const isFirebaseConfigured = () => {
-  const required = [
-    firebaseConfig.apiKey,
-    firebaseConfig.projectId,
-    firebaseConfig.authDomain,
-    firebaseConfig.appId,
-  ];
-  
-  const missing = [];
-  if (!firebaseConfig.apiKey) missing.push('EXPO_PUBLIC_FIREBASE_API_KEY');
-  if (!firebaseConfig.projectId) missing.push('EXPO_PUBLIC_FIREBASE_PROJECT_ID');
-  if (!firebaseConfig.authDomain) missing.push('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN');
-  if (!firebaseConfig.appId) missing.push('EXPO_PUBLIC_FIREBASE_APP_ID');
-  
-  if (missing.length > 0) {
-    console.error('❌ Missing Firebase environment variables:', missing.join(', '));
-    console.error('💡 Run: cd apps/mobile && node scripts/convert-env.js');
-    return false;
-  }
-  
-  return true;
-};
+console.log('🔵 Firebase: Initializing app...');
+console.log('🔵 Platform:', Platform.OS);
 
-// Initialize Firebase
-let app;
-let auth;
-let db;
-let storage;
-
-try {
-  // Check if app is already initialized
-  if (getApps().length === 0) {
-    // Validate configuration before initializing
-    if (!isFirebaseConfigured()) {
-      throw new Error('Firebase configuration is incomplete. Please check your environment variables.');
-    }
-    
-    console.log('🔥 Initializing Firebase for React Native...');
-    app = initializeApp(firebaseConfig);
-    
-    // Initialize Auth - React Native uses AsyncStorage by default
-    auth = getAuth(app);
-    
-    db = getFirestore(app);
-    storage = getStorage(app);
-    
-    console.log('✅ Firebase initialized successfully');
-  } else {
-    // Use existing app
-    app = getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
-    storage = getStorage(app);
-    console.log('✅ Using existing Firebase app');
-  }
-} catch (error: any) {
-  console.error('❌ Firebase initialization failed:', error);
-  if (error?.code === 'auth/invalid-api-key') {
-    console.error('💡 Your Firebase API key is invalid or missing.');
-    console.error('💡 Make sure you have run: cd apps/mobile && node scripts/convert-env.js');
-  }
-  throw error;
+// Initialize Firebase App
+let app: FirebaseApp;
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+  console.log('🔵 Firebase: App initialized');
+} else {
+  app = getApp();
+  console.log('🔵 Firebase: Using existing app');
 }
 
-export { auth, db, storage };
-export default app;
+// Initialize Auth - React Native requires special handling
+let auth: Auth;
 
+if (Platform.OS === 'web') {
+  // Web: simple initialization
+  console.log('🔵 Firebase: Initializing auth for web...');
+  try {
+    auth = initializeAuth(app, {
+      persistence: browserLocalPersistence,
+    });
+    console.log('🔵 Firebase: Web auth initialized');
+  } catch (error: any) {
+    if (error?.code === 'auth/already-initialized') {
+      console.log('🔵 Firebase: Auth already initialized, getting instance');
+      auth = getAuth(app);
+    } else {
+      throw error;
+    }
+  }
+} else {
+  console.log('🔵 Firebase: Initializing auth for React Native...');
+  try {
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+    console.log('🔵 Firebase: React Native auth initialized');
+  } catch (error: any) {
+    if (error?.code === 'auth/already-initialized') {
+      console.log('🔵 Firebase: Auth already initialized, getting instance');
+      auth = getAuth(app);
+    } else {
+      console.error('🔴 Firebase: Auth initialization error:', error);
+      throw error;
+    }
+  }
+}
+
+console.log('🔵 Firebase: Initializing Firestore and Storage...');
+const db = getFirestore(app);
+const storage = getStorage(app);
+console.log('🔵 Firebase: All services initialized successfully');
+
+export { app, auth, db, storage };

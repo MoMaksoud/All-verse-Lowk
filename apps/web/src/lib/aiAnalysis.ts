@@ -161,30 +161,103 @@ export class AIAnalysisService {
       `;
     
       // Fetch the image from URL first
-      const imageResponse = await fetch(imageUrls[0]);
-      const imageBuffer = await imageResponse.arrayBuffer();
-      const imageBlob = new Blob([imageBuffer], { type: 'image/jpeg' });
+      console.log('🔵 AI Analysis: Fetching image from URL:', imageUrls[0]);
+      let imageResponse;
+      try {
+        imageResponse = await fetch(imageUrls[0], {
+          // Add timeout for image fetch
+          signal: AbortSignal.timeout(30000), // 30 second timeout
+        });
+      } catch (fetchError: any) {
+        console.error('❌ AI Analysis: Image fetch failed:', {
+          error: fetchError,
+          message: fetchError?.message,
+          name: fetchError?.name,
+        });
+        if (fetchError?.name === 'AbortError' || fetchError?.message?.includes('timeout')) {
+          throw new Error('Image fetch timed out. Please try again.');
+        }
+        throw new Error(`Failed to fetch image: ${fetchError?.message || 'Unknown error'}`);
+      }
       
+      if (!imageResponse.ok) {
+        console.error('❌ AI Analysis: Failed to fetch image:', imageResponse.status, imageResponse.statusText);
+        const errorText = await imageResponse.text().catch(() => '');
+        console.error('❌ AI Analysis: Image fetch error body:', errorText.substring(0, 200));
+        throw new Error(`Failed to fetch image: ${imageResponse.status} ${imageResponse.statusText}`);
+      }
+      
+      let imageBuffer;
+      try {
+        imageBuffer = await imageResponse.arrayBuffer();
+        console.log('🔵 AI Analysis: Image buffer size:', imageBuffer.byteLength);
+      } catch (bufferError: any) {
+        console.error('❌ AI Analysis: Failed to read image buffer:', {
+          error: bufferError,
+          message: bufferError?.message,
+        });
+        throw new Error(`Failed to read image data: ${bufferError?.message || 'Unknown error'}`);
+      }
+      
+      if (imageBuffer.byteLength === 0) {
+        console.error('❌ AI Analysis: Image buffer is empty');
+        throw new Error('Image buffer is empty');
+      }
+      
+      const imageBlob = new Blob([imageBuffer], { type: 'image/jpeg' });
+      console.log('🔵 AI Analysis: Image blob created, size:', imageBlob.size);
+      
+      console.log('🔵 AI Analysis: Uploading image to Gemini...');
       const image = await genAi.files.upload({
         file: imageBlob,
         config: { 
           mimeType: 'image/jpeg'
         }
       });
+      console.log('🔵 AI Analysis: Image uploaded, URI:', image.uri);
 
-      const response = await genAi.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: 
-          createUserContent([
-            createPartFromUri(image.uri!, image.mimeType!),
-            prompt,
-          ]),
-      });
+      console.log('🔵 AI Analysis: Calling Gemini API...');
+      let response;
+      try {
+        response = await genAi.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: 
+            createUserContent([
+              createPartFromUri(image.uri!, image.mimeType!),
+              prompt,
+            ]),
+        });
+        console.log('🔵 AI Analysis: Gemini API response received');
+      } catch (geminiError: any) {
+        console.error('❌ AI Analysis: Gemini API call failed:', {
+          error: geminiError,
+          message: geminiError?.message,
+          stack: geminiError?.stack,
+        });
+        // Check if it's a JSON parse error from the SDK
+        if (geminiError?.message?.includes('JSON') || geminiError?.message?.includes('Unexpected end')) {
+          throw new Error('Gemini API returned incomplete response. This may be due to a timeout or network issue. Please try again.');
+        }
+        throw geminiError;
+      }
 
       const text = response?.text ?? '';
+      
+      if (!text || text.trim().length === 0) {
+        console.error('❌ AI Analysis: Empty response from Gemini API');
+        throw new Error('AI service returned empty response');
+      }
+
+      console.log('🔵 AI Analysis: Raw response text length:', text.length);
+      console.log('🔵 AI Analysis: Raw response preview:', text.substring(0, 500));
 
       // Parse the JSON response
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+      
+      if (!cleanText || cleanText.length === 0) {
+        console.error('❌ AI Analysis: Cleaned text is empty');
+        throw new Error('AI service returned empty JSON after cleaning');
+      }
       
       let analysis;
       try {
@@ -219,8 +292,14 @@ export class AIAnalysisService {
           }
         };
     
-      } catch (error) {
-        return undefined;
+      } catch (parseError: any) {
+        console.error('❌ AI Analysis: JSON parse error:', {
+          error: parseError,
+          message: parseError?.message,
+          cleanTextLength: cleanText?.length,
+          cleanTextPreview: cleanText?.substring(0, 200),
+        });
+        throw new Error(`Failed to parse AI response: ${parseError?.message || 'Unexpected end of JSON input'}`);
       }
   }
 

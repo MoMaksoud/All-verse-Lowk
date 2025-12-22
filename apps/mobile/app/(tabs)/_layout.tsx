@@ -1,9 +1,39 @@
 import { Tabs } from 'expo-router';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 const logoSource = require('../../assets/icon.png');
+
+// Custom header component with Logo/Title
+function CustomHeader({ title, showBackButton }: { title?: string; showBackButton?: boolean }) {
+  const isHomePage = !title;
+
+  return (
+    <View style={styles.navbar}>
+      {/* Center: Logo + Text (Home) or Title (Other pages) */}
+      {isHomePage ? (
+        <TouchableOpacity 
+          style={styles.centerContainer}
+          onPress={() => router.push('/(tabs)/index' as any)}
+          activeOpacity={0.7}
+        >
+          <Image 
+            source={logoSource} 
+            style={styles.navbarLogo}
+            contentFit="contain"
+          />
+          <Text style={styles.navbarTitle}>ALL VERSE GPT</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.centerTitleContainer}>
+          <Text style={styles.centerTitle}>{title}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   return (
@@ -12,11 +42,11 @@ export default function TabsLayout() {
         tabBarActiveTintColor: '#60a5fa', // Accent blue color
         tabBarInactiveTintColor: '#71717a', // Gray
         tabBarStyle: {
-          backgroundColor: '#020617',
+          backgroundColor: '#0f1b2e',
           borderTopColor: 'rgba(255, 255, 255, 0.1)',
           borderTopWidth: 1,
-          height: 90,
-          paddingBottom: 30,
+          height: 70,
+          paddingBottom: 20,
           paddingTop: 10,
         },
         tabBarLabelStyle: {
@@ -24,72 +54,65 @@ export default function TabsLayout() {
           fontWeight: '600',
         },
         headerStyle: {
-          backgroundColor: '#020617',
+          backgroundColor: '#0f1b2e',
           elevation: 0,
           shadowOpacity: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+          borderBottomWidth: 0,
+          height: 100,
         },
         headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          fontSize: 18,
-        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          headerTitle: () => (
-            <View style={styles.headerContainer}>
-              <Image 
-                source={logoSource} 
-                style={styles.headerLogo}
-                contentFit="contain"
-                transition={200}
-              />
-              <Text style={styles.headerTitle}>ALL VERSE GPT</Text>
-            </View>
-          ),
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
+          tabBarLabel: '',
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search" size={size} color={color} />
           ),
+          tabBarLabel: '',
         }}
       />
       <Tabs.Screen
         name="sell"
         options={{
-          title: 'Sell',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle" size={size} color={color} />
           ),
+          tabBarLabel: '',
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Messages',
+          headerTitle: () => <CustomHeader title="Messages" />,
+          headerTitleAlign: 'center',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles" size={size} color={color} />
           ),
+          tabBarLabel: '',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          headerTitle: () => <CustomHeader title="Account" />,
+          headerTitleAlign: 'center',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
+          tabBarLabel: '',
         }}
       />
     </Tabs>
@@ -97,21 +120,49 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
+  navbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: 44,
+    paddingTop: 10,
+  },
+  centerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerLogo: {
+  centerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navbarLogo: {
     width: 28,
     height: 28,
-    tintColor: undefined, // Don't tint the image
   },
-  headerTitle: {
+  navbarTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
     letterSpacing: 0.5,
+  },
+  centerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 16,
+    gap: 4,
+  },
+  backButtonText: {
+    fontSize: 17,
+    color: '#60a5fa',
+    fontWeight: '600',
   },
 });
 

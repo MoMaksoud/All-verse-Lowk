@@ -78,6 +78,24 @@ class APIClient {
     const isFormData = fetchOptions.body instanceof FormData;
     const headers = await this.getHeaders(requiresAuth, isFormData);
 
+    console.log(`🌐 [API Client] ${fetchOptions.method || 'GET'} ${url}`);
+    console.log(`🌐 [API Client] Headers:`, {
+      ...headers,
+      Authorization: headers.Authorization ? 'Bearer ***' : undefined,
+    });
+    if (isFormData) {
+      console.log(`🌐 [API Client] Body: FormData`);
+    } else if (fetchOptions.body) {
+      try {
+        const bodyPreview = typeof fetchOptions.body === 'string' 
+          ? fetchOptions.body.substring(0, 200) 
+          : JSON.stringify(fetchOptions.body).substring(0, 200);
+        console.log(`🌐 [API Client] Body preview:`, bodyPreview);
+      } catch (e) {
+        console.log(`🌐 [API Client] Body: [could not stringify]`);
+      }
+    }
+
     try {
       const response = await fetch(url, {
         ...fetchOptions,
@@ -87,9 +105,20 @@ class APIClient {
         },
       });
 
+      console.log(`🌐 [API Client] Response: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.clone().text().catch(() => '');
+        console.error(`🌐 [API Client] Error response body:`, errorText.substring(0, 500));
+      }
+
       return response;
-    } catch (error) {
-      console.error(`API Request failed: ${endpoint}`, error);
+    } catch (error: any) {
+      console.error(`🌐 [API Client] Request failed: ${endpoint}`, {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        url,
+      });
       throw error;
     }
   }
