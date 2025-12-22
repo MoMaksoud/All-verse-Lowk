@@ -1,11 +1,14 @@
 'use client';
 
 import { Navigation } from '@/components/Navigation';
+import { ReactNode } from 'react';
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+const NavComponent = Navigation as React.ComponentType;
+
+export default function Layout({ children }: { children: ReactNode }): ReactNode {
   return (
     <>
-      <Navigation />
+      <NavComponent />
       {children}
     </>
   );
