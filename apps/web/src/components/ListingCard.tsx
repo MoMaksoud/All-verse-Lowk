@@ -524,4 +524,6 @@ function ListingCard({
 }
 
 // Export memoized version for better performance
-export default memo(ListingCard);
+// Cast to ComponentType to fix React 19 type compatibility with memo()
+const ListingCardMemo = memo(ListingCard);
+export default ListingCardMemo as React.ComponentType<Props>;

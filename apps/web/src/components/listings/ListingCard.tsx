@@ -59,7 +59,9 @@ function ListingCardComponent({ listing, view = "comfortable" }: Props) {
   );
 }
 
-export const ListingCard = memo(ListingCardComponent, (prev, next) => {
+// Cast to ComponentType to fix React 19 type compatibility with memo()
+const ListingCardMemo = memo(ListingCardComponent, (prev, next) => {
   return prev.listing.id === next.listing.id && prev.view === next.view;
 });
+export const ListingCard = ListingCardMemo as React.ComponentType<Props>;
 

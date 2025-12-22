@@ -665,5 +665,7 @@ const Navigation = memo(function Navigation() {
   );
 });
 
-export { Navigation };
-export default Navigation;
+// Cast to ComponentType to fix React 19 type compatibility with memo()
+const NavigationExport = Navigation as React.ComponentType;
+export { NavigationExport as Navigation };
+export default NavigationExport;
