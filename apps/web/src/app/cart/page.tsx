@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigation } from '@/components/Navigation';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import dynamic from 'next/dynamic';
+// @ts-ignore - Next.js dynamic import type incompatibility with React 19
 const CheckoutPage = dynamic(() => import('@/components/CheckoutForm'), {
   ssr: false,
   loading: () => null,
