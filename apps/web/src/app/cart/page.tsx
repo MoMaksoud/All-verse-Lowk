@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic';
 const CheckoutPage = dynamic(() => import('@/components/CheckoutForm'), {
   ssr: false,
   loading: () => null,
-}) as any;
+});
 import { 
   ShoppingBag, 
   Trash2, 
