@@ -41,7 +41,7 @@ const sizeToPx: Record<NonNullable<ProfilePictureProps['size']>, string> = {
   xl: '80px',
 };
 
-const ProfilePictureComponent = memo(function ProfilePicture({
+export const ProfilePicture = memo(function ProfilePicture({
   src,
   alt = 'Profile',
   name,
@@ -156,7 +156,4 @@ const ProfilePictureComponent = memo(function ProfilePicture({
     </div>
   );
 });
-
-// Cast to ComponentType to fix React 19 type compatibility with memo()
-export const ProfilePicture = ProfilePictureComponent as React.ComponentType<ProfilePictureProps>;
 
