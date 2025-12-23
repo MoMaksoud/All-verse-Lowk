@@ -94,10 +94,23 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="cart"
+        options={{
+          href: null, // Hide from tab bar but keep route accessible
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="favorites"
+        options={{
+          href: null, // Hide from tab bar but keep route accessible
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
         name="messages"
         options={{
-          headerTitle: () => <CustomHeader title="Messages" />,
-          headerTitleAlign: 'center',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles" size={size} color={color} />
           ),

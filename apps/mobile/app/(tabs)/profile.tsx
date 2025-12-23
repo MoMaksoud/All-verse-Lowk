@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { apiClient } from '../../lib/api/client';
 import { signOut, getCurrentUser, onAuthStateChange, getIdToken } from '../../lib/firebase/auth';
 import ListingCard from '../../components/ListingCard';
@@ -93,15 +93,25 @@ export default function ProfileScreen() {
       }
     });
 
-    // Fetch profile if authenticated
+    // Fetch profile and listings if authenticated
     if (getCurrentUser()) {
       fetchProfile();
+      fetchListings();
     } else {
       setLoading(false);
     }
 
     return () => unsubscribe();
   }, []);
+
+  // Refresh listings when screen comes into focus (e.g., after publishing a listing)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (getCurrentUser()) {
+        fetchListings();
+      }
+    }, [])
+  );
 
   const fetchProfile = async () => {
     // Don't fetch if not authenticated
@@ -133,9 +143,6 @@ export default function ProfileScreen() {
           setProfile(null);
         } else {
           setProfile(data.data);
-          if (data.data.listings) {
-            setListings(data.data.listings);
-          }
         }
       } else if (response.status === 400) {
         // Bad request - likely userId missing
@@ -161,9 +168,36 @@ export default function ProfileScreen() {
     }
   };
 
+  const fetchListings = async () => {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      setListings([]);
+      return;
+    }
+
+    try {
+      // Fetch user's listings using sellerId filter
+      const response = await apiClient.get(`/api/listings?sellerId=${currentUser.uid}`, false);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data && Array.isArray(data.data)) {
+          setListings(data.data);
+        } else {
+          setListings([]);
+        }
+      } else {
+        setListings([]);
+      }
+    } catch (err: any) {
+      // Silently fail - listings are not critical
+      setListings([]);
+    }
+  };
+
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await fetchProfile();
+    await Promise.all([fetchProfile(), fetchListings()]);
     setRefreshing(false);
   }, []);
 
@@ -197,8 +231,8 @@ export default function ProfileScreen() {
             try {
               const response = await apiClient.delete(`/api/listings/${listingId}`, true);
               if (response.ok) {
-                // Remove from local state
-                setListings(listings.filter(l => l.id !== listingId));
+                // Refresh listings from server to ensure consistency
+                await fetchListings();
                 Alert.alert('Success', 'Listing deleted successfully');
               } else {
                 const data = await response.json();
@@ -327,6 +361,53 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Legal & Support Section */}
+        <View style={styles.legalSection}>
+          <Text style={styles.sectionTitle}>Legal & Support</Text>
+          <View style={styles.legalList}>
+            <TouchableOpacity
+              style={styles.legalItem}
+              onPress={() => router.push('/legal/faq' as any)}
+            >
+              <Ionicons name="help-circle-outline" size={24} color="#60a5fa" />
+              <Text style={styles.legalItemText}>FAQ</Text>
+              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.legalItem}
+              onPress={() => router.push('/legal/help' as any)}
+            >
+              <Ionicons name="chatbubbles-outline" size={24} color="#60a5fa" />
+              <Text style={styles.legalItemText}>Help Center</Text>
+              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.legalItem}
+              onPress={() => router.push('/legal/privacy' as any)}
+            >
+              <Ionicons name="shield-outline" size={24} color="#60a5fa" />
+              <Text style={styles.legalItemText}>Privacy Policy</Text>
+              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.legalItem}
+              onPress={() => router.push('/legal/terms' as any)}
+            >
+              <Ionicons name="document-text-outline" size={24} color="#60a5fa" />
+              <Text style={styles.legalItemText}>Terms of Service</Text>
+              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.legalItem}
+              onPress={() => router.push('/legal/contact' as any)}
+            >
+              <Ionicons name="mail-outline" size={24} color="#60a5fa" />
+              <Text style={styles.legalItemText}>Contact Us</Text>
+              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
@@ -463,6 +544,29 @@ const styles = StyleSheet.create({
     color: '#ccc',
     lineHeight: 20,
     marginTop: 8,
+  },
+  legalSection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+  },
+  legalList: {
+    backgroundColor: '#1a2332',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  legalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    gap: 12,
+  },
+  legalItemText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '500',
   },
   signOutButton: {
     flexDirection: 'row',

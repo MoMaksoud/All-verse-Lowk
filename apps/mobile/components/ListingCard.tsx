@@ -6,10 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../contexts/AuthContext';
+import { apiClient } from '../lib/api/client';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 56) / 2; // 2 columns with spacing
@@ -42,7 +46,9 @@ export default function ListingCard({
   inventory,
   variant = 'grid',
 }: ListingCardProps) {
+  const { currentUser } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   // Load favorite state on mount
   React.useEffect(() => {
@@ -87,6 +93,49 @@ export default function ListingCard({
     }
   }, [id, isFavorited]);
 
+  const handleAddToCart = useCallback(async (e?: any) => {
+    if (e) {
+      e.stopPropagation?.();
+    }
+
+    if (!currentUser) {
+      Alert.alert('Sign In Required', 'Please sign in to add items to cart');
+      return;
+    }
+
+    if (!sellerId) {
+      Alert.alert('Error', 'Unable to add item to cart');
+      return;
+    }
+
+    if (sold || inventory === 0) {
+      Alert.alert('Item Unavailable', 'This item is sold out');
+      return;
+    }
+
+    try {
+      setAddingToCart(true);
+      const response = await apiClient.post('/api/carts', {
+        listingId: id,
+        sellerId: sellerId,
+        qty: 1,
+        priceAtAdd: price,
+      }, true);
+
+      if (response.ok) {
+        Alert.alert('Success', 'Item added to cart!');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        Alert.alert('Error', errorData.message || 'Failed to add item to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      Alert.alert('Error', 'Failed to add item to cart');
+    } finally {
+      setAddingToCart(false);
+    }
+  }, [currentUser, sellerId, id, price, sold, inventory]);
+
   const formatPrice = (price: number): string => {
     return `$${price.toLocaleString()}`;
   };
@@ -121,6 +170,22 @@ export default function ListingCard({
             <Text style={styles.price}>{formatPrice(price)}</Text>
             <Text style={styles.category}>{category}</Text>
           </View>
+          {!(sold || inventory === 0) && (
+            <TouchableOpacity
+              style={[styles.addToCartButton, addingToCart && styles.addToCartButtonDisabled]}
+              onPress={handleAddToCart}
+              disabled={addingToCart}
+            >
+              {addingToCart ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="cart-outline" size={16} color="#fff" />
+                  <Text style={styles.addToCartText}>Add to Cart</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity
           style={styles.favoriteButton}
@@ -148,22 +213,24 @@ export default function ListingCard({
         resizeMode="cover"
       />
       
-      {sold && (
-        <View style={styles.soldBadge}>
-          <Text style={styles.soldText}>SOLD</Text>
-        </View>
-      )}
+      <View style={styles.cardOverlay}>
+        {(sold || inventory === 0) && (
+          <View style={styles.soldBadge}>
+            <Text style={styles.soldText}>SOLD</Text>
+          </View>
+        )}
 
-      <TouchableOpacity
-        style={styles.gridFavoriteButton}
-        onPress={handleFavorite}
-      >
-        <Ionicons
-          name={isFavorited ? 'heart' : 'heart-outline'}
-          size={20}
-          color={isFavorited ? '#ef4444' : '#fff'}
-        />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.gridFavoriteButton}
+          onPress={handleFavorite}
+        >
+          <Ionicons
+            name={isFavorited ? 'heart' : 'heart-outline'}
+            size={20}
+            color={isFavorited ? '#ef4444' : '#fff'}
+          />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.gridContent}>
         <Text style={styles.gridTitle} numberOfLines={2}>
@@ -180,6 +247,22 @@ export default function ListingCard({
             </View>
           )}
         </View>
+        {!(sold || inventory === 0) && (
+          <TouchableOpacity
+            style={[styles.addToCartButton, addingToCart && styles.addToCartButtonDisabled]}
+            onPress={handleAddToCart}
+            disabled={addingToCart}
+          >
+            {addingToCart ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="cart-outline" size={16} color="#fff" />
+                <Text style={styles.addToCartText}>Add to Cart</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -199,6 +282,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: CARD_IMAGE_HEIGHT,
     backgroundColor: '#0E1526',
+  },
+  cardOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: CARD_IMAGE_HEIGHT,
+    pointerEvents: 'box-none',
+    zIndex: 5,
   },
   gridContent: {
     padding: 14,
@@ -232,6 +324,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 20,
     padding: 8,
+    zIndex: 15,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // List variant styles
@@ -302,7 +399,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    zIndex: 10,
+    zIndex: 12,
+    maxWidth: '60%',
   },
   soldText: {
     fontSize: 12,
@@ -316,6 +414,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 20,
     padding: 8,
+  },
+  addToCartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#60a5fa',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 10,
+    gap: 6,
+  },
+  addToCartButtonDisabled: {
+    backgroundColor: 'rgba(96, 165, 250, 0.5)',
+  },
+  addToCartText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

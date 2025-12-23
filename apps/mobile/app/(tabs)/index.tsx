@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { apiClient } from '../../lib/api/client';
 import ListingCard from '../../components/ListingCard';
@@ -44,6 +44,13 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchListings();
   }, []);
+
+  // Refresh listings when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchListings();
+    }, [])
+  );
 
   const fetchListings = async () => {
     try {
@@ -108,6 +115,20 @@ export default function HomeScreen() {
               contentFit="contain"
             />
             <Text style={styles.headerTitle}>ALL VERSE GPT</Text>
+          </View>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={() => router.push('/(tabs)/favorites')}
+            >
+              <Ionicons name="heart-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={() => router.push('/(tabs)/cart')}
+            >
+              <Ionicons name="cart-outline" size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -305,12 +326,29 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 8,
     paddingHorizontal: 20,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerLogo: {
     width: 28,

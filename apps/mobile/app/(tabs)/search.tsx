@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../../lib/api/client';
 import ListingCard from '../../components/ListingCard';
@@ -82,6 +82,15 @@ export default function SearchScreen() {
     }
   }, [params.q]);
 
+  // Refresh listings when screen comes into focus (if no search query)
+  useFocusEffect(
+    useCallback(() => {
+      if (!params.q && !searchQuery.trim()) {
+        fetchListings();
+      }
+    }, [params.q, searchQuery])
+  );
+
   useEffect(() => {
     if (searchQuery.length === 0) {
       setShowRecentSearches(true);
@@ -136,13 +145,17 @@ export default function SearchScreen() {
   const fetchListings = async () => {
     try {
       setListingsLoading(true);
-      const response = await apiClient.get('/api/listings');
+      // Fetch with a higher limit to get more listings (API default is 20, we'll request more)
+      const response = await apiClient.get('/api/listings?limit=100');
       const data = await response.json();
       
       if (response.ok && data.data && Array.isArray(data.data)) {
         setListings(data.data);
       } else if (response.ok && data.data?.items) {
         setListings(data.data.items);
+      } else if (response.ok && Array.isArray(data)) {
+        // Handle case where API returns array directly
+        setListings(data);
       }
     } catch (error) {
       console.error('Error fetching listings:', error);
@@ -280,7 +293,7 @@ export default function SearchScreen() {
                     condition={listing.condition}
                     imageUrl={listing.photos?.[0]}
                     sellerId={listing.sellerId}
-                    sold={listing.sold}
+                    sold={(listing.sold ?? false) || listing.inventory === 0}
                     inventory={listing.inventory}
                     variant="grid"
                   />
@@ -384,7 +397,7 @@ export default function SearchScreen() {
                     condition={listing.condition}
                     imageUrl={listing.photos?.[0]}
                     sellerId={listing.sellerId}
-                    sold={listing.sold}
+                    sold={(listing.sold ?? false) || listing.inventory === 0}
                     inventory={listing.inventory}
                     variant="grid"
                   />

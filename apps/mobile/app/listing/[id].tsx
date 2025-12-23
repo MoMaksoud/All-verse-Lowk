@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../../lib/api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -46,14 +47,29 @@ export default function ListingDetailScreen() {
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollViewRef = useRef<any>(null);
 
   useEffect(() => {
     if (id) {
       fetchListing();
+      loadFavoriteState();
     }
   }, [id]);
+
+  const loadFavoriteState = async () => {
+    if (!id) return;
+    try {
+      const favorites = await AsyncStorage.getItem('favorites');
+      if (favorites) {
+        const favArray = JSON.parse(favorites);
+        setIsFavorited(favArray.includes(id));
+      }
+    } catch (error) {
+      console.error('Error loading favorite state:', error);
+    }
+  };
 
   const fetchListing = async () => {
     try {
@@ -144,6 +160,36 @@ export default function ListingDetailScreen() {
     }
   };
 
+  const handleFavorite = async () => {
+    if (!currentUser) {
+      Alert.alert('Sign In Required', 'Please sign in to favorite items');
+      router.push('/auth/signin');
+      return;
+    }
+
+    if (!id) return;
+
+    try {
+      const favorites = await AsyncStorage.getItem('favorites');
+      const favArray = favorites ? JSON.parse(favorites) : [];
+
+      if (isFavorited) {
+        const updated = favArray.filter((fav: string) => fav !== id);
+        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
+        setIsFavorited(false);
+        Alert.alert('Removed from favorites');
+      } else {
+        const updated = [...favArray, id];
+        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
+        setIsFavorited(true);
+        Alert.alert('Added to favorites');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      Alert.alert('Error', 'Failed to update favorites');
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner message="Loading listing..." />;
   }
@@ -165,6 +211,18 @@ export default function ListingDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
+        {/* Favorite Button - Floating */}
+        <TouchableOpacity
+          style={styles.favoriteButton}
+          onPress={handleFavorite}
+        >
+          <Ionicons
+            name={isFavorited ? 'heart' : 'heart-outline'}
+            size={24}
+            color={isFavorited ? '#ef4444' : '#fff'}
+          />
+        </TouchableOpacity>
+
         {/* Image Gallery */}
         <View style={styles.imageContainer}>
           <View style={styles.imageWrapper}>
@@ -249,7 +307,7 @@ export default function ListingDetailScreen() {
               <Text style={styles.priceLabel}>Price</Text>
               <Text style={styles.price}>${listing.price.toLocaleString()}</Text>
             </View>
-            {listing.sold && (
+            {((listing.sold ?? false) || listing.inventory === 0) && (
               <View style={styles.soldBadge}>
                 <Text style={styles.soldText}>SOLD</Text>
               </View>
@@ -329,7 +387,7 @@ export default function ListingDetailScreen() {
           </TouchableOpacity>
         </View>
       )}
-      {listing.sold && (
+      {((listing.sold ?? false) || listing.inventory === 0) && (
         <View style={styles.actionBar}>
           <View style={styles.soldButton}>
             <Ionicons name="close-circle" size={22} color="#ef4444" />
@@ -348,6 +406,18 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 100,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 24,
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   imageContainer: {
     position: 'relative',

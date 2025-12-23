@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../../lib/api/client';
 import { useAuth } from '../../contexts/AuthContext';
@@ -108,16 +108,65 @@ export default function ChatDetailScreen() {
     }
   };
 
+  const markChatAsRead = async () => {
+    if (!id || !currentUser) return;
+
+    try {
+      // Mark chat as opened (updates lastOpenedAt timestamp)
+      await apiClient.put(`/api/chats/${id}/read`, {}, true);
+    } catch (error) {
+      // Silently fail - marking as read is not critical
+      console.error('Error marking chat as read:', error);
+    }
+  };
+
   useEffect(() => {
     if (id && currentUser) {
       fetchChatInfo();
       fetchMessages();
+      markChatAsRead(); // Mark as read when chat is opened
       
-      // Poll for new messages every 3 seconds
-      const interval = setInterval(fetchMessages, 3000);
+      // Poll for new messages every 2 seconds for real-time updates
+      const interval = setInterval(() => {
+        fetchMessages();
+        // Only mark as read if user is actively viewing (not in background)
+        markChatAsRead();
+      }, 2000);
       return () => clearInterval(interval);
     }
   }, [id, currentUser]);
+
+  // Mark as read when screen loses focus (user navigates away)
+  useFocusEffect(
+    React.useCallback(() => {
+      // When screen comes into focus, mark as read
+      if (id && currentUser) {
+        markChatAsRead();
+      }
+      
+      // When screen loses focus (user navigates away), mark as read one more time
+      // This ensures the read status is updated before navigating back
+      return () => {
+        if (id && currentUser) {
+          // Use a small delay to ensure the API call completes before navigation
+          const timeoutId = setTimeout(() => {
+            markChatAsRead();
+          }, 100);
+          return () => clearTimeout(timeoutId);
+        }
+      };
+    }, [id, currentUser])
+  );
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Small delay to ensure layout has updated
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length]);
 
   const sendMessage = async () => {
     if (!messageText.trim() || sending || !id || !currentUser) return;
@@ -302,8 +351,19 @@ export default function ChatDetailScreen() {
           contentContainerStyle={styles.messagesList}
           inverted={false}
           onContentSizeChange={() => {
+            // Auto-scroll to bottom when content size changes (new messages)
             if (messages.length > 0) {
-              flatListRef.current?.scrollToEnd({ animated: true });
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }, 50);
+            }
+          }}
+          onLayout={() => {
+            // Auto-scroll to bottom when layout is ready (initial load)
+            if (messages.length > 0) {
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: false });
+              }, 100);
             }
           }}
           ListEmptyComponent={

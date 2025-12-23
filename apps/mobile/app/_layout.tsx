@@ -50,10 +50,45 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
-          name="profile/[userId]" 
+          name="checkout" 
           options={{ 
-            title: 'Profile',
-            headerShown: true,
+            title: 'Checkout',
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="legal/faq" 
+          options={{ 
+            title: 'FAQ',
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="legal/privacy" 
+          options={{ 
+            title: 'Privacy Policy',
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="legal/terms" 
+          options={{ 
+            title: 'Terms of Service',
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="legal/help" 
+          options={{ 
+            title: 'Help Center',
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="legal/contact" 
+          options={{ 
+            title: 'Contact Us',
+            headerShown: false,
           }} 
         />
       </Stack>
