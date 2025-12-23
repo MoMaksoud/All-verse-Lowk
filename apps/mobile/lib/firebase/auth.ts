@@ -17,7 +17,6 @@ export const signIn = async (email: string, password: string) => {
     await AsyncStorage.setItem('user', JSON.stringify(userCredential.user));
     return { user: userCredential.user, error: null };
   } catch (error: any) {
-    console.error('Sign in error:', error);
     return { user: null, error: error.message };
   }
 };
@@ -29,7 +28,6 @@ export const signUp = async (email: string, password: string) => {
     await AsyncStorage.setItem('user', JSON.stringify(userCredential.user));
     return { user: userCredential.user, error: null };
   } catch (error: any) {
-    console.error('Sign up error:', error);
     return { user: null, error: error.message };
   }
 };
@@ -37,19 +35,10 @@ export const signUp = async (email: string, password: string) => {
 // Sign out
 export const signOut = async () => {
   try {
-    console.log('🟢 Firebase Auth: Starting sign out...');
-    console.log('🟢 Firebase Auth: Current user:', auth.currentUser?.email);
-    
     await firebaseSignOut(auth);
-    console.log('🟢 Firebase Auth: firebaseSignOut completed');
-    
     await AsyncStorage.removeItem('user');
-    console.log('🟢 Firebase Auth: AsyncStorage cleared');
-    
-    console.log('🟢 Firebase Auth: Sign out successful');
     return { error: null };
   } catch (error: any) {
-    console.error('🔴 Firebase Auth: Sign out error:', error);
     return { error: error.message };
   }
 };
@@ -64,16 +53,18 @@ export const onAuthStateChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, callback);
 };
 
-// Get ID token
-export const getIdToken = async (): Promise<string | null> => {
+// Get ID token (force refresh to ensure it's valid)
+export const getIdToken = async (forceRefresh: boolean = false): Promise<string | null> => {
   const user = auth.currentUser;
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
   
   try {
-    const token = await user.getIdToken();
+    // Force refresh to ensure we have a valid token
+    const token = await user.getIdToken(forceRefresh);
     return token;
-  } catch (error) {
-    console.error('Error getting ID token:', error);
+  } catch (error: any) {
     return null;
   }
 };

@@ -2,7 +2,67 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { firestoreServices } from '@/lib/services/firestore';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+export const POST = withApi(async (req: NextRequest & { userId: string }) => {
+  try {
+    const userId = req.userId;
+    const body = await req.json();
+    const { otherUserId } = body;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'User ID is required' },
+        { status: 401 }
+      );
+    }
+
+    if (!otherUserId || typeof otherUserId !== 'string') {
+      return NextResponse.json(
+        { error: 'Bad Request', message: 'otherUserId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate that users are different
+    if (userId === otherUserId) {
+      return NextResponse.json(
+        { error: 'Bad Request', message: 'Cannot create a chat with yourself' },
+        { status: 400 }
+      );
+    }
+
+    // Create or get existing chat
+    const chatId = await firestoreServices.chats.getOrCreateChat(userId, otherUserId);
+
+    return NextResponse.json({
+      success: true,
+      chatId,
+    });
+  } catch (error: any) {
+    console.error('Error creating/getting chat:', error);
+    
+    // Handle specific error cases
+    if (error?.message?.includes('deleted user')) {
+      return NextResponse.json(
+        {
+          error: 'Cannot create chat',
+          message: 'Cannot message a deleted user',
+        },
+        { status: 400 }
+      );
+    }
+    
+    return NextResponse.json(
+      {
+        error: 'Failed to create chat',
+        message: error?.message || 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+});
 
 export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {

@@ -107,8 +107,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          headerTitle: () => <CustomHeader title="Account" />,
-          headerTitleAlign: 'center',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),

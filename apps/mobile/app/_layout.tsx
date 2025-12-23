@@ -44,7 +44,9 @@ export default function RootLayout() {
           name="chat/[id]" 
           options={{ 
             title: 'Chat',
-            headerShown: true,
+            headerShown: false,
+            headerBackTitle: 'Back',
+            headerBackTitleVisible: true,
           }} 
         />
         <Stack.Screen 

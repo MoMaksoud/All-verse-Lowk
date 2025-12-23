@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiClient } from '../../lib/api/client';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import UserSearchModal from '../../components/UserSearchModal';
 
 interface Chat {
   id: string;
@@ -33,6 +34,7 @@ export default function MessagesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showUserSearch, setShowUserSearch] = useState(false);
 
   const fetchChats = async () => {
     if (!currentUser) {
@@ -78,7 +80,6 @@ export default function MessagesScreen() {
         setChats([]);
       }
     } catch (err: any) {
-      console.error('Error fetching chats:', err);
       // Handle JSON parse errors
       if (err?.message?.includes('JSON') || err?.message?.includes('<!DOCTYPE')) {
         setError('Server error: Invalid response. Please try again.');
@@ -104,6 +105,61 @@ export default function MessagesScreen() {
     setRefreshing(true);
     await fetchChats();
   }, [currentUser]);
+
+  const handleSelectUser = async (userId: string) => {
+    if (!currentUser) {
+      Alert.alert('Sign In Required', 'Please sign in to start a conversation.');
+      return;
+    }
+    
+    if (!userId || userId === currentUser.uid) {
+      Alert.alert('Invalid User', 'Cannot start a chat with yourself.');
+      return;
+    }
+    
+    try {
+      // Create or get existing chat
+      const response = await apiClient.post('/api/chats', { otherUserId: userId }, true);
+      
+      if (!response.ok) {
+        let errorMessage = 'Failed to create chat';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          const errorText = await response.text().catch(() => '');
+          if (errorText) {
+            try {
+              const parsed = JSON.parse(errorText);
+              errorMessage = parsed.message || parsed.error || errorMessage;
+            } catch {
+              errorMessage = errorText.substring(0, 100) || errorMessage;
+            }
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      const chatId = data.chatId || data.id;
+      
+      if (!chatId) {
+        throw new Error('No chat ID returned from server');
+      }
+      
+      // Refresh chats list to include the new chat
+      await fetchChats();
+      
+      // Navigate to the chat
+      router.push(`/chat/${chatId}` as any);
+    } catch (err: any) {
+      Alert.alert(
+        'Error Creating Chat',
+        err?.message || 'Failed to start chat. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   const formatTimestamp = (timestamp: any) => {
     if (!timestamp) return '';
@@ -145,8 +201,8 @@ export default function MessagesScreen() {
       <TouchableOpacity
         style={styles.chatItem}
         onPress={() => {
-          // Navigate to chat detail (you'll need to create this screen)
-          router.push(`/chat/${item.id}`);
+          // Navigate to chat detail
+          router.push(`/chat/${item.id}` as any);
         }}
       >
         <View style={styles.avatarContainer}>
@@ -228,12 +284,21 @@ export default function MessagesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* New Message Button */}
+      <TouchableOpacity
+        style={styles.newMessageButton}
+        onPress={() => setShowUserSearch(true)}
+      >
+        <Ionicons name="create-outline" size={24} color="#fff" />
+        <Text style={styles.newMessageText}>New Message</Text>
+      </TouchableOpacity>
+
       {chats.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="chatbubbles-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
           <Text style={styles.emptyTitle}>No Messages</Text>
           <Text style={styles.emptyText}>
-            Start a conversation by messaging a seller from a listing
+            Start a conversation by searching for a user or messaging a seller from a listing
           </Text>
         </View>
       ) : (
@@ -247,6 +312,13 @@ export default function MessagesScreen() {
           }
         />
       )}
+
+      {/* User Search Modal */}
+      <UserSearchModal
+        isOpen={showUserSearch}
+        onClose={() => setShowUserSearch(false)}
+        onSelectUser={handleSelectUser}
+      />
     </SafeAreaView>
   );
 }
@@ -363,5 +435,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#fff',
+  },
+  newMessageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#60a5fa',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  newMessageText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

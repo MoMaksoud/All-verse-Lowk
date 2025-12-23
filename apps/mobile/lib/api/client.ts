@@ -35,13 +35,12 @@ class APIClient {
     return `/api/${endpoint}`;
   }
 
-  private async getAuthToken(): Promise<string | null> {
+  private async getAuthToken(forceRefresh: boolean = false): Promise<string | null> {
     try {
-      // Get Firebase ID token
-      const token = await getIdToken();
+      // Get Firebase ID token (force refresh to ensure it's valid)
+      const token = await getIdToken(forceRefresh);
       return token;
     } catch (error) {
-      console.error('Error getting auth token:', error);
       return null;
     }
   }
@@ -55,7 +54,11 @@ class APIClient {
     }
 
     if (requiresAuth) {
-      const token = await this.getAuthToken();
+      // Try to get token, force refresh if first attempt fails
+      let token = await this.getAuthToken(false);
+      if (!token) {
+        token = await this.getAuthToken(true);
+      }
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
@@ -78,24 +81,6 @@ class APIClient {
     const isFormData = fetchOptions.body instanceof FormData;
     const headers = await this.getHeaders(requiresAuth, isFormData);
 
-    console.log(`🌐 [API Client] ${fetchOptions.method || 'GET'} ${url}`);
-    console.log(`🌐 [API Client] Headers:`, {
-      ...headers,
-      Authorization: headers.Authorization ? 'Bearer ***' : undefined,
-    });
-    if (isFormData) {
-      console.log(`🌐 [API Client] Body: FormData`);
-    } else if (fetchOptions.body) {
-      try {
-        const bodyPreview = typeof fetchOptions.body === 'string' 
-          ? fetchOptions.body.substring(0, 200) 
-          : JSON.stringify(fetchOptions.body).substring(0, 200);
-        console.log(`🌐 [API Client] Body preview:`, bodyPreview);
-      } catch (e) {
-        console.log(`🌐 [API Client] Body: [could not stringify]`);
-      }
-    }
-
     try {
       const response = await fetch(url, {
         ...fetchOptions,
@@ -105,20 +90,8 @@ class APIClient {
         },
       });
 
-      console.log(`🌐 [API Client] Response: ${response.status} ${response.statusText}`);
-      if (!response.ok) {
-        const errorText = await response.clone().text().catch(() => '');
-        console.error(`🌐 [API Client] Error response body:`, errorText.substring(0, 500));
-      }
-
       return response;
     } catch (error: any) {
-      console.error(`🌐 [API Client] Request failed: ${endpoint}`, {
-        error,
-        message: error?.message,
-        stack: error?.stack,
-        url,
-      });
       throw error;
     }
   }

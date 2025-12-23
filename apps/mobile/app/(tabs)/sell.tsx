@@ -97,102 +97,50 @@ export default function SellScreen() {
 
     try {
       setAiAnalyzing(true);
-      console.log('🔵 [AI Analysis] Starting analysis with', photos.length, 'photos');
-      
       // Upload photos first using ai-chat endpoint (temporary uploads for AI analysis)
       const uploadedUrls: string[] = [];
       for (let i = 0; i < photos.length; i++) {
         const photoUri = photos[i];
         try {
-          console.log(`🔵 [AI Analysis] Uploading photo ${i + 1}/${photos.length}:`, photoUri);
-          
-          // Convert React Native file URI to Blob for web API compatibility
-          console.log('🔵 [AI Analysis] Fetching photo URI to convert to blob...');
-          const response = await fetch(photoUri);
-          console.log('🔵 [AI Analysis] Fetch response status:', response.status, response.ok);
-          
-          if (!response.ok) {
-            console.error('❌ [AI Analysis] Failed to fetch photo URI:', response.status, response.statusText);
-            continue;
-          }
-          
-          const blob = await response.blob();
-          console.log('🔵 [AI Analysis] Blob created, size:', blob.size, 'type:', blob.type);
-          
+          // For React Native, pass URI directly with proper metadata (don't convert HEIC to blob)
           const formData = new FormData();
-          // Create a File-like object that web API can handle
-          formData.append('file', blob, 'photo.jpg');
-          console.log('🔵 [AI Analysis] FormData created, posting to /api/upload/ai-chat...');
+          formData.append('file', {
+            uri: photoUri,
+            type: 'image/jpeg', // Force JPEG, not image/heic
+            name: 'photo.jpg',
+          } as any);
 
           const uploadResponse = await apiClient.post('/api/upload/ai-chat', formData, true);
-          console.log('🔵 [AI Analysis] Upload response status:', uploadResponse.status, uploadResponse.ok);
           
           if (uploadResponse.ok) {
             const uploadData = await uploadResponse.json();
-            console.log('✅ [AI Analysis] Upload successful:', uploadData);
             if (uploadData.url) {
               uploadedUrls.push(uploadData.url);
-              console.log('✅ [AI Analysis] Added URL to list:', uploadData.url);
-            } else {
-              console.warn('⚠️ [AI Analysis] Upload response missing URL:', uploadData);
-            }
-          } else {
-            const errorText = await uploadResponse.text();
-            console.error('❌ [AI Analysis] Upload failed:', {
-              status: uploadResponse.status,
-              statusText: uploadResponse.statusText,
-              body: errorText,
-            });
-            try {
-              const errorData = JSON.parse(errorText);
-              console.error('❌ [AI Analysis] Upload error details:', errorData);
-            } catch (e) {
-              console.error('❌ [AI Analysis] Could not parse error response as JSON');
             }
           }
         } catch (uploadError: any) {
-          console.error('❌ [AI Analysis] Error converting/uploading file:', {
-            error: uploadError,
-            message: uploadError?.message,
-            stack: uploadError?.stack,
-            photoIndex: i,
-            photoUri: photoUri,
-          });
+          // Silently continue to next photo
         }
       }
       
-      console.log('🔵 [AI Analysis] Upload complete. Uploaded URLs:', uploadedUrls);
-      console.log('🔵 [AI Analysis] Total uploaded:', uploadedUrls.length, 'out of', photos.length);
-      
       if (uploadedUrls.length === 0) {
-        const errorMsg = 'Failed to upload photos. Check console for details.';
-        console.error('❌ [AI Analysis]', errorMsg);
-        throw new Error(errorMsg);
+        throw new Error('Failed to upload photos. Please try again.');
       }
 
       // Call AI analysis
       const analysisPayload = {
         imageUrls: uploadedUrls,
       };
-      console.log('🔵 [AI Analysis] Calling /api/ai/analyze-product with payload:', {
-        ...analysisPayload,
-        imageUrls: uploadedUrls.length + ' URLs',
-      });
       
       const response = await apiClient.post('/api/ai/analyze-product', analysisPayload, true);
-      console.log('🔵 [AI Analysis] Analysis response status:', response.status, response.ok);
-      console.log('🔵 [AI Analysis] Analysis response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.ok) {
         const responseText = await response.text();
-        console.log('🔵 [AI Analysis] Analysis response body (raw):', responseText);
         
         let result;
         try {
           result = JSON.parse(responseText);
-          console.log('✅ [AI Analysis] Analysis response parsed:', result);
         } catch (parseError) {
-          console.error('❌ [AI Analysis] Failed to parse response as JSON:', parseError);
           throw new Error('Invalid JSON response from AI analysis');
         }
         
@@ -422,11 +370,13 @@ export default function SellScreen() {
       for (const photoUri of photos) {
         try {
           // Convert React Native file URI to Blob for web API compatibility
-          const response = await fetch(photoUri);
-          const blob = await response.blob();
-          
+          // For React Native, pass URI directly with proper metadata (don't convert HEIC to blob)
           const formData = new FormData();
-          formData.append('file', blob, 'photo.jpg');
+          formData.append('file', {
+            uri: photoUri,
+            type: 'image/jpeg', // Force JPEG, not image/heic
+            name: 'photo.jpg',
+          } as any);
 
           const uploadResponse = await apiClient.post('/api/upload/ai-chat', formData, true);
           if (uploadResponse.ok) {

@@ -14,18 +14,39 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { apiClient } from '../../lib/api/client';
-import { signOut, getCurrentUser, onAuthStateChange } from '../../lib/firebase/auth';
+import { signOut, getCurrentUser, onAuthStateChange, getIdToken } from '../../lib/firebase/auth';
 import ListingCard from '../../components/ListingCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import EditProfileModal from '../../components/EditProfileModal';
 
 const { width } = Dimensions.get('window');
 
 interface Profile {
-  id: string;
-  name?: string;
-  email?: string;
-  profilePic?: string;
+  userId: string;
+  username?: string;
+  displayName?: string;
   bio?: string;
+  profilePicture?: string;
+  email?: string;
+  gender?: 'male' | 'female' | 'prefer-not-to-say';
+  age?: number;
+  phoneNumber?: string;
+  interestCategories?: string[];
+  userActivity?: 'browse-only' | 'buy-only' | 'sell-only' | 'both-buy-sell';
+  budget?: {
+    min?: number;
+    max?: number;
+    currency?: string;
+  };
+  shoppingFrequency?: 'daily' | 'weekly' | 'monthly' | 'occasionally' | 'rarely';
+  itemConditionPreference?: 'new-only' | 'second-hand-only' | 'both';
+  shippingAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+  };
 }
 
 interface Listing {
@@ -48,6 +69,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     // Check authentication state
@@ -83,7 +105,8 @@ export default function ProfileScreen() {
 
   const fetchProfile = async () => {
     // Don't fetch if not authenticated
-    if (!getCurrentUser()) {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
       setLoading(false);
       return;
     }
@@ -91,6 +114,16 @@ export default function ProfileScreen() {
     try {
       setLoading(true);
       setError(null);
+      
+      // Check if we can get a token (force refresh to ensure it's valid)
+      const token = await getIdToken(true);
+      
+      if (!token) {
+        setError('Authentication failed. Please sign out and sign in again.');
+        setLoading(false);
+        return;
+      }
+      
       const response = await apiClient.get('/api/profile', true);
       const data = await response.json();
       
@@ -104,19 +137,21 @@ export default function ProfileScreen() {
             setListings(data.data.listings);
           }
         }
-      } else if (response.status === 404) {
-        // Profile not found - expected for new users
-        setProfile(null);
+      } else if (response.status === 400) {
+        // Bad request - likely userId missing
+        setError(data.error || data.message || 'Profile not found. Please try signing out and back in.');
       } else if (response.status === 401) {
         // Unauthorized - user is signed out
         setIsAuthenticated(false);
         setProfile(null);
         setListings([]);
+      } else if (response.status === 404) {
+        // Profile not found - expected for new users
+        setProfile(null);
       } else {
-        setError(data.message || 'Failed to load profile');
+        setError(data.message || data.error || 'Failed to load profile');
       }
     } catch (err: any) {
-      console.error('Profile fetch error:', err);
       // Only show error if user is authenticated
       if (getCurrentUser()) {
         setError(err?.message || 'Failed to load profile');
@@ -227,24 +262,71 @@ export default function ProfileScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{
-                uri: profile?.profilePic || 'https://via.placeholder.com/100',
-              }}
-              style={styles.avatar}
-            />
-          </View>
-          <Text style={styles.name}>{profile?.name || 'User'}</Text>
-          {profile?.email && (
-            <Text style={styles.email}>{profile.email}</Text>
-          )}
-          {profile?.bio && (
-            <Text style={styles.bio}>{profile.bio}</Text>
-          )}
+        {/* Page Header */}
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle}>Account</Text>
         </View>
+
+        {/* Profile Card */}
+        {profile ? (
+          <View style={styles.profileCard}>
+            <View style={styles.profileHeader}>
+              <View style={styles.avatarContainer}>
+                {profile.profilePicture ? (
+                  <Image
+                    source={{
+                      uri: profile.profilePicture,
+                    }}
+                    style={styles.avatar}
+                    defaultSource={require('../../assets/icon.png')}
+                  />
+                ) : (
+                  <Image
+                    source={require('../../assets/icon.png')}
+                    style={styles.avatar}
+                  />
+                )}
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.name}>{profile.displayName || profile.username || 'User'}</Text>
+                {profile.username && (
+                  <Text style={styles.username}>@{profile.username}</Text>
+                )}
+                {profile.bio && (
+                  <Text style={styles.bio}>{profile.bio}</Text>
+                )}
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => setShowEditModal(true)}
+            >
+              <Ionicons name="create-outline" size={18} color="#60a5fa" />
+              <Text style={styles.editButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.profileCard}>
+            <View style={styles.profileHeader}>
+              <View style={styles.avatarContainer}>
+                <Ionicons name="person-circle-outline" size={80} color="#60a5fa" />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.name}>Welcome!</Text>
+                <Text style={styles.email}>{getCurrentUser()?.email || ''}</Text>
+                <Text style={styles.createProfileText}>
+                  Complete your profile to get started
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.createProfileButton}
+              onPress={() => setShowEditModal(true)}
+            >
+              <Text style={styles.createProfileButtonText}>Create Profile</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
@@ -302,6 +384,18 @@ export default function ProfileScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <EditProfileModal
+          profile={profile}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={(updatedProfile) => {
+            setProfile(updatedProfile);
+            setShowEditModal(false);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -312,36 +406,62 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f1b2e',
   },
   scrollContent: {
+    paddingBottom: 20,
+  },
+  pageHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  profileCard: {
+    backgroundColor: '#1a2332',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 16,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   profileHeader: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  avatarContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
+  avatarContainer: {
+    marginRight: 16,
+  },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#1a1a1a',
   },
+  profileInfo: {
+    flex: 1,
+  },
   name: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 4,
   },
   email: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#999',
     marginBottom: 8,
   },
   bio: {
     fontSize: 14,
     color: '#ccc',
-    textAlign: 'center',
+    lineHeight: 20,
     marginTop: 8,
   },
   signOutButton: {
@@ -351,7 +471,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444',
     padding: 14,
     borderRadius: 12,
-    marginBottom: 30,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 20,
     gap: 8,
   },
   signOutText: {
@@ -361,6 +483,7 @@ const styles = StyleSheet.create({
   },
   listingsSection: {
     marginTop: 20,
+    marginHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -470,5 +593,42 @@ const styles = StyleSheet.create({
     color: '#60a5fa',
     fontSize: 16,
     fontWeight: '600',
+  },
+  username: {
+    fontSize: 14,
+    color: '#60a5fa',
+    marginBottom: 4,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#60a5fa',
+    padding: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  editButtonText: {
+    color: '#60a5fa',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  createProfileButton: {
+    backgroundColor: '#60a5fa',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  createProfileButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  createProfileText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
   },
 });
