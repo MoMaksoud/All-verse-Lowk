@@ -117,25 +117,8 @@ export default function MessagesScreen() {
     loadLastOpenedTimestamp();
   }, [currentUser?.uid]);
 
-  // Update lastOpenedMessagesPageAt when Messages page is opened (clears global badge)
-  useEffect(() => {
-    const updateLastOpenedTimestamp = async () => {
-      if (!currentUser?.uid) return;
-      
-      try {
-        const now = Date.now();
-        const key = `${LAST_OPENED_MESSAGES_PAGE_KEY}_${currentUser.uid}`;
-        await AsyncStorage.setItem(key, now.toString());
-        setLastOpenedTimestamp(now);
-      } catch (error) {
-        console.error('Error updating last opened timestamp:', error);
-      }
-    };
-    
-    if (currentUser?.uid) {
-      updateLastOpenedTimestamp();
-    }
-  }, [currentUser?.uid]);
+  // Don't update timestamp when messages page opens - only update when user opens a specific chat
+  // This keeps unread indicators visible until user actually views the chat
 
   useEffect(() => {
     if (currentUser) {
@@ -156,23 +139,31 @@ export default function MessagesScreen() {
   useFocusEffect(
     useCallback(() => {
       if (currentUser) {
-        // Force refresh by setting loading state first
-        setRefreshing(true);
+        // Reload last opened timestamp from AsyncStorage (don't update it - only update when chat is opened)
+        const loadTimestamp = async () => {
+          try {
+            const key = `${LAST_OPENED_MESSAGES_PAGE_KEY}_${currentUser.uid}`;
+            const stored = await AsyncStorage.getItem(key);
+            if (stored) {
+              setLastOpenedTimestamp(parseInt(stored, 10));
+            }
+          } catch (error) {
+            // Ignore errors
+          }
+        };
         
-        // Refresh immediately when screen comes into focus
+        loadTimestamp();
+        
+        // Refresh chats when screen comes into focus
         fetchChats();
         
-        // Also refresh after delays to catch any server-side updates
-        const timeout1 = setTimeout(() => {
+        // Also refresh after a delay to catch any server-side updates
+        const timeout = setTimeout(() => {
           fetchChats();
         }, 500);
-        const timeout2 = setTimeout(() => {
-          fetchChats();
-        }, 1000);
         
         return () => {
-          clearTimeout(timeout1);
-          clearTimeout(timeout2);
+          clearTimeout(timeout);
         };
       }
     }, [currentUser, fetchChats])
@@ -327,6 +318,18 @@ export default function MessagesScreen() {
       <TouchableOpacity
         style={styles.chatItem}
         onPress={async () => {
+          // Update global timestamp when user opens a chat (not just views the list)
+          if (currentUser?.uid) {
+            try {
+              const now = Date.now();
+              const key = `${LAST_OPENED_MESSAGES_PAGE_KEY}_${currentUser.uid}`;
+              await AsyncStorage.setItem(key, now.toString());
+              setLastOpenedTimestamp(now);
+            } catch (error) {
+              // Silently fail
+            }
+          }
+          
           // Mark chat as read before navigating (optimistic update)
           if (hasUnread && currentUser?.uid) {
             try {
@@ -590,11 +593,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+    minWidth: 12,
   },
   unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#60a5fa',
   },
   unreadText: {

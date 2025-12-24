@@ -3,6 +3,7 @@ import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useUnreadMessages } from '../../hooks/useUnreadMessages';
 
 const logoSource = require('../../assets/icon.png');
 
@@ -36,6 +37,8 @@ function CustomHeader({ title, showBackButton }: { title?: string; showBackButto
 }
 
 export default function TabsLayout() {
+  const unreadCount = useUnreadMessages();
+
   return (
     <Tabs
       screenOptions={{
@@ -112,7 +115,12 @@ export default function TabsLayout() {
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+            <View style={styles.iconContainer}>
+              <Ionicons name="chatbubbles" size={size} color={color} />
+              {unreadCount > 0 && (
+                <View style={styles.badge} />
+              )}
+            </View>
           ),
           tabBarLabel: '',
         }}
@@ -175,6 +183,20 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: '#60a5fa',
     fontWeight: '600',
+  },
+  iconContainer: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#ef4444',
+    borderWidth: 2,
+    borderColor: '#0f1b2e',
   },
 });
 

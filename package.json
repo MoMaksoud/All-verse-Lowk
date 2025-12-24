@@ -10,7 +10,9 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean",
-    "type-check": "turbo run type-check"
+    "type-check": "turbo run type-check",
+    "build:mobile:ios": "eas build --platform ios --profile production --working-dir apps/mobile",
+    "build:mobile:ios:preview": "eas build --platform ios --profile preview --working-dir apps/mobile"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

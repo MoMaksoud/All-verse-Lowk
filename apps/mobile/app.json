@@ -11,15 +11,17 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0a0a0a"
+      "backgroundColor": "#0f1b2e"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.allversegpt.mobile",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "AllVerse GPT needs access to your camera to take photos of items you want to sell.",
         "NSPhotoLibraryUsageDescription": "AllVerse GPT needs access to your photo library to upload product photos.",
-        "NSPhotoLibraryAddUsageDescription": "AllVerse GPT needs permission to save photos to your library."
+        "NSPhotoLibraryAddUsageDescription": "AllVerse GPT needs permission to save photos to your library.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -33,7 +35,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -62,8 +65,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "your-project-id-here"
+        "projectId": "eab64647-ba64-4620-8e13-1608845fbdc2"
       }
-    }
+    },
+    "owner": "allversegpt"
   }
 }
