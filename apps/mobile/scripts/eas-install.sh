@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Ignore any command line arguments (like --platform ios)
+# EAS may append these, but we don't need them
+
 # Navigate to monorepo root
 cd "$(dirname "$0")/../.."
 
