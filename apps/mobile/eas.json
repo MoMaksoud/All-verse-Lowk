@@ -27,10 +27,7 @@
         "EXPO_PUBLIC_API_URL": "https://www.allversegpt.com/api"
       },
       "ios": {
-        "cocoapods": "1.15.2",
-        "podInstall": {
-          "repoUpdate": true
-        }
+        "cocoapods": "1.15.2"
       }
     }
   },

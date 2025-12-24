@@ -11,7 +11,8 @@
     "build:ios": "eas build --platform ios --profile production",
     "build:ios:preview": "eas build --platform ios --profile preview",
     "submit:ios": "eas submit --platform ios --profile production",
-    "eas-build-pre-install": "cd ../.. && pnpm install --no-frozen-lockfile && cd apps/mobile/ios && pod repo update"
+    "eas-build-pre-install": "cd ../.. && pnpm install --no-frozen-lockfile",
+    "eas-build-post-install": "if [ -d ios ]; then cd ios && pod repo update || true; fi"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
