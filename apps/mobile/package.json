@@ -10,7 +10,8 @@
     "lint": "expo lint",
     "build:ios": "eas build --platform ios --profile production",
     "build:ios:preview": "eas build --platform ios --profile preview",
-    "submit:ios": "eas submit --platform ios --profile production"
+    "submit:ios": "eas submit --platform ios --profile production",
+    "eas-build-pre-install": "cd ../.. && pnpm install --no-frozen-lockfile"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
