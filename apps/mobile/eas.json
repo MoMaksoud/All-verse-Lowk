@@ -11,7 +11,7 @@
       },
       "node": "20.19.0",
       "pnpm": "8.15.0",
-      "prebuildCommand": "cd ../.. && pnpm install --frozen-lockfile"
+      "prebuildCommand": "bash scripts/eas-install.sh"
     },
     "preview": {
       "distribution": "internal",
@@ -20,7 +20,7 @@
       },
       "node": "20.19.0",
       "pnpm": "8.15.0",
-      "prebuildCommand": "cd ../.. && pnpm install --frozen-lockfile"
+      "prebuildCommand": "bash scripts/eas-install.sh"
     },
     "production": {
       "node": "20.19.0",
@@ -28,7 +28,7 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://www.allversegpt.com/api"
       },
-      "prebuildCommand": "cd ../.. && pnpm install --frozen-lockfile"
+      "prebuildCommand": "bash scripts/eas-install.sh"
     }
   },
   "submit": {
