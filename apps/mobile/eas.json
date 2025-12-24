@@ -25,6 +25,12 @@
       "pnpm": "8.15.0",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://www.allversegpt.com/api"
+      },
+      "ios": {
+        "cocoapods": "1.15.2",
+        "podInstall": {
+          "repoUpdate": true
+        }
       }
     }
   },
