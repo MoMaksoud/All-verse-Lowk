@@ -538,7 +538,7 @@ export default function SellPage() {
                   <PhotoUpload
                     uid={currentUser.uid}
                     listingId={listingId || ''}
-                    max={10}
+                    max={6}
                     initial={[]}
                     onChange={handlePhotoChange}
                     className="max-w-2xl mx-auto"

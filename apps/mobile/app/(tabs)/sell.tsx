@@ -76,12 +76,19 @@ export default function SellScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
       quality: 0.8,
-      selectionLimit: 10,
+      selectionLimit: 6,
     });
 
     if (!result.canceled && result.assets) {
       const newPhotos = result.assets.map((asset) => asset.uri);
-      setPhotos([...photos, ...newPhotos].slice(0, 10));
+      const totalPhotos = photos.length + newPhotos.length;
+      const maxPhotos = 6;
+      const photosToAdd = totalPhotos > maxPhotos ? maxPhotos - photos.length : newPhotos.length;
+      setPhotos([...photos, ...newPhotos.slice(0, photosToAdd)].slice(0, maxPhotos));
+      
+      if (totalPhotos > maxPhotos) {
+        Alert.alert('Photo Limit', `You can upload up to ${maxPhotos} photos. Only the first ${maxPhotos} will be used.`);
+      }
     }
   };
 
@@ -95,12 +102,20 @@ export default function SellScreen() {
       return;
     }
 
+    // Cap photos to 6 for analysis to prevent upload issues
+    const photosToAnalyze = photos.slice(0, 6);
+    if (photos.length > 6) {
+      Alert.alert('Photo Limit', 'Only the first 6 photos will be analyzed.');
+    }
+
     try {
       setAiAnalyzing(true);
       // Upload photos first using ai-chat endpoint (temporary uploads for AI analysis)
       const uploadedUrls: string[] = [];
-      for (let i = 0; i < photos.length; i++) {
-        const photoUri = photos[i];
+      let uploadErrors = 0;
+      
+      for (let i = 0; i < photosToAnalyze.length; i++) {
+        const photoUri = photosToAnalyze[i];
         try {
           // For React Native, pass URI directly with proper metadata (don't convert HEIC to blob)
           const formData = new FormData();
@@ -116,15 +131,33 @@ export default function SellScreen() {
             const uploadData = await uploadResponse.json();
             if (uploadData.url) {
               uploadedUrls.push(uploadData.url);
+            } else {
+              uploadErrors++;
+            }
+          } else {
+            uploadErrors++;
+            // If we get a 401/403, stop trying to avoid redirect issues
+            if (uploadResponse.status === 401 || uploadResponse.status === 403) {
+              throw new Error('Authentication failed. Please sign in again.');
             }
           }
         } catch (uploadError: any) {
-          // Silently continue to next photo
+          uploadErrors++;
+          // If it's an auth error, stop and show error
+          if (uploadError?.message?.includes('auth') || uploadError?.message?.includes('Authentication')) {
+            throw uploadError;
+          }
+          // Continue with other photos if it's just a network error
         }
       }
       
       if (uploadedUrls.length === 0) {
-        throw new Error('Failed to upload photos. Please try again.');
+        throw new Error('Failed to upload photos. Please try again with fewer photos.');
+      }
+      
+      // Warn if some photos failed but we have at least one
+      if (uploadErrors > 0 && uploadedUrls.length > 0) {
+        console.warn(`Uploaded ${uploadedUrls.length} of ${photosToAnalyze.length} photos`);
       }
 
       // Call AI analysis
@@ -364,10 +397,15 @@ export default function SellScreen() {
     try {
       setLoading(true);
       
+      // Cap photos to 6 for upload to prevent issues
+      const photosToUpload = photos.slice(0, 6);
+      
       // Upload photos using ai-chat endpoint (temporary uploads)
       // Note: These will be moved to listing-photos endpoint after listing is created
       const uploadedUrls: string[] = [];
-      for (const photoUri of photos) {
+      let uploadErrors = 0;
+      
+      for (const photoUri of photosToUpload) {
         try {
           // Convert React Native file URI to Blob for web API compatibility
           // For React Native, pass URI directly with proper metadata (don't convert HEIC to blob)
@@ -383,16 +421,28 @@ export default function SellScreen() {
             const uploadData = await uploadResponse.json();
             uploadedUrls.push(uploadData.url);
           } else {
+            uploadErrors++;
+            // If we get a 401/403, stop trying to avoid redirect issues
+            if (uploadResponse.status === 401 || uploadResponse.status === 403) {
+              throw new Error('Authentication failed. Please sign in again.');
+            }
             const errorData = await uploadResponse.json().catch(() => ({}));
             console.error('Upload failed:', errorData);
           }
-        } catch (uploadError) {
+        } catch (uploadError: any) {
+          uploadErrors++;
+          // If it's an auth error, stop and show error
+          if (uploadError?.message?.includes('auth') || uploadError?.message?.includes('Authentication')) {
+            Alert.alert('Authentication Error', 'Please sign in again and try uploading fewer photos.');
+            setLoading(false);
+            return;
+          }
           console.error('Error converting/uploading file:', uploadError);
         }
       }
       
       if (uploadedUrls.length === 0) {
-        Alert.alert('Error', 'Failed to upload photos. Please try again.');
+        Alert.alert('Error', 'Failed to upload photos. Please try again with fewer photos.');
         setLoading(false);
         return;
       }
@@ -466,7 +516,7 @@ export default function SellScreen() {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Upload Your Item Photos</Text>
             <Text style={styles.stepSubtitle}>
-              Take or select photos of your item. You can upload up to 10 photos.
+              Take or select photos of your item. You can upload up to 6 photos.
             </Text>
 
             <View style={styles.photosContainer}>
@@ -485,7 +535,7 @@ export default function SellScreen() {
                       Maximum file size: 10MB per photo
                     </Text>
                     <Text style={styles.uploadInfoText}>
-                      Up to 10 photos allowed
+                      Up to 6 photos allowed
                     </Text>
                   </View>
                 </View>
@@ -502,7 +552,7 @@ export default function SellScreen() {
                       </TouchableOpacity>
                     </View>
                   ))}
-                  {photos.length < 10 && (
+                  {photos.length < 6 && (
                     <TouchableOpacity style={styles.addPhotoButton} onPress={pickImages}>
                       <Ionicons name="camera-outline" size={32} color="rgba(255, 255, 255, 0.6)" />
                       <Text style={styles.addPhotoText}>Add Photo</Text>

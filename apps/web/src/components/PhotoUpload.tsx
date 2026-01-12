@@ -21,7 +21,7 @@ interface PhotoUploadProps {
 export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   uid,
   listingId,
-  max = 10,
+  max = 6,
   onChange,
   initial = [],
   className = '',
