@@ -267,7 +267,7 @@ export default function FavoritesScreen() {
           numColumns={2}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={renderListHeader}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#60a5fa" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />}
           columnWrapperStyle={styles.row}
         />
       )}
@@ -278,7 +278,7 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   pageHeader: {
     flexDirection: 'row',
@@ -340,8 +340,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   categoryChipActive: {
-    backgroundColor: '#60a5fa',
-    borderColor: '#60a5fa',
+    backgroundColor: '#0063e1',
+    borderColor: '#0063e1',
   },
   categoryChipText: {
     color: 'rgba(255, 255, 255, 0.7)',
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   browseButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,

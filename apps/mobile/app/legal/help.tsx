@@ -79,7 +79,7 @@ export default function HelpScreen() {
     },
     {
       icon: 'time-outline',
-      iconColor: '#60a5fa',
+      iconColor: '#0063e1',
       title: 'Support Response Times',
       items: [
         'Typical response: 1–12 hours.',
@@ -100,7 +100,7 @@ export default function HelpScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
           <View style={styles.badge}>
-            <Ionicons name="chatbubbles" size={20} color="#60a5fa" />
+            <Ionicons name="chatbubbles" size={20} color="#0063e1" />
             <Text style={styles.badgeText}>Help Center</Text>
           </View>
           <Text style={styles.title}>All Verse GPT – Help Center</Text>
@@ -108,7 +108,7 @@ export default function HelpScreen() {
             We're here to support you as you buy, sell, and manage listings across the All Verse GPT platform.
           </Text>
           <View style={styles.contactBanner}>
-            <Ionicons name="mail" size={20} color="#60a5fa" />
+            <Ionicons name="mail" size={20} color="#0063e1" />
             <Text style={styles.contactBannerText}>
               Need help? Contact us at{' '}
               <Text style={styles.contactLink} onPress={handleEmailPress}>info@allversegpt.com</Text>
@@ -152,7 +152,7 @@ export default function HelpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   header: {
     flexDirection: 'row',
@@ -190,15 +190,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    backgroundColor: 'rgba(0, 99, 225, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.2)',
+    borderColor: 'rgba(0, 99, 225, 0.2)',
     marginBottom: 24,
   },
   badgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   title: {
     fontSize: 32,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   },
   contactLink: {
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
     textDecorationLine: 'underline',
   },
   sectionsList: {

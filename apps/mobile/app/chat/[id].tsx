@@ -410,7 +410,7 @@ export default function ChatDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   flex1: {
     flex: 1,
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   myMessageBubble: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     borderBottomRightRadius: 4,
   },
   otherMessageBubble: {
@@ -557,12 +557,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: 'rgba(96, 165, 250, 0.3)',
+    backgroundColor: 'rgba(0, 99, 225, 0.3)',
   },
   emptyState: {
     flex: 1,

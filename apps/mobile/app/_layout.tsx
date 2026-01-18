@@ -17,7 +17,7 @@ export default function RootLayout() {
             borderBottomWidth: 1,
             borderBottomColor: 'rgba(255, 255, 255, 0.1)',
           },
-          headerTintColor: '#60a5fa',
+          headerTintColor: '#0063e1',
           headerTitleStyle: {
             fontWeight: '700',
             fontSize: 18,

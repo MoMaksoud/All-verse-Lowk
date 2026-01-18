@@ -523,7 +523,7 @@ export default function SellScreen() {
               {photos.length === 0 ? (
                 <View style={styles.centerPhotoContainer}>
                   <TouchableOpacity style={styles.addPhotoButtonLarge} onPress={pickImages}>
-                    <Ionicons name="camera-outline" size={48} color="rgba(96, 165, 250, 0.8)" />
+                    <Ionicons name="camera-outline" size={48} color="rgba(0, 99, 225, 0.8)" />
                     <Text style={styles.addPhotoTextLarge}>Tap to Upload</Text>
                     <Text style={styles.addPhotoSubtext}>or select from gallery</Text>
                   </TouchableOpacity>
@@ -581,12 +581,12 @@ export default function SellScreen() {
                 style={styles.stepBackButton}
                 onPress={() => setCurrentStep(currentStep - 1)}
               >
-                <Ionicons name="chevron-back" size={20} color="#60a5fa" />
+                <Ionicons name="chevron-back" size={20} color="#0063e1" />
                 <Text style={styles.stepBackButtonText}>Back</Text>
               </TouchableOpacity>
             )}
             <View style={styles.iconContainer}>
-              <Ionicons name="bulb-outline" size={48} color="#60a5fa" />
+              <Ionicons name="bulb-outline" size={48} color="#0063e1" />
             </View>
             <Text style={styles.stepTitle}>AI Analysis</Text>
             <Text style={styles.stepSubtitle}>
@@ -595,7 +595,7 @@ export default function SellScreen() {
 
             {aiAnalyzing ? (
               <View style={styles.analyzingContainer}>
-                <ActivityIndicator size="large" color="#60a5fa" />
+                <ActivityIndicator size="large" color="#0063e1" />
                 <Text style={styles.analyzingText}>Analyzing your photos...</Text>
                 <Text style={styles.analyzingSubtext}>This may take a few moments</Text>
               </View>
@@ -633,12 +633,12 @@ export default function SellScreen() {
                   }
                 }}
               >
-                <Ionicons name="chevron-back" size={20} color="#60a5fa" />
+                <Ionicons name="chevron-back" size={20} color="#0063e1" />
                 <Text style={styles.stepBackButtonText}>Back</Text>
               </TouchableOpacity>
             )}
             <View style={styles.questionHeader}>
-              <Ionicons name="chatbubbles-outline" size={32} color="#60a5fa" />
+              <Ionicons name="chatbubbles-outline" size={32} color="#0063e1" />
               <Text style={styles.questionProgress}>
                 Question {currentQuestionIndex + 1} of {missingInfoQuestions.length}
               </Text>
@@ -722,7 +722,7 @@ export default function SellScreen() {
                   }
                 }}
               >
-                <Ionicons name="chevron-back" size={20} color="#60a5fa" />
+                <Ionicons name="chevron-back" size={20} color="#0063e1" />
                 <Text style={styles.stepBackButtonText}>Back</Text>
               </TouchableOpacity>
             )}
@@ -877,7 +877,7 @@ export default function SellScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -885,15 +885,15 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   headerCard: {
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 20,
     padding: 20,
     marginTop: 20,
     marginBottom: 32,
     marginHorizontal: 20,
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.3)',
-    shadowColor: '#60a5fa',
+    borderColor: 'rgba(0, 99, 225, 0.3)',
+    shadowColor: '#0063e1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -908,11 +908,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(96, 165, 250, 0.15)',
+    backgroundColor: 'rgba(0, 99, 225, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(96, 165, 250, 0.4)',
+    borderColor: 'rgba(0, 99, 225, 0.4)',
   },
   logo: {
     width: 36,
@@ -971,7 +971,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 16,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -979,7 +979,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
     borderRadius: 12,
     padding: 2,
   },
@@ -987,9 +987,9 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 16,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderWidth: 2,
-    borderColor: 'rgba(96, 165, 250, 0.3)',
+    borderColor: 'rgba(0, 99, 225, 0.3)',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
@@ -999,9 +999,9 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 20,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderWidth: 2.5,
-    borderColor: 'rgba(96, 165, 250, 0.4)',
+    borderColor: 'rgba(0, 99, 225, 0.4)',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
   },
   addPhotoTextLarge: {
     fontSize: 18,
-    color: '#60a5fa',
+    color: '#0063e1',
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -1052,7 +1052,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 24,
@@ -1060,7 +1060,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    shadowColor: '#60a5fa',
+    shadowColor: '#0063e1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1108,14 +1108,14 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 2,
     marginTop: 20,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
   },
   previewImage: {
     width: '100%',
@@ -1133,7 +1133,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   input: {
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1155,7 +1155,7 @@ const styles = StyleSheet.create({
     left: 16,
     fontSize: 16,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
     zIndex: 1,
   },
   priceField: {
@@ -1168,7 +1168,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   option: {
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -1176,8 +1176,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   optionSelected: {
-    backgroundColor: '#60a5fa',
-    borderColor: '#60a5fa',
+    backgroundColor: '#0063e1',
+    borderColor: '#0063e1',
   },
   optionText: {
     fontSize: 14,
@@ -1198,7 +1198,7 @@ const styles = StyleSheet.create({
   stepBackButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
     marginLeft: 4,
   },
   emptyState: {
@@ -1221,7 +1221,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   signInButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,

@@ -422,7 +422,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   searchContainer: {
     paddingHorizontal: 20,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   },
   recentSearchesContainer: {
     marginTop: 12,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     fontSize: 13,
-    color: '#60a5fa',
+    color: '#0063e1',
     fontWeight: '600',
   },
   recentSearchItem: {
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   badge: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   externalCard: {
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   externalPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -581,18 +581,18 @@ const styles = StyleSheet.create({
   },
   sourceBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    backgroundColor: 'rgba(0, 99, 225, 0.2)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.3)',
+    borderColor: 'rgba(0, 99, 225, 0.3)',
   },
   sourceText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   emptyState: {
     flex: 1,

@@ -305,7 +305,7 @@ export default function CartScreen() {
             renderItem={renderCartItem}
             keyExtractor={(item) => item.listingId}
             contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#60a5fa" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />}
             ListHeaderComponent={ListHeader}
           />
 
@@ -356,7 +356,7 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   pageHeader: {
     flexDirection: 'row',
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   quantityControls: {
     flexDirection: 'row',
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   signInButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   browseButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -580,10 +580,10 @@ const styles = StyleSheet.create({
   summaryTotalValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   checkoutButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,

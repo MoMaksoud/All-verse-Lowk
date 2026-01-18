@@ -442,7 +442,7 @@ export default function MessagesScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#60a5fa" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />
           }
           showsVerticalScrollIndicator={false}
         >
@@ -463,7 +463,7 @@ export default function MessagesScreen() {
           ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#60a5fa" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />
           }
         />
       )}
@@ -481,7 +481,7 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   scrollContent: {
     flexGrow: 1,
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   signInButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#1e293b',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
   },
   unreadText: {
     fontSize: 12,
@@ -610,10 +610,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     marginHorizontal: 20,
     marginTop: 12,
-    marginBottom: 8,
+    marginBottom: 24,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,

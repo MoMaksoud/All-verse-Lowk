@@ -260,7 +260,7 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.signInPrompt}>
-            <Ionicons name="person-circle-outline" size={80} color="#60a5fa" />
+            <Ionicons name="person-circle-outline" size={80} color="#0063e1" />
             <Text style={styles.signInTitle}>Sign In Required</Text>
             <Text style={styles.signInSubtitle}>
               Please sign in to view your profile and manage your listings
@@ -291,7 +291,7 @@ export default function ProfileScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor="#60a5fa"
+            tintColor="#0063e1"
           />
         }
         showsVerticalScrollIndicator={false}
@@ -335,7 +335,7 @@ export default function ProfileScreen() {
               style={styles.editButton}
               onPress={() => setShowEditModal(true)}
             >
-              <Ionicons name="create-outline" size={18} color="#60a5fa" />
+              <Ionicons name="create-outline" size={18} color="#0063e1" />
               <Text style={styles.editButtonText}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
@@ -343,7 +343,7 @@ export default function ProfileScreen() {
           <View style={styles.profileCard}>
             <View style={styles.profileHeader}>
               <View style={styles.avatarContainer}>
-                <Ionicons name="person-circle-outline" size={80} color="#60a5fa" />
+                <Ionicons name="person-circle-outline" size={80} color="#0063e1" />
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.name}>Welcome!</Text>
@@ -370,7 +370,7 @@ export default function ProfileScreen() {
               style={styles.legalItem}
               onPress={() => router.push('/legal/faq' as any)}
             >
-              <Ionicons name="help-circle-outline" size={24} color="#60a5fa" />
+              <Ionicons name="help-circle-outline" size={24} color="#0063e1" />
               <Text style={styles.legalItemText}>FAQ</Text>
               <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
             </TouchableOpacity>
@@ -378,7 +378,7 @@ export default function ProfileScreen() {
               style={styles.legalItem}
               onPress={() => router.push('/legal/help' as any)}
             >
-              <Ionicons name="chatbubbles-outline" size={24} color="#60a5fa" />
+              <Ionicons name="chatbubbles-outline" size={24} color="#0063e1" />
               <Text style={styles.legalItemText}>Help Center</Text>
               <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
             </TouchableOpacity>
@@ -386,7 +386,7 @@ export default function ProfileScreen() {
               style={styles.legalItem}
               onPress={() => router.push('/legal/privacy' as any)}
             >
-              <Ionicons name="shield-outline" size={24} color="#60a5fa" />
+              <Ionicons name="shield-outline" size={24} color="#0063e1" />
               <Text style={styles.legalItemText}>Privacy Policy</Text>
               <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
             </TouchableOpacity>
@@ -394,7 +394,7 @@ export default function ProfileScreen() {
               style={styles.legalItem}
               onPress={() => router.push('/legal/terms' as any)}
             >
-              <Ionicons name="document-text-outline" size={24} color="#60a5fa" />
+              <Ionicons name="document-text-outline" size={24} color="#0063e1" />
               <Text style={styles.legalItemText}>Terms of Service</Text>
               <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
             </TouchableOpacity>
@@ -402,7 +402,7 @@ export default function ProfileScreen() {
               style={styles.legalItem}
               onPress={() => router.push('/legal/contact' as any)}
             >
-              <Ionicons name="mail-outline" size={24} color="#60a5fa" />
+              <Ionicons name="mail-outline" size={24} color="#0063e1" />
               <Text style={styles.legalItemText}>Contact Us</Text>
               <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
             </TouchableOpacity>
@@ -484,7 +484,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   scrollContent: {
     paddingBottom: 20,
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   createButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   signInButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
@@ -691,16 +691,16 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#60a5fa',
+    borderColor: '#0063e1',
   },
   signUpButtonText: {
-    color: '#60a5fa',
+    color: '#0063e1',
     fontSize: 16,
     fontWeight: '600',
   },
   username: {
     fontSize: 14,
-    color: '#60a5fa',
+    color: '#0063e1',
     marginBottom: 4,
   },
   editButton: {
@@ -709,18 +709,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#60a5fa',
+    borderColor: '#0063e1',
     padding: 12,
     borderRadius: 12,
     gap: 8,
   },
   editButtonText: {
-    color: '#60a5fa',
+    color: '#0063e1',
     fontSize: 16,
     fontWeight: '600',
   },
   createProfileButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     padding: 14,
     borderRadius: 12,
     alignItems: 'center',

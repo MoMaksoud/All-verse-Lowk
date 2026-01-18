@@ -153,7 +153,7 @@ export default function PrivacyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   header: {
     flexDirection: 'row',
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
-    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    backgroundColor: 'rgba(0, 99, 225, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   link: {
-    color: '#60a5fa',
+    color: '#0063e1',
     textDecorationLine: 'underline',
   },
 });

@@ -386,7 +386,7 @@ export default function CheckoutScreen() {
             <Text style={styles.sectionTitle}>Shipping Options</Text>
             {loadingRates ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#60a5fa" />
+                <ActivityIndicator size="small" color="#0063e1" />
                 <Text style={styles.loadingText}>Loading shipping rates...</Text>
               </View>
             ) : ratesError ? (
@@ -410,7 +410,7 @@ export default function CheckoutScreen() {
                         <Ionicons
                           name={selectedShipping?.id === rate.id ? 'radio-button-on' : 'radio-button-off'}
                           size={24}
-                          color={selectedShipping?.id === rate.id ? '#60a5fa' : 'rgba(255, 255, 255, 0.5)'}
+                          color={selectedShipping?.id === rate.id ? '#0063e1' : 'rgba(255, 255, 255, 0.5)'}
                         />
                         <View style={styles.shippingOptionInfo}>
                           <Text style={styles.shippingOptionName}>{rate.serviceName}</Text>
@@ -495,7 +495,7 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   header: {
     flexDirection: 'row',
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#1a2332',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -572,15 +572,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   shippingOption: {
-    backgroundColor: '#1a2332',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   shippingOptionSelected: {
-    borderColor: '#60a5fa',
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    borderColor: '#0063e1',
+    backgroundColor: 'rgba(0, 99, 225, 0.1)',
   },
   shippingOptionContent: {
     flexDirection: 'row',
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   shippingOptionPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   noRatesText: {
     color: 'rgba(255, 255, 255, 0.6)',
@@ -663,17 +663,17 @@ const styles = StyleSheet.create({
   summaryTotalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   footer: {
-    backgroundColor: '#1a2332',
+    backgroundColor: '#1e293b',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
     padding: 20,
     paddingBottom: 32,
   },
   checkoutButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   checkoutButtonDisabled: {
-    backgroundColor: 'rgba(96, 165, 250, 0.5)',
+    backgroundColor: 'rgba(0, 99, 225, 0.5)',
   },
   checkoutButtonText: {
     color: '#fff',
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   browseButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,

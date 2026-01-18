@@ -101,7 +101,7 @@ export default function HomeScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor="#60a5fa"
+            tintColor="#0063e1"
           />
         }
         showsVerticalScrollIndicator={false}
@@ -135,7 +135,7 @@ export default function HomeScreen() {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.badge}>
-            <Ionicons name="sparkles" size={16} color="#60a5fa" />
+            <Ionicons name="sparkles" size={16} color="#0063e1" />
             <Text style={styles.badgeText}>Universal AI Shopping Search</Text>
           </View>
           
@@ -197,7 +197,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/search')}
             >
               <Text style={styles.viewAllText}>View All</Text>
-              <Ionicons name="arrow-forward" size={16} color="#60a5fa" />
+              <Ionicons name="arrow-forward" size={16} color="#0063e1" />
             </TouchableOpacity>
           </View>
           
@@ -316,7 +316,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   scrollContent: {
     paddingBottom: 10,
@@ -388,9 +388,9 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    backgroundColor: 'rgba(0, 99, 225, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.2)',
+    borderColor: 'rgba(0, 99, 225, 0.2)',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   heroTitle: {
     fontSize: 36,
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   searchButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     borderRadius: 12,
     padding: 10,
     marginLeft: 8,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   errorContainer: {
     padding: 16,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     width: (width - 52) / 2,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    backgroundColor: 'rgba(0, 99, 225, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 14,

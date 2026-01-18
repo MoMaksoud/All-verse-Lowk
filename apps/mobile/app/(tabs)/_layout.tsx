@@ -42,10 +42,10 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#60a5fa', // Accent blue color
+        tabBarActiveTintColor: '#0063e1', // Accent blue color
         tabBarInactiveTintColor: '#71717a', // Gray
         tabBarStyle: {
-          backgroundColor: '#0f1b2e',
+          backgroundColor: '#020617',
           borderTopColor: 'rgba(255, 255, 255, 0.1)',
           borderTopWidth: 1,
           height: 70,
@@ -57,7 +57,7 @@ export default function TabsLayout() {
           fontWeight: '600',
         },
         headerStyle: {
-          backgroundColor: '#0f1b2e',
+          backgroundColor: '#020617',
           elevation: 0,
           shadowOpacity: 0,
           borderBottomWidth: 0,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 17,
-    color: '#60a5fa',
+    color: '#0063e1',
     fontWeight: '600',
   },
   iconContainer: {
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#ef4444',
     borderWidth: 2,
-    borderColor: '#0f1b2e',
+    borderColor: '#020617',
   },
 });
 

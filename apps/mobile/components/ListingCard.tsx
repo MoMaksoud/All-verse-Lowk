@@ -271,7 +271,7 @@ export default function ListingCard({
 const styles = StyleSheet.create({
   // Grid variant styles
   gridCard: {
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
 
   // List variant styles
   listCard: {
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   category: {
     fontSize: 12,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   addToCartButtonDisabled: {
-    backgroundColor: 'rgba(96, 165, 250, 0.5)',
+    backgroundColor: 'rgba(0, 99, 225, 0.5)',
   },
   addToCartText: {
     color: '#fff',

@@ -27,7 +27,7 @@ export default function ContactScreen() {
       description: 'Get help via email',
       action: 'info@allversegpt.com',
       onPress: handleEmailPress,
-      color: '#60a5fa',
+      color: '#0063e1',
     },
     {
       icon: 'globe',
@@ -51,7 +51,7 @@ export default function ContactScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
           <View style={styles.iconContainer}>
-            <Ionicons name="mail" size={48} color="#60a5fa" />
+            <Ionicons name="mail" size={48} color="#0063e1" />
           </View>
           <Text style={styles.title}>Get in Touch</Text>
           <Text style={styles.subtitle}>
@@ -106,7 +106,7 @@ export default function ContactScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   header: {
     flexDirection: 'row',
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 20,
-    backgroundColor: 'rgba(96, 165, 250, 0.2)',
+    backgroundColor: 'rgba(0, 99, 225, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,

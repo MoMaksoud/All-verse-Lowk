@@ -320,7 +320,7 @@ export default function ListingDetailScreen() {
           {/* Meta Info */}
           <View style={styles.metaContainer}>
             <View style={styles.metaChip}>
-              <Ionicons name="pricetag" size={14} color="#60a5fa" />
+              <Ionicons name="pricetag" size={14} color="#0063e1" />
               <Text style={styles.metaText}>{listing.category}</Text>
             </View>
             {listing.condition && (
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   },
   paginationDotActive: {
     width: 20,
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
   },
   content: {
     padding: 20,
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   soldBadge: {
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
@@ -523,12 +523,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    backgroundColor: 'rgba(0, 99, 225, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.2)',
+    borderColor: 'rgba(0, 99, 225, 0.2)',
   },
   metaText: {
     fontSize: 13,
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   },
   descriptionSection: {
     marginBottom: 24,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   sellerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     gap: 12,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
     shadowColor: '#000',
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#374151',
   },
   cartButton: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
   },
   buttonText: {
     fontSize: 16,

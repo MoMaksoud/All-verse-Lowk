@@ -71,7 +71,7 @@ export default function FAQScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
           <View style={styles.badge}>
-            <Ionicons name="help-circle" size={20} color="#60a5fa" />
+            <Ionicons name="help-circle" size={20} color="#0063e1" />
             <Text style={styles.badgeText}>Frequently Asked Questions</Text>
           </View>
           <Text style={styles.title}>All Verse GPT – FAQ</Text>
@@ -92,7 +92,7 @@ export default function FAQScreen() {
         </View>
 
         <View style={styles.ctaSection}>
-          <Ionicons name="mail" size={48} color="#60a5fa" />
+          <Ionicons name="mail" size={48} color="#0063e1" />
           <Text style={styles.ctaTitle}>Still have questions?</Text>
           <Text style={styles.ctaText}>
             If your question is not listed, email us at info@allversegpt.com
@@ -110,7 +110,7 @@ export default function FAQScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: '#020617',
   },
   header: {
     flexDirection: 'row',
@@ -148,15 +148,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    backgroundColor: 'rgba(0, 99, 225, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.2)',
+    borderColor: 'rgba(0, 99, 225, 0.2)',
     marginBottom: 24,
   },
   badgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   title: {
     fontSize: 32,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   faqNumber: {
-    color: '#60a5fa',
+    color: '#0063e1',
   },
   faqAnswer: {
     fontSize: 15,
@@ -199,10 +199,10 @@ const styles = StyleSheet.create({
     paddingLeft: 24,
   },
   ctaSection: {
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    backgroundColor: 'rgba(0, 99, 225, 0.1)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.2)',
+    borderColor: 'rgba(0, 99, 225, 0.2)',
     padding: 32,
     alignItems: 'center',
   },
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,

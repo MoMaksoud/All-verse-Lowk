@@ -76,7 +76,7 @@ export default function SignInScreen() {
               }
             }}
           >
-            <Ionicons name="arrow-back" size={24} color="#60a5fa" />
+            <Ionicons name="arrow-back" size={24} color="#0063e1" />
           </TouchableOpacity>
 
           {/* Header */}
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0B1220',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   button: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#0063e1',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   link: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: '#0063e1',
   },
 });
 
