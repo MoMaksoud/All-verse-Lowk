@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { withApi } from "@/lib/withApi";
 import { firestoreServices } from "@/lib/services/firestore";
 import { success, error } from "@/lib/response";
-import { notFound, badRequest, unauthorized } from "@/lib/errors";
+import { notFound, badRequest, unauthorized } from "@marketplace/shared-logic";
 import { UpdateOrderInput } from "@/lib/types/firestore";
 
 export const runtime = "nodejs";

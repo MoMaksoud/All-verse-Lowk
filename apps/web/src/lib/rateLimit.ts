@@ -1,4 +1,4 @@
-import { rateLimited } from "./errors";
+import { rateLimited } from "@marketplace/shared-logic";
 
 // Simple token bucket: N requests per minute per IP
 const BUCKETS = new Map<string, { tokens: number; last: number }>();

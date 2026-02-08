@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ExternalLink, DollarSign } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
-import { normalizeImageSrc } from '@/lib/image-utils';
+import { normalizeImageSrc } from '@marketplace/shared-logic';
 
 interface ListingPreviewCardProps {
   listingId: string;

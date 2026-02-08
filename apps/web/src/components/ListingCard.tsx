@@ -9,7 +9,9 @@ import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
 import { MessageInputModal } from '@/components/MessageInputModal';
 import { ProfilePicture } from '@/components/ProfilePicture';
-import { normalizeImageSrc } from '@/lib/image-utils';
+import { normalizeImageSrc } from '@marketplace/shared-logic';
+
+type SellerProfile = { username?: string; profilePicture?: string; createdAt?: string | Date | { toDate?: () => Date } };
 
 type Props = {
   variant: "grid" | "list";
@@ -21,6 +23,7 @@ type Props = {
   condition?: string;
   imageUrl?: string | null;
   sellerId?: string;
+  sellerProfile?: SellerProfile | null;
   sold?: boolean;
   inventory?: number;
   onAddToCart?: () => void;
@@ -38,6 +41,7 @@ function ListingCard({
   condition,
   imageUrl,
   sellerId,
+  sellerProfile: sellerProfileProp,
   sold = false,
   inventory,
   onAddToCart,
@@ -60,59 +64,42 @@ function ListingCard({
     return false;
   });
   const [addingToCart, setAddingToCart] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
-  // Seller profile state
-  const [sellerProfile, setSellerProfile] = useState<{
-    username?: string;
-    profilePicture?: string;
-    createdAt?: string;
-  } | null>(null);
-
-  // Fetch seller profile when sellerId is available - using useEffect (no render-phase updates)
+  // Reset image error when imageUrl changes (e.g. different listing)
   useEffect(() => {
-    if (!sellerId) return;
+    setImageError(false);
+  }, [imageUrl]);
+  
+  // Seller profile: use prop when provided (from API), otherwise fetch
+  const [fetchedSellerProfile, setFetchedSellerProfile] = useState<SellerProfile | null>(null);
+
+  useEffect(() => {
+    if (sellerProfileProp != null || !sellerId) return;
 
     const fetchSellerProfile = async () => {
       try {
         const { apiGet } = await import('@/lib/api-client');
-        const response = await apiGet(`/api/profile?userId=${sellerId}`, { 
-          requireAuth: false 
-        });
-        
+        const response = await apiGet(`/api/profile?userId=${sellerId}`, { requireAuth: false });
         if (response.ok) {
           const data = await response.json();
-          setSellerProfile({
-            username: data.data?.username || 'Marketplace User',
-            profilePicture: data.data?.profilePicture || null,
-            createdAt: data.data?.createdAt || null,
-          });
-        } else if (response.status === 404) {
-          // Profile not found - expected behavior, use fallback
-          setSellerProfile({
-            username: 'Marketplace User',
-            profilePicture: null,
-            createdAt: null,
+          setFetchedSellerProfile({
+            username: data.data?.username || "Marketplace User",
+            profilePicture: data.data?.profilePicture ?? undefined,
+            createdAt: data.data?.createdAt,
           });
         } else {
-          // Set fallback on other errors
-          setSellerProfile({
-            username: 'Marketplace User',
-            profilePicture: null,
-            createdAt: null,
-          });
+          setFetchedSellerProfile({ username: "Marketplace User" });
         }
-      } catch (error) {
-        // Silently set fallback - fetch errors are expected
-        setSellerProfile({
-          username: 'Marketplace User',
-          profilePicture: null,
-          createdAt: null,
-        });
+      } catch {
+        setFetchedSellerProfile({ username: "Marketplace User" });
       }
     };
 
     fetchSellerProfile();
-  }, [sellerId]);
+  }, [sellerId, sellerProfileProp]);
+
+  const sellerProfile = sellerProfileProp ?? fetchedSellerProfile;
 
   // Helper function to format price with commas
   const formatPrice = (price: string | number): string => {
@@ -273,7 +260,9 @@ function ListingCard({
   }, [currentUser, id, showSuccess, showError, onFav]);
 
   const listingImageSrc =
-    normalizeImageSrc(imageUrl || '') || '/default-avatar.png';
+    imageError || !normalizeImageSrc(imageUrl || '')
+      ? '/fallback-product.png'
+      : normalizeImageSrc(imageUrl || '');
 
   return (
     <>
@@ -288,17 +277,14 @@ function ListingCard({
           <div className="flex flex-col h-full">
             {/* Image */}
             <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
-              {(() => {
-                return (
-                  <Image
-                    src={listingImageSrc}
-                    alt={title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="object-cover"
-                  />
-                );
-              })()}
+              <Image
+                src={listingImageSrc}
+                alt={title}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-cover"
+                onError={() => setImageError(true)}
+              />
             </div>
 
             {/* Content */}
@@ -413,17 +399,14 @@ function ListingCard({
             {/* Image */}
             <div className="w-full sm:w-32 md:w-44 lg:w-56 shrink-0">
               <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
-                {(() => {
-                  return (
-                    <Image
-                      src={listingImageSrc}
-                      alt={title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 40vw"
-                      className="object-cover"
-                    />
-                  );
-                })()}
+                <Image
+                  src={listingImageSrc}
+                  alt={title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 40vw"
+                  className="object-cover"
+                  onError={() => setImageError(true)}
+                />
               </div>
             </div>
 

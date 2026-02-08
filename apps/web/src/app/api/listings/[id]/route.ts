@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApi } from "@/lib/withApi";
 import { success, error } from "@/lib/response";
-import { badRequest, notFound } from "@/lib/errors";
+import { badRequest, notFound } from "@marketplace/shared-logic";
 import { UpdateListingInput } from "@/lib/types/firestore";
 import { FirebaseCleanupService } from "@/lib/firebaseCleanup";
 

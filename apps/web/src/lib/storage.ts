@@ -1,5 +1,6 @@
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject, getMetadata, updateMetadata } from 'firebase/storage';
+import { normalizeImageForUpload } from './image-upload-utils';
 
 export interface UploadResult {
   url: string;
@@ -32,7 +33,9 @@ export async function uploadListingPhotoFile(params: {
   file: File;
 }) {
   const { uid, listingId, file } = params;
-  const ext = file.name.split(".").pop() ?? "jpg";
+  // Normalize image (convert HEIC/unsupported formats to JPEG) for browser compatibility
+  const normalizedFile = await normalizeImageForUpload(file);
+  const ext = normalizedFile.name.split(".").pop() ?? "jpg";
   const filename = `${crypto.randomUUID()}.${ext}`;
   const storagePath = `listing-photos/${uid}/${listingId}/${filename}`;
 
@@ -41,7 +44,8 @@ export async function uploadListingPhotoFile(params: {
   }
 
   const r = ref(storage, storagePath);
-  await uploadBytes(r, file, { contentType: file.type });
+  // Always use normalized contentType (image/jpeg for converted files)
+  await uploadBytes(r, normalizedFile, { contentType: normalizedFile.type });
   const url = await getDownloadURL(r);
   return { url, storagePath };
 }

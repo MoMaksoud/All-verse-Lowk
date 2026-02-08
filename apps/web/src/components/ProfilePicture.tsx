@@ -5,8 +5,7 @@ import Image from 'next/image';
 import { User } from 'firebase/auth';
 import { DefaultAvatar } from './DefaultAvatar';
 import { storagePathToUrl } from '@/lib/storage-utils';
-import { normalizeImageSrc } from '@/lib/image-utils';
-import { getProfilePictureSource, normalizeProfilePictureSrc } from '@/lib/profile-picture-utils';
+import { getProfilePictureSource } from '@marketplace/shared-logic';
 
 interface ProfilePictureProps {
   src?: string | null;
@@ -57,7 +56,7 @@ export const ProfilePicture = memo(function ProfilePicture({
   // Get the correct profile picture source using utility function
   const profilePictureSource = React.useMemo(() => {
     return getProfilePictureSource({
-      currentUser,
+      photoURL: currentUser?.photoURL ?? undefined,
       userProfilePic,
       profilePicture: src,
     });

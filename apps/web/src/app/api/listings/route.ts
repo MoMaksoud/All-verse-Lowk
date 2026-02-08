@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CreateListingInput } from "@/lib/types/firestore";
 import { withApi } from "@/lib/withApi";
+import { ProfileService } from "@/lib/firestore";
 
 // Import firestore services dynamically to avoid webpack issues
 async function getFirestoreServices() {
@@ -203,8 +204,34 @@ export async function GET(req: NextRequest) {
     const endIndex = startIndex + limit;
     const paginatedItems = transformedItems.slice(startIndex, endIndex);
 
+    // Batch-fetch seller profiles to avoid N+1 client requests
+    const uniqueSellerIds = [...new Set(paginatedItems.map((i) => i.sellerId).filter(Boolean))] as string[];
+    const profileMap = new Map<string, { username?: string; profilePicture?: string }>();
+    await Promise.all(
+      uniqueSellerIds.map(async (uid) => {
+        try {
+          const profile = await ProfileService.getProfile(uid);
+          if (profile) {
+            profileMap.set(uid, {
+              username: profile.username || "Marketplace User",
+              profilePicture: profile.profilePicture || undefined,
+            });
+          } else {
+            profileMap.set(uid, { username: "Marketplace User" });
+          }
+        } catch {
+          profileMap.set(uid, { username: "Marketplace User" });
+        }
+      })
+    );
+
+    const itemsWithSeller = paginatedItems.map((item) => ({
+      ...item,
+      sellerProfile: item.sellerId ? profileMap.get(item.sellerId) ?? null : null,
+    }));
+
     const response = NextResponse.json({
-      data: paginatedItems,
+      data: itemsWithSeller,
       pagination: {
         page: page,
         limit: limit,

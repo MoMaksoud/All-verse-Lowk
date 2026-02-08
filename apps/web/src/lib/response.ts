@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { HttpError, internal } from "./errors";
+import { HttpError, internal } from "@marketplace/shared-logic";
 
 export const success = <T>(data: T, init?: ResponseInit) =>
   NextResponse.json(data as any, { status: (init?.status ?? 200), ...init });

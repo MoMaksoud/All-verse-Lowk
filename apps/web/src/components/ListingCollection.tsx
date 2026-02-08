@@ -9,6 +9,7 @@ type Item = {
   condition?: string;
   imageUrl?: string | null;
   sellerId?: string;
+  sellerProfile?: { username?: string; profilePicture?: string } | null;
   sold?: boolean;
 };
 
@@ -34,6 +35,7 @@ export default function ListingCollection({
             condition={item.condition}
             imageUrl={item.imageUrl}
             sellerId={item.sellerId}
+            sellerProfile={item.sellerProfile}
             sold={item.sold}
           />
         ))}
@@ -55,6 +57,7 @@ export default function ListingCollection({
           condition={item.condition}
           imageUrl={item.imageUrl}
           sellerId={item.sellerId}
+          sellerProfile={item.sellerProfile}
         />
       ))}
     </div>

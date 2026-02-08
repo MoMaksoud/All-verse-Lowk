@@ -5,9 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
-import { ListingCard } from '@/components/listings/ListingCard';
+import ListingCard from '@/components/ListingCard';
 import { ProfilePicture } from '@/components/ProfilePicture';
-import { normalizeImageSrc } from '@/lib/image-utils';
+import { normalizeImageSrc } from '@marketplace/shared-logic';
 import { SimpleListing } from '@marketplace/types';
 
 interface UserProfile {
@@ -193,14 +193,16 @@ export default function UserProfilePage() {
               {listings.map((listing) => (
                 <ListingCard
                   key={listing.id}
-                  listing={{
-                    id: listing.id,
-                    title: listing.title,
-                    price: listing.price,
-                    imageUrl: listing.photos?.[0] || '/default-avatar.png',
-                    createdAt: listing.createdAt,
-                  }}
-                  view="comfortable"
+                  variant="grid"
+                  id={listing.id}
+                  title={listing.title}
+                  description=""
+                  price={listing.price}
+                  category={listing.category || ''}
+                  imageUrl={listing.photos?.[0] || '/default-avatar.png'}
+                  sellerId={listing.sellerId}
+                  sellerProfile={(listing as any).sellerProfile}
+                  sold={(listing as any).sold}
                 />
               ))}
             </div>

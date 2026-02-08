@@ -136,6 +136,9 @@ importers:
       '@headlessui/react':
         specifier: ^2.2.9
         version: 2.2.9(react-dom@18.3.1)(react@18.3.1)
+      '@marketplace/shared-logic':
+        specifier: workspace:^
+        version: link:../../packages/shared-logic
       '@marketplace/types':
         specifier: file:../../packages/types
         version: file:packages/types
