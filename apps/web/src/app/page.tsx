@@ -136,6 +136,7 @@ export default function HomePage() {
                     sellerId={listing.sellerId}
                     sellerProfile={(listing as any).sellerProfile}
                     sold={(listing as any).sold}
+                    soldThroughAllVerse={(listing as any).soldThroughAllVerse}
                   />
                 </Suspense>
               ))

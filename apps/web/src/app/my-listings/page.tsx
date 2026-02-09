@@ -17,7 +17,8 @@ import {
   Calendar,
   DollarSign,
   Tag,
-  AlertCircle
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
 import { useFirebaseCleanup } from '@/hooks/useFirebaseCleanup';
 import Link from 'next/link';
@@ -34,6 +35,8 @@ interface MyListing {
   updatedAt: string;
   sellerId: string;
   status: string;
+  sold?: boolean;
+  soldThroughAllVerse?: boolean;
 }
 
 const formatCurrency = (amount: number) => {
@@ -51,12 +54,15 @@ const formatDate = (dateString: string) => {
   });
 };
 
-const getStatusColor = (status: string) => {
-  switch (status) {
+const getStatusColor = (listing: MyListing) => {
+  if (listing.sold) {
+    return listing.soldThroughAllVerse
+      ? 'text-emerald-400 bg-emerald-900/20 border-emerald-500/20'
+      : 'text-red-400 bg-red-900/20 border-red-500/20';
+  }
+  switch (listing.status) {
     case 'active':
       return 'text-green-400 bg-green-900/20 border-green-500/20';
-    case 'sold':
-      return 'text-blue-400 bg-blue-900/20 border-blue-500/20';
     case 'draft':
       return 'text-yellow-400 bg-yellow-900/20 border-yellow-500/20';
     case 'inactive':
@@ -64,6 +70,11 @@ const getStatusColor = (status: string) => {
     default:
       return 'text-gray-400 bg-gray-900/20 border-gray-500/20';
   }
+};
+
+const getStatusLabel = (listing: MyListing) => {
+  if (listing.sold) return listing.soldThroughAllVerse ? 'Sold through AllVerse' : 'Sold';
+  return listing.status.charAt(0).toUpperCase() + listing.status.slice(1);
 };
 
 export default function MyListingsPage() {
@@ -79,6 +90,12 @@ export default function MyListingsPage() {
     listingId: null,
     listingTitle: ''
   });
+  const [markSoldModal, setMarkSoldModal] = useState<{
+    isOpen: boolean;
+    listingId: string | null;
+    listingTitle: string;
+  }>({ isOpen: false, listingId: null, listingTitle: '' });
+  const [markingSold, setMarkingSold] = useState(false);
   const { currentUser, loading: authLoading } = useAuth();
   const { showSuccess, showError } = useToast();
   const { isDeleting, deleteListing } = useFirebaseCleanup();
@@ -175,6 +192,39 @@ export default function MyListingsPage() {
 
   const cancelDeleteListing = () => {
     setDeleteModal({ isOpen: false, listingId: null, listingTitle: '' });
+  };
+
+  const handleMarkAsSold = (listing: MyListing) => {
+    setMarkSoldModal({ isOpen: true, listingId: listing.id, listingTitle: listing.title });
+  };
+
+  const confirmMarkAsSold = async () => {
+    if (!markSoldModal.listingId) return;
+    try {
+      setMarkingSold(true);
+      const { apiPut } = await import('@/lib/api-client');
+      const response = await apiPut(`/api/listings/${markSoldModal.listingId}`, { sold: true });
+      if (response.ok) {
+        setListings(prev => prev.map(l => 
+          l.id === markSoldModal.listingId 
+            ? { ...l, sold: true, status: 'sold', soldThroughAllVerse: false } 
+            : l
+        ));
+        showSuccess('Listing marked as sold. It will stay on your profile.');
+        setMarkSoldModal({ isOpen: false, listingId: null, listingTitle: '' });
+      } else {
+        const err = await response.json().catch(() => ({}));
+        showError(err.error || 'Failed to mark as sold');
+      }
+    } catch (e) {
+      showError('Failed to mark as sold');
+    } finally {
+      setMarkingSold(false);
+    }
+  };
+
+  const cancelMarkSold = () => {
+    setMarkSoldModal({ isOpen: false, listingId: null, listingTitle: '' });
   };
 
   // Wait for auth to finish loading before showing sign-in prompt
@@ -323,8 +373,8 @@ export default function MyListingsPage() {
                     )}
                     
                     {/* Status Badge */}
-                    <div className={`absolute top-3 left-3 px-3 py-1.5 rounded-full border backdrop-blur-sm text-xs font-semibold shadow-lg transition-all duration-300 group-hover:scale-105 ${getStatusColor(listing.status)}`}>
-                      {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
+                    <div className={`absolute top-3 left-3 px-3 py-1.5 rounded-full border backdrop-blur-sm text-xs font-semibold shadow-lg transition-all duration-300 group-hover:scale-105 ${getStatusColor(listing)}`}>
+                      {getStatusLabel(listing)}
                     </div>
 
                     {/* Photo Count Badge */}
@@ -367,26 +417,36 @@ export default function MyListingsPage() {
 
                   {/* Actions */}
                   <div className="pt-4 border-t border-zinc-800 group-hover:border-zinc-700 transition-colors">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Link
                         href={`/listings/${listing.id}`}
-                        className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 hover:shadow-md"
+                        className="shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5 hover:shadow-md"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 shrink-0" />
                         View
                       </Link>
                       <Link
                         href={`/listings/${listing.id}/edit`}
-                        className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 hover:shadow-md hover:shadow-blue-500/25"
+                        className="shrink-0 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5 hover:shadow-md hover:shadow-blue-500/25"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 shrink-0" />
                         Edit
                       </Link>
+                      {!listing.sold && (
+                        <button
+                          onClick={() => handleMarkAsSold(listing)}
+                          className="shrink-0 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 hover:text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5 hover:shadow-md"
+                          title="I sold this elsewhere"
+                        >
+                          <CheckCircle className="w-4 h-4 shrink-0" />
+                          Sold
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDeleteListing(listing.id)}
-                        className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 hover:shadow-md hover:shadow-red-500/25"
+                        className="shrink-0 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5 hover:shadow-md hover:shadow-red-500/25"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 shrink-0" />
                       </button>
                     </div>
                   </div>
@@ -408,6 +468,19 @@ export default function MyListingsPage() {
         cancelText="Cancel"
         type="danger"
         isLoading={isDeleting}
+      />
+
+      {/* Mark as sold confirmation */}
+      <ConfirmationModal
+        isOpen={markSoldModal.isOpen}
+        onClose={cancelMarkSold}
+        onConfirm={confirmMarkAsSold}
+        title="Mark as sold"
+        message={`Mark "${markSoldModal.listingTitle}" as sold (sold elsewhere)? It will stay on your profile but show as "Sold" rather than "Sold through AllVerse."`}
+        confirmText="Mark as sold"
+        cancelText="Cancel"
+        type="info"
+        isLoading={markingSold}
       />
     </div>
   );

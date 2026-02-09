@@ -296,6 +296,17 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
     };
   }
 
+  /** Mark listing as sold manually (e.g. sold elsewhere). Only for seller use; never sets soldThroughAllVerse true. */
+  async markAsSold(id: string): Promise<void> {
+    await this.updateDoc(id, {
+      sold: true,
+      soldAt: serverTimestamp(),
+      inventory: 0,
+      soldThroughAllVerse: false,
+      isActive: true, // Keep on profile; marketplace will hide after 3 days
+    });
+  }
+
   async updateInventory(id: string, quantitySold: number): Promise<void> {
     const listing = await this.getListing(id);
     if (!listing) throw new Error('Listing not found');
@@ -313,6 +324,7 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
     if (newInventory === 0) {
       updates.sold = true;
       updates.soldAt = serverTimestamp();
+      updates.soldThroughAllVerse = true; // Only this flow can set true (real platform sale)
       updates.isActive = true; // Keep active for 3 days, then filter out
     }
 

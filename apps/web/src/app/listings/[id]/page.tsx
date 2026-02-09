@@ -422,7 +422,9 @@ export default function ListingDetailPage() {
                           <div className="text-3xl font-bold text-zinc-100 mb-1">
                             ${listing.price.toLocaleString()}
                           </div>
-                          <div className="text-lg font-semibold text-red-400 mt-4">SOLD</div>
+                          <div className={`text-lg font-semibold mt-4 ${(listing as SimpleListing & { soldThroughAllVerse?: boolean }).soldThroughAllVerse ? "text-emerald-400" : "text-red-400"}`}>
+                            {(listing as SimpleListing & { soldThroughAllVerse?: boolean }).soldThroughAllVerse ? "Sold through AllVerse" : "Sold"}
+                          </div>
                         </div>
                       </div>
                     ) : (

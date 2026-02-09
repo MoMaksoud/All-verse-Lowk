@@ -25,6 +25,7 @@ type Props = {
   sellerId?: string;
   sellerProfile?: SellerProfile | null;
   sold?: boolean;
+  soldThroughAllVerse?: boolean;
   inventory?: number;
   onAddToCart?: () => void;
   onChat?: () => void;
@@ -43,6 +44,7 @@ function ListingCard({
   sellerId,
   sellerProfile: sellerProfileProp,
   sold = false,
+  soldThroughAllVerse = false,
   inventory,
   onAddToCart,
   onChat,
@@ -358,8 +360,18 @@ function ListingCard({
               {/* Actions - Fixed height */}
               <div className="mt-auto pt-2 sm:pt-3">
                 {sold || inventory === 0 ? (
-                  <div className="flex items-center justify-center rounded-xl sm:rounded-2xl border border-red-500/30 bg-red-500/10 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
-                    <span className="text-sm sm:text-base font-semibold text-red-400">SOLD</span>
+                  <div className={clsx(
+                    "flex items-center justify-center rounded-xl sm:rounded-2xl px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3",
+                    soldThroughAllVerse
+                      ? "border border-emerald-500/30 bg-emerald-500/10"
+                      : "border border-red-500/30 bg-red-500/10"
+                  )}>
+                    <span className={clsx(
+                      "text-sm sm:text-base font-semibold",
+                      soldThroughAllVerse ? "text-emerald-400" : "text-red-400"
+                    )}>
+                      {soldThroughAllVerse ? "Sold through AllVerse" : "Sold"}
+                    </span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-[#0E1526] px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">

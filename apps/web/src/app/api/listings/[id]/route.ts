@@ -33,6 +33,7 @@ export const GET = withApi(async (
 
     // Transform FirestoreListing to SimpleListing format
     // Treat items with inventory === 0 as sold even if sold field is not set
+    const isSold = (listing.sold ?? false) === true || listing.inventory === 0;
     const simpleListing = {
       id: (listing as any).id, // FirestoreListing & { id: string }
       title: listing.title,
@@ -43,7 +44,8 @@ export const GET = withApi(async (
       createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: listing.sellerId,
-      sold: (listing.sold ?? false) === true || listing.inventory === 0,
+      sold: isSold,
+      soldThroughAllVerse: isSold ? (listing as any).soldThroughAllVerse === true : undefined,
     };
 
     return success(simpleListing);
@@ -72,9 +74,22 @@ export const PUT = withApi(async (
     if (existingListing.sellerId !== req.userId) {
       return error(badRequest("You can only update your own listings"));
     }
-    
-    // Update the listing
-    await firestoreServices.listings.updateListing(params.id, body);
+
+    // Mark as sold (manual): only owner can set; server always sets soldThroughAllVerse false
+    if (body.sold === true) {
+      await firestoreServices.listings.markAsSold(params.id);
+      const { sold, soldAt, ...rest } = body;
+      const safeRest = { ...rest } as Record<string, unknown>;
+      delete safeRest.soldThroughAllVerse;
+      if (Object.keys(safeRest).length > 0) {
+        await firestoreServices.listings.updateListing(params.id, safeRest as UpdateListingInput);
+      }
+    } else {
+      // Never allow client to set soldThroughAllVerse to true
+      const safeBody = { ...body } as Record<string, unknown>;
+      delete safeBody.soldThroughAllVerse;
+      await firestoreServices.listings.updateListing(params.id, safeBody as UpdateListingInput);
+    }
     
     // Get the updated listing
     const updatedListing = await firestoreServices.listings.getListing(params.id);
@@ -83,8 +98,7 @@ export const PUT = withApi(async (
       return error(notFound("Listing not found after update"));
     }
     
-    // Transform to SimpleListing format
-    // Treat items with inventory === 0 as sold even if sold field is not set
+    const isSoldUpdated = (updatedListing.sold ?? false) === true || updatedListing.inventory === 0;
     const simpleListing = {
       id: (updatedListing as any).id,
       title: updatedListing.title,
@@ -95,7 +109,8 @@ export const PUT = withApi(async (
       createdAt: updatedListing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: updatedListing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: updatedListing.sellerId,
-      sold: (updatedListing.sold ?? false) === true || updatedListing.inventory === 0,
+      sold: isSoldUpdated,
+      soldThroughAllVerse: isSoldUpdated ? (updatedListing as any).soldThroughAllVerse === true : undefined,
     };
 
     return success(simpleListing);

@@ -184,6 +184,7 @@ export async function GET(req: NextRequest) {
           return '/default-avatar.png';
         });
         
+        const isSold = (listing.sold ?? false) === true || listing.inventory === 0;
         return {
           id: (listing as any).id,
           title: listing.title,
@@ -194,8 +195,8 @@ export async function GET(req: NextRequest) {
           createdAt: createdAt,
           updatedAt: updatedAt,
           sellerId: listing.sellerId,
-          // Treat items with inventory === 0 as sold even if sold field is not set
-          sold: (listing.sold ?? false) === true || listing.inventory === 0,
+          sold: isSold,
+          soldThroughAllVerse: isSold ? (listing as any).soldThroughAllVerse === true : undefined,
         };
       });
 

@@ -77,6 +77,7 @@ export type SimpleListing = {
   sellerId?: string;
   condition?: 'new' | 'like-new' | 'good' | 'fair' | 'poor';
   sold?: boolean;
+  soldThroughAllVerse?: boolean; // true = sold via platform; false/undefined = manually marked
   inventory?: number;
 };
 

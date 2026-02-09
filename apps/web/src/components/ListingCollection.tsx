@@ -11,6 +11,7 @@ type Item = {
   sellerId?: string;
   sellerProfile?: { username?: string; profilePicture?: string } | null;
   sold?: boolean;
+  soldThroughAllVerse?: boolean;
 };
 
 export default function ListingCollection({
@@ -37,6 +38,7 @@ export default function ListingCollection({
             sellerId={item.sellerId}
             sellerProfile={item.sellerProfile}
             sold={item.sold}
+            soldThroughAllVerse={item.soldThroughAllVerse}
           />
         ))}
       </div>
@@ -58,6 +60,8 @@ export default function ListingCollection({
           imageUrl={item.imageUrl}
           sellerId={item.sellerId}
           sellerProfile={item.sellerProfile}
+          sold={item.sold}
+          soldThroughAllVerse={item.soldThroughAllVerse}
         />
       ))}
     </div>

@@ -50,6 +50,7 @@ export interface FirestoreListing {
   isActive: boolean;
   sold?: boolean; // Whether the listing has been sold
   soldAt?: Timestamp; // When the listing was sold
+  soldThroughAllVerse?: boolean; // true = sold via platform checkout; false/undefined = manually marked or legacy
   createdAt: Timestamp;
   updatedAt: Timestamp;
   soldCount: number;
@@ -78,6 +79,9 @@ export interface UpdateListingInput {
   condition?: 'new' | 'like-new' | 'good' | 'fair';
   inventory?: number;
   isActive?: boolean;
+  /** When seller marks as sold elsewhere: set sold true, inventory 0. Server ignores soldThroughAllVerse from client and sets false. */
+  sold?: boolean;
+  soldAt?: Timestamp;
 }
 
 // ============================================================================
