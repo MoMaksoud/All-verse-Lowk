@@ -17,6 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://allversegpt.com'),
   title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
   description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
   keywords: ['AI', 'marketplace', 'GPT', 'buy', 'sell', 'intelligent'],

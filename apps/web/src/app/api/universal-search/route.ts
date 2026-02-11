@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 interface ExternalResult {
   title: string;
   price: number;
@@ -39,7 +41,7 @@ interface SearchResponse {
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const query = searchParams.get('q');
 
     if (!query || query.trim().length === 0) {
