@@ -5,6 +5,7 @@ import { firestoreServices } from '@/lib/services/firestore';
 import { ProfileService } from '@/lib/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { sendOrderConfirmationEmail, sendSellerNotificationEmail } from '@/lib/email';
+import { sendEmail } from '@/lib/sendEmail';
 import { getAdminAuth } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
@@ -49,7 +50,11 @@ export async function POST(req: NextRequest) {
       case 'payment_intent.canceled':
         await handlePaymentCanceled(event.data.object);
         break;
-      
+
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
@@ -270,5 +275,43 @@ async function handlePaymentCanceled(paymentIntent: Stripe.PaymentIntent) {
     }
   } catch (error) {
     console.error('Error handling payment canceled:', error);
+  }
+}
+
+function formatShippingAddress(address: Stripe.Checkout.Session['customer_details']['address'] | null): string {
+  if (!address) return 'Not provided';
+  const parts = [
+    address.line1,
+    address.line2,
+    address.city,
+    address.state,
+    address.postal_code,
+    address.country,
+  ].filter(Boolean);
+  return parts.join(', ') || 'Not provided';
+}
+
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  const buyerEmail = session.customer_details?.email ?? null;
+  const sellerEmail = typeof session.metadata?.sellerEmail === 'string' ? session.metadata.sellerEmail : null;
+  const shippingAddress = formatShippingAddress(session.customer_details?.address ?? null);
+
+  if (!buyerEmail || !sellerEmail) {
+    return;
+  }
+
+  try {
+    await sendEmail(
+      sellerEmail,
+      'New Order Received',
+      `<p>You have received a new order.</p><p><strong>Buyer email:</strong> ${buyerEmail}</p><p><strong>Shipping address:</strong> ${shippingAddress}</p>`
+    );
+    await sendEmail(
+      buyerEmail,
+      'Order Confirmation',
+      '<p>Thank you for your order. Your payment has been confirmed.</p>'
+    );
+  } catch (emailError) {
+    console.error('Checkout session completed: email send failed', emailError);
   }
 }
