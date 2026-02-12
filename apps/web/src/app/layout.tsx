@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import './performance.css';
@@ -8,6 +9,8 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { ChatProvider } from '@/contexts/ChatContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteTransitionMonitor } from '@/lib/performance';
+
+const GA_MEASUREMENT_ID = 'G-1KVRME8D19';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -73,6 +76,19 @@ export default function RootLayout({
       <head>
         {/* Explicitly set transparent theme-color for mobile browsers */}
         <meta name="color-scheme" content="dark" />
+        {/* Google Analytics (GA4) */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
       </head>
       <body className={`${inter.variable} font-sans h-full overflow-x-hidden`} suppressHydrationWarning>
         <div className="min-h-screen w-full max-w-screen overflow-x-hidden">
