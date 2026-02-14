@@ -18,7 +18,11 @@ export function middleware(request: NextRequest) {
   if (!pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
-  
+
+  if (request.nextUrl.pathname.startsWith('/api/dev')) {
+    return NextResponse.next();
+  }
+
   // CORS headers for API routes
   const response = NextResponse.next();
   

@@ -7,7 +7,10 @@ import { assertStripeAndSendGridConfig } from '@/lib/config';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const baseUrl =
+  process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000'
+    : 'https://allversegpt.com';
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
@@ -80,9 +83,9 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
     const orderId = await firestoreServices.orders.createOrder(orderData as any);
 
-    const successUrl = `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`;
+    const successUrl = `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${baseUrl}/cart`;
-
+    
     const result = await createCheckoutSession({
       amountTotalCents: Math.round(total * 100),
       orderId,

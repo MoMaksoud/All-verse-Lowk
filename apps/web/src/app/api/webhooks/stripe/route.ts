@@ -114,6 +114,12 @@ export async function POST(req: NextRequest) {
       return new Response('Webhook error', { status: 500 });
     }
 
+    const orderSnapshot = await firestoreServices.orders.getOrder(orderId);
+    if (orderSnapshot?.emailSent === true) {
+      console.log('[WEBHOOK] Emails already sent for order:', orderId);
+      return NextResponse.json({ received: true });
+    }
+
     const auth = getAdminAuth();
     const buyerProfile = await ProfileService.getProfile(order.buyerId);
     const buyerUser = auth ? await auth.getUser(order.buyerId) : null;
@@ -122,7 +128,7 @@ export async function POST(req: NextRequest) {
 
     if (buyerEmail && buyerProfile) {
       try {
-        const result = await sendOrderConfirmationEmail({
+        const buyerData = {
           orderId,
           buyerName: buyerProfile.displayName || 'Customer',
           buyerEmail,
@@ -136,12 +142,16 @@ export async function POST(req: NextRequest) {
           fees: order.fees,
           total: order.total,
           shippingAddress: order.shippingAddress,
-        });
-        if (result.success) {
+          stripeReference: session.id,
+        };
+        const buyerResult = await sendOrderConfirmationEmail(buyerData);
+        console.log('[EMAIL] Buyer result:', buyerResult);
+
+        if (buyerResult.success) {
           await logEmail('order_confirmation', buyerEmail, 'success', { orderId });
         } else {
           allEmailsOk = false;
-          await logEmail('order_confirmation', buyerEmail, 'failed', { orderId, error: result.error });
+          await logEmail('order_confirmation', buyerEmail, 'failed', { orderId, error: buyerResult.error });
         }
       } catch (err) {
         allEmailsOk = false;
@@ -159,7 +169,7 @@ export async function POST(req: NextRequest) {
 
       try {
         const itemTotal = item.unitPrice * item.qty;
-        const result = await sendSellerNotificationEmail({
+        const sellerData = {
           sellerName: sellerProfile.displayName || 'Seller',
           sellerEmail,
           buyerName: buyerProfile?.displayName || 'Customer',
@@ -168,12 +178,16 @@ export async function POST(req: NextRequest) {
           unitPrice: item.unitPrice,
           total: itemTotal,
           orderId,
-        });
-        if (result.success) {
+          stripeReference: session.id,
+        };
+        const sellerResult = await sendSellerNotificationEmail(sellerData);
+        console.log('[EMAIL] Seller result:', sellerResult);
+
+        if (sellerResult.success) {
           await logEmail('seller_notification', sellerEmail, 'success', { orderId });
         } else {
           allEmailsOk = false;
-          await logEmail('seller_notification', sellerEmail, 'failed', { orderId, error: result.error });
+          await logEmail('seller_notification', sellerEmail, 'failed', { orderId, error: sellerResult.error });
         }
       } catch (err) {
         allEmailsOk = false;

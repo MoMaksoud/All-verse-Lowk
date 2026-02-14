@@ -48,6 +48,11 @@ export function withApi(
 ) {
   return async (req: NextRequest, context?: any) => {
     try {
+      if (req.nextUrl.pathname.startsWith('/api/dev')) {
+        const res = await handler(req as NextRequest & { userId: string }, context);
+        return applySecurityHeaders(res);
+      }
+
       // Rate limiting
       checkRateLimit(getIp(req), opts?.rateLimit ?? 60);
       

@@ -1,10 +1,5 @@
 import sgMail from '@sendgrid/mail';
 
-const sendgridApiKey = process.env.SENDGRID_API_KEY;
-if (sendgridApiKey) {
-  sgMail.setApiKey(sendgridApiKey);
-}
-
 const REQUIRED_SENDGRID_ENV = [
   'SENDGRID_API_KEY',
   'SENDGRID_FROM_EMAIL',
@@ -18,6 +13,11 @@ function getMissingSendGridEnv(): string[] {
 }
 
 function assertSendGridConfig(): { ok: false; error: string } | { ok: true } {
+  if (!process.env.SENDGRID_API_KEY) {
+    return { ok: false, error: 'Missing SENDGRID_API_KEY' };
+  }
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
   const missing = getMissingSendGridEnv();
   if (missing.length) {
     return {
@@ -25,12 +25,11 @@ function assertSendGridConfig(): { ok: false; error: string } | { ok: true } {
       error: `SendGrid not configured. Missing: ${missing.join(', ')}. Set these in .env.local.`,
     };
   }
-  if (sendgridApiKey) sgMail.setApiKey(sendgridApiKey);
   return { ok: true };
 }
 
 export function isSendGridConfigured(): boolean {
-  return getMissingSendGridEnv().length === 0 && !!sendgridApiKey;
+  return getMissingSendGridEnv().length === 0 && !!process.env.SENDGRID_API_KEY;
 }
 
 // ============================================================================
@@ -60,6 +59,7 @@ export async function sendVerificationEmail(
     });
     return { success: true };
   } catch (error: unknown) {
+    console.error('[EMAIL ERROR FULL OBJECT]', error);
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message };
   }
@@ -79,6 +79,7 @@ export interface OrderConfirmationData {
   fees: number;
   total: number;
   shippingAddress: unknown;
+  stripeReference?: string;
 }
 
 export async function sendOrderConfirmationEmail(
@@ -111,10 +112,12 @@ export async function sendOrderConfirmationEmail(
         fees: data.fees,
         total: data.total,
         shippingAddress: data.shippingAddress,
+        stripeReference: data.stripeReference,
       },
     });
     return { success: true };
   } catch (error: unknown) {
+    console.error('[EMAIL ERROR FULL OBJECT]', error);
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message };
   }
@@ -133,6 +136,7 @@ export interface SellerNotificationData {
   unitPrice: number;
   total: number;
   orderId: string;
+  stripeReference?: string;
 }
 
 export async function sendSellerNotificationEmail(
@@ -160,10 +164,12 @@ export async function sendSellerNotificationEmail(
         total: data.total,
         orderId: data.orderId,
         orderIdShort: data.orderId.slice(0, 8),
+        stripeReference: data.stripeReference,
       },
     });
     return { success: true };
   } catch (error: unknown) {
+    console.error('[EMAIL ERROR FULL OBJECT]', error);
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message };
   }
