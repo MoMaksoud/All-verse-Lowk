@@ -35,6 +35,55 @@ export async function createPaymentIntent(amount: number, currency: string = 'us
 }
 
 
+/**
+ * Create a Stripe Checkout Session (mode: payment).
+ * Call this after creating the order in Firestore; pass orderId in metadata.
+ */
+export async function createCheckoutSession(params: {
+  amountTotalCents: number;
+  orderId: string;
+  successUrl: string;
+  cancelUrl: string;
+  description?: string;
+}) {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: 'usd',
+            unit_amount: params.amountTotalCents,
+            product_data: {
+              name: 'Order',
+              description: params.description || 'Marketplace order',
+            },
+          },
+        },
+      ],
+      success_url: params.successUrl,
+      cancel_url: params.cancelUrl,
+      metadata: {
+        orderId: params.orderId,
+      },
+    });
+
+    return {
+      success: true,
+      sessionId: session.id,
+      url: session.url,
+      session,
+    };
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create checkout session',
+    };
+  }
+}
+
 // Retrieve payment intent
 export async function retrievePaymentIntent(paymentIntentId: string) {
   try {

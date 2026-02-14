@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { 
   CreditCard, 
   ShoppingBag, 
@@ -49,8 +49,6 @@ interface SelectedShipping {
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onError }) => {
-  const stripe = useStripe();
-  const elements = useElements();
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [shippingAddress, setShippingAddress] = useState({
@@ -203,16 +201,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements) {
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // Create payment intent
       const { apiPost } = await import('@/lib/api-client');
-      const response = await apiPost('/api/payments/create-intent', {
+      const response = await apiPost('/api/payments/create-checkout-session', {
         cartItems,
         shippingAddress,
         selectedShipping: selectedShipping ? {
@@ -227,46 +220,18 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to create payment intent');
+        throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      // Confirm payment
-      const { error } = await stripe.confirmCardPayment(data.clientSecret, {
-        payment_method: {
-          card: elements.getElement(CardElement)!,
-          billing_details: {
-            name: shippingAddress.name,
-            address: {
-              line1: shippingAddress.street,
-              city: shippingAddress.city,
-              state: shippingAddress.state,
-              postal_code: shippingAddress.zip,
-              country: shippingAddress.country,
-            },
-          },
-        },
-      });
-
-      if (error) {
-        throw new Error(error.message);
+      if (data.url) {
+        window.location.href = data.url;
+        return;
       }
 
-      // Confirm payment on server
-      const { apiPost: apiPostConfirm } = await import('@/lib/api-client');
-      const confirmResponse = await apiPostConfirm('/api/payments/confirm', {
-        paymentIntentId: data.paymentIntentId,
-      });
-
-      const confirmData = await confirmResponse.json();
-
-      if (confirmData.success) {
-        onSuccess(confirmData.orderId);
-      } else {
-        throw new Error(confirmData.message || 'Payment confirmation failed');
-      }
+      throw new Error('No checkout URL returned');
     } catch (error) {
-      console.error('Payment error:', error);
-      onError(error instanceof Error ? error.message : 'Payment failed');
+      console.error('Checkout error:', error);
+      onError(error instanceof Error ? error.message : 'Checkout failed');
     } finally {
       setLoading(false);
     }
@@ -426,30 +391,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
         </div>
       )}
 
-      {/* Payment Method */}
+      {/* Payment via Stripe Checkout */}
       <div className="bg-dark-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <CreditCard className="w-5 h-5 mr-2 text-accent-500" />
-          Payment Method
-        </h3>
-        <div className="bg-dark-600 border border-dark-500 rounded-lg p-4">
-          <CardElement
-            options={{
-              style: {
-                base: {
-                  fontSize: '16px',
-                  color: '#ffffff',
-                  '::placeholder': {
-                    color: '#9ca3af',
-                  },
-                },
-                invalid: {
-                  color: '#ef4444',
-                },
-              },
-            }}
-          />
-        </div>
+        <p className="text-gray-300 text-sm">
+          You will complete payment securely on Stripe Checkout.
+        </p>
       </div>
 
       {/* Order Summary */}
@@ -489,18 +435,18 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={!stripe || loading}
+        disabled={loading}
         className="w-full bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
       >
         {loading ? (
           <>
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Processing Payment...
+            Redirecting to Checkout...
           </>
         ) : (
           <>
             <CreditCard className="w-5 h-5 mr-2" />
-            Pay ${totals.total.toFixed(2)}
+            Proceed to Stripe Checkout — ${totals.total.toFixed(2)}
           </>
         )}
       </button>

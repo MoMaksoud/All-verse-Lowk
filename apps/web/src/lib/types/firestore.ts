@@ -140,10 +140,16 @@ export interface FirestoreOrder {
   total: number;
   currency: string;
   status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
-  paymentIntentId: string;
+  paymentIntentId?: string; // Optional when using Stripe Checkout (session has its own payment intent)
   createdAt: Timestamp;
   updatedAt: Timestamp;
   shippingAddress: ShippingAddress;
+  /** Set to true after order/seller emails sent (idempotency). */
+  emailSent?: boolean;
+  /** When order/seller emails were sent. */
+  emailSentAt?: Timestamp;
+  /** When payment was completed (fulfillment idempotency). */
+  paidAt?: Timestamp;
 }
 
 export interface CreateOrderInput {
@@ -154,13 +160,16 @@ export interface CreateOrderInput {
   tax: number;
   total: number;
   currency: string;
-  paymentIntentId: string;
+  paymentIntentId?: string; // Optional when using Stripe Checkout
   shippingAddress: ShippingAddress;
 }
 
 export interface UpdateOrderInput {
   status?: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   paymentIntentId?: string;
+  emailSent?: boolean;
+  emailSentAt?: Timestamp;
+  paidAt?: Timestamp;
 }
 
 // ============================================================================

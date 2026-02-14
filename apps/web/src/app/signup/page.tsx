@@ -41,9 +41,6 @@ export default function SignUp() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [verifying, setVerifying] = useState(false);
-  const [verificationError, setVerificationError] = useState('');
   const { signup, signInWithGoogle, isConfigured, currentUser } = useAuth();
   const router = useRouter();
 
@@ -232,69 +229,6 @@ export default function SignUp() {
   function handleProfileCancel() {
     // Skip profile setup and go to home page
     router.push('/');
-  }
-
-  async function handleVerifyEmail() {
-    if (!currentUser) return;
-
-    setVerificationError('');
-    setVerifying(true);
-
-    try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: verificationCode,
-          email: currentUser.email,
-          userId: currentUser.uid,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setVerificationError(data.error || 'Verification failed');
-        return;
-      }
-
-      // Email verified successfully
-      setShowVerification(false);
-      setShowProfileSetup(true);
-    } catch (error: any) {
-      setVerificationError('Failed to verify email. Please try again.');
-      console.error('Verification error:', error);
-    } finally {
-      setVerifying(false);
-    }
-  }
-
-  async function handleResendCode() {
-    if (!currentUser) return;
-
-    try {
-      const response = await fetch('/api/auth/send-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: currentUser.email,
-        }),
-      });
-
-      if (response.ok) {
-        setVerificationError('');
-        alert('Verification code resent!');
-      } else {
-        setVerificationError('Failed to resend code. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error resending code:', error);
-      setVerificationError('Failed to resend code. Please try again.');
-    }
   }
 
   async function handleGoogleSignIn() {
