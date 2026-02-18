@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
+import { shippo } from '@/lib/shippo';
+import { DistanceUnitEnum, WeightUnitEnum } from 'shippo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// EasyPost API configuration
-const easypostApiKey = process.env.EASYPOST_API_KEY;
-
-if (!easypostApiKey) {
-  console.error('❌ EASYPOST_API_KEY is not configured');
-}
-
-const EASYPOST_API_URL = 'https://api.easypost.com/v2';
 
 interface ShippingRatesRequest {
   weight: number;
@@ -21,7 +14,6 @@ interface ShippingRatesRequest {
   height: number;
   fromZip: string;
   toZip: string;
-  // Optional full addresses for more accurate rates and label generation
   fromAddress?: {
     street?: string;
     city?: string;
@@ -38,25 +30,6 @@ interface ShippingRatesRequest {
   };
 }
 
-interface EasyPostRate {
-  id: string;
-  object: string;
-  service: string;
-  carrier: string;
-  carrier_account_id: string;
-  shipment_id: string;
-  rate: string;
-  currency: string;
-  retail_rate: string;
-  retail_currency: string;
-  list_rate: string;
-  list_currency: string;
-  delivery_days?: number;
-  delivery_date?: string;
-  delivery_date_guaranteed?: boolean;
-  est_delivery_days?: number;
-}
-
 interface ShippingRate {
   id?: string;
   serviceName: string;
@@ -70,22 +43,26 @@ interface ShippingRate {
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    // Rate limit (60/min)
     const ip = getIp(req as unknown as Request);
     checkRateLimit(ip, 60);
 
-    // Check if API key is configured
-    if (!easypostApiKey) {
+    try {
+      if (!process.env.SHIPPO_API_KEY?.trim()) {
+        return NextResponse.json(
+          { error: 'Shipping service is not configured', details: 'SHIPPO_API_KEY is missing' },
+          { status: 500 }
+        );
+      }
+    } catch {
       return NextResponse.json(
-        { error: 'Shipping service is not configured', details: 'EASYPOST_API_KEY is missing' },
+        { error: 'Shipping service is not configured', details: 'SHIPPO_API_KEY is missing' },
         { status: 500 }
       );
     }
 
-    const body = await req.json() as ShippingRatesRequest;
+    const body = (await req.json()) as ShippingRatesRequest;
     const { weight, length, width, height, fromZip, toZip } = body;
 
-    // Validate required fields
     if (!weight || weight <= 0) {
       return NextResponse.json(
         { error: 'Weight is required and must be greater than 0' },
@@ -107,7 +84,6 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       );
     }
 
-    // Validate ZIP code format (basic US ZIP validation)
     const zipRegex = /^\d{5}(-\d{4})?$/;
     if (!zipRegex.test(fromZip) || !zipRegex.test(toZip)) {
       return NextResponse.json(
@@ -116,114 +92,93 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       );
     }
 
-    console.log('📦 Getting shipping rates:', { weight, length, width, height, fromZip, toZip });
+    console.log('📦 Getting shipping rates (Shippo):', { weight, length, width, height, fromZip, toZip });
 
-    // Use full addresses if provided, otherwise ZIP-only (ZIP-only works for rate calculation)
-    const fromAddress = body.fromAddress || {
-      zip: fromZip,
-      country: 'US',
-    };
+    const fromAddress = body.fromAddress ?? { zip: fromZip, country: 'US' };
+    const toAddress = body.toAddress ?? { zip: toZip, country: 'US' };
 
-    const toAddress = body.toAddress || {
-      zip: toZip,
-      country: 'US',
-    };
-
-    // Create parcel
-    // EasyPost expects weight in ounces, so convert from pounds
-    const weightInOunces = weight * 16;
-    const parcel = {
-      length: length.toFixed(2),
-      width: width.toFixed(2),
-      height: height.toFixed(2),
-      weight: weightInOunces.toFixed(2),
-    };
-
-    // Create shipment to get rates
-    const shipmentData = {
-      shipment: {
-        to_address: toAddress,
-        from_address: fromAddress,
-        parcel: parcel,
+    const shipment = await shippo.shipments.create({
+      addressFrom: {
+        name: 'Seller',
+        street1: fromAddress.street ?? '',
+        city: fromAddress.city ?? '',
+        state: fromAddress.state ?? '',
+        zip: fromAddress.zip,
+        country: fromAddress.country ?? 'US',
       },
-    };
-
-    console.log('📦 Creating EasyPost shipment...');
-
-    const response = await fetch(`${EASYPOST_API_URL}/shipments`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${Buffer.from(easypostApiKey + ':').toString('base64')}`,
-        'Content-Type': 'application/json',
+      addressTo: {
+        name: 'Recipient',
+        street1: toAddress.street ?? '',
+        city: toAddress.city ?? '',
+        state: toAddress.state ?? '',
+        zip: toAddress.zip,
+        country: toAddress.country ?? 'US',
       },
-      body: JSON.stringify(shipmentData),
+      parcels: [
+        {
+          length: length.toFixed(2),
+          width: width.toFixed(2),
+          height: height.toFixed(2),
+          distanceUnit: DistanceUnitEnum.In,
+          weight: weight.toFixed(2),
+          massUnit: WeightUnitEnum.Lb,
+        },
+      ],
+      async: false,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('❌ EasyPost API error:', errorData);
-      
-      let errorMessage = 'Failed to get shipping rates';
-      if (errorData.error) {
-        errorMessage = errorData.error.message || errorData.error.code || errorMessage;
-      }
-
+    const shippoRates = shipment.rates ?? [];
+    if (shippoRates.length === 0) {
       return NextResponse.json(
-        { error: errorMessage, details: process.env.NODE_ENV === 'development' ? errorData : undefined },
-        { status: response.status === 401 ? 401 : response.status === 422 ? 422 : 500 }
+        { error: 'No shipping rates available for this address and package.' },
+        { status: 422 }
       );
     }
 
-    const shipment = await response.json();
-    console.log('📦 Shipment created, rates available:', shipment.rates?.length || 0);
-
-    // Transform EasyPost rates to our format
-    // Note: EasyPost API returns rates pre-sorted, so no client-side sorting needed
-    const rates: ShippingRate[] = (shipment.rates || []).map((rate: EasyPostRate) => ({
-      id: rate.id, // Include EasyPost rate ID for purchasing
-      serviceName: rate.service || 'Standard',
-      carrier: rate.carrier || 'Unknown',
-      price: parseFloat(rate.rate),
-      currency: rate.currency || 'USD',
-      deliveryDays: rate.delivery_days || rate.est_delivery_days || undefined,
-      deliveryDate: rate.delivery_date || undefined,
-      deliveryDateGuaranteed: rate.delivery_date_guaranteed || false,
+    const rates: ShippingRate[] = shippoRates.map((rate: { objectId?: string; object_id?: string; amount?: string; currency?: string; provider?: string; servicelevel?: { name?: string; token?: string }; estimatedDays?: number }) => ({
+      id: rate.object_id ?? rate.objectId ?? '',
+      serviceName: rate.servicelevel?.name ?? rate.servicelevel?.token ?? 'Standard',
+      carrier: rate.provider ?? 'Unknown',
+      price: parseFloat(rate.amount ?? '0'),
+      currency: rate.currency ?? 'USD',
+      deliveryDays: rate.estimatedDays,
     }));
+
+    const shipmentId = (shipment as { objectId?: string; object_id?: string }).object_id ?? (shipment as { objectId?: string }).objectId ?? '';
 
     console.log('📦 Returning', rates.length, 'shipping rates');
 
     return NextResponse.json({
       success: true,
       rates,
-      shipmentId: shipment.id,
+      shipmentId,
     }, { status: 200 });
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error getting shipping rates:', error);
-    
-    // Provide user-friendly error messages
+
     let errorMessage = 'Failed to get shipping rates';
     let statusCode = 500;
 
     if (error instanceof Error) {
       const msg = error.message.toLowerCase();
-      
       if (msg.includes('network') || msg.includes('fetch') || msg.includes('econnrefused')) {
         errorMessage = 'Unable to connect to shipping service. Please check your internet connection and try again.';
         statusCode = 503;
       } else if (msg.includes('timeout')) {
         errorMessage = 'Request to shipping service timed out. Please try again.';
         statusCode = 504;
+      } else if (msg.includes('shippo_api_key') || msg.includes('api key')) {
+        errorMessage = 'Shipping service is not configured. Please set SHIPPO_API_KEY.';
+        statusCode = 500;
       }
     }
 
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+        details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : undefined,
       },
       { status: statusCode }
     );
   }
 });
-

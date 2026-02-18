@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPartFromUri, createUserContent, GoogleGenAI } from '@google/genai';
 import { withApi } from '@/lib/withApi';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
+import { GEMINI_MODELS } from '@/lib/ai/models';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -100,7 +101,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
     // Generate content with Gemini Vision
     const response = await genAi.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: GEMINI_MODELS.FAST,
       contents: createUserContent([
         createPartFromUri(uploadedImage.uri!, uploadedImage.mimeType!),
         prompt,

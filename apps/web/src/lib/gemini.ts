@@ -1,4 +1,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GEMINI_MODELS } from '@/lib/ai/models';
+
+export type GeminiModelOption = keyof typeof GEMINI_MODELS | string;
+
+function resolveModel(modelOption?: GeminiModelOption): string {
+  if (modelOption == null) return GEMINI_MODELS.FAST;
+  if (modelOption in GEMINI_MODELS) return GEMINI_MODELS[modelOption as keyof typeof GEMINI_MODELS];
+  return modelOption;
+}
 
 // Lazy initialization function to avoid module-level errors
 function getGenAI() {
@@ -40,7 +49,8 @@ export class GeminiService {
     conversationHistory: any[] = [],
     listingsContext: string = '',
     mediaUrl?: string,
-    mediaType?: 'image' | 'video'
+    mediaType?: 'image' | 'video',
+    options?: { model?: GeminiModelOption }
   ): Promise<string> {
     // Define system prompts for each role
     const buyerPrompt = `
@@ -154,7 +164,8 @@ Always end with a short, encouraging call-to-action question.
       }
 
       console.log('🔵 Calling Gemini generateContent, prompt length:', fullPrompt.length);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const modelName = resolveModel(options?.model);
+      const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(fullPrompt);
       console.log('✅ Gemini generateContent completed');
       const response = await result.response;
@@ -201,10 +212,11 @@ Always end with a short, encouraging call-to-action question.
   /**
    * Generate a response from Gemini AI
    */
-  static async generateResponse(prompt: string): Promise<ChatResponse> {
+  static async generateResponse(prompt: string, options?: { model?: GeminiModelOption }): Promise<ChatResponse> {
     try {
       const genAI = getGenAI();
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const modelName = resolveModel(options?.model);
+      const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const response = await result.response;
 

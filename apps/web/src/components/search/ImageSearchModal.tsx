@@ -79,10 +79,13 @@ export function ImageSearchModal({ isOpen, onClose }: ImageSearchModalProps) {
       }
 
       const data = await apiResponse.json();
-      
-      // Navigate to search results with image query
+
       const query = data.extractedQuery || 'image search';
-      router.push(`/search?query=${encodeURIComponent(query)}&imageSearch=true`);
+      const params = new URLSearchParams({ query, imageSearch: 'true' });
+      if (data.brand) params.set('brand', data.brand);
+      if (data.model) params.set('model', data.model);
+      if (data.category) params.set('category', data.category);
+      router.push(`/search?${params.toString()}`);
       onClose();
     } catch (err) {
       console.error('Image search error:', err);

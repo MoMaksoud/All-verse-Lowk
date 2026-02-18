@@ -252,6 +252,17 @@ export function getAutocompleteSuggestions(query: string, limit: number = 8): Se
   return uniqueSuggestions;
 }
 
+// Get popular/trending searches for hero (no query prefix)
+export function getPopularSearches(limit: number = 6): SearchQuery[] {
+  return [...searchDatabase]
+    .sort((a, b) => {
+      if (a.isTrending && !b.isTrending) return -1;
+      if (!a.isTrending && b.isTrending) return 1;
+      return b.count - a.count;
+    })
+    .slice(0, limit);
+}
+
 // Track a search (for analytics)
 export function trackSearch(query: string, category?: string) {
   // In a real app, this would send data to analytics service

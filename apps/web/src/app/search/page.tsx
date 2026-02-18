@@ -9,8 +9,9 @@ import { ExternalResultsSection } from '@/components/search/ExternalResultsSecti
 import { InternalResultsSection } from '@/components/search/InternalResultsSection';
 import { SellCTASection } from '@/components/search/SellCTASection';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { AlertCircle, Search, ArrowLeft, Home } from 'lucide-react';
+import { AlertCircle, Search, ArrowLeft, Home, Camera } from 'lucide-react';
 import Link from 'next/link';
+import { getPopularSearches } from '@/lib/searchAnalytics';
 
 interface SearchResults {
   externalResults: Array<{
@@ -48,6 +49,7 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const queryParam = searchParams.get('query');
+  const imageSearch = searchParams.get('imageSearch') === 'true';
   const [query, setQuery] = useState<string>('');
   const [searchInput, setSearchInput] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -67,6 +69,10 @@ function SearchContent() {
     }
   }, [queryParam, router]);
 
+  const brandParam = searchParams.get('brand') || '';
+  const modelParam = searchParams.get('model') || '';
+  const categoryParam = searchParams.get('category') || '';
+
   useEffect(() => {
     if (!mounted || !query) return;
 
@@ -75,9 +81,14 @@ function SearchContent() {
         setLoading(true);
         setError(null);
 
+        const params = new URLSearchParams({ q: query });
+        if (brandParam) params.set('brand', brandParam);
+        if (modelParam) params.set('model', modelParam);
+        if (categoryParam) params.set('category', categoryParam);
+
         const { apiGet } = await import('@/lib/api-client');
         const response = await apiGet(
-          `/api/universal-search?q=${encodeURIComponent(query)}`,
+          `/api/universal-search?${params.toString()}`,
           { requireAuth: false }
         );
 
@@ -96,7 +107,7 @@ function SearchContent() {
     };
 
     fetchSearchResults();
-  }, [query, mounted]);
+  }, [query, mounted, brandParam, modelParam, categoryParam]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,6 +172,12 @@ function SearchContent() {
       <div className="relative py-6 border-b border-dark-700/50">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto text-center">
+          {imageSearch && mounted && (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-3 rounded-full bg-accent-500/20 border border-accent-500/30 text-accent-300 text-sm">
+              <Camera className="w-4 h-4" />
+              Searched by image
+            </div>
+          )}
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
             {mounted && query ? `Search Results for "${query}"` : 'Search Results'}
           </h1>
@@ -245,6 +262,28 @@ function SearchContent() {
             <ExternalResultsSection results={results.externalResults} />
             </div>
           )}
+
+          {/* Others also searched for */}
+          {(results.externalResults?.length || 0) + (results.internalResults?.length || 0) > 0 && (() => {
+            const popular = getPopularSearches(6).map((q) => q.query).filter((term) => term.toLowerCase() !== query.toLowerCase()).slice(0, 4);
+            if (popular.length === 0) return null;
+            return (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <p className="text-sm text-gray-400 mb-2">Others also searched for</p>
+                <div className="flex flex-wrap gap-2">
+                  {popular.map((term) => (
+                    <Link
+                      key={term}
+                      href={`/search?query=${encodeURIComponent(term)}`}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white text-sm transition-colors"
+                    >
+                      {term}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* No Results State */}
           {(!results.externalResults || results.externalResults.length === 0) &&

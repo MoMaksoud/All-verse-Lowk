@@ -1,4 +1,5 @@
 import { createPartFromUri, createUserContent, GoogleGenAI } from '@google/genai';
+import { GEMINI_MODELS } from '@/lib/ai/models';
 
 // Initialize Gemini AI
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
@@ -220,7 +221,7 @@ export class AIAnalysisService {
       let response;
       try {
         response = await genAi.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: GEMINI_MODELS.FAST,
           contents: 
             createUserContent([
               createPartFromUri(image.uri!, image.mimeType!),
@@ -386,7 +387,7 @@ export class AIAnalysisService {
       console.log('🔄 Image uploaded, generating content...');
 
       const response = await genAi.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: GEMINI_MODELS.SMART,
         contents: createUserContent([
           createPartFromUri(image.uri!, image.mimeType!),
           prompt,

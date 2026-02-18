@@ -48,6 +48,10 @@ export interface FirestoreListing {
   sellerId: string;
   inventory: number;
   isActive: boolean;
+  /** Optional product identifiers for search and exact-item matching */
+  brand?: string;
+  model?: string;
+  gtin?: string;
   sold?: boolean; // Whether the listing has been sold
   soldAt?: Timestamp; // When the listing was sold
   soldThroughAllVerse?: boolean; // true = sold via platform checkout; false/undefined = manually marked or legacy
@@ -67,6 +71,9 @@ export interface CreateListingInput {
   sellerId: string;
   inventory: number;
   isActive?: boolean;
+  brand?: string;
+  model?: string;
+  gtin?: string;
 }
 
 export interface UpdateListingInput {
@@ -79,6 +86,9 @@ export interface UpdateListingInput {
   condition?: 'new' | 'like-new' | 'good' | 'fair';
   inventory?: number;
   isActive?: boolean;
+  brand?: string;
+  model?: string;
+  gtin?: string;
   /** When seller marks as sold elsewhere: set sold true, inventory 0. Server ignores soldThroughAllVerse from client and sets false. */
   sold?: boolean;
   soldAt?: Timestamp;

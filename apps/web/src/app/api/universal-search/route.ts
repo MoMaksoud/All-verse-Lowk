@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GEMINI_MODELS } from '@/lib/ai/models';
 
 export const dynamic = 'force-dynamic';
+
+const SEARCH_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+const searchCache = new Map<string, { data: SearchResponse; expiresAt: number }>();
+
+function normalizeQuery(q: string): string {
+  return q.trim().toLowerCase().replace(/\s+/g, ' ');
+}
 
 interface ExternalResult {
   title: string;
@@ -21,7 +29,10 @@ interface InternalResult {
   category: string;
   condition: string;
   sellerId: string;
-  isMatched?: boolean; // Highlighted if it matches external listings
+  isMatched?: boolean;
+  brand?: string;
+  model?: string;
+  gtin?: string;
 }
 
 interface SearchResponse {
@@ -39,10 +50,90 @@ interface SearchResponse {
   } | null;
 }
 
+/**
+ * POST: Image search - extract product search query from uploaded image via Gemini Vision
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const imageFile = formData.get('image') as File | null;
+
+    if (!imageFile || !(imageFile instanceof Blob) || imageFile.size === 0) {
+      return NextResponse.json(
+        { error: 'Image file is required. Send as multipart/form-data with field "image".' },
+        { status: 400 }
+      );
+    }
+
+    const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
+      return NextResponse.json(
+        { error: 'Image search is not configured. Missing Gemini API key.' },
+        { status: 503 }
+      );
+    }
+
+    const arrayBuffer = await imageFile.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    const mimeType = imageFile.type || 'image/jpeg';
+
+    const prompt = `Look at this product image. Identify what the product is and extract structured data for shopping search.
+Reply with ONLY a JSON object (no markdown, no code block), exactly this structure:
+{"query": "short search query 2-6 words", "brand": "BrandName or null", "model": "model or product line or null", "category": "electronics|fashion|home|sports|other or null"}
+Use null when a field is not visible. For category use lowercase: electronics, fashion, home, sports, or other if unsure.`;
+
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODELS.FAST });
+
+    const result = await model.generateContent({
+      contents: [{
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType, data: base64 } },
+          { text: prompt },
+        ],
+      }],
+    });
+
+    const text = (result.response.text() || '').trim().replace(/^["']|["']$/g, '');
+    let extractedQuery = 'product';
+    let brand: string | null = null;
+    let productModel: string | null = null;
+    let category: string | null = null;
+
+    try {
+      const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      if (parsed && typeof parsed.query === 'string') extractedQuery = parsed.query.trim() || 'product';
+      if (parsed?.brand && typeof parsed.brand === 'string') brand = parsed.brand.trim() || null;
+      if (parsed?.model && typeof parsed.model === 'string') productModel = parsed.model.trim() || null;
+      if (parsed?.category && typeof parsed.category === 'string') category = parsed.category.trim().toLowerCase() || null;
+    } catch {
+      extractedQuery = text || 'product';
+    }
+
+    const body: Record<string, string> = { extractedQuery };
+    if (brand) body.brand = brand;
+    if (productModel) body.model = productModel;
+    if (category) body.category = category;
+    return NextResponse.json(body);
+  } catch (error) {
+    console.error('Universal search image POST error:', error);
+    return NextResponse.json(
+      { error: 'Failed to analyze image. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const query = searchParams.get('q');
+    const brand = searchParams.get('brand')?.trim() || undefined;
+    const model = searchParams.get('model')?.trim() || undefined;
+    const category = searchParams.get('category')?.trim()?.toLowerCase() || undefined;
 
     if (!query || query.trim().length === 0) {
       return NextResponse.json(
@@ -51,8 +142,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const filterParts = [brand, model, category].filter(Boolean).sort().join('|');
+    const cacheKey = normalizeQuery(query) + (filterParts ? `|${filterParts}` : '');
+    const cached = searchCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return NextResponse.json(cached.data);
+    }
+
+    const filters = (brand || model || category) ? { brand, model, category } : undefined;
     const [internalResults, externalResults] = await Promise.all([
-      searchInternalListings(query),
+      searchInternalListings(query, filters),
       searchExternalInternet(query),
     ]);
 
@@ -72,7 +171,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`🎯 Matched internal listings: ${matchedInternalResults.filter(r => r.isMatched).length}`);
 
-    const summary = buildDeterministicSummary(query, externalResults, sortedInternalResults);
+    const summary = await buildSummary(query, externalResults, sortedInternalResults);
 
     const response: SearchResponse = {
       externalResults,
@@ -80,6 +179,7 @@ export async function GET(request: NextRequest) {
       summary,
     };
 
+    searchCache.set(cacheKey, { data: response, expiresAt: Date.now() + SEARCH_CACHE_TTL_MS });
     return NextResponse.json(response);
   } catch (error) {
     console.error('Universal search error:', error);
@@ -90,10 +190,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/** Optional filters from image search (brand, model, category) for improved ranking */
+type SearchFilters = { brand?: string; model?: string; category?: string } | undefined;
+
 /**
  * Search internal All Verse GPT listings using Gemini AI for intelligent matching
  */
-async function searchInternalListings(query: string): Promise<InternalResult[]> {
+async function searchInternalListings(query: string, filters?: SearchFilters): Promise<InternalResult[]> {
   try {
     const { initializeApp, getApps, cert } = await import('firebase-admin/app');
     const { getFirestore } = await import('firebase-admin/firestore');
@@ -133,29 +236,68 @@ async function searchInternalListings(query: string): Promise<InternalResult[]> 
           category: data.category,
           condition: data.condition || 'good',
           sellerId: data.sellerId,
+          brand: data.brand,
+          model: data.model,
+          gtin: data.gtin,
         });
     });
 
     console.log(`📦 Loaded ${allListings.length} internal listings for Gemini search`);
 
+    // First-stage retrieval: limit candidate set by query keywords to reduce Gemini usage
+    const queryTokens = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(w => w.length > 2)
+      .slice(0, 3);
+    let candidates = allListings;
+    if (queryTokens.length > 0) {
+      const filtered = allListings.filter(listing => {
+        const title = (listing.title || '').toLowerCase();
+        const description = (listing.description || '').toLowerCase();
+        const category = (listing.category || '').toLowerCase();
+        const text = `${title} ${description} ${category}`;
+        return queryTokens.some(tok => text.includes(tok));
+      });
+      candidates = filtered.length >= 5 ? filtered.slice(0, 30) : allListings.slice(0, 30);
+    } else {
+      candidates = allListings.slice(0, 30);
+    }
+    console.log(`📦 Using ${candidates.length} candidates for Gemini ranking`);
+
     // Use Gemini to intelligently find matching listings
     const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
       console.warn('⚠️ Gemini API key not configured, using simple keyword search');
-      // Fallback to simple keyword search
       const queryLower = query.toLowerCase();
-      return allListings
+      let fallbackResults = allListings
         .filter(listing => {
           const title = (listing.title || '').toLowerCase();
           const description = (listing.description || '').toLowerCase();
-          const category = (listing.category || '').toLowerCase();
-          return title.includes(queryLower) || description.includes(queryLower) || category.includes(queryLower);
+          const cat = (listing.category || '').toLowerCase();
+          return title.includes(queryLower) || description.includes(queryLower) || cat.includes(queryLower);
         })
         .slice(0, 8);
+      if (filters && fallbackResults.length > 0) {
+        const brandLower = filters.brand?.toLowerCase();
+        const modelLower = filters.model?.toLowerCase();
+        const categoryLower = filters.category?.toLowerCase();
+        fallbackResults = [...fallbackResults].sort((a, b) => {
+          const score = (r: InternalResult) => {
+            let s = 0;
+            if (brandLower && (r.brand || '').toLowerCase().includes(brandLower)) s += 2;
+            if (modelLower && ((r.model || '').toLowerCase().includes(modelLower) || (r.title || '').toLowerCase().includes(modelLower))) s += 1;
+            if (categoryLower && (r.category || '').toLowerCase().includes(categoryLower)) s += 1;
+            return s;
+          };
+          return score(b) - score(a);
+        });
+      }
+      return fallbackResults as InternalResult[];
     }
 
-    // Prepare listings context for Gemini
-    const listingsContext = allListings
+    // Prepare listings context for Gemini (candidate set only)
+    const listingsContext = candidates
       .map((listing, index) => 
         `${index + 1}. ID: ${listing.id} | Title: ${listing.title} | Price: $${listing.price} | Category: ${listing.category} | Condition: ${listing.condition} | Description: ${listing.description}`
       )
@@ -175,7 +317,7 @@ If no products match, return an empty array: []`;
 
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODELS.FAST });
 
     console.log('🤖 Asking Gemini to search internal listings...');
     const result = await model.generateContent(prompt);
@@ -185,17 +327,50 @@ If no products match, return an empty array: []`;
     // Parse Gemini's response
     const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
     if (!jsonMatch) {
-      console.warn('⚠️ Gemini did not return valid JSON, using all listings');
-      return allListings.slice(0, 8);
+      console.warn('⚠️ Gemini did not return valid JSON, using top candidates');
+      let fallback = candidates.slice(0, 8) as InternalResult[];
+      if (filters && fallback.length > 0) {
+        const brandLower = filters.brand?.toLowerCase();
+        const modelLower = filters.model?.toLowerCase();
+        const categoryLower = filters.category?.toLowerCase();
+        fallback = [...fallback].sort((a, b) => {
+          const score = (r: InternalResult) => {
+            let s = 0;
+            if (brandLower && (r.brand || '').toLowerCase().includes(brandLower)) s += 2;
+            if (modelLower && ((r.model || '').toLowerCase().includes(modelLower) || (r.title || '').toLowerCase().includes(modelLower))) s += 1;
+            if (categoryLower && (r.category || '').toLowerCase().includes(categoryLower)) s += 1;
+            return s;
+          };
+          return score(b) - score(a);
+        });
+      }
+      return fallback;
     }
 
     const matchedIds: string[] = JSON.parse(jsonMatch[0]);
     console.log(`🎯 Gemini matched ${matchedIds.length} internal listings`);
 
-    // Return listings in the order Gemini suggested
-    const orderedResults = matchedIds
-      .map(id => allListings.find(l => l.id === id))
+    // Return listings in the order Gemini suggested (from candidate set)
+    let orderedResults = matchedIds
+      .map(id => candidates.find((l: { id: string }) => l.id === id))
       .filter(Boolean) as InternalResult[];
+
+    // When filters from image search are provided, prefer listings that match brand/model/category
+    if (filters && orderedResults.length > 0) {
+      const brandLower = filters.brand?.toLowerCase();
+      const modelLower = filters.model?.toLowerCase();
+      const categoryLower = filters.category?.toLowerCase();
+      orderedResults = [...orderedResults].sort((a, b) => {
+        const score = (r: InternalResult) => {
+          let s = 0;
+          if (brandLower && (r.brand || '').toLowerCase().includes(brandLower)) s += 2;
+          if (modelLower && ((r.model || '').toLowerCase().includes(modelLower) || (r.title || '').toLowerCase().includes(modelLower))) s += 2;
+          if (categoryLower && (r.category || '').toLowerCase().includes(categoryLower)) s += 1;
+          return s;
+        };
+        return score(b) - score(a);
+      });
+    }
 
     return orderedResults;
 
@@ -224,23 +399,38 @@ function findMatchingListings(
     : 0;
 
   return internalResults.map(internal => {
-    // Check if internal listing matches any external product
     let isMatched = false;
 
     for (const external of externalResults) {
-      // Simple title similarity check (shared keywords)
-      const internalWords = internal.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const externalWords = external.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const sharedWords = internalWords.filter(w => externalWords.includes(w));
-      const similarity = sharedWords.length / Math.max(internalWords.length, externalWords.length);
+      const extTitle = external.title.toLowerCase();
 
-      // Check if similar product (>40% keyword match) and competitive price (within 20% of average)
-      if (similarity > 0.4 && avgExternalPrice > 0) {
-        const priceDiff = Math.abs(internal.price - avgExternalPrice) / avgExternalPrice;
-        if (priceDiff <= 0.2) { // Within 20% of market average
-          isMatched = true;
-          console.log(`🎯 Matched internal listing: "${internal.title}" ($${internal.price}) with market avg $${avgExternalPrice.toFixed(2)}`);
-          break;
+      // Prefer structured match: brand + model align with external title
+      if (internal.brand && internal.model) {
+        const brandMatch = extTitle.includes(internal.brand.toLowerCase());
+        const modelMatch = extTitle.includes(internal.model.toLowerCase());
+        if (brandMatch && modelMatch && avgExternalPrice > 0) {
+          const priceDiff = Math.abs(internal.price - avgExternalPrice) / avgExternalPrice;
+          if (priceDiff <= 0.25) {
+            isMatched = true;
+            console.log(`🎯 Matched (brand+model) internal: "${internal.title}" with ${external.source}`);
+            break;
+          }
+        }
+      }
+
+      // Fallback: title similarity and competitive price
+      if (!isMatched) {
+        const internalWords = internal.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+        const externalWords = extTitle.split(/\s+/).filter(w => w.length > 3);
+        const sharedWords = internalWords.filter(w => externalWords.includes(w));
+        const similarity = sharedWords.length / Math.max(internalWords.length, externalWords.length);
+        if (similarity > 0.4 && avgExternalPrice > 0) {
+          const priceDiff = Math.abs(internal.price - avgExternalPrice) / avgExternalPrice;
+          if (priceDiff <= 0.2) {
+            isMatched = true;
+            console.log(`🎯 Matched internal listing: "${internal.title}" ($${internal.price}) with market avg $${avgExternalPrice.toFixed(2)}`);
+            break;
+          }
         }
       }
     }
@@ -585,10 +775,41 @@ async function searchExternalInternet(query: string): Promise<ExternalResult[]> 
               }
             }
             
-            const withImages = diverseResults.filter(r => r.image);
             console.log(`✅ SerpAPI Shopping: ${diverseResults.length} diverse results from ${sourceCount.size} sources`);
             return diverseResults;
           }
+        }
+
+        // SerpAPI shopping returned no results: try generic Google search and map product-like results
+        try {
+          const googleParams = new URLSearchParams({
+            engine: 'google',
+            q: query,
+            api_key: serpApiKey,
+            num: '10',
+            gl: 'us',
+            hl: 'en',
+          });
+          const googleResponse = await fetch(`https://serpapi.com/search?${googleParams.toString()}`);
+          if (googleResponse.ok) {
+            const googleData = await googleResponse.json();
+            const organic = googleData.organic_results || [];
+            const mapped: ExternalResult[] = organic.slice(0, 8).map((item: any) => ({
+              title: item.title || '',
+              price: extractPriceFromSnippet(item.snippet) || 0,
+              source: extractSource(item.link) || 'Web',
+              url: extractActualUrl(item.link) || item.link || '',
+              image: extractImage(item),
+              rating: null,
+              reviewsCount: null,
+            })).filter((r: ExternalResult) => r.title && r.url && (r.url.startsWith('https') || r.url.startsWith('http')));
+            if (mapped.length > 0) {
+              console.log(`✅ SerpAPI Google fallback: ${mapped.length} results`);
+              return mapped;
+            }
+          }
+        } catch (fallbackErr) {
+          console.error('SerpAPI Google fallback error:', fallbackErr);
         }
       } else {
         const errorText = await shoppingResponse.text();
@@ -603,10 +824,10 @@ async function searchExternalInternet(query: string): Promise<ExternalResult[]> 
     console.log('⚠️ SERPAPI_API_KEY not configured');
   }
 
-  // Fallback to Google Custom Search API
+  // Fallback to Google Custom Search API (real results only)
   const googleApiKey = process.env.GOOGLE_CUSTOM_SEARCH_API_KEY;
   const googleCx = process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID;
-  
+
   if (googleApiKey && googleCx) {
     try {
       const response = await fetch(
@@ -616,8 +837,8 @@ async function searchExternalInternet(query: string): Promise<ExternalResult[]> 
       if (response.ok) {
         const data = await response.json();
         const items = data.items || [];
-        
-        return items.slice(0, 8).map((item: any) => ({
+
+        const results = items.slice(0, 8).map((item: any) => ({
           title: item.title || '',
           price: extractPriceFromSnippet(item.snippet) || 0,
           source: extractSource(item.link) || 'Unknown',
@@ -626,14 +847,15 @@ async function searchExternalInternet(query: string): Promise<ExternalResult[]> 
           rating: null,
           reviewsCount: null,
         })).filter((item: ExternalResult) => item.title && item.url && item.url.startsWith('https'));
+        if (results.length > 0) return results;
       }
     } catch (error) {
       console.error('Google Custom Search API error:', error);
     }
   }
 
-  // Final fallback: Generate contextual results (no hardcoded images)
-  return generateFallbackResults(query);
+  // No fake data: return empty when no real external results are available
+  return [];
 }
 
 function tryParseJson(text: string): any {
@@ -693,6 +915,55 @@ function buildDeterministicSummary(
     topRecommendations: recommendations,
     marketInsights: insights,
   };
+}
+
+/**
+ * Build search summary: priceRange always from data; overview/recommendations/insights from Gemini when possible, else deterministic.
+ */
+async function buildSummary(
+  query: string,
+  externalResults: ExternalResult[],
+  internalResults: InternalResult[]
+): Promise<SearchResponse['summary']> {
+  const deterministic = buildDeterministicSummary(query, externalResults, internalResults);
+  if (!deterministic) return null;
+
+  const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) return deterministic;
+
+  const externalSnippet = externalResults.slice(0, 6).map(r => `${r.title} ($${r.price}, ${r.source})`).join('\n');
+  const internalSnippet = internalResults.slice(0, 4).map(r => `${r.title} ($${r.price})`).join('\n');
+  const hasInternalMatches = internalResults.some(r => r.isMatched);
+
+  const prompt = `You are a shopping search assistant. For the search "${query}" we have:
+External results: ${externalResults.length}. Sample: ${externalSnippet || 'none'}
+Our marketplace: ${internalResults.length}. Sample: ${internalSnippet || 'none'}
+${hasInternalMatches ? 'We have matching listings on our marketplace for this product.' : ''}
+
+Reply with ONLY a JSON object (no markdown, no code block) with exactly:
+{"overview": "1-2 sentences summarizing what we found and whether prices look typical.", "topRecommendations": ["short bullet 1", "short bullet 2", "short bullet 3"], "marketInsights": ["insight 1", "insight 2"]}
+Keep each string brief. If we have matching items on our marketplace, mention it in overview or recommendations.`;
+
+  try {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODELS.FAST });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const cleaned = (text || '').replace(/```json\n?|\n?```/g, '').trim();
+    const json = tryParseJson(cleaned);
+    if (json && typeof json.overview === 'string' && Array.isArray(json.topRecommendations) && Array.isArray(json.marketInsights)) {
+      return {
+        overview: json.overview,
+        priceRange: deterministic.priceRange,
+        topRecommendations: json.topRecommendations.slice(0, 4),
+        marketInsights: json.marketInsights.slice(0, 4),
+      };
+    }
+  } catch (err) {
+    console.warn('Gemini summary fallback to deterministic:', err);
+  }
+  return deterministic;
 }
 
 function extractPrice(priceStr: string | number | undefined): number {

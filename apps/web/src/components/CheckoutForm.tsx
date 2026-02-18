@@ -15,6 +15,9 @@ import {
   Truck
 } from 'lucide-react';
 
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -371,7 +374,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
                         <span className="text-gray-400 ml-2">{rate.serviceName}</span>
                       </div>
                       <span className="font-semibold text-white">
-                        ${rate.price.toFixed(2)}
+                        {formatCurrency(rate.price)}
                       </span>
                     </div>
                     {rate.deliveryDays && (
@@ -407,26 +410,26 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
         <div className="space-y-2">
           <div className="flex justify-between text-gray-300">
             <span>Subtotal</span>
-            <span>${totals.subtotal.toFixed(2)}</span>
+            <span>{formatCurrency(totals.subtotal)}</span>
           </div>
           {totals.shipping > 0 && (
             <div className="flex justify-between text-gray-300">
               <span>Shipping</span>
-              <span>${totals.shipping.toFixed(2)}</span>
+              <span>{formatCurrency(totals.shipping)}</span>
             </div>
           )}
           <div className="flex justify-between text-gray-300">
             <span>Tax</span>
-            <span>${totals.tax.toFixed(2)}</span>
+            <span>{formatCurrency(totals.tax)}</span>
           </div>
           <div className="flex justify-between text-gray-300">
             <span>Processing Fee</span>
-            <span>${totals.fees.toFixed(2)}</span>
+            <span>{formatCurrency(totals.fees)}</span>
           </div>
           <div className="border-t border-dark-500 pt-2">
             <div className="flex justify-between text-white font-semibold text-lg">
               <span>Total</span>
-              <span>${totals.total.toFixed(2)}</span>
+              <span>{formatCurrency(totals.total)}</span>
             </div>
           </div>
         </div>
@@ -446,7 +449,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
         ) : (
           <>
             <CreditCard className="w-5 h-5 mr-2" />
-            Proceed to Stripe Checkout — ${totals.total.toFixed(2)}
+            Proceed to Stripe Checkout — {formatCurrency(totals.total)}
           </>
         )}
       </button>

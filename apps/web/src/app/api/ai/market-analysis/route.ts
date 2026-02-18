@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
+import { GEMINI_MODELS } from '@/lib/ai/models';
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
 export const dynamic = 'force-dynamic';
@@ -34,8 +35,30 @@ export async function POST(req: NextRequest) {
 
     console.log('🔍 Starting AI market analysis for:', { title, category, condition });
 
+    // Fetch live external results to ground the analysis
+    let liveMarketBlock = '';
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const searchQuery = [brand, model, title].filter(Boolean).join(' ').trim() || title;
+      const searchRes = await fetch(`${baseUrl}/api/universal-search?q=${encodeURIComponent(searchQuery.slice(0, 80))}`);
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        const external = searchData.externalResults || [];
+        const internal = searchData.internalResults || [];
+        if (external.length > 0 || internal.length > 0) {
+          const lines = [
+            ...external.slice(0, 8).map((r: { title: string; price: number; source: string }) => `${r.source}: $${r.price} — ${r.title}`),
+            ...internal.slice(0, 4).map((r: { title: string; price: number }) => `Our marketplace: $${r.price} — ${r.title}`),
+          ];
+          liveMarketBlock = `\n\nLIVE MARKET DATA (current search results for this product):\n${lines.join('\n')}\n\nUse this live data to inform suggestedPrice, priceRange, and reasoning.`;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch live market data for market analysis:', e);
+    }
+
     const model_ai = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: GEMINI_MODELS.SMART,
       generationConfig: {
         temperature: 0.3,
         topK: 1,
@@ -55,6 +78,7 @@ export async function POST(req: NextRequest) {
     - Condition: ${condition || 'Good'}
     - Brand: ${brand || 'Unknown'}
     - Model: ${model || 'Unknown'}
+    ${liveMarketBlock}
 
     Your task (US MARKET FOCUS ONLY):
     1. Research current US market prices for this exact item or similar items
@@ -99,6 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     Guidelines (US MARKET ONLY):
+    - When LIVE MARKET DATA is provided above, use it to set suggestedPrice and priceRange; base reasoning on those real results.
     - Use realistic US market prices based on actual US marketplace data
     - Consider depreciation for used items in US market
     - Factor in brand value and model popularity in US market

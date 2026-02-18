@@ -1,12 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Sparkles, TrendingUp } from 'lucide-react';
+import { Search, Sparkles, TrendingUp, Camera } from 'lucide-react';
+import { ImageSearchModal } from '@/components/search/ImageSearchModal';
+import { getPopularSearches } from '@/lib/searchAnalytics';
+
+const POPULAR_LIMIT = 4;
 
 export function UniversalSearchHero() {
   const [query, setQuery] = useState('');
+  const [showImageModal, setShowImageModal] = useState(false);
   const router = useRouter();
+  const popularSearches = useMemo(() => getPopularSearches(POPULAR_LIMIT).map((q) => q.query), []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +57,15 @@ export function UniversalSearchHero() {
                   autoComplete="off"
                 />
                 <button
+                  type="button"
+                  onClick={() => setShowImageModal(true)}
+                  className="m-2 p-2 sm:p-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all duration-200"
+                  title="Search by image"
+                  aria-label="Search by image"
+                >
+                  <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+                <button
                   type="submit"
                   disabled={!query.trim()}
                   className="m-2 px-6 sm:px-8 py-3 sm:py-4 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg"
@@ -61,10 +76,22 @@ export function UniversalSearchHero() {
               </div>
             </div>
 
-            {/* Popular searches */}
+            {/* Search by image pill */}
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowImageModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 backdrop-blur-sm border border-white/10 rounded-full text-white/90 text-sm transition-all duration-200"
+              >
+                <Camera className="w-4 h-4 text-accent-400" />
+                Search by image
+              </button>
+            </div>
+
+            {/* Popular searches from analytics */}
             <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
               <span className="text-white/70">Popular:</span>
-              {['iPhone 14', 'Nike Shoes', 'MacBook', 'Gaming Chair'].map((term) => (
+              {popularSearches.map((term) => (
                 <button
                   key={term}
                   type="button"
@@ -81,6 +108,7 @@ export function UniversalSearchHero() {
           </form>
         </div>
       </div>
+      <ImageSearchModal isOpen={showImageModal} onClose={() => setShowImageModal(false)} />
     </section>
   );
 }

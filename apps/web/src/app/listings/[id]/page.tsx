@@ -7,6 +7,7 @@ import { Heart, Star, MessageCircle, X, ArrowLeft, Clock, Tag } from 'lucide-rea
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Navigation } from '@/components/Navigation';
+import ListingCard from '@/components/ListingCard';
 import { SellerInfo } from '@/components/SellerInfo';
 import { ListingActions } from '@/components/ListingActions';
 import { PriceSuggestionModal } from '@/components/PriceSuggestionModal';
@@ -70,6 +71,7 @@ export default function ListingDetailPage() {
   const [priceSuggestion, setPriceSuggestion] = useState('');
   const [priceSuggestionLoading, setPriceSuggestionLoading] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [similarListings, setSimilarListings] = useState<SimpleListing[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!params.id) return;
@@ -94,6 +96,31 @@ export default function ListingDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Fetch similar listings (same category, exclude current)
+  useEffect(() => {
+    if (!listing?.category || !listing?.id) return;
+    const fetchSimilar = async () => {
+      try {
+        const { apiGet } = await import('@/lib/api-client');
+        const response = await apiGet(
+          `/api/listings?category=${encodeURIComponent(listing.category)}&limit=6`,
+          { requireAuth: false }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const items = Array.isArray(data.data) ? data.data : [];
+          const similar = items
+            .filter((l: SimpleListing) => l.id !== listing.id && !(l.sold ?? false))
+            .slice(0, 4);
+          setSimilarListings(similar);
+        }
+      } catch {
+        setSimilarListings([]);
+      }
+    };
+    fetchSimilar();
+  }, [listing?.id, listing?.category]);
 
   // Fetch seller profile when listing is loaded
   useEffect(() => {
@@ -462,6 +489,32 @@ export default function ListingDetailPage() {
             </Card>
           </div>
         </div>
+
+        {/* Similar items */}
+        {similarListings.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-xl font-bold text-white mb-4">Similar items</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {similarListings.map((similar) => (
+                <ListingCard
+                  key={similar.id}
+                  variant="grid"
+                  id={similar.id}
+                  title={similar.title}
+                  description={similar.description ?? ''}
+                  price={similar.price}
+                  category={similar.category ?? ''}
+                  condition={similar.condition}
+                  imageUrl={similar.photos?.[0] ?? null}
+                  sellerId={similar.sellerId}
+                  sold={similar.sold}
+                  soldThroughAllVerse={(similar as SimpleListing & { soldThroughAllVerse?: boolean }).soldThroughAllVerse}
+                  inventory={similar.inventory}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modals */}

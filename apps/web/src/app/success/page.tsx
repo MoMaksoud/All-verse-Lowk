@@ -7,6 +7,9 @@ import { CheckCircle } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import { DynamicBackground } from '@/components/DynamicBackground';
 
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
@@ -59,7 +62,7 @@ function SuccessContent() {
               <span className="block mt-2 text-gray-300">
                 Order #<span className="font-mono text-white">{orderSummary.orderIdShort}</span>
                 {orderSummary.total > 0 && (
-                  <span className="block text-sm mt-1">Total: ${orderSummary.total.toFixed(2)}</span>
+                  <span className="block text-sm mt-1">Total: {formatCurrency(orderSummary.total)}</span>
                 )}
               </span>
             )}

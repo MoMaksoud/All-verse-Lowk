@@ -482,6 +482,12 @@ export default function SellPage() {
         isActive: true,
         sellerId: currentUser?.uid || '',
       };
+      // Populate optional product identifiers from AI analysis for search and exact-item matching
+      const brand = initialEvidence?.brand ?? aiAnalysis?.brand;
+      const model = initialEvidence?.model_exact ?? initialEvidence?.model_range ?? aiAnalysis?.model;
+      if (brand) listingData.brand = brand;
+      if (model) listingData.model = model;
+      if (initialEvidence?.gtin) listingData.gtin = initialEvidence.gtin;
 
       // Add shipping information if provided
       if (formData.shipping && (

@@ -5,18 +5,10 @@ import { getAdminFirestore } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestoreServices } from '@/lib/services/firestore';
 import { ProfileService } from '@/lib/firestore';
+import { shippo } from '@/lib/shippo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// EasyPost API configuration
-const easypostApiKey = process.env.EASYPOST_API_KEY;
-
-if (!easypostApiKey) {
-  console.error('❌ EASYPOST_API_KEY is not configured');
-}
-
-const EASYPOST_API_URL = 'https://api.easypost.com/v2';
 
 interface CreateLabelRequest {
   rateId: string;
@@ -24,33 +16,25 @@ interface CreateLabelRequest {
   orderId: string;
 }
 
-interface EasyPostShipment {
-  id: string;
-  tracking_code: string;
-  postage_label: {
-    label_url: string;
-    label_pdf_url?: string;
-    label_zpl_url?: string;
-  };
-  carrier: string;
-  service: string;
-}
-
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    // Rate limit (30/min)
     const ip = getIp(req as unknown as Request);
     checkRateLimit(ip, 30);
 
-    // Check if API key is configured
-    if (!easypostApiKey) {
+    try {
+      if (!process.env.SHIPPO_API_KEY?.trim()) {
+        return NextResponse.json(
+          { error: 'Shipping service is not configured', details: 'SHIPPO_API_KEY is missing' },
+          { status: 500 }
+        );
+      }
+    } catch {
       return NextResponse.json(
-        { error: 'Shipping service is not configured', details: 'EASYPOST_API_KEY is missing' },
+        { error: 'Shipping service is not configured', details: 'SHIPPO_API_KEY is missing' },
         { status: 500 }
       );
     }
 
-    // Get Firestore admin instance
     const adminDb = getAdminFirestore();
     if (!adminDb) {
       return NextResponse.json(
@@ -59,10 +43,9 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       );
     }
 
-    const body = await req.json() as CreateLabelRequest;
+    const body = (await req.json()) as CreateLabelRequest;
     const { rateId, shipmentId, orderId } = body;
 
-    // Validate required fields
     if (!rateId || !shipmentId || !orderId) {
       return NextResponse.json(
         { error: 'rateId, shipmentId, and orderId are required' },
@@ -70,15 +53,13 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       );
     }
 
-    console.log('📦 Creating shipping label:', { rateId, shipmentId, orderId });
+    console.log('📦 Creating shipping label (Shippo):', { rateId, shipmentId, orderId });
 
-    // Get order to retrieve buyer's full address
     const order = await firestoreServices.orders.getOrder(orderId);
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Get seller's address from profile (use first seller for now)
     const sellerId = order.items[0]?.sellerId;
     if (!sellerId) {
       return NextResponse.json({ error: 'Seller ID not found in order' }, { status: 400 });
@@ -92,131 +73,96 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       );
     }
 
-    // Update shipment with full addresses before purchasing (required for label generation)
-    console.log('📦 Updating shipment with full addresses...');
-    const updateShipmentData = {
-      shipment: {
-        from_address: {
-          street1: sellerProfile.shippingAddress.street || '',
-          city: sellerProfile.shippingAddress.city || '',
-          state: sellerProfile.shippingAddress.state || '',
-          zip: sellerProfile.shippingAddress.zip,
-          country: sellerProfile.shippingAddress.country || 'US',
-        },
-        to_address: {
-          street1: order.shippingAddress.street,
-          city: order.shippingAddress.city,
-          state: order.shippingAddress.state,
-          zip: order.shippingAddress.zip,
-          country: order.shippingAddress.country || 'US',
-        },
-      },
+    const transaction = await shippo.transactions.create({
+      rate: rateId,
+      label_file_type: 'PDF',
+      async: false,
+    } as Parameters<typeof shippo.transactions.create>[0]);
+
+    type TxShape = {
+      status?: string;
+      object_id?: string;
+      objectId?: string;
+      label_url?: string;
+      labelUrl?: string;
+      tracking_number?: string;
+      trackingNumber?: string;
+      tracking_url_provider?: string;
+      trackingUrlProvider?: string;
+      rate?: string;
+      carrier?: string;
+      servicelevel?: { name?: string; token?: string };
     };
 
-    // Update the shipment first
-    const updateResponse = await fetch(`${EASYPOST_API_URL}/shipments/${shipmentId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Basic ${Buffer.from(easypostApiKey + ':').toString('base64')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updateShipmentData),
-    });
+    let completedTx = transaction as TxShape;
 
-    if (!updateResponse.ok) {
-      const errorData = await updateResponse.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('❌ EasyPost shipment update error:', errorData);
-      // Continue anyway - some shipments might already have addresses
-    } else {
-      console.log('✅ Shipment updated with full addresses');
+    if (completedTx.status !== 'SUCCESS') {
+      const transactionId = completedTx.object_id ?? completedTx.objectId;
+      if (!transactionId) {
+        return NextResponse.json(
+          { error: 'Invalid response from shipping service. Missing transaction ID.' },
+          { status: 500 }
+        );
+      }
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        completedTx = (await shippo.transactions.get(transactionId)) as TxShape;
+        if (completedTx.status === 'SUCCESS') break;
+        if (completedTx.status === 'ERROR') {
+          return NextResponse.json(
+            { error: 'Label creation failed. Please try another rate or contact support.' },
+            { status: 422 }
+          );
+        }
+      }
     }
 
-    // Purchase the label from EasyPost
-    const purchaseData = {
-      rate: {
-        id: rateId,
-      },
-    };
-
-    console.log('📦 Purchasing label from EasyPost...');
-
-    const response = await fetch(`${EASYPOST_API_URL}/shipments/${shipmentId}/buy`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${Buffer.from(easypostApiKey + ':').toString('base64')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(purchaseData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('❌ EasyPost API error:', errorData);
-      
-      let errorMessage = 'Failed to create shipping label';
-      if (errorData.error) {
-        errorMessage = errorData.error.message || errorData.error.code || errorMessage;
-      }
-
+    if (completedTx.status !== 'SUCCESS') {
       return NextResponse.json(
-        { error: errorMessage, details: process.env.NODE_ENV === 'development' ? errorData : undefined },
-        { status: response.status === 401 ? 401 : response.status === 422 ? 422 : 500 }
+        { error: 'Label creation is taking longer than expected. Please try again or contact support.' },
+        { status: 504 }
       );
     }
 
-    const shipment: EasyPostShipment = await response.json();
-    console.log('📦 Label purchased successfully:', {
-      trackingCode: shipment.tracking_code,
-      carrier: shipment.carrier,
-      service: shipment.service,
-    });
-
-    // Extract shipping information
-    const trackingNumber = shipment.tracking_code;
-    const labelUrl = shipment.postage_label?.label_url || shipment.postage_label?.label_pdf_url || '';
-    const carrier = shipment.carrier || 'Unknown';
+    const trackingNumber = completedTx.tracking_number ?? completedTx.trackingNumber ?? '';
+    const labelUrl = completedTx.label_url ?? completedTx.labelUrl ?? '';
+    const carrier = (completedTx as { carrier?: string }).carrier ?? 'Unknown';
+    const service = completedTx.servicelevel?.name ?? completedTx.servicelevel?.token ?? '';
 
     if (!trackingNumber || !labelUrl) {
-      console.error('❌ Missing tracking number or label URL in EasyPost response');
+      console.error('❌ Missing tracking number or label URL in Shippo response');
       return NextResponse.json(
         { error: 'Invalid response from shipping service. Missing tracking number or label URL.' },
         { status: 500 }
       );
     }
 
-    // Store shipping information in Firestore under orders/{orderId}/shipping
     const shippingRef = adminDb.collection('orders').doc(orderId).collection('shipping').doc();
-    const shippingData = {
+    await shippingRef.set({
       trackingNumber,
       labelUrl,
       carrier,
-      service: shipment.service || '',
+      service,
       rateId,
       shipmentId,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-    };
-
-    await shippingRef.set(shippingData);
+    });
     console.log('📦 Shipping information stored in Firestore');
 
-    // Return tracking number and label URL
     return NextResponse.json({
       success: true,
       trackingNumber,
       labelUrl,
     }, { status: 200 });
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error creating shipping label:', error);
-    
-    // Provide user-friendly error messages
+
     let errorMessage = 'Failed to create shipping label';
     let statusCode = 500;
 
     if (error instanceof Error) {
       const msg = error.message.toLowerCase();
-      
       if (msg.includes('network') || msg.includes('fetch') || msg.includes('econnrefused')) {
         errorMessage = 'Unable to connect to shipping service. Please check your internet connection and try again.';
         statusCode = 503;
@@ -226,16 +172,18 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       } else if (msg.includes('permission') || msg.includes('firestore')) {
         errorMessage = 'Database error. Please try again.';
         statusCode = 500;
+      } else if (msg.includes('shippo') || msg.includes('api key')) {
+        errorMessage = 'Shipping service error. Please try again or choose another rate.';
+        statusCode = 502;
       }
     }
 
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+        details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : undefined,
       },
       { status: statusCode }
     );
   }
 });
-

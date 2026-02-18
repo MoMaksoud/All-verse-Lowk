@@ -90,10 +90,11 @@ Successfully implemented a new Universal AI Shopping Search feature for All Vers
 - Searches title, description, category
 - Returns top 4 matches
 
-**External Search (MVP):**
-- Mock data for Amazon, eBay, Etsy
-- Real API integration ready (URLs prepared)
-- Returns 4 results per marketplace
+**External Search (real web results):**
+- Requires at least one of the following in `apps/web/.env.local`:
+  - **SERPAPI_API_KEY** – [SerpAPI](https://serpapi.com/) key (free tier: 100 searches/month). Used for Google Shopping and, if no shopping results, generic Google search.
+  - **GOOGLE_CUSTOM_SEARCH_API_KEY** and **GOOGLE_CUSTOM_SEARCH_ENGINE_ID** – [Programmable Search Engine](https://programmablesearchengine.google.com/) (optional fallback).
+- If neither is set, external results are empty and you only see marketplace listings.
 
 **AI Summary:**
 - Uses Gemini Pro model

@@ -19,6 +19,9 @@ import {
   Loader2
 } from 'lucide-react';
 
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+
 interface CartItem {
   listingId: string;
   sellerId: string;
@@ -269,20 +272,20 @@ export default function CartPage() {
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between text-gray-300">
                       <span>Subtotal ({cartItems.length} items)</span>
-                      <span>${calculateTotal().toFixed(2)}</span>
+                      <span>{formatCurrency(calculateTotal())}</span>
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Tax (8%)</span>
-                      <span>${(calculateTotal() * 0.08).toFixed(2)}</span>
+                      <span>{formatCurrency(calculateTotal() * 0.08)}</span>
                     </div>
                     <div className="flex justify-between text-gray-300">
                       <span>Processing Fee</span>
-                      <span>${(calculateTotal() * 0.029 + 0.30).toFixed(2)}</span>
+                      <span>{formatCurrency(calculateTotal() * 0.029 + 0.30)}</span>
                     </div>
                     <div className="border-t border-dark-600 pt-3">
                       <div className="flex justify-between text-white font-semibold text-lg">
                         <span>Total</span>
-                        <span>${(calculateTotal() * 1.08 + calculateTotal() * 0.029 + 0.30).toFixed(2)}</span>
+                        <span>{formatCurrency(calculateTotal() * 1.08 + calculateTotal() * 0.029 + 0.30)}</span>
                       </div>
                     </div>
                   </div>

@@ -86,6 +86,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch live external results for the same product to ground the suggestion
+    let liveMarketContext = '';
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const searchQuery = title.split(/\s+/).slice(0, 6).join(' ');
+      const searchRes = await fetch(`${baseUrl}/api/universal-search?q=${encodeURIComponent(searchQuery)}`);
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        const external = searchData.externalResults || [];
+        const internal = searchData.internalResults || [];
+        if (external.length > 0 || internal.length > 0) {
+          const lines = [
+            ...external.slice(0, 6).map((r: { title: string; price: number; source: string }) => `${r.source}: $${r.price} - ${r.title}`),
+            ...internal.slice(0, 3).map((r: { title: string; price: number }) => `Our marketplace: $${r.price} - ${r.title}`),
+          ];
+          liveMarketContext = `\n\nLive market data (current search results for similar items):\n${lines.join('\n')}\n\nUse this data to inform your price suggestion.`;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch live market data for price suggest:', e);
+    }
+
     // Try Gemini AI first
     try {
       const pricePrompt = `You are a pricing expert. Suggest a fair market price range for:
@@ -94,8 +116,9 @@ Description: ${description}
 Category: ${category}
 Condition: ${condition}
 ${size ? `Size: ${size}` : ''}
+${liveMarketContext}
 
-Provide a concise price suggestion with a recommended price range and brief reasoning. Keep it under 100 words.`;
+Provide a concise price suggestion with a recommended price range and brief reasoning. Keep it under 100 words.${liveMarketContext ? ' Base your range on the live market data above when relevant.' : ''}`;
 
       const priceResponse = await GeminiService.generateResponse(pricePrompt);
 
