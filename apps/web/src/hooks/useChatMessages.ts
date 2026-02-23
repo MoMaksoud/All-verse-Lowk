@@ -31,39 +31,32 @@ export function useChatMessages(chatId: string | null) {
       
       const chatMessages = await firestoreServices.chats.getChatMessages(chatId);
 
-      // Enrich and normalize messages (ensure timestamp/chatId exist)
-      const enrichedMessages = await Promise.all(
-        chatMessages.map(async (message) => {
-          try {
-            const sender = await firestoreServices.users.getUser(message.senderId);
-            const normalized: MessageWithUser = {
-              ...(message as any),
-              chatId: (message as any).chatId ?? chatId!,
-              timestamp: (message as any).timestamp ?? (message as any).createdAt,
-              sender: {
-                id: message.senderId,
-                name: sender?.displayName || sender?.email || `User ${message.senderId.substring(0, 8)}`,
-                username: sender?.username,
-                email: sender?.email || '',
-                photoURL: sender?.photoURL,
-              },
-            };
-            return normalized;
-          } catch (error) {
-            const normalized: MessageWithUser = {
-              ...(message as any),
-              chatId: (message as any).chatId ?? chatId!,
-              timestamp: (message as any).timestamp ?? (message as any).createdAt,
-              sender: {
-                id: message.senderId,
-                name: 'Unknown User',
-                email: '',
-              },
-            } as MessageWithUser;
-            return normalized;
-          }
-        })
-      );
+      // Batch-fetch unique senders once, then enrich all messages from the map
+      const uniqueSenderIds = [...new Set(chatMessages.map(m => m.senderId))];
+      const senderMap = new Map<string, any>();
+      await Promise.all(uniqueSenderIds.map(async (id) => {
+        try {
+          senderMap.set(id, await firestoreServices.users.getUser(id));
+        } catch {
+          senderMap.set(id, null);
+        }
+      }));
+
+      const enrichedMessages: MessageWithUser[] = chatMessages.map(message => {
+        const sender = senderMap.get(message.senderId);
+        return {
+          ...(message as any),
+          chatId: (message as any).chatId ?? chatId!,
+          timestamp: (message as any).timestamp ?? (message as any).createdAt,
+          sender: {
+            id: message.senderId,
+            name: sender?.displayName || sender?.email || `User ${message.senderId.substring(0, 8)}`,
+            username: sender?.username,
+            email: sender?.email || '',
+            photoURL: sender?.photoURL,
+          },
+        };
+      });
 
       setMessages(enrichedMessages);
     } catch (error) {
@@ -78,39 +71,32 @@ export function useChatMessages(chatId: string | null) {
     if (!chatId || !currentUser?.uid) return () => {};
 
     return firestoreServices.chats.subscribeToChatMessages(chatId, async (chatMessages) => {
-      // Enrich and normalize messages (ensure timestamp/chatId exist)
-      const enrichedMessages = await Promise.all(
-        chatMessages.map(async (message) => {
-          try {
-            const sender = await firestoreServices.users.getUser(message.senderId);
-            const normalized: MessageWithUser = {
-              ...(message as any),
-              chatId: (message as any).chatId ?? chatId!,
-              timestamp: (message as any).timestamp ?? (message as any).createdAt,
-              sender: {
-                id: message.senderId,
-                name: sender?.displayName || sender?.email || `User ${message.senderId.substring(0, 8)}`,
-                username: (sender as any)?.username,
-                email: (sender as any)?.email || '',
-                photoURL: (sender as any)?.photoURL,
-              },
-            };
-            return normalized;
-          } catch (error) {
-            const normalized: MessageWithUser = {
-              ...(message as any),
-              chatId: (message as any).chatId ?? chatId!,
-              timestamp: (message as any).timestamp ?? (message as any).createdAt,
-              sender: {
-                id: message.senderId,
-                name: `User ${message.senderId.substring(0, 8)}`,
-                email: '',
-              },
-            } as MessageWithUser;
-            return normalized;
-          }
-        })
-      );
+      // Batch-fetch unique senders once, then enrich all messages from the map
+      const uniqueSenderIds = [...new Set(chatMessages.map(m => m.senderId))];
+      const senderMap = new Map<string, any>();
+      await Promise.all(uniqueSenderIds.map(async (id) => {
+        try {
+          senderMap.set(id, await firestoreServices.users.getUser(id));
+        } catch {
+          senderMap.set(id, null);
+        }
+      }));
+
+      const enrichedMessages: MessageWithUser[] = chatMessages.map(message => {
+        const sender = senderMap.get(message.senderId);
+        return {
+          ...(message as any),
+          chatId: (message as any).chatId ?? chatId!,
+          timestamp: (message as any).timestamp ?? (message as any).createdAt,
+          sender: {
+            id: message.senderId,
+            name: sender?.displayName || sender?.email || `User ${message.senderId.substring(0, 8)}`,
+            username: sender?.username,
+            email: sender?.email || '',
+            photoURL: sender?.photoURL,
+          },
+        };
+      });
 
       setMessages(enrichedMessages);
       setLoading(false);

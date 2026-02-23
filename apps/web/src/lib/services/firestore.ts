@@ -116,11 +116,11 @@ abstract class BaseFirestoreService<T> {
     lastDoc?: QueryDocumentSnapshot
   ) {
     let paginatedQuery = baseQuery;
-    
+
     if (lastDoc) {
       paginatedQuery = query(paginatedQuery, startAfter(lastDoc));
     }
-    
+
     return query(paginatedQuery, limit(options.limit));
   }
 
@@ -131,7 +131,7 @@ abstract class BaseFirestoreService<T> {
   ): PaginatedResult<T> {
     const items = docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     const hasMore = docs.length === options.limit;
-    
+
     return {
       items,
       total: total || items.length,
@@ -153,7 +153,7 @@ export class UsersService extends BaseFirestoreService<FirestoreUser> {
   async getUser(uid: string): Promise<FirestoreUser | null> {
     const doc = await this.getDoc(uid);
     if (!doc.exists()) return null;
-    
+
     return { id: doc.id, ...doc.data() } as FirestoreUser & { id: string };
   }
 
@@ -207,7 +207,7 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
   async getListing(id: string): Promise<FirestoreListing | null> {
     const doc = await this.getDoc(id);
     if (!doc.exists()) return null;
-    
+
     return { id: doc.id, ...doc.data() } as FirestoreListing & { id: string };
   }
 
@@ -251,16 +251,17 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
 
   async searchListings(
     filters: SearchFilters,
-    sortOptions?: SortOptions
+    sortOptions?: SortOptions,
+    maxResults?: number
   ): Promise<PaginatedResult<FirestoreListing>> {
     let q = query(this.getCollection());
 
-    // Apply database-level filters BEFORE sorting
+    // Apply database-level filters before sorting
     // Only filter by isActive if explicitly set (undefined means show all)
     if (filters.isActive !== undefined) {
       q = query(q, where('isActive', '==', filters.isActive));
     }
-    
+
     if (filters.category) {
       q = query(q, where('category', '==', filters.category));
     }
@@ -282,10 +283,13 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
     const sortDirection = sortOptions?.direction || 'desc';
     q = query(q, orderBy(sortField, sortDirection));
 
-    // Fetch ALL matching listings (Firestore limit is 1000, but we'll handle pagination in API route)
-    // Note: For larger datasets, consider implementing cursor-based pagination
+    // Cap the number of documents fetched from Firestore to reduce read costs
+    if (maxResults) {
+      q = query(q, limit(maxResults));
+    }
+
     const docs = await this.getDocs(q);
-    
+
     // Return all items (pagination will be applied in API route after keyword filtering)
     return {
       items: docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreListing & { id: string })),
@@ -343,7 +347,7 @@ export class CartsService extends BaseFirestoreService<FirestoreCart> {
   async getCart(uid: string): Promise<FirestoreCart | null> {
     const doc = await this.getDoc(uid);
     if (!doc.exists()) return null;
-    
+
     return { id: doc.id, ...doc.data() } as FirestoreCart & { id: string };
   }
 
@@ -444,13 +448,17 @@ export class OrdersService extends BaseFirestoreService<FirestoreOrder> {
   async getOrder(id: string): Promise<FirestoreOrder | null> {
     const doc = await this.getDoc(id);
     if (!doc.exists()) return null;
-    
+
     return { id: doc.id, ...doc.data() } as FirestoreOrder & { id: string };
   }
 
   async createOrder(orderData: CreateOrderInput): Promise<string> {
+    // Denormalize seller IDs for efficient array-contains queries
+    const sellerIds = [...new Set(orderData.items.map(item => item.sellerId))];
+
     const orderDataWithDefaults = {
       ...orderData,
+      sellerIds,
       status: 'pending' as const,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -470,7 +478,7 @@ export class OrdersService extends BaseFirestoreService<FirestoreOrder> {
   }
 
   async getOrdersBySeller(sellerId: string): Promise<FirestoreOrder[]> {
-    const q = query(this.getCollection(), where('items', 'array-contains', { sellerId }));
+    const q = query(this.getCollection(), where('sellerIds', 'array-contains', sellerId));
     const docs = await this.getDocs(q);
     return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreOrder & { id: string }));
   }
@@ -493,7 +501,7 @@ export class PaymentsService extends BaseFirestoreService<FirestorePayment> {
   async getPayment(id: string): Promise<FirestorePayment | null> {
     const doc = await this.getDoc(id);
     if (!doc.exists()) return null;
-    
+
     return { id: doc.id, ...doc.data() } as FirestorePayment & { id: string };
   }
 
@@ -544,7 +552,7 @@ class ProfilePhotosService extends BaseFirestoreService<ProfilePhotoUpload> {
   async getProfilePhoto(userId: string): Promise<ProfilePhotoUpload | null> {
     const docRef = doc(db, this.collectionName, userId);
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       return { ...docSnap.data(), userId } as ProfilePhotoUpload;
     }
@@ -576,7 +584,7 @@ class ListingPhotosService extends BaseFirestoreService<ListingPhotoUpload> {
   async getListingPhotos(listingId: string): Promise<ListingPhotoUpload | null> {
     const docRef = doc(db, this.collectionName, listingId);
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       return { ...docSnap.data(), listingId } as ListingPhotoUpload;
     }
@@ -602,20 +610,20 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     // Check if either user is deleted
     const user1Doc = await getDoc(doc(db, COLLECTIONS.USERS, userId1));
     const user2Doc = await getDoc(doc(db, COLLECTIONS.USERS, userId2));
-    
+
     const user1Deleted = user1Doc.exists() && (user1Doc.data() as any)?.deleted === true;
     const user2Deleted = user2Doc.exists() && (user2Doc.data() as any)?.deleted === true;
-    
+
     if (user1Deleted || user2Deleted) {
       throw new Error('Cannot create chat with a deleted user');
     }
-    
+
     const participants = [userId1, userId2].sort();
     const chatId = participants.join('_');
-    
+
     const chatRef = doc(db, this.collectionName, chatId);
     const chatSnap = await getDoc(chatRef);
-    
+
     // Check if chat exists and if user is marked as deleted in it
     if (chatSnap.exists()) {
       const chatData = chatSnap.data() as any;
@@ -623,7 +631,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
         throw new Error('Cannot message a deleted user');
       }
     }
-    
+
     if (!chatSnap.exists()) {
       // Fetch minimal profile info for both users from profiles (preferred) or users fallback
       const buildProfile = async (uid: string) => {
@@ -634,10 +642,10 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
           const displayName = p?.displayName || p?.username || `User ${uid.substring(0, 8)}`;
           const username = p?.username || displayName;
           const photoURL = p?.profilePicture || '';
-          return { 
-            displayName: displayName || `User ${uid.substring(0, 8)}`, 
-            username: username || displayName || `User ${uid.substring(0, 8)}`, 
-            photoURL: photoURL || '' 
+          return {
+            displayName: displayName || `User ${uid.substring(0, 8)}`,
+            username: username || displayName || `User ${uid.substring(0, 8)}`,
+            photoURL: photoURL || ''
           };
         } catch (error) {
           console.error(`Error fetching profile for ${uid}:`, error);
@@ -671,7 +679,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       };
       await setDoc(chatRef, newChat);
     }
-    
+
     return chatId;
   }
 
@@ -682,7 +690,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       where('participants', 'array-contains', userId),
       orderBy('updatedAt', 'desc')
     );
-    
+
     const docs = await this.getDocs(q);
     return docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreChat & { id: string }));
   }
@@ -703,24 +711,24 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
     if (!chatDoc.exists()) {
       throw new Error('Chat not found');
     }
-    
+
     const chat = chatDoc.data() as any;
     const participants = chat?.participants || [];
     const deletedParticipants = chat?.deletedParticipants || {};
-    
+
     // Find the other participant
     const otherParticipant = participants.find((p: string) => p !== senderId);
     if (otherParticipant && deletedParticipants[otherParticipant]) {
       throw new Error('Cannot send message to a deleted user');
     }
-    
+
     const messageRef = doc(collection(db, this.collectionName, chatId, 'messages'));
-    
+
     // Validate listingId if provided
-    const validListingId = listingId && typeof listingId === 'string' && listingId.trim() !== '' 
-      ? listingId.trim() 
+    const validListingId = listingId && typeof listingId === 'string' && listingId.trim() !== ''
+      ? listingId.trim()
       : undefined;
-    
+
     const messageData: FirestoreMessage = {
       chatId,
       senderId,
@@ -729,14 +737,14 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       readBy: [senderId], // Sender has read their own message
       ...(validListingId && { listingId: validListingId }), // Include listingId if valid
     };
-    
+
     // Log for debugging (remove in production if needed)
     if (validListingId) {
       console.log('📦 Message sent with listing context:', { chatId, listingId: validListingId });
     }
-    
+
     await setDoc(messageRef, messageData);
-    
+
     // Update last message and increment unread for others
     const chatRef = doc(db, this.collectionName, chatId);
     const updates: any = {
@@ -747,19 +755,19 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       },
       updatedAt: serverTimestamp(),
     };
-    
+
     // Increment unread count for each participant except sender
     for (const uid of participants) {
       if (uid !== senderId) {
         updates[`unreadCount.${uid}`] = increment(1);
       }
     }
-    
+
     await updateDoc(chatRef, updates);
-    
+
     return messageRef.id;
   }
-  
+
   // Mark messages as read (legacy - sets unreadCount to 0)
   async markChatAsRead(chatId: string, userId: string): Promise<void> {
     const chatRef = doc(db, this.collectionName, chatId);
@@ -781,7 +789,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   async getChatMessages(chatId: string): Promise<FirestoreMessage[]> {
     const messagesRef = collection(db, this.collectionName, chatId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
-    
+
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
@@ -793,7 +801,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
   subscribeToChatMessages(chatId: string, callback: (messages: FirestoreMessage[]) => void): () => void {
     const messagesRef = collection(db, this.collectionName, chatId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
-    
+
     return onSnapshot(q, (querySnapshot) => {
       const messages = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -810,7 +818,7 @@ export class ChatsService extends BaseFirestoreService<FirestoreChat> {
       where('participants', 'array-contains', userId),
       orderBy('updatedAt', 'desc')
     );
-    
+
     return onSnapshot(q, (querySnapshot) => {
       const chats = querySnapshot.docs.map(doc => ({
         id: doc.id,
