@@ -144,6 +144,7 @@ export interface ShippingAddress {
 export interface FirestoreOrder {
   buyerId: string;
   items: OrderItem[];
+  sellerIds?: string[]; // Denormalized from items for efficient array-contains queries
   subtotal: number;
   fees: number;
   tax: number;
