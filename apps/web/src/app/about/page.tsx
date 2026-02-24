@@ -2,46 +2,10 @@
 
 import React from 'react';
 import { Navigation } from '@/components/Navigation';
-import { ArrowLeft, Info, Linkedin, Twitter, Github, Mail } from 'lucide-react';
+import { ArrowLeft, Info, Mail } from 'lucide-react';
 import Link from 'next/link';
-
-const teamMembers = [
-  {
-    name: 'Dustin Harrell',
-    role: 'Chief Executive Officer',
-    description: 'Leads product direction, platform vision, and core system decisions.',
-  },
-  {
-    name: 'Christopher Derys',
-    role: 'Chief Operating Officer',
-    description: 'Oversees daily operations, workflow efficiency, and user-seller interactions.',
-  },
-  {
-    name: 'Mohamed Abdelmaksoud',
-    role: 'Developer',
-    description: '',
-  },
-  {
-    name: 'Mario Sinclair',
-    role: 'Developer',
-    description: '',
-  },
-  {
-    name: 'Alex Mohamed',
-    role: 'Chief Financial Officer',
-    description: 'Handles financial strategy, investor communication, and platform sustainability.',
-  },
-  {
-    name: 'Matthew Ackerman',
-    role: 'Head of Brand & Communications',
-    description: 'Builds messaging, branding, and community presence.',
-  },
-  {
-    name: 'Michael Nieves',
-    role: 'Social Media & Reputation Director',
-    description: 'Crafts engagement, trust signals, and digital credibility.',
-  },
-];
+import { teamMembers } from '@/app/team/page';
+import { TeamMemberCard } from '@/components/TeamMemberCard';
 
 export default function AboutPage() {
   return (
@@ -105,7 +69,7 @@ export default function AboutPage() {
           </section>
 
           {/* Our Team */}
-          <section className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10">
+          <section className="bg-white/5 backdrop-blur-sm p-6 sm:p-8 md:p-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Our Team</h2>
@@ -115,43 +79,15 @@ export default function AboutPage() {
               </div>
               <Link 
                 href="/team"
-                className="mt-4 sm:mt-0 text-accent-400 hover:text-accent-300 transition-colors text-sm sm:text-base font-medium"
-              >
-                View Full Team →
+                className="mt-4 sm:mt-0 whitespace-nowrap text-accent-400 hover:text-accent-300 transition-colors text-sm sm:text-base font-medium"              >
+              View Full Team →
               </Link>
             </div>
-            
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-6">Leadership</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {teamMembers.map((member, index) => (
-                  <div
-                    key={index}
-                    className="bg-white/5 rounded-xl border border-white/10 p-5 hover:border-accent-500/30 transition-all duration-200 hover:bg-white/10"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h4 className="text-white font-semibold text-lg mb-1">{member.name}</h4>
-                        <p className="text-accent-400 text-sm font-medium mb-2">{member.role}</p>
-                      </div>
-                    </div>
-                    {member.description && (
-                      <p className="text-gray-400 text-sm leading-relaxed">{member.description}</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/10">
-                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-accent-500/20 transition-colors cursor-pointer">
-                        <Linkedin className="w-4 h-4 text-gray-400" />
-                      </div>
-                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-accent-500/20 transition-colors cursor-pointer">
-                        <Twitter className="w-4 h-4 text-gray-400" />
-                      </div>
-                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-accent-500/20 transition-colors cursor-pointer">
-                        <Github className="w-4 h-4 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <h3 className="text-xl font-semibold text-white mb-6">Leadership</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {teamMembers.map((member) => (
+                <TeamMemberCard key={member.name} member={member} showDescription={false} />
+              ))}
             </div>
           </section>
 

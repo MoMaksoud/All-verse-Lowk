@@ -32,6 +32,11 @@ export interface ChatResponse {
   error?: string;
 }
 
+export type RefinementStep =
+  | { action: 'ask'; question: string; options: string[]; field: string }
+  | { action: 'search' }
+  | { action: 'done' };
+
 export class GeminiService {
   /**
    * Generate AI response based on role (buyer or seller) and user message
@@ -240,6 +245,48 @@ Always end with a short, encouraging call-to-action question.
     }
   }
 
+  /**
+   * Decide next step for conversational search refinement.
+   * Uses FAST model. Returns one of: ask (with question/options/field), search, or done.
+   */
+  static async decideSearchRefinement(
+    searchState: import('@/lib/ai/searchState').SearchState,
+    resultCount: number,
+    lastUserMessage: string
+  ): Promise<RefinementStep> {
+    const genAI = getGenAI();
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODELS.FAST });
+    const prompt = `You are a search refinement assistant. Given current search state and result count, decide ONE next step.
+
+RULES:
+- Ask a question ONLY if it will significantly reduce results.
+- Priority: 1) price intent missing → ask cheap/best value/premium. 2) condition missing → new/used. 3) category unclear → ask category. 4) too many results → ask brand or key attribute.
+- Only ONE question per turn.
+- Reply with ONLY a JSON object, no markdown. One of:
+  {"action":"ask","question":"...","options":["a","b","c"],"field":"priceIntent"}
+  {"action":"ask","question":"...","options":["new","used"],"field":"condition"}
+  {"action":"ask","question":"...","options":["..."],"field":"category"} or "field":"brand"
+  {"action":"search"}
+  {"action":"done"}
+
+Current state: ${JSON.stringify(searchState)}
+Result count: ${resultCount}
+Last user message: ${lastUserMessage}`;
+
+    const result = await model.generateContent(prompt);
+    const text = (result.response.text() || '').trim().replace(/^["']|["']$/g, '');
+    const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+    try {
+      const parsed = JSON.parse(cleaned);
+      if (parsed?.action === 'ask' && parsed?.question && Array.isArray(parsed?.options) && parsed?.field) {
+        return { action: 'ask', question: parsed.question, options: parsed.options, field: parsed.field };
+      }
+      if (parsed?.action === 'done') return { action: 'done' };
+    } catch {
+      // fall through to search
+    }
+    return { action: 'search' };
+  }
 }
 
 export default GeminiService;

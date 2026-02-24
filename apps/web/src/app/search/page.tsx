@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { DynamicBackground } from '@/components/DynamicBackground';
@@ -9,40 +9,24 @@ import { ExternalResultsSection } from '@/components/search/ExternalResultsSecti
 import { InternalResultsSection } from '@/components/search/InternalResultsSection';
 import { SellCTASection } from '@/components/search/SellCTASection';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { AlertCircle, Search, ArrowLeft, Home, Camera } from 'lucide-react';
+import { AlertCircle, Search, ArrowLeft, Home, Camera, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { getPopularSearches } from '@/lib/searchAnalytics';
+import { useConversationalSearch } from '@/hooks/useConversationalSearch';
 
-interface SearchResults {
-  externalResults: Array<{
-    title: string;
-    price: number;
-    source: string;
-    url: string;
-    image?: string | null;
-    rating?: number | null;
-    reviewsCount?: number | null;
-  }>;
-  internalResults: Array<{
-    id: string;
-    title: string;
-    price: number;
-    description: string;
-    photos: string[];
-    category: string;
-    condition: string;
-    sellerId: string;
-  }>;
-  summary: {
-    overview: string;
-    priceRange?: {
-      min: number;
-      max: number;
-      average: number;
-    };
-    topRecommendations?: string[];
-    marketInsights?: string[];
-  } | null;
+/** Map display option labels to API values for refinement */
+function optionToValue(field: string, option: string): string {
+  const v = option.trim().toLowerCase();
+  if (field === 'priceIntent') {
+    if (v === 'cheap') return 'cheap';
+    if (v === 'premium') return 'premium';
+    if (v === 'best value' || v === 'mid') return 'mid';
+  }
+  if (field === 'condition') {
+    if (v === 'new') return 'new';
+    if (v === 'used') return 'used';
+  }
+  return option.trim();
 }
 
 function SearchContent() {
@@ -50,19 +34,26 @@ function SearchContent() {
   const router = useRouter();
   const queryParam = searchParams.get('query');
   const imageSearch = searchParams.get('imageSearch') === 'true';
-  const [query, setQuery] = useState<string>('');
   const [searchInput, setSearchInput] = useState('');
   const [mounted, setMounted] = useState(false);
-  
-  const [results, setResults] = useState<SearchResults | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const lastQueryRef = useRef<string | null>(null);
 
-  // Fix hydration: sync query after mount
+  const {
+    searchState,
+    results,
+    refinementQuestion,
+    loading,
+    error,
+    search,
+    searchWithState,
+    answerRefinement,
+  } = useConversationalSearch();
+
+  const query = searchState.rawQuery || queryParam || '';
+
   useEffect(() => {
     setMounted(true);
     if (queryParam) {
-      setQuery(queryParam);
       setSearchInput(queryParam);
     } else {
       router.push('/');
@@ -74,46 +65,33 @@ function SearchContent() {
   const categoryParam = searchParams.get('category') || '';
 
   useEffect(() => {
-    if (!mounted || !query) return;
+    if (!mounted || !queryParam) return;
+    if (lastQueryRef.current === queryParam) return;
+    lastQueryRef.current = queryParam;
 
-    const fetchSearchResults = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const params = new URLSearchParams({ q: query });
-        if (brandParam) params.set('brand', brandParam);
-        if (modelParam) params.set('model', modelParam);
-        if (categoryParam) params.set('category', categoryParam);
-
-        const { apiGet } = await import('@/lib/api-client');
-        const response = await apiGet(
-          `/api/universal-search?${params.toString()}`,
-          { requireAuth: false }
-        );
-
-        if (!response.ok) {
-          throw new Error('Search failed');
-        }
-
-        const data = await response.json();
-        setResults(data);
-      } catch (err) {
-        console.error('Search error:', err);
-        setError('Failed to fetch search results. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSearchResults();
-  }, [query, mounted, brandParam, modelParam, categoryParam]);
+    if (imageSearch && (brandParam || categoryParam || modelParam)) {
+      searchWithState({
+        rawQuery: queryParam,
+        category: categoryParam || undefined,
+        brand: brandParam ? [brandParam] : undefined,
+        attributes: modelParam ? { model: modelParam } : undefined,
+      });
+    } else {
+      search(queryParam);
+    }
+  }, [mounted, queryParam, imageSearch, brandParam, categoryParam, modelParam, search, searchWithState]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
       router.push(`/search?query=${encodeURIComponent(searchInput.trim())}`);
     }
+  };
+
+  const handleRefinementOption = (option: string) => {
+    if (!refinementQuestion) return;
+    const value = optionToValue(refinementQuestion.field, option);
+    answerRefinement(refinementQuestion.field, value);
   };
 
   // Always render the same structure to prevent hydration mismatch
@@ -186,6 +164,8 @@ function SearchContent() {
               ? 'Loading...'
               : loading
               ? 'Searching across marketplaces...'
+              : refinementQuestion
+              ? 'Narrow down your search — pick an option below'
               : results
               ? `Found ${(results.externalResults?.length || 0) + (results.internalResults?.length || 0)} results`
               : 'No results found'}
@@ -193,6 +173,31 @@ function SearchContent() {
           </div>
         </div>
       </div>
+
+      {/* AI refinement question — walk user through to better results */}
+      {mounted && query && !loading && refinementQuestion && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageCircle className="w-5 h-5 text-accent-400" />
+              <span className="text-sm font-medium text-accent-300">AI assistant</span>
+            </div>
+            <p className="text-lg font-semibold text-white mb-4">{refinementQuestion.question}</p>
+            <div className="flex flex-wrap gap-3">
+              {refinementQuestion.options.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleRefinementOption(option)}
+                  className="px-5 py-2.5 bg-white/10 hover:bg-accent-500/20 border border-white/20 hover:border-accent-500/50 rounded-xl text-white font-medium transition-colors"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error State */}
       {error && (

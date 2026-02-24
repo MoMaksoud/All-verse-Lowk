@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GEMINI_MODELS } from '@/lib/ai/models';
+import type { SearchState } from '@/lib/ai/searchState';
+import { mergeSearchState } from '@/lib/ai/searchState';
+import { GeminiService } from '@/lib/gemini';
 
 export const dynamic = 'force-dynamic';
 
@@ -127,29 +130,80 @@ Use null when a field is not visible. For category use lowercase: electronics, f
   }
 }
 
+function parseSearchStateFromParams(searchParams: URLSearchParams): SearchState | undefined {
+  const raw = searchParams.get('searchState');
+  if (!raw?.trim()) return undefined;
+  try {
+    const decoded = decodeURIComponent(raw);
+    const parsed = JSON.parse(decoded) as SearchState;
+    return parsed && typeof parsed === 'object' ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function applyRefinementToState(prev: SearchState, field: string, value: string): SearchState {
+  const next: Partial<SearchState> = {};
+  const v = value.trim().toLowerCase();
+  if (field === 'priceIntent' && (v === 'cheap' || v === 'mid' || v === 'premium')) next.priceIntent = v as 'cheap' | 'mid' | 'premium';
+  else if (field === 'condition' && (v === 'new' || v === 'used')) next.condition = v as 'new' | 'used';
+  else if (field === 'category') next.category = value.trim().toLowerCase() || undefined;
+  else if (field === 'brand') next.brand = value.trim() ? [value.trim()] : undefined;
+  else if (field && value) next.attributes = { ...prev.attributes, [field]: value };
+  return mergeSearchState(prev, next);
+}
+
+function searchStateToFilters(state: SearchState): NonNullable<SearchFilters> {
+  const filters: NonNullable<SearchFilters> = {};
+  if (state.category) filters.category = state.category;
+  if (state.brand?.length) filters.brand = state.brand[0];
+  if (state.attributes?.model) filters.model = state.attributes.model;
+  if (state.condition) filters.condition = state.condition;
+  if (state.priceIntent === 'cheap') filters.sortByPrice = 'price_low';
+  else if (state.priceIntent === 'premium') filters.sortByPrice = 'price_high';
+  return filters;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const query = searchParams.get('q');
-    const brand = searchParams.get('brand')?.trim() || undefined;
-    const model = searchParams.get('model')?.trim() || undefined;
-    const category = searchParams.get('category')?.trim()?.toLowerCase() || undefined;
+    const q = searchParams.get('q')?.trim();
+    let searchState: SearchState = parseSearchStateFromParams(searchParams) ?? {};
 
-    if (!query || query.trim().length === 0) {
+    const refinementField = searchParams.get('refinementField')?.trim();
+    const refinementValue = searchParams.get('refinementValue')?.trim();
+    if (refinementField && refinementValue) {
+      searchState = applyRefinementToState(searchState, refinementField, refinementValue);
+    }
+
+    const query = searchState.rawQuery || q;
+    if (!query || query.length === 0) {
       return NextResponse.json(
-        { error: 'Search query is required' },
+        { error: 'Search query is required (use q or searchState.rawQuery)' },
         { status: 400 }
       );
     }
 
-    const filterParts = [brand, model, category].filter(Boolean).sort().join('|');
+    const filtersFromState = Object.keys(searchState).length > 0 ? searchStateToFilters(searchState) : undefined;
+    const brand = searchParams.get('brand')?.trim() || filtersFromState?.brand;
+    const model = searchParams.get('model')?.trim() || filtersFromState?.model;
+    const category = searchParams.get('category')?.trim()?.toLowerCase() || filtersFromState?.category;
+    const condition = filtersFromState?.condition;
+    const sortByPrice = filtersFromState?.sortByPrice;
+
+    const filters: SearchFilters =
+      brand || model || category || condition || sortByPrice
+        ? { brand, model, category, condition, sortByPrice }
+        : undefined;
+
+    const filterParts = [brand, model, category, condition, sortByPrice].filter(Boolean).sort().join('|');
     const cacheKey = normalizeQuery(query) + (filterParts ? `|${filterParts}` : '');
-    const cached = searchCache.get(cacheKey);
+    const conversationalMode = searchParams.get('searchState') != null || refinementField != null;
+    const cached = !conversationalMode ? searchCache.get(cacheKey) : null;
     if (cached && cached.expiresAt > Date.now()) {
       return NextResponse.json(cached.data);
     }
 
-    const filters = (brand || model || category) ? { brand, model, category } : undefined;
     const [internalResults, externalResults] = await Promise.all([
       searchInternalListings(query, filters),
       searchExternalInternet(query),
@@ -160,19 +214,33 @@ export async function GET(request: NextRequest) {
       external: externalResults.length
     });
 
-    // Find matching internal listings (similar product, competitive price)
     const matchedInternalResults = findMatchingListings(internalResults, externalResults);
-    
-    // Sort: matched listings first, then rest
     const sortedInternalResults = [
       ...matchedInternalResults.filter(r => r.isMatched),
       ...matchedInternalResults.filter(r => !r.isMatched),
     ];
 
-    console.log(`🎯 Matched internal listings: ${matchedInternalResults.filter(r => r.isMatched).length}`);
+    const resultCount = sortedInternalResults.length + externalResults.length;
+    const lastUserMessage = searchParams.get('lastUserMessage')?.trim() || query;
+
+    const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    if (geminiApiKey && conversationalMode) {
+      const step = await GeminiService.decideSearchRefinement(
+        { ...searchState, rawQuery: query },
+        resultCount,
+        lastUserMessage
+      );
+      if (step.action === 'ask') {
+        return NextResponse.json({
+          type: 'refinement_question',
+          question: step.question,
+          options: step.options,
+          field: step.field,
+        });
+      }
+    }
 
     const summary = await buildSummary(query, externalResults, sortedInternalResults);
-
     const response: SearchResponse = {
       externalResults,
       internalResults: sortedInternalResults,
@@ -190,8 +258,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** Optional filters from image search (brand, model, category) for improved ranking */
-type SearchFilters = { brand?: string; model?: string; category?: string } | undefined;
+/** Optional filters from image search and conversational refinement */
+type SearchFilters = {
+  brand?: string;
+  model?: string;
+  category?: string;
+  condition?: 'new' | 'used';
+  sortByPrice?: 'price_low' | 'price_high';
+} | undefined;
 
 /**
  * Search internal All Verse GPT listings using Gemini AI for intelligent matching
@@ -216,7 +290,7 @@ async function searchInternalListings(query: string, filters?: SearchFilters): P
     // Fetch all active listings
     const snapshot = await listingsRef
       .where('isActive', '==', true)
-      .limit(50) // Get more listings for Gemini to search through
+      .limit(100) // Get more listings for Gemini to search through
       .get();
 
     if (snapshot.empty) {
@@ -259,9 +333,9 @@ async function searchInternalListings(query: string, filters?: SearchFilters): P
         const text = `${title} ${description} ${category}`;
         return queryTokens.some(tok => text.includes(tok));
       });
-      candidates = filtered.length >= 5 ? filtered.slice(0, 30) : allListings.slice(0, 30);
+      candidates = filtered.length >= 5 ? filtered.slice(0, 50) : allListings.slice(0, 50);
     } else {
-      candidates = allListings.slice(0, 30);
+      candidates = allListings.slice(0, 50);
     }
     console.log(`📦 Using ${candidates.length} candidates for Gemini ranking`);
 
@@ -277,7 +351,7 @@ async function searchInternalListings(query: string, filters?: SearchFilters): P
           const cat = (listing.category || '').toLowerCase();
           return title.includes(queryLower) || description.includes(queryLower) || cat.includes(queryLower);
         })
-        .slice(0, 8);
+        .slice(0, 12);
       if (filters && fallbackResults.length > 0) {
         const brandLower = filters.brand?.toLowerCase();
         const modelLower = filters.model?.toLowerCase();
@@ -310,7 +384,7 @@ Search Query: "${query}"
 Available Products:
 ${listingsContext}
 
-Return ONLY a JSON array of product IDs that match the search query, ordered by relevance (most relevant first). Return up to 8 IDs.
+Return ONLY a JSON array of product IDs that match the search query, ordered by relevance (most relevant first). Return up to 12 IDs.
 Format: ["id1", "id2", "id3"]
 
 If no products match, return an empty array: []`;
@@ -328,7 +402,7 @@ If no products match, return an empty array: []`;
     const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
     if (!jsonMatch) {
       console.warn('⚠️ Gemini did not return valid JSON, using top candidates');
-      let fallback = candidates.slice(0, 8) as InternalResult[];
+      let fallback = candidates.slice(0, 12) as InternalResult[];
       if (filters && fallback.length > 0) {
         const brandLower = filters.brand?.toLowerCase();
         const modelLower = filters.model?.toLowerCase();
@@ -355,6 +429,14 @@ If no products match, return an empty array: []`;
       .map(id => candidates.find((l: { id: string }) => l.id === id))
       .filter(Boolean) as InternalResult[];
 
+    // If Gemini returned fewer than 12, pad with more candidates so we show at least 12 when available
+    const targetCount = 12;
+    if (orderedResults.length < targetCount && candidates.length > orderedResults.length) {
+      const includedIds = new Set(orderedResults.map((r) => r.id));
+      const extra = (candidates as InternalResult[]).filter((c) => !includedIds.has(c.id)).slice(0, targetCount - orderedResults.length);
+      orderedResults = [...orderedResults, ...extra];
+    }
+
     // When filters from image search are provided, prefer listings that match brand/model/category
     if (filters && orderedResults.length > 0) {
       const brandLower = filters.brand?.toLowerCase();
@@ -370,6 +452,18 @@ If no products match, return an empty array: []`;
         };
         return score(b) - score(a);
       });
+    }
+
+    // Condition filter (new/used)
+    if (filters?.condition) {
+      const cond = filters.condition.toLowerCase();
+      orderedResults = orderedResults.filter((r) => (r.condition || '').toLowerCase() === cond);
+    }
+    // Price sort (cheap → low to high, premium → high to low)
+    if (filters?.sortByPrice) {
+      orderedResults = [...orderedResults].sort((a, b) =>
+        filters.sortByPrice === 'price_low' ? a.price - b.price : b.price - a.price
+      );
     }
 
     return orderedResults;

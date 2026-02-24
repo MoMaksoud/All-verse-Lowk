@@ -34,7 +34,7 @@ export function InternalResultsSection({ results, loading }: InternalResultsSect
   return (
     <section className="py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-6">
           {results.map((result) => {
             const primaryPhoto = result.photos?.[0];
             const validImage = primaryPhoto && primaryPhoto.startsWith('http') ? primaryPhoto : '/fallback-product.png';
