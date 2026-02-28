@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 
 import { db, isFirebaseConfigured } from '../firebase';
+import { generateSearchKeywords } from '../searchTokens';
 import {
   FirestoreUser,
   CreateUserInput,
@@ -212,8 +213,17 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
   }
 
   async createListing(listingData: CreateListingInput): Promise<string> {
+    const searchKeywords = generateSearchKeywords({
+      title: listingData.title,
+      description: listingData.description,
+      brand: listingData.brand,
+      model: listingData.model,
+      category: listingData.category,
+    });
+
     const listingDataWithDefaults = {
       ...listingData,
+      searchKeywords,
       currency: listingData.currency || 'USD',
       isActive: listingData.isActive !== false,
       soldCount: 0,
@@ -225,6 +235,19 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
   }
 
   async updateListing(id: string, updates: UpdateListingInput): Promise<void> {
+    // Regenerate search keywords if any searchable field changed
+    if (updates.title || updates.description || (updates as any).brand || (updates as any).model || updates.category) {
+      const current = await this.getListing(id);
+      if (current) {
+        (updates as any).searchKeywords = generateSearchKeywords({
+          title: updates.title || current.title,
+          description: updates.description || current.description,
+          brand: (updates as any).brand || current.brand,
+          model: (updates as any).model || current.model,
+          category: updates.category || current.category,
+        });
+      }
+    }
     await this.updateDoc(id, updates);
   }
 
@@ -276,6 +299,14 @@ export class ListingsService extends BaseFirestoreService<FirestoreListing> {
     }
     if (filters.maxPrice !== undefined) {
       q = query(q, where('price', '<=', filters.maxPrice));
+    }
+
+    // Use array-contains for indexed keyword search (first token narrows at DB level)
+    if (filters.keyword) {
+      const token = filters.keyword.toLowerCase().trim().split(/\s+/)[0];
+      if (token && token.length >= 2) {
+        q = query(q, where('searchKeywords', 'array-contains', token));
+      }
     }
 
     // Apply sorting at database level BEFORE pagination

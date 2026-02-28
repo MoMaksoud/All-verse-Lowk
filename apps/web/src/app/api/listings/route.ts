@@ -18,10 +18,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 10; // Cache for 10 seconds
 
+// Server-side in-memory cache for listing queries (survives warm serverless instances)
+const listingsCache = new Map<string, { data: any; expiresAt: number }>();
+const LISTINGS_CACHE_TTL_MS = 15_000; // 15 seconds
+
 export async function GET(req: NextRequest) {
   try {
     const firestoreServices = await getFirestoreServices();
-    
+
     const url = new URL(req.url);
     const q = url.searchParams.get('q') || undefined;
     const category = url.searchParams.get('category') || undefined;
@@ -77,9 +81,18 @@ export async function GET(req: NextRequest) {
       direction: sortDirection,
     };
 
+    // Check server-side cache
+    const cacheKey = JSON.stringify({ filters, sortOptions, page, limit });
+    const cached = listingsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      const response = NextResponse.json(cached.data);
+      response.headers.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
+      return response;
+    }
+
     // Cap Firestore reads: tight limit when no keyword search, larger cap when keyword needs client-side filtering
     const maxResults = filters.keyword
-      ? 500
+      ? 100
       : Math.min(page * limit * 5, 200);
 
     const result = await firestoreServices.listings.searchListings(filters, sortOptions, maxResults);
@@ -239,7 +252,7 @@ export async function GET(req: NextRequest) {
       sellerProfile: item.sellerId ? profileMap.get(item.sellerId) ?? null : null,
     }));
 
-    const response = NextResponse.json({
+    const responseBody = {
       data: itemsWithSeller,
       pagination: {
         page: page,
@@ -247,8 +260,12 @@ export async function GET(req: NextRequest) {
         total: transformedItems.length,
         hasMore: endIndex < transformedItems.length,
       },
-    });
-    
+    };
+
+    // Store in server-side cache
+    listingsCache.set(cacheKey, { data: responseBody, expiresAt: Date.now() + LISTINGS_CACHE_TTL_MS });
+
+    const response = NextResponse.json(responseBody);
     response.headers.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
     return response;
   } catch (error) {
