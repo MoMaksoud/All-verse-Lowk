@@ -4,7 +4,7 @@ import React from 'react';
 import { Navigation } from '@/components/Navigation';
 import { ArrowLeft, Info, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { teamMembers } from '@/app/team/page';
+import { teamMembers } from '@/data/team';
 import { TeamMemberCard } from '@/components/TeamMemberCard';
 
 export default function AboutPage() {
