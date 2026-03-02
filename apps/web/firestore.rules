@@ -39,7 +39,7 @@ service cloud.firestore {
     // This allows the client SDK to work in API routes
     // Server-side API routes should use Admin SDK which bypasses rules
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 1, 31);
+      allow read, write: if request.time < timestamp.date(2027, 12, 31);
     }
   }
 }
