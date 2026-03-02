@@ -15,7 +15,7 @@ export interface TeamMember {
   github?: string;
 }
 
-export const teamMembers: TeamMember[] = [
+const teamMembers: TeamMember[] = [
   {
     name: 'Dustin Harrell',
     role: 'Chief Executive Officer',
