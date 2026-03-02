@@ -9,6 +9,7 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { ChatProvider } from '@/contexts/ChatContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteTransitionMonitor } from '@/lib/performance';
+import { WebVitalsReporter } from '@/components/WebVitalsReporter';
 
 const GA_MEASUREMENT_ID = 'G-1KVRME8D19';
 
@@ -97,6 +98,7 @@ export default function RootLayout({
               <ToastProvider>
                 <ChatProvider>
                   <RouteTransitionMonitor />
+                  <WebVitalsReporter />
                   {children}
                 </ChatProvider>
               </ToastProvider>

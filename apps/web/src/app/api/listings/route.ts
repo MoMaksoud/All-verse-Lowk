@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CreateListingInput } from "@/lib/types/firestore";
 import { withApi } from "@/lib/withApi";
-import { ProfileService } from "@/lib/firestore";
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 // Import firestore services dynamically to avoid webpack issues
 async function getFirestoreServices() {
@@ -18,10 +18,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 10; // Cache for 10 seconds
 
+// Server-side in-memory cache for listing queries (survives warm serverless instances)
+const listingsCache = new Map<string, { data: any; expiresAt: number }>();
+const LISTINGS_CACHE_TTL_MS = 15_000; // 15 seconds
+
 export async function GET(req: NextRequest) {
   try {
     const firestoreServices = await getFirestoreServices();
-    
+
     const url = new URL(req.url);
     const q = url.searchParams.get('q') || undefined;
     const category = url.searchParams.get('category') || undefined;
@@ -77,10 +81,21 @@ export async function GET(req: NextRequest) {
       direction: sortDirection,
     };
 
-    // Fetch ALL listings with filters and sorting applied at database level
-    // Then apply keyword filtering (client-side, as Firestore doesn't support full-text search)
-    // Then paginate
-    const result = await firestoreServices.listings.searchListings(filters, sortOptions);
+    // Check server-side cache
+    const cacheKey = JSON.stringify({ filters, sortOptions, page, limit });
+    const cached = listingsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      const response = NextResponse.json(cached.data);
+      response.headers.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
+      return response;
+    }
+
+    // Cap Firestore reads: tight limit when no keyword search, larger cap when keyword needs client-side filtering
+    const maxResults = filters.keyword
+      ? 100
+      : Math.min(page * limit * 5, 200);
+
+    const result = await firestoreServices.listings.searchListings(filters, sortOptions, maxResults);
       
     // Apply keyword search (client-side, as Firestore doesn't support full-text search)
     let filteredData = [...result.items];
@@ -205,33 +220,39 @@ export async function GET(req: NextRequest) {
     const endIndex = startIndex + limit;
     const paginatedItems = transformedItems.slice(startIndex, endIndex);
 
-    // Batch-fetch seller profiles to avoid N+1 client requests
+    // Batch-fetch seller profiles in a single round trip via Admin SDK getAll()
     const uniqueSellerIds = [...new Set(paginatedItems.map((i) => i.sellerId).filter(Boolean))] as string[];
     const profileMap = new Map<string, { username?: string; profilePicture?: string }>();
-    await Promise.all(
-      uniqueSellerIds.map(async (uid) => {
-        try {
-          const profile = await ProfileService.getProfile(uid);
-          if (profile) {
-            profileMap.set(uid, {
-              username: profile.username || "Marketplace User",
-              profilePicture: profile.profilePicture || undefined,
+    if (uniqueSellerIds.length > 0) {
+      try {
+        const adminDb = getAdminFirestore();
+        const profileRefs = uniqueSellerIds.map(uid => adminDb.collection('profiles').doc(uid));
+        const profileDocs = await adminDb.getAll(...profileRefs);
+        for (const profileDoc of profileDocs) {
+          if (profileDoc.exists) {
+            const data = profileDoc.data();
+            profileMap.set(profileDoc.id, {
+              username: data?.username || "Marketplace User",
+              profilePicture: data?.profilePicture || undefined,
             });
           } else {
-            profileMap.set(uid, { username: "Marketplace User" });
+            profileMap.set(profileDoc.id, { username: "Marketplace User" });
           }
-        } catch {
+        }
+      } catch {
+        // Fallback: set defaults for all sellers if batch read fails
+        for (const uid of uniqueSellerIds) {
           profileMap.set(uid, { username: "Marketplace User" });
         }
-      })
-    );
+      }
+    }
 
     const itemsWithSeller = paginatedItems.map((item) => ({
       ...item,
       sellerProfile: item.sellerId ? profileMap.get(item.sellerId) ?? null : null,
     }));
 
-    const response = NextResponse.json({
+    const responseBody = {
       data: itemsWithSeller,
       pagination: {
         page: page,
@@ -239,8 +260,12 @@ export async function GET(req: NextRequest) {
         total: transformedItems.length,
         hasMore: endIndex < transformedItems.length,
       },
-    });
-    
+    };
+
+    // Store in server-side cache
+    listingsCache.set(cacheKey, { data: responseBody, expiresAt: Date.now() + LISTINGS_CACHE_TTL_MS });
+
+    const response = NextResponse.json(responseBody);
     response.headers.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
     return response;
   } catch (error) {

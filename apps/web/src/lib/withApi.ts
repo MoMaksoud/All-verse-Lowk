@@ -47,9 +47,11 @@ export function withApi(
   }
 ) {
   return async (req: NextRequest, context?: any) => {
+    const startTime = Date.now();
     try {
       if (req.nextUrl.pathname.startsWith('/api/dev')) {
         const res = await handler(req as NextRequest & { userId: string }, context);
+        res.headers.set('Server-Timing', `api;dur=${Date.now() - startTime}`);
         return applySecurityHeaders(res);
       }
 
@@ -82,9 +84,11 @@ export function withApi(
       }
       
       const res = await handler(req as NextRequest & { userId: string }, context);
+      res.headers.set('Server-Timing', `api;dur=${Date.now() - startTime}`);
       return applySecurityHeaders(res);
     } catch (e) {
       const res = error(e);
+      res.headers.set('Server-Timing', `api;dur=${Date.now() - startTime}`);
       return applySecurityHeaders(res);
     }
   };

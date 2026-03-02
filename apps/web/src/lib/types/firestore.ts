@@ -52,6 +52,7 @@ export interface FirestoreListing {
   brand?: string;
   model?: string;
   gtin?: string;
+  searchKeywords?: string[]; // Generated tokens for Firestore array-contains search
   sold?: boolean; // Whether the listing has been sold
   soldAt?: Timestamp; // When the listing was sold
   soldThroughAllVerse?: boolean; // true = sold via platform checkout; false/undefined = manually marked or legacy
@@ -144,6 +145,7 @@ export interface ShippingAddress {
 export interface FirestoreOrder {
   buyerId: string;
   items: OrderItem[];
+  sellerIds?: string[]; // Denormalized from items for efficient array-contains queries
   subtotal: number;
   fees: number;
   tax: number;
