@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense, lazy, useCallback, memo, useMemo } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback, memo, useMemo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 // Optimized lucide-react imports - only import what's actually used
 import { 
@@ -28,8 +29,14 @@ import { useChatContext } from '@/contexts/ChatContext';
 import { Profile } from '@marketplace/types';
 import { useChats } from '@/hooks/useChats';
 
-// Lazy load heavy components
-const ProfilePicture = lazy(() => import('./ProfilePicture').then(module => ({ default: module.ProfilePicture })));
+// Lazy load heavy component via next/dynamic to avoid hydration/webpack issues with React.lazy
+const ProfilePicture = dynamic(
+  () => import('./ProfilePicture').then((mod) => ({ default: mod.ProfilePicture })),
+  {
+    ssr: false,
+    loading: () => <div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse shrink-0" />,
+  }
+);
 
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
