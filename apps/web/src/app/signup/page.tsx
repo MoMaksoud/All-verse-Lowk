@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Eye, EyeOff } from 'lucide-react';
@@ -43,6 +43,31 @@ export default function SignUp() {
   const [showVerification, setShowVerification] = useState(false);
   const { signup, signInWithGoogle, isConfigured, currentUser } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // After email verification, user is redirected to /signup?verified=1 — show profile setup instead of Create Account
+  useEffect(() => {
+    const verifiedParam = searchParams.get('verified');
+    if (verifiedParam !== '1' || !currentUser) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await auth?.authStateReady();
+        const user = auth?.currentUser ?? currentUser;
+        if (!user || cancelled) return;
+        await user.reload();
+        if (cancelled) return;
+        setShowProfileSetup(true);
+        // Remove ?verified=1 from URL without reload
+        window.history.replaceState({}, '', '/signup');
+      } catch {
+        // If reload fails, still show profile setup
+        if (!cancelled) setShowProfileSetup(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [searchParams, currentUser]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
