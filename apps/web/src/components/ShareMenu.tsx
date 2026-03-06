@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link2, Clipboard, Twitter, MessageCircle, Share2 } from "lucide-react";
+import { formatPrice } from "@/lib/format";
 
 type Props = {
   listing: { id: string; title: string; price: number };
@@ -34,7 +35,7 @@ export default function ShareMenu({ listing, align = "right" }: Props) {
     return `${window.location.origin}/listings/${listing.id}`;
   }, [listing.id]);
 
-  const title = `${listing.title} - $${listing.price}`;
+  const title = `${listing.title} - ${formatPrice(listing.price)}`;
 
   const onClose = () => setOpen(false);
   const boxRef = useClickOutside<HTMLDivElement>(open, onClose);

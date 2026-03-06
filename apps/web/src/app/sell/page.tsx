@@ -17,6 +17,7 @@ import { firestoreServices } from '@/lib/services/firestore';
 import { Toast, ToastType } from '@/components/Toast';
 import { isCloudUrl } from '@/types/photos';
 import { uploadListingPhotoFile } from '@/lib/storage';
+import { formatPrice } from '@/lib/format';
 
 const steps = [
   { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
@@ -433,7 +434,7 @@ export default function SellPage() {
         }));
         
         addToast('success', 'AI Price Analysis Complete!', 
-          `Price updated to $${marketData.suggestedPrice} (${marketData.marketDemand} demand, range: $${marketData.priceRange.min}-$${marketData.priceRange.max})`);
+          `Price updated to ${formatPrice(marketData.suggestedPrice)} (${marketData.marketDemand} demand, range: ${formatPrice(marketData.priceRange.min)}-${formatPrice(marketData.priceRange.max)})`);
       } else {
         throw new Error('Invalid market analysis response');
       }
@@ -1043,7 +1044,7 @@ export default function SellPage() {
                         <div>
                           <h4 className="text-sm font-medium text-yellow-400 mb-1">Price Outside Suggested Range</h4>
                           <p className="text-sm text-yellow-200 mb-2">
-                            Your current price (${currentPrice}) is outside the AI-suggested range of ${minPrice} - ${maxPrice}.
+                            Your current price ({formatPrice(currentPrice)}) is outside the AI-suggested range of {formatPrice(minPrice)} - {formatPrice(maxPrice)}.
                           </p>
                           <div className="flex gap-2">
                             <button
@@ -1051,14 +1052,14 @@ export default function SellPage() {
                               onClick={() => setFormData(prev => ({ ...prev, price: suggestedPrice.toString() }))}
                               className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-md transition-colors"
                             >
-                              Use AI Suggested Price (${suggestedPrice})
+                              Use AI Suggested Price ({formatPrice(suggestedPrice)})
                             </button>
                             <button
                               type="button"
                               onClick={() => setFormData(prev => ({ ...prev, price: minPrice.toString() }))}
                               className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md transition-colors"
                             >
-                              Use Min Price (${minPrice})
+                              Use Min Price ({formatPrice(minPrice)})
                             </button>
                           </div>
                         </div>
@@ -1080,14 +1081,14 @@ export default function SellPage() {
                   <div>
                     <span className="text-zinc-400">Market Price:</span>
                     <span className="ml-2 text-zinc-100">
-                      ${(aiAnalysis?.suggestedPrice || formData.marketResearch?.averagePrice || 0).toFixed(2)}
+                      {formatPrice(aiAnalysis?.suggestedPrice || formData.marketResearch?.averagePrice || 0)}
                     </span>
                   </div>
                   <div>
                     <span className="text-zinc-400">Price Range:</span>
                     <span className="ml-2 text-zinc-100">
-                      ${aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0} - 
-                      ${aiAnalysis?.priceRange?.max || formData.marketResearch?.priceRange?.max || 0}
+                      {formatPrice(aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0)} - 
+                      {formatPrice(aiAnalysis?.priceRange?.max || formData.marketResearch?.priceRange?.max || 0)}
                     </span>
                   </div>
                   <div>
@@ -1374,7 +1375,7 @@ export default function SellPage() {
                     </div>
                     <div>
                       <span className="text-zinc-400">Price:</span>
-                      <span className="ml-2 text-zinc-100 font-semibold">${formData.price.toLocaleString()}</span>
+                      <span className="ml-2 text-zinc-100 font-semibold">{formatPrice(formData.price)}</span>
                     </div>
                     {formData.size && (
                       <div>
@@ -1506,11 +1507,11 @@ export default function SellPage() {
                     <div className="text-sm text-blue-400">
                       <div className="flex justify-between items-center mb-1">
                         <span>AI Suggested Price:</span>
-                        <span className="font-semibold">${formData.marketResearch.averagePrice}</span>
+                        <span className="font-semibold">{formatPrice(formData.marketResearch.averagePrice)}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs text-blue-300">
                         <span>Market Range:</span>
-                        <span>${formData.marketResearch.priceRange.min} - ${formData.marketResearch.priceRange.max}</span>
+                        <span>{formatPrice(formData.marketResearch.priceRange.min)} - {formatPrice(formData.marketResearch.priceRange.max)}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs text-blue-300">
                         <span>Demand:</span>
@@ -1568,7 +1569,7 @@ export default function SellPage() {
                   </div>
                   <div>
                     <span className="text-zinc-400">Price:</span>
-                    <span className="ml-2 text-zinc-100">${formData.price.toLocaleString()}</span>
+                    <span className="ml-2 text-zinc-100">{formatPrice(formData.price)}</span>
                   </div>
                 </div>
               </div>

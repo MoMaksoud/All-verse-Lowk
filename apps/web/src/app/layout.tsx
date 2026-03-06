@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
-import { Analytics } from '@vercel/analytics/react';
+import { AnalyticsDeferred } from '@/components/AnalyticsDeferred';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import './performance.css';
@@ -101,7 +101,7 @@ export default function RootLayout({
                   <RouteTransitionMonitor />
                   <WebVitalsReporter />
                   {children}
-                  <Analytics />
+                  <AnalyticsDeferred />
                 </ChatProvider>
               </ToastProvider>
             </AuthProvider>

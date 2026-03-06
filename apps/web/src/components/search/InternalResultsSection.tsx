@@ -4,6 +4,7 @@ import Image from 'next/image';
 import React from 'react';
 import Link from 'next/link';
 import { Heart, MessageCircle } from 'lucide-react';
+import { formatPrice } from '@/lib/format';
 
 interface InternalResult {
   id: string;
@@ -80,7 +81,7 @@ export function InternalResultsSection({ results, loading }: InternalResultsSect
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <span className="text-sm sm:text-lg font-bold text-accent-400">
-                      ${result.price.toFixed(2)}
+                      {formatPrice(result.price)}
                     </span>
                       {result.isMatched && (
                         <span className="text-[9px] sm:text-xs text-yellow-400 font-medium">

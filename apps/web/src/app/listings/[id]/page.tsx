@@ -17,13 +17,7 @@ import { ListingGallery } from '@/components/ListingGallery';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-};
+import { formatPrice } from '@/lib/format';
 
 const formatRelativeTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -447,7 +441,7 @@ export default function ListingDetailPage() {
                         <h3 className="text-zinc-200 font-medium">Actions</h3>
                         <div className="text-center">
                           <div className="text-3xl font-bold text-zinc-100 mb-1">
-                            ${listing.price.toLocaleString()}
+                            {formatPrice(listing.price)}
                           </div>
                           <div className={`text-lg font-semibold mt-4 ${(listing as SimpleListing & { soldThroughAllVerse?: boolean }).soldThroughAllVerse ? "text-emerald-400" : "text-red-400"}`}>
                             {(listing as SimpleListing & { soldThroughAllVerse?: boolean }).soldThroughAllVerse ? "Sold through AllVerse" : "Sold"}

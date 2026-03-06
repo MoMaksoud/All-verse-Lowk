@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { DollarSign, Star } from 'lucide-react';
+import { formatPrice } from '@/lib/format';
 
 interface ExternalResult {
   title: string;
@@ -86,7 +87,7 @@ function ProductCard({ result, hasPrice }: { result: ExternalResult; hasPrice: b
         <div className="flex items-center justify-between">
           <span className="text-sm sm:text-lg font-bold text-accent-400 flex items-center gap-0.5 sm:gap-1">
             <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="text-xs sm:text-base">{hasPrice ? result.price.toFixed(2) : 'N/A'}</span>
+            <span className="text-xs sm:text-base">{hasPrice ? formatPrice(result.price) : 'N/A'}</span>
           </span>
 
           {result.rating ? (

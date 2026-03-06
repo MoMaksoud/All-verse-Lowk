@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Brain, DollarSign, TrendingUp } from 'lucide-react';
+import { formatPrice, formatNumber } from '@/lib/format';
 
 interface AISummary {
   overview: string;
@@ -57,21 +58,21 @@ export function AISummarySection({ summary, query, hasResults }: AISummarySectio
                 <p className="text-xs text-gray-400 mb-1">Minimum</p>
                 <p className="text-lg font-bold text-green-400 flex items-center gap-2">
                   <DollarSign className="w-4 h-4" />
-                  {summary.priceRange!.min.toFixed(2)}
+                  {formatNumber(summary.priceRange!.min, 2)}
                 </p>
               </div>
               <div className="p-4 rounded-xl border border-white/10 bg-white/5">
                 <p className="text-xs text-gray-400 mb-1">Average</p>
                 <p className="text-lg font-bold text-accent-400 flex items-center gap-2">
                   <DollarSign className="w-4 h-4" />
-                  {summary.priceRange!.average.toFixed(2)}
+                  {formatNumber(summary.priceRange!.average, 2)}
                 </p>
               </div>
               <div className="p-4 rounded-xl border border-white/10 bg-white/5">
                 <p className="text-xs text-gray-400 mb-1">Maximum</p>
                 <p className="text-lg font-bold text-red-400 flex items-center gap-2">
                   <DollarSign className="w-4 h-4" />
-                  {summary.priceRange!.max.toFixed(2)}
+                  {formatNumber(summary.priceRange!.max, 2)}
                 </p>
               </div>
             </div>
