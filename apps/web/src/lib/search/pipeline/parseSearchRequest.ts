@@ -12,7 +12,7 @@ function isTruthy(v: string | null | undefined) {
 
 function parseSource(v: string | null): SearchSource {
     if (v === "internal" || v === "external" || v === "both") return v;
-    return "external";
+    return "both";
 }
 
 function parseProvider(v: string | null): ExternalProvider {
@@ -30,6 +30,15 @@ function parseSearchState(raw: string | null): SearchState | undefined {
     } catch {
         return undefined;
     }
+}
+
+function parseRefinementTurn(raw: string | null): number | undefined {
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return undefined;
+    const int = Math.floor(parsed);
+    if (int < 0) return 0;
+    return Math.min(int, 5);
 }
 
 export function parseSearchRequest(
@@ -66,6 +75,10 @@ export function parseSearchRequest(
     const refinementField = sp.get("refinementField")?.trim() || undefined;
     const refinementValue = sp.get("refinementValue")?.trim() || undefined;
     const lastUserMessage = sp.get("lastUserMessage")?.trim() || undefined;
+    const refinementTurn =
+        parseRefinementTurn(sp.get("refinementTurn")) ??
+        searchState?.refinementTurn;
+    const queryRewrite = sp.get("queryRewrite")?.trim() || searchState?.queryRewrite;
 
     // conversational if we have a state or a refinement step
     const conversationalMode =
@@ -85,6 +98,8 @@ export function parseSearchRequest(
             searchState,
             refinementField,
             refinementValue,
+            refinementTurn,
+            queryRewrite,
             lastUserMessage,
             conversationalMode,
         },

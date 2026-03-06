@@ -1,4 +1,10 @@
-import type { ExternalProvider, RefinementQuestion, SearchState } from "../types";
+import type { ExternalProvider, SearchState } from "../types";
+
+type LegacyRefinementQuestion = {
+    field: string;
+    question: string;
+    options: string[];
+};
 
 function setAttr(prev: SearchState, key: string, value: string | undefined): SearchState {
     const attrs = { ...(prev.attributes ?? {}) };
@@ -61,9 +67,12 @@ export function updateSearchState(
 ): SearchState {
     let state: SearchState = { ...baseState };
     if (rawQuery && !state.rawQuery) state.rawQuery = rawQuery;
+    if (state.refinementTurn == null) state.refinementTurn = 0;
 
     if (refinementField && refinementValue) {
         state = applyRefinementToState(state, refinementField, refinementValue);
+        state.refinementTurn = (baseState.refinementTurn ?? 0) + 1;
+        state.lastRefinementField = refinementField;
     }
 
     return state;
@@ -101,7 +110,7 @@ export function decideRefinementQuestion(args: {
     state: SearchState;
     resultCount: number;
     provider: ExternalProvider;
-}): RefinementQuestion | null {
+}): LegacyRefinementQuestion | null {
     const { query, state, resultCount, provider } = args;
 
     const missingBrand = !state.brand || state.brand.length === 0;

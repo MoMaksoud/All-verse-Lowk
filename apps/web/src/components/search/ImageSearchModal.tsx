@@ -68,7 +68,7 @@ export function ImageSearchModal({ isOpen, onClose }: ImageSearchModalProps) {
       formData.append('image', file);
 
       // Send to API
-      const apiResponse = await fetch('/api/universal-search', {
+      const apiResponse = await fetch('/api/search/image', {
         method: 'POST',
         body: formData,
       });

@@ -252,10 +252,13 @@ export default function SearchClientShell({
 
         const refinementSearchState = getRefinementSearchState(effectiveRefinement);
         if (refinementSearchState) {
-            params.set(
-                "searchState",
-                encodeURIComponent(JSON.stringify(refinementSearchState))
-            );
+            params.set("searchState", JSON.stringify(refinementSearchState));
+            if (typeof refinementSearchState.refinementTurn === "number") {
+                params.set("refinementTurn", String(refinementSearchState.refinementTurn));
+            }
+            if (typeof refinementSearchState.queryRewrite === "string" && refinementSearchState.queryRewrite.trim()) {
+                params.set("queryRewrite", refinementSearchState.queryRewrite.trim());
+            }
         }
 
         params.set("refinementField", effectiveRefinement.field);

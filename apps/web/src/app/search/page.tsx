@@ -24,6 +24,10 @@ export default async function SearchPage({
     typeof sp.refinementField === "string" ? sp.refinementField : undefined;
   const refinementValue =
     typeof sp.refinementValue === "string" ? sp.refinementValue : undefined;
+  const refinementTurn =
+    typeof sp.refinementTurn === "string" ? Number(sp.refinementTurn) : undefined;
+  const queryRewrite =
+    typeof sp.queryRewrite === "string" ? sp.queryRewrite : undefined;
 
   if (debugSearch) {
     console.warn("[search-debug][search-page] incoming params", {
@@ -35,6 +39,8 @@ export default async function SearchPage({
       searchStateParam,
       refinementField,
       refinementValue,
+      refinementTurn,
+      queryRewrite,
     });
   }
 
@@ -63,6 +69,8 @@ export default async function SearchPage({
     searchStateParam,
     refinementField,
     refinementValue,
+    refinementTurn,
+    queryRewrite,
   });
 
   if (debugSearch) {

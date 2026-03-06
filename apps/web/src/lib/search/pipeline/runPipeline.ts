@@ -1,20 +1,32 @@
 import type {
+    ExternalProvider,
+    ExternalResult,
+    InternalResult,
+    RefinementQuestionResponse,
     SearchRequest,
+    SearchResults,
+    SearchResultsResponse,
     SearchResponse,
     SearchState,
-    ExternalProvider,
 } from "../types";
 
 import { debugLog, startTimer } from "./debug";
 import { simpleInternalSearch } from "../internal/simpleInternalSearch";
 import { serpapiShoppingSearch } from "../external/serpapiShopping";
 import { serpapiOrganicSearch } from "../external/serpapiOrgnaic";
+import {
+    evaluateResults as evaluateResultQuality,
+    inferVertical,
+    runRefinementEngine,
+} from "./refinementEngine";
 
-import { updateSearchState, decideRefinementQuestion } from "./refinements";
+import { updateSearchState } from "./refinements";
+
+const MAX_REFINEMENT_TURNS = 2;
+const SEARCH_REFINEMENT_V2_ENABLED = process.env.SEARCH_REFINEMENT_V2 !== "0";
 
 // provider=auto selection (cheap heuristic; intent wins)
 function chooseProviderAuto(query: string, state?: SearchState): ExternalProvider {
-
     if (state?.intent === "info") return "organic";
     if (state?.intent === "shopping") return "shopping";
 
@@ -44,12 +56,76 @@ function chooseProviderAuto(query: string, state?: SearchState): ExternalProvide
     return "shopping";
 }
 
+async function runSearchSources(args: {
+    req: SearchRequest;
+    query: string;
+    provider: ExternalProvider;
+    state: SearchState;
+    timings: Record<string, number>;
+    timingPrefix: string;
+}): Promise<{ internalResults: InternalResult[]; externalResults: ExternalResult[] }> {
+    const { req, query, provider, state, timings, timingPrefix } = args;
+    let internalResults: InternalResult[] = [];
+    let externalResults: ExternalResult[] = [];
+
+    if (req.source === "internal" || req.source === "both") {
+        const t = startTimer();
+        const internal = await simpleInternalSearch({
+            query,
+            limit: req.limit,
+            debug: req.debug,
+            searchState: state,
+        });
+        internalResults = internal.results;
+        timings[`${timingPrefix}InternalSearch`] = t();
+
+        debugLog(req.debug, req.traceId, "pipeline.internal.done", {
+            query,
+            returned: internalResults.length,
+            ms: timings[`${timingPrefix}InternalSearch`],
+            phase: timingPrefix,
+        });
+    }
+
+    if (req.source === "external" || req.source === "both") {
+        const t = startTimer();
+
+        if (provider === "organic") {
+            externalResults = await serpapiOrganicSearch({
+                query,
+                limit: req.limit,
+                traceId: req.traceId,
+                debug: req.debug,
+            });
+        } else {
+            externalResults = await serpapiShoppingSearch({
+                query,
+                limit: req.limit,
+                traceId: req.traceId,
+                debug: req.debug,
+            });
+        }
+
+        timings[`${timingPrefix}ExternalSearch`] = t();
+        debugLog(req.debug, req.traceId, "pipeline.external.done", {
+            query,
+            provider,
+            count: externalResults.length,
+            ms: timings[`${timingPrefix}ExternalSearch`],
+            phase: timingPrefix,
+        });
+    }
+
+    return { internalResults, externalResults };
+}
+
 export async function runPipeline(req: SearchRequest): Promise<SearchResponse> {
     const timings: Record<string, number> = {};
     const tAll = startTimer();
 
     // conversational mode: if client is sending state/refinements, we can ask questions
     const conversationalMode =
+        Boolean(req.conversationalMode) ||
         Boolean(req.searchState) ||
         Boolean(req.refinementField) ||
         Boolean(req.refinementValue) ||
@@ -72,82 +148,65 @@ export async function runPipeline(req: SearchRequest): Promise<SearchResponse> {
         req.refinementValue,
         req.query
     );
+    if (req.queryRewrite && !state.queryRewrite) {
+        state.queryRewrite = req.queryRewrite;
+    }
+    if (typeof req.refinementTurn === "number" && Number.isFinite(req.refinementTurn) && state.refinementTurn == null) {
+        state.refinementTurn = Math.max(0, Math.floor(req.refinementTurn));
+    }
+    let effectiveState: SearchState = { ...state };
+    let effectiveQuery = state.queryRewrite?.trim() || req.query;
+    let confidenceScore: number | undefined;
+    let confidenceReasons: SearchResultsResponse["meta"]["confidenceReasons"];
+    let inferredVertical = inferVertical(effectiveQuery, effectiveState);
+    let rewriteUsed = false;
+    let refinementTriggered = false;
 
     // 2) resolve provider (auto -> organic/shopping)
-    const provider: ExternalProvider =
-        req.provider === "auto" ? chooseProviderAuto(req.query, state) : req.provider;
+    let provider: ExternalProvider =
+        req.provider === "auto" ? chooseProviderAuto(effectiveQuery, effectiveState) : req.provider;
 
-    let internalResults: any[] = [];
-    let externalResults: any[] = [];
+    // 3) run initial search
+    const initial = await runSearchSources({
+        req,
+        query: effectiveQuery,
+        provider,
+        state: effectiveState,
+        timings,
+        timingPrefix: "initial",
+    });
 
-    // 3) internal search
-    if (req.source === "internal" || req.source === "both") {
-        const t = startTimer();
-        const internal = await simpleInternalSearch({
-            query: req.query,
-            limit: req.limit,
+    let internalResults = initial.internalResults;
+    let externalResults = initial.externalResults;
+    let searchResults: SearchResults = {
+        summary: null,
+        internalResults,
+        externalResults,
+    };
+
+    if (SEARCH_REFINEMENT_V2_ENABLED && conversationalMode) {
+        const decision = await runRefinementEngine({
+            query: effectiveQuery,
+            results: searchResults,
+            state: effectiveState,
+            vertical: inferredVertical,
+            maxTurns: MAX_REFINEMENT_TURNS,
+            allowLlmRewrite: true,
             debug: req.debug,
-        });
-        internalResults = internal.results;
-        timings.internalSearch = t();
-
-        debugLog(req.debug, req.traceId, "pipeline.internal.done", {
-            returned: internalResults.length,
-            ms: timings.internalSearch,
-        });
-    }
-
-    // 4) external search
-    if (req.source === "external" || req.source === "both") {
-        const t = startTimer();
-
-        if (provider === "organic") {
-            externalResults = await serpapiOrganicSearch({
-                query: req.query,
-                limit: req.limit,
-                traceId: req.traceId,
-                debug: req.debug,
-            });
-        } else {
-            externalResults = await serpapiShoppingSearch({
-                query: req.query,
-                limit: req.limit,
-                traceId: req.traceId,
-                debug: req.debug,
-            });
-        }
-
-        timings.externalSearch = t();
-        debugLog(req.debug, req.traceId, "pipeline.external.done", {
-            provider,
-            count: externalResults.length,
-            ms: timings.externalSearch,
-        });
-    }
-
-    const resultCount = internalResults.length + externalResults.length;
-
-    // 5) conversational refinement question (rule-based for now)
-    if (conversationalMode) {
-        const q = decideRefinementQuestion({
-            query: req.query,
-            state,
-            resultCount,
-            provider,
+            traceId: req.traceId,
         });
 
-        if (q) {
+        inferredVertical = decision.vertical;
+        effectiveState = decision.state;
+        confidenceScore = decision.resultQuality.score;
+        confidenceReasons = decision.resultQuality.reasons;
+        rewriteUsed = decision.rewriteUsed;
+
+        if (decision.action === "ask" && decision.question) {
+            refinementTriggered = true;
             timings.total = tAll();
 
-            debugLog(req.debug, req.traceId, "pipeline.refinement.ask", {
-                field: q.field,
-                optionsCount: q.options.length,
-                resultCount,
-                provider,
-                totalMs: timings.total,
-            });
-
-            return {
+            const questionResponse: RefinementQuestionResponse = {
                 traceId: req.traceId,
                 meta: {
                     cacheHit: false,
@@ -155,21 +214,73 @@ export async function runPipeline(req: SearchRequest): Promise<SearchResponse> {
                     source: req.source,
                     limit: req.limit,
                     provider,
+                    confidenceScore,
+                    confidenceReasons,
+                    vertical: inferredVertical,
+                    refinementTriggered: true,
+                    refinementTurn: decision.question.turn,
+                    rewriteUsed: false,
                 },
                 type: "refinement_question",
-                question: q.question,
-                options: q.options,
-                field: q.field,
-                searchState: state,
+                question: decision.question.question,
+                options: decision.question.options,
+                field: decision.question.field,
+                searchState: effectiveState,
+                turn: decision.question.turn,
+                maxTurns: decision.question.maxTurns,
+                vertical: decision.question.vertical,
+                reason: decision.question.reason,
+            };
+
+            debugLog(req.debug, req.traceId, "pipeline.refinement.ask", {
+                field: decision.question.field,
+                optionsCount: decision.question.options.length,
+                qualityScore: decision.resultQuality.score,
+                provider,
+                totalMs: timings.total,
+                vertical: inferredVertical,
+            });
+
+            return questionResponse;
+        }
+
+        if (decision.rewriteUsed && decision.rewrittenQuery && decision.rewrittenQuery !== effectiveQuery) {
+            effectiveQuery = decision.rewrittenQuery;
+            effectiveState.queryRewrite = decision.rewrittenQuery;
+            provider = req.provider === "auto"
+                ? chooseProviderAuto(effectiveQuery, effectiveState)
+                : req.provider;
+
+            const rewriteRound = await runSearchSources({
+                req,
+                query: effectiveQuery,
+                provider,
+                state: effectiveState,
+                timings,
+                timingPrefix: "rewrite",
+            });
+            internalResults = rewriteRound.internalResults;
+            externalResults = rewriteRound.externalResults;
+            searchResults = {
+                summary: null,
+                internalResults,
+                externalResults,
             };
         }
+    } else {
+        const quality = evaluateResultQuality({
+            query: effectiveQuery,
+            vertical: inferredVertical,
+            state: effectiveState,
+            results: searchResults,
+        });
+        confidenceScore = quality.score;
+        confidenceReasons = quality.reasons;
     }
 
     timings.total = tAll();
     debugLog(req.debug, req.traceId, "pipeline.done", { totalMs: timings.total });
-    console.warn("Internal results:", internalResults);
-    // 6) normal results
-    return {
+    const response: SearchResultsResponse = {
         traceId: req.traceId,
         meta: {
             cacheHit: false,
@@ -177,12 +288,20 @@ export async function runPipeline(req: SearchRequest): Promise<SearchResponse> {
             source: req.source,
             limit: req.limit,
             provider,
+            confidenceScore,
+            confidenceReasons,
+            vertical: inferredVertical,
+            refinementTriggered,
+            refinementTurn: effectiveState.refinementTurn ?? 0,
+            rewriteUsed,
         },
         data: {
-            query: req.query,
-            searchState: state,
+            query: effectiveQuery,
+            searchState: effectiveState,
+            summary: null,
             internalResults,
             externalResults,
         },
     };
+    return response;
 }

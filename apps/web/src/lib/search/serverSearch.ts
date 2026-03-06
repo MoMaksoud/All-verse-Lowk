@@ -107,6 +107,8 @@ export async function serverSearch(args: {
     searchStateParam?: string;
     refinementField?: RefinementQuestion["field"];
     refinementValue?: string;
+    refinementTurn?: number;
+    queryRewrite?: string;
 }): Promise<ServerSearchResponse> {
     const searchId = randomId();
     const debugSearch =
@@ -118,6 +120,8 @@ export async function serverSearch(args: {
         category: args.category || undefined,
         brand: args.brand ? [args.brand] : undefined,
         attributes: args.model ? { model: args.model } : undefined,
+        refinementTurn: typeof args.refinementTurn === "number" ? Math.max(0, Math.floor(args.refinementTurn)) : 0,
+        queryRewrite: args.queryRewrite?.trim() || undefined,
     };
 
     // If searchState was already passed from a prior refinement step, prefer it
@@ -144,6 +148,8 @@ export async function serverSearch(args: {
             searchStateParam: args.searchStateParam,
             refinementField: args.refinementField,
             refinementValue: args.refinementValue,
+            refinementTurn: args.refinementTurn,
+            queryRewrite: args.queryRewrite,
         });
 
         const params = new URLSearchParams({
@@ -168,6 +174,12 @@ export async function serverSearch(args: {
         }
         if (args.refinementValue) {
             params.set("refinementValue", args.refinementValue);
+        }
+        if (typeof args.refinementTurn === "number" && Number.isFinite(args.refinementTurn)) {
+            params.set("refinementTurn", String(Math.max(0, Math.floor(args.refinementTurn))));
+        }
+        if (args.queryRewrite?.trim()) {
+            params.set("queryRewrite", args.queryRewrite.trim());
         }
 
         debugLog(debugSearch, searchId, "serverSearch.api.request", {
@@ -217,6 +229,10 @@ export async function serverSearch(args: {
                 question: payload.question,
                 options: payload.options,
                 searchState: payload.searchState ?? state,
+                turn: payload.turn ?? ((payload.searchState?.refinementTurn ?? state.refinementTurn ?? 0) + 1),
+                maxTurns: payload.maxTurns ?? 2,
+                vertical: payload.vertical ?? payload.searchState?.vertical ?? "general",
+                reason: payload.reason ?? "Need one more detail to improve precision.",
             };
         } else if (isApiResultsPayload(payload)) {
             results = {

@@ -14,6 +14,10 @@ export type SearchState = {
     priceIntent?: PriceIntent;
     attributes?: Record<string, string>;
     intent?: SearchIntent;
+    vertical?: SearchVertical;
+    refinementTurn?: number;
+    lastRefinementField?: SearchRefinementField;
+    queryRewrite?: string;
 };
 
 export type SearchRefinementField =
@@ -35,6 +39,8 @@ export type SearchRequest = {
     searchState?: SearchState;
     refinementField?: SearchRefinementField;
     refinementValue?: string;
+    refinementTurn?: number;
+    queryRewrite?: string;
     lastUserMessage?: string;
     conversationalMode?: boolean;
 };
@@ -87,6 +93,12 @@ export type SearchMeta = {
     source: SearchSource;
     provider: ExternalProvider;
     limit: number;
+    confidenceScore?: number;
+    confidenceReasons?: ResultQualityReason[];
+    vertical?: SearchVertical;
+    refinementTriggered?: boolean;
+    refinementTurn?: number;
+    rewriteUsed?: boolean;
 };
 
 export type SearchResultsResponse = {
@@ -106,6 +118,10 @@ export type RefinementQuestion = {
     question: string;
     options: string[];
     searchState?: SearchState;
+    turn: number;
+    maxTurns: number;
+    vertical: SearchVertical;
+    reason: string;
 };
 
 export type RefinementQuestionResponse = {
@@ -116,6 +132,10 @@ export type RefinementQuestionResponse = {
     options: string[];
     field: SearchRefinementField;
     searchState: SearchState;
+    turn: number;
+    maxTurns: number;
+    vertical: SearchVertical;
+    reason: string;
 };
 
 export type SearchResponse = SearchResultsResponse | RefinementQuestionResponse;
@@ -170,6 +190,14 @@ export type ResultQuality = {
     bad: boolean;
     score: number;
     reasons: ResultQualityReason[];
+    band: "bad" | "borderline" | "good";
+    signals: {
+        resultCountSignal: number;
+        sourceAgreementSignal: number;
+        slotCoverageSignal: number;
+        queryMatchSignal: number;
+        ambiguitySignal: number;
+    };
 };
 
 export type InferVerticalFn = (query: string, state: SearchState) => SearchVertical;
