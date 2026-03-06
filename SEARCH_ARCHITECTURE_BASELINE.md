@@ -51,10 +51,10 @@ Main architecture rule:
 ```mermaid
 flowchart LR
   U[User Browser]
-  SP[Server Page\napp/search/page.tsx]
-  CS[Client Shell\ncomponents/search/SearchClientShell.tsx]
-  API[API Route\napp/api/search/route.ts]
-  LIB[Business Logic\nlib/search/pipeline/*]
+  SP[Server Page<br/>app/search/page.tsx]
+  CS[Client Shell<br/>components/search/SearchClientShell.tsx]
+  API[API Route<br/>app/api/search/route.ts]
+  LIB[Business Logic<br/>lib/search/pipeline/*]
   DATA[("Data Sources<br/>Firestore + SerpAPI")]
 
   U --> SP
