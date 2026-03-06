@@ -31,11 +31,11 @@ export function UniversalSearchHero() {
               <span className="text-accent-400 font-medium">Universal AI Shopping Search</span>
               <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-accent-400 animate-pulse" />
             </div>
-            
+
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 text-gradient drop-shadow-lg px-2 break-words">
               Find Anything, Anywhere
             </h1>
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 text-white max-w-3xl mx-auto drop-shadow-lg px-4" style={{textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'}}>
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 text-white max-w-3xl mx-auto drop-shadow-lg px-4" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>
               One search. Every marketplace. AI-powered insights that help you buy smarter.
             </p>
           </div>
