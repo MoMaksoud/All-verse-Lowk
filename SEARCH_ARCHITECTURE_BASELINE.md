@@ -55,7 +55,7 @@ flowchart LR
   CS[Client Shell\ncomponents/search/SearchClientShell.tsx]
   API[API Route\napp/api/search/route.ts]
   LIB[Business Logic\nlib/search/pipeline/*]
-  DATA[(Data Sources)\nFirestore + SerpAPI]
+  DATA[("Data Sources<br/>Firestore + SerpAPI")]
 
   U --> SP
   SP --> CS
