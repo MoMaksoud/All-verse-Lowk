@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
+import { AnalyticsDeferred } from '@/components/AnalyticsDeferred';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import './performance.css';
@@ -9,6 +10,7 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { ChatProvider } from '@/contexts/ChatContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteTransitionMonitor } from '@/lib/performance';
+import { WebVitalsReporter } from '@/components/WebVitalsReporter';
 
 const GA_MEASUREMENT_ID = 'G-1KVRME8D19';
 
@@ -97,7 +99,9 @@ export default function RootLayout({
               <ToastProvider>
                 <ChatProvider>
                   <RouteTransitionMonitor />
+                  <WebVitalsReporter />
                   {children}
+                  <AnalyticsDeferred />
                 </ChatProvider>
               </ToastProvider>
             </AuthProvider>

@@ -10,7 +10,7 @@ import {
   Calendar, 
   DollarSign, 
   MapPin, 
-  CheckCircle, 
+  CheckCircle,
   Clock, 
   XCircle,
   Eye,
@@ -23,7 +23,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
-import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
 
 interface OrderItem {
@@ -140,10 +140,9 @@ export default function SalesPage() {
 
     setLoading(true);
 
-    // Real-time subscription to all orders
-    // We'll filter client-side for orders where current user is the seller
+    // Real-time subscription to orders where current user is a seller
     const ordersRef = collection(db, 'orders');
-    const q = query(ordersRef, orderBy('createdAt', 'desc'));
+    const q = query(ordersRef, where('sellerIds', 'array-contains', currentUser.uid), orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(
       q,

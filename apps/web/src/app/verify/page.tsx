@@ -27,7 +27,7 @@ export default function VerifyPage() {
           setStatus('success');
           setMessage('Email verified successfully! Redirecting...');
           setTimeout(() => {
-            router.push('/signup');
+            router.push('/signup?verified=1');
           }, 2000);
         } else {
           setStatus('error');

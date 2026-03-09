@@ -40,11 +40,13 @@ export async function POST(req: NextRequest) {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
       const searchQuery = [brand, model, title].filter(Boolean).join(' ').trim() || title;
-      const searchRes = await fetch(`${baseUrl}/api/universal-search?q=${encodeURIComponent(searchQuery.slice(0, 80))}`);
+      const searchRes = await fetch(
+        `${baseUrl}/api/search?q=${encodeURIComponent(searchQuery.slice(0, 80))}&source=both&provider=auto`
+      );
       if (searchRes.ok) {
         const searchData = await searchRes.json();
-        const external = searchData.externalResults || [];
-        const internal = searchData.internalResults || [];
+        const external = searchData?.data?.externalResults || [];
+        const internal = searchData?.data?.internalResults || [];
         if (external.length > 0 || internal.length > 0) {
           const lines = [
             ...external.slice(0, 8).map((r: { title: string; price: number; source: string }) => `${r.source}: $${r.price} — ${r.title}`),

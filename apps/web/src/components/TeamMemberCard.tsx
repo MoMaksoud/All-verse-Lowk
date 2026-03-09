@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Linkedin, Github } from 'lucide-react';
-import type { TeamMember } from '@/app/team/page';
+import type { TeamMember } from '@/data/team';
 
 function hasImage(member: TeamMember): boolean {
   return Boolean(member.image && member.image.trim());

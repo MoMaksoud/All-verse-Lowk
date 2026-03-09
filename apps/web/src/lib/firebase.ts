@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -45,9 +45,24 @@ if (firebaseConfig.apiKey &&
     
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
-    db = getFirestore(app);
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
     storage = getStorage(app);
     
+    // Initialize Performance Monitoring (client-side only, non-blocking)
+    if (typeof window !== 'undefined') {
+      import('firebase/performance').then(({ getPerformance }) => {
+        try {
+          getPerformance(app);
+        } catch {
+          // Silently fail — perf monitoring is non-critical
+        }
+      });
+    }
+
     console.log('🔥 Firebase initialized successfully:', {
       app: !!app,
       auth: !!auth,

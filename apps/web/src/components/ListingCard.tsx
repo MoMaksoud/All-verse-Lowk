@@ -10,6 +10,7 @@ import { useStartChatFromListing } from '@/lib/messaging';
 import { MessageInputModal } from '@/components/MessageInputModal';
 import { ProfilePicture } from '@/components/ProfilePicture';
 import { normalizeImageSrc } from '@marketplace/shared-logic';
+import { formatPrice as formatPriceUtil } from '@/lib/format';
 
 type SellerProfile = { username?: string; profilePicture?: string; createdAt?: string | Date | { toDate?: () => Date } };
 
@@ -103,18 +104,7 @@ function ListingCard({
 
   const sellerProfile = sellerProfileProp ?? fetchedSellerProfile;
 
-  // Helper function to format price with commas
-  const formatPrice = (price: string | number): string => {
-    if (typeof price === 'number') {
-      return `$${price.toLocaleString()}`;
-    }
-    // If it's a string, try to parse it
-    const numPrice = parseFloat(price.toString().replace(/[^0-9.-]+/g, ''));
-    if (!isNaN(numPrice)) {
-      return `$${numPrice.toLocaleString()}`;
-    }
-    return price.toString(); // Fallback to original if parsing fails
-  };
+  const formatPriceDisplay = (p: string | number): string => formatPriceUtil(p);
 
   // Helper function to format member since date
   const formatMemberSince = (timestamp: any) => {
@@ -343,7 +333,7 @@ function ListingCard({
 
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm min-h-[1.5rem]">
                 <span className="text-blue-400 font-semibold">
-                  {formatPrice(price)}
+                  {formatPriceDisplay(price)}
                 </span>
                 <span className="hidden sm:inline text-zinc-400">•</span>
                 <span className="hidden sm:inline text-zinc-300/90 text-xs truncate">{category}</span>
@@ -455,7 +445,7 @@ function ListingCard({
 
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
                 <span className="text-blue-400 font-semibold">
-                  {formatPrice(price)}
+                  {formatPriceDisplay(price)}
                 </span>
                 <span className="text-zinc-400">•</span>
                 <span className="text-zinc-300/90">{category}</span>

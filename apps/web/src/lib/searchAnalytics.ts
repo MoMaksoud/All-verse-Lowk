@@ -263,7 +263,12 @@ export function getPopularSearches(limit: number = 6): SearchQuery[] {
     .slice(0, limit);
 }
 
-// Track a search (for analytics)
+// Track a search (sends to GA4)
 export function trackSearch(query: string, category?: string) {
-  // In a real app, this would send data to analytics service
+  if (typeof window === 'undefined' || typeof (window as any).gtag !== 'function') return;
+
+  (window as any).gtag('event', 'search', {
+    search_term: query,
+    ...(category && { content_group: category }),
+  });
 }

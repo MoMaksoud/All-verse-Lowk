@@ -1,4 +1,5 @@
 import { DollarSign, MessageCircle, Edit, Trash2 } from "lucide-react";
+import { formatPrice } from '@/lib/format';
 
 interface ListingActionsProps {
   listing: { id: string; title: string; price: number; sold?: boolean; inventory?: number };
@@ -31,7 +32,7 @@ export function ListingActions({
         <h3 className="text-zinc-200 font-medium">Actions</h3>
         <div className="text-center">
           <div className="text-3xl font-bold text-zinc-100 mb-1">
-            ${listing.price.toLocaleString()}
+            {formatPrice(listing.price)}
           </div>
           <div className="text-lg font-semibold text-red-400 mt-4">SOLD</div>
         </div>
@@ -46,7 +47,7 @@ export function ListingActions({
       {/* Price Display */}
       <div className="text-center">
         <div className="text-3xl font-bold text-zinc-100 mb-1">
-          ${listing.price.toLocaleString()}
+          {formatPrice(listing.price)}
         </div>
         <p className="text-sm text-zinc-400">Current asking price</p>
       </div>

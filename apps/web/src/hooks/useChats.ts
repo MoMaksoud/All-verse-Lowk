@@ -29,36 +29,57 @@ export function useChats() {
       
       const userChats = await firestoreServices.chats.getUserChats(currentUser.uid);
       
-      // Enrich chats with user data
-      const enrichedChats = await Promise.all(
-        userChats.map(async (chat) => {
-          const otherUserId = chat.participants.find(id => id !== currentUser.uid);
-          if (!otherUserId) return chat;
+      // Enrich chats with user data — prefer embedded participantProfiles, batch-fetch fallbacks
+      const chatsNeedingFetch: { chat: typeof userChats[0]; otherUserId: string }[] = [];
+      const enrichedChats: ChatWithUser[] = [];
 
+      for (const chat of userChats) {
+        const otherUserId = chat.participants.find(id => id !== currentUser.uid);
+        if (!otherUserId) { enrichedChats.push(chat); continue; }
+
+        const embedded = (chat as any).participantProfiles?.[otherUserId];
+        if (embedded) {
+          enrichedChats.push({
+            ...chat,
+            otherUser: {
+              id: otherUserId,
+              name: embedded.displayName || embedded.username || `User ${otherUserId.substring(0, 8)}`,
+              username: embedded.username,
+              email: embedded.email || '',
+              photoURL: embedded.photoURL,
+            },
+          });
+        } else {
+          chatsNeedingFetch.push({ chat, otherUserId });
+        }
+      }
+
+      // Batch-fetch only the users not covered by embedded profiles (legacy chats)
+      if (chatsNeedingFetch.length > 0) {
+        const uniqueIds = [...new Set(chatsNeedingFetch.map(c => c.otherUserId))];
+        const userMap = new Map<string, any>();
+        await Promise.all(uniqueIds.map(async (id) => {
           try {
-            const otherUser = await firestoreServices.users.getUser(otherUserId);
-            return {
-              ...chat,
-              otherUser: {
-                id: otherUserId,
-                name: otherUser?.displayName || otherUser?.email || `User ${otherUserId.substring(0, 8)}`,
-                username: otherUser?.username,
-                email: otherUser?.email || '',
-                photoURL: otherUser?.photoURL,
-              },
-            };
-          } catch (error) {
-            return {
-              ...chat,
-              otherUser: {
-                id: otherUserId,
-                name: 'Unknown User',
-                email: '',
-              },
-            };
+            userMap.set(id, await firestoreServices.users.getUser(id));
+          } catch {
+            userMap.set(id, null);
           }
-        })
-      );
+        }));
+
+        for (const { chat, otherUserId } of chatsNeedingFetch) {
+          const otherUser = userMap.get(otherUserId);
+          enrichedChats.push({
+            ...chat,
+            otherUser: {
+              id: otherUserId,
+              name: otherUser?.displayName || otherUser?.email || `User ${otherUserId.substring(0, 8)}`,
+              username: otherUser?.username,
+              email: otherUser?.email || '',
+              photoURL: otherUser?.photoURL,
+            },
+          });
+        }
+      }
 
       setChats(enrichedChats);
     } catch (error) {

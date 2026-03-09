@@ -91,11 +91,13 @@ export async function POST(request: NextRequest) {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
       const searchQuery = title.split(/\s+/).slice(0, 6).join(' ');
-      const searchRes = await fetch(`${baseUrl}/api/universal-search?q=${encodeURIComponent(searchQuery)}`);
+      const searchRes = await fetch(
+        `${baseUrl}/api/search?q=${encodeURIComponent(searchQuery)}&source=both&provider=auto`
+      );
       if (searchRes.ok) {
         const searchData = await searchRes.json();
-        const external = searchData.externalResults || [];
-        const internal = searchData.internalResults || [];
+        const external = searchData?.data?.externalResults || [];
+        const internal = searchData?.data?.internalResults || [];
         if (external.length > 0 || internal.length > 0) {
           const lines = [
             ...external.slice(0, 6).map((r: { title: string; price: number; source: string }) => `${r.source}: $${r.price} - ${r.title}`),

@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Loader2
 } from 'lucide-react';
+import { formatPrice } from '@/lib/format';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -229,7 +230,7 @@ export default function CartPage() {
                               <h3 className="text-white font-medium">{listing.title}</h3>
                               <p className="text-gray-400 text-sm">{listing.category}</p>
                               <p className="text-gray-400 text-sm">Condition: {listing.condition}</p>
-                              <p className="text-accent-500 font-semibold">${item.priceAtAdd}</p>
+                              <p className="text-accent-500 font-semibold">{formatPrice(item.priceAtAdd)}</p>
                             </div>
 
                             {/* Quantity Controls */}

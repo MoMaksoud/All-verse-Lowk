@@ -1,337 +1,103 @@
-'use client';
+import { Navigation } from "@/components/Navigation";
+import { DynamicBackground } from "@/components/DynamicBackground";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { serverSearch } from "@/lib/search/serverSearch";
+import SearchClientShell from "@/components/search/SearchClientShell";
 
-import React, { useEffect, useState, useRef, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Navigation } from '@/components/Navigation';
-import { DynamicBackground } from '@/components/DynamicBackground';
-import { AISummarySection } from '@/components/search/AISummarySection';
-import { ExternalResultsSection } from '@/components/search/ExternalResultsSection';
-import { InternalResultsSection } from '@/components/search/InternalResultsSection';
-import { SellCTASection } from '@/components/search/SellCTASection';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { AlertCircle, Search, ArrowLeft, Home, Camera, MessageCircle } from 'lucide-react';
-import Link from 'next/link';
-import { getPopularSearches } from '@/lib/searchAnalytics';
-import { useConversationalSearch } from '@/hooks/useConversationalSearch';
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const query = typeof sp.query === "string" ? sp.query : "";
+  const imageSearch = sp.imageSearch === "true";
+  const debugSearch = sp.debugSearch === "1" || sp.debugSearch === "true";
 
-/** Map display option labels to API values for refinement */
-function optionToValue(field: string, option: string): string {
-  const v = option.trim().toLowerCase();
-  if (field === 'priceIntent') {
-    if (v === 'cheap') return 'cheap';
-    if (v === 'premium') return 'premium';
-    if (v === 'best value' || v === 'mid') return 'mid';
+  const brand = typeof sp.brand === "string" ? sp.brand : undefined;
+  const model = typeof sp.model === "string" ? sp.model : undefined;
+  const category = typeof sp.category === "string" ? sp.category : undefined;
+
+  const searchStateParam =
+    typeof sp.searchState === "string" ? sp.searchState : undefined;
+  const refinementField =
+    typeof sp.refinementField === "string" ? sp.refinementField : undefined;
+  const refinementValue =
+    typeof sp.refinementValue === "string" ? sp.refinementValue : undefined;
+  const refinementTurn =
+    typeof sp.refinementTurn === "string" ? Number(sp.refinementTurn) : undefined;
+  const queryRewrite =
+    typeof sp.queryRewrite === "string" ? sp.queryRewrite : undefined;
+
+  if (debugSearch) {
+    console.warn("[search-debug][search-page] incoming params", {
+      query,
+      imageSearch,
+      brand,
+      model,
+      category,
+      searchStateParam,
+      refinementField,
+      refinementValue,
+      refinementTurn,
+      queryRewrite,
+    });
   }
-  if (field === 'condition') {
-    if (v === 'new') return 'new';
-    if (v === 'used') return 'used';
+
+  if (!query) {
+    return (
+      <div className="min-h-screen bg-dark-950">
+        <DynamicBackground intensity="low" showParticles={false} />
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <LoadingSpinner
+            size="lg"
+            text="No query provided. Redirect from home search."
+          />
+        </div>
+      </div>
+    );
   }
-  return option.trim();
-}
 
-function SearchContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const queryParam = searchParams.get('query');
-  const imageSearch = searchParams.get('imageSearch') === 'true';
-  const [searchInput, setSearchInput] = useState('');
-  const [mounted, setMounted] = useState(false);
-  const lastQueryRef = useRef<string | null>(null);
+  const payload = await serverSearch({
+    query,
+    imageSearch,
+    brand,
+    model,
+    category,
+    debugSearch,
+    searchStateParam,
+    refinementField,
+    refinementValue,
+    refinementTurn,
+    queryRewrite,
+  });
 
-  const {
-    searchState,
-    results,
-    refinementQuestion,
-    loading,
-    error,
-    search,
-    searchWithState,
-    answerRefinement,
-  } = useConversationalSearch();
+  if (debugSearch) {
+    console.info("[search-debug][search-page] serverSearch payload", {
+      searchId: payload.searchId,
+      hasResults: Boolean(payload.results),
+      hasRefinementQuestion: Boolean(payload.refinementQuestion),
+      error: payload.error,
+      externalCount: payload.results?.externalResults?.length ?? 0,
+      internalCount: payload.results?.internalResults?.length ?? 0,
+    });
+  }
 
-  const query = searchState.rawQuery || queryParam || '';
-
-  useEffect(() => {
-    setMounted(true);
-    if (queryParam) {
-      setSearchInput(queryParam);
-    } else {
-      router.push('/');
-    }
-  }, [queryParam, router]);
-
-  const brandParam = searchParams.get('brand') || '';
-  const modelParam = searchParams.get('model') || '';
-  const categoryParam = searchParams.get('category') || '';
-
-  useEffect(() => {
-    if (!mounted || !queryParam) return;
-    if (lastQueryRef.current === queryParam) return;
-    lastQueryRef.current = queryParam;
-
-    if (imageSearch && (brandParam || categoryParam || modelParam)) {
-      searchWithState({
-        rawQuery: queryParam,
-        category: categoryParam || undefined,
-        brand: brandParam ? [brandParam] : undefined,
-        attributes: modelParam ? { model: modelParam } : undefined,
-      });
-    } else {
-      search(queryParam);
-    }
-  }, [mounted, queryParam, imageSearch, brandParam, categoryParam, modelParam, search, searchWithState]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchInput.trim()) {
-      router.push(`/search?query=${encodeURIComponent(searchInput.trim())}`);
-    }
-  };
-
-  const handleRefinementOption = (option: string) => {
-    if (!refinementQuestion) return;
-    const value = optionToValue(refinementQuestion.field, option);
-    answerRefinement(refinementQuestion.field, value);
-  };
-
-  // Always render the same structure to prevent hydration mismatch
   return (
     <div className="min-h-screen bg-dark-950">
       <DynamicBackground intensity="low" showParticles={false} />
       <Navigation />
 
-      {/* Persistent Search Bar */}
-      <div className="sticky top-0 z-40 bg-dark-950/95 backdrop-blur-lg border-b border-dark-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="hidden sm:block p-2 hover:bg-white/10 rounded-lg transition-colors"
-              title="Back to Home"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-400" />
-            </Link>
-            
-            <form onSubmit={handleSearch} className="flex-1">
-              <div className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl overflow-hidden hover:border-accent-500/50 transition-all">
-                <div className="pl-3 sm:pl-4">
-                  <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <input
-                  type="text"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search for products..."
-                  className="flex-1 bg-transparent text-white placeholder-white/60 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base outline-none"
-                  autoComplete="off"
-                />
-                <button
-                  type="submit"
-                  disabled={!searchInput.trim()}
-                  className="m-1.5 sm:m-2 px-4 sm:px-6 py-1.5 sm:py-2 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm sm:text-base font-semibold rounded-lg transition-all"
-                >
-                  Search
-                </button>
-              </div>
-            </form>
-
-            <Link
-              href="/"
-              className="hidden sm:block p-2 hover:bg-white/10 rounded-lg transition-colors"
-              title="Home"
-            >
-              <Home className="w-5 h-5 text-gray-400" />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Search Header - Always render to prevent hydration mismatch */}
-      <div className="relative py-6 border-b border-dark-700/50">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto text-center">
-          {imageSearch && mounted && (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-3 rounded-full bg-accent-500/20 border border-accent-500/30 text-accent-300 text-sm">
-              <Camera className="w-4 h-4" />
-              Searched by image
-            </div>
-          )}
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            {mounted && query ? `Search Results for "${query}"` : 'Search Results'}
-          </h1>
-          <p className="text-gray-400">
-            {!mounted || !query
-              ? 'Loading...'
-              : loading
-              ? 'Searching across marketplaces...'
-              : refinementQuestion
-              ? 'Narrow down your search — pick an option below'
-              : results
-              ? `Found ${(results.externalResults?.length || 0) + (results.internalResults?.length || 0)} results`
-              : 'No results found'}
-          </p>
-          </div>
-        </div>
-      </div>
-
-      {/* AI refinement question — walk user through to better results */}
-      {mounted && query && !loading && refinementQuestion && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-4">
-              <MessageCircle className="w-5 h-5 text-accent-400" />
-              <span className="text-sm font-medium text-accent-300">AI assistant</span>
-            </div>
-            <p className="text-lg font-semibold text-white mb-4">{refinementQuestion.question}</p>
-            <div className="flex flex-wrap gap-3">
-              {refinementQuestion.options.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => handleRefinementOption(option)}
-                  className="px-5 py-2.5 bg-white/10 hover:bg-accent-500/20 border border-white/20 hover:border-accent-500/50 rounded-xl text-white font-medium transition-colors"
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 flex items-start gap-4">
-            <AlertCircle className="w-6 h-6 text-red-400 shrink-0 mt-1" />
-            <div>
-              <h3 className="text-lg font-semibold text-red-400 mb-1">
-                Search Error
-              </h3>
-              <p className="text-red-300">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Loading State */}
-      {(!mounted || !query || loading) && !error && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <LoadingSpinner size="lg" text="Searching across the web..." />
-        </div>
-      )}
-
-      {/* Results */}
-      {mounted && query && !loading && !error && results && (
-        <>
-          { (results.externalResults?.length || results.internalResults?.length) > 0 && (
-            <AISummarySection
-              summary={results.summary}
-              query={query}
-              hasResults={(results.externalResults?.length || 0) + (results.internalResults?.length || 0) > 0}
-            />
-          )}
-
-          {/* Internal Results - AllVerse GPT Marketplace FIRST */}
-          {results.internalResults && results.internalResults.length > 0 && (
-            <div>
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  AllVerse GPT Marketplace
-                </h2>
-                <p className="text-gray-400">
-                  From our community
-                </p>
-              </div>
-              <InternalResultsSection results={results.internalResults} />
-            </div>
-          )}
-
-          {/* External Results - Other Marketplaces SECOND */}
-          {results.externalResults && results.externalResults.length > 0 && (
-            <div>
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  From Other Marketplaces
-                </h2>
-                <p className="text-gray-400">
-                  Showing results from Amazon, eBay, Walmart, and more
-                </p>
-              </div>
-            <ExternalResultsSection results={results.externalResults} />
-            </div>
-          )}
-
-          {/* Others also searched for */}
-          {(results.externalResults?.length || 0) + (results.internalResults?.length || 0) > 0 && (() => {
-            const popular = getPopularSearches(6).map((q) => q.query).filter((term) => term.toLowerCase() !== query.toLowerCase()).slice(0, 4);
-            if (popular.length === 0) return null;
-            return (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <p className="text-sm text-gray-400 mb-2">Others also searched for</p>
-                <div className="flex flex-wrap gap-2">
-                  {popular.map((term) => (
-                    <Link
-                      key={term}
-                      href={`/search?query=${encodeURIComponent(term)}`}
-                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white text-sm transition-colors"
-                    >
-                      {term}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* No Results State */}
-          {(!results.externalResults || results.externalResults.length === 0) &&
-            (!results.internalResults || results.internalResults.length === 0) && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="text-2xl font-bold text-white mb-2">
-                    No results found
-                  </h3>
-                  <p className="text-gray-400 mb-6">
-                    Try searching with different keywords or browse our marketplace
-                  </p>
-                  <button
-                    onClick={() => router.push('/listings')}
-                    className="px-6 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-xl transition-colors"
-                  >
-                    Browse All Listings
-                  </button>
-                </div>
-              </div>
-            )}
-
-          {/* Sell CTA */}
-          <SellCTASection />
-        </>
-      )}
+      <SearchClientShell
+        initialQuery={payload.query}
+        imageSearch={payload.imageSearch}
+        initialResults={payload.results}
+        initialRefinementQuestion={payload.refinementQuestion}
+        initialError={payload.error}
+        searchId={payload.searchId}
+        debugSearch={debugSearch}
+      />
     </div>
   );
 }
-
-export default function SearchPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-dark-950">
-          <Navigation />
-          <LoadingSpinner size="lg" text="Loading search..." />
-        </div>
-      }
-    >
-      <SearchContent />
-    </Suspense>
-  );
-}
-

@@ -370,6 +370,7 @@ export async function POST(req: NextRequest) {
       checkoutSessionId: fullSession.id,
       itemId,
       sellerId,
+      sellerIds: [sellerId],
       buyerEmail,
       shippingAddress,
       paymentIntentId,

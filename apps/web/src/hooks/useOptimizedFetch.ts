@@ -8,7 +8,7 @@ interface CacheEntry<T> {
 
 class DataCache {
   private cache = new Map<string, CacheEntry<any>>();
-  private readonly DEFAULT_TTL = 15000; // 15 seconds
+  private readonly DEFAULT_TTL = 30000; // 30 seconds
 
   set<T>(key: string, data: T, ttl = this.DEFAULT_TTL): void {
     this.cache.set(key, {
@@ -80,7 +80,7 @@ export function useOptimizedFetch<T>(
   // Add version to cache key so it invalidates on new builds
   const versionedKey = `${key}__v${CACHE_VERSION}`;
   
-  const { enabled = true, ttl = 15000, onSuccess, onError } = options;
+  const { enabled = true, ttl = 30000, onSuccess, onError } = options;
   
   const [data, setData] = useState<T | null>(() => {
     // Try to get cached data immediately
@@ -95,6 +95,16 @@ export function useOptimizedFetch<T>(
     if (cachedData) {
       setData(cachedData);
       setLoading(false);
+
+      // If stale (past half-TTL), return cached data but refetch in background
+      if (dataCache.isStale(versionedKey, ttl)) {
+        fetcher().then(result => {
+          dataCache.set(versionedKey, result, ttl);
+          setData(result);
+          onSuccess?.(result);
+        }).catch(() => {}); // Silently fail; user still has cached data
+      }
+
       return cachedData;
     }
 

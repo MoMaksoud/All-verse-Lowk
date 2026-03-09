@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ExternalLink, DollarSign } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { normalizeImageSrc } from '@marketplace/shared-logic';
+import { formatPrice } from '@/lib/format';
 
 interface ListingPreviewCardProps {
   listingId: string;
@@ -81,17 +82,6 @@ export function ListingPreviewCard({ listingId, className = '', onError }: Listi
     fetchListing();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId]); // Only depend on listingId - onError is a callback prop
-
-  const formatPrice = (price: string | number): string => {
-    if (typeof price === 'number') {
-      return `$${price.toLocaleString()}`;
-    }
-    const numPrice = parseFloat(price.toString().replace(/[^0-9.-]+/g, ''));
-    if (!isNaN(numPrice)) {
-      return `$${numPrice.toLocaleString()}`;
-    }
-    return price.toString();
-  };
 
   if (loading) {
     return (

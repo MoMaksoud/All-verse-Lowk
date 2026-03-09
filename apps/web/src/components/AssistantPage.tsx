@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/contexts/ToastContext';
 import { Send, Bot, ShoppingCart, Store, Trash2, Image as ImageIcon } from 'lucide-react';
+import { formatPrice } from '@/lib/format';
 
 interface Message {
   id: string;
@@ -455,7 +456,7 @@ export default function AssistantPage() {
                                   <h3 className="text-sm font-medium text-zinc-100 mb-1 line-clamp-2">
                                     {item.title}
                                   </h3>
-                                  <p className="text-xs text-zinc-400 mb-2">${item.price}</p>
+                                  <p className="text-xs text-zinc-400 mb-2">{formatPrice(item.price)}</p>
                                   <span className="text-blue-400 text-xs">View Listing</span>
                                 </div>
                               );

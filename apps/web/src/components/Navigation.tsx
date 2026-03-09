@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense, lazy, useCallback, memo, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 // Optimized lucide-react imports - only import what's actually used
@@ -23,13 +23,11 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { Logo } from './Logo';
+import { ProfilePicture } from './ProfilePicture';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatContext } from '@/contexts/ChatContext';
 import { Profile } from '@marketplace/types';
 import { useChats } from '@/hooks/useChats';
-
-// Lazy load heavy components
-const ProfilePicture = lazy(() => import('./ProfilePicture').then(module => ({ default: module.ProfilePicture })));
 
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
@@ -283,21 +281,19 @@ const Navigation = memo(function Navigation() {
                   Sell
                 </Link>
                 <div className="relative shrink-0" ref={dropdownRef}>
-                  <button
+                    <button
                     onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                     className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2 shrink-0"
                   >
-                    <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
-                      <ProfilePicture
-                        src={(profile?.profilePicture || currentUser?.photoURL) as string | null}
-                        alt={currentUser?.displayName || 'Avatar'}
-                        name={currentUser?.displayName || undefined}
-                        email={currentUser?.email || undefined}
-                        size="sm"
-                        currentUser={currentUser}
-                        userProfilePic={userProfilePic}
-                      />
-                    </Suspense>
+                    <ProfilePicture
+                      src={(profile?.profilePicture || currentUser?.photoURL) as string | null}
+                      alt={currentUser?.displayName || 'Avatar'}
+                      name={currentUser?.displayName || undefined}
+                      email={currentUser?.email || undefined}
+                      size="sm"
+                      currentUser={currentUser}
+                      userProfilePic={userProfilePic}
+                    />
                     <ChevronDown className="w-4 h-4 text-gray-400" />
                   </button>
 
@@ -308,17 +304,15 @@ const Navigation = memo(function Navigation() {
                       <div className="px-4 py-3 border-b border-dark-600 bg-dark-800">
                         <div className="flex items-center space-x-3">
                           <div className="shrink-0">
-                            <Suspense fallback={<div className="w-10 h-10 bg-gray-600 rounded-full animate-pulse" />}>
-                              <ProfilePicture
-                                src={profile?.profilePicture || userProfile?.profilePicture}
-                                alt={currentUser?.displayName || 'Avatar'}
-                                name={currentUser?.displayName || undefined}
-                                email={currentUser?.email || undefined}
-                                size="md"
-                                currentUser={currentUser}
-                                userProfilePic={userProfilePic}
-                              />
-                            </Suspense>
+                            <ProfilePicture
+                              src={profile?.profilePicture || userProfile?.profilePicture}
+                              alt={currentUser?.displayName || 'Avatar'}
+                              name={currentUser?.displayName || undefined}
+                              email={currentUser?.email || undefined}
+                              size="md"
+                              currentUser={currentUser}
+                              userProfilePic={userProfilePic}
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">
@@ -583,17 +577,15 @@ const Navigation = memo(function Navigation() {
               {currentUser && (
                 <div className="pt-4 border-t border-dark-600">
                   <div className="flex items-center px-3 py-3">
-                    <Suspense fallback={<div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse" />}>
-                      <ProfilePicture
-                        src={profile?.profilePicture || userProfile?.profilePicture}
-                        alt={currentUser?.displayName || 'Avatar'}
-                        name={currentUser?.displayName || undefined}
-                        email={currentUser?.email || undefined}
-                        size="sm"
-                        currentUser={currentUser}
-                        userProfilePic={userProfilePic}
-                      />
-                    </Suspense>
+                    <ProfilePicture
+                      src={profile?.profilePicture || userProfile?.profilePicture}
+                      alt={currentUser?.displayName || 'Avatar'}
+                      name={currentUser?.displayName || undefined}
+                      email={currentUser?.email || undefined}
+                      size="sm"
+                      currentUser={currentUser}
+                      userProfilePic={userProfilePic}
+                    />
                     <div className="ml-3">
                       <div className="text-base font-medium text-white">
                         {currentUser.displayName || "User"}

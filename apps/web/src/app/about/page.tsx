@@ -4,7 +4,7 @@ import React from 'react';
 import { Navigation } from '@/components/Navigation';
 import { ArrowLeft, Info, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { teamMembers } from '@/app/team/page';
+import { teamMembers } from '@/data/team';
 import { TeamMemberCard } from '@/components/TeamMemberCard';
 
 export default function AboutPage() {
@@ -88,23 +88,6 @@ export default function AboutPage() {
               {teamMembers.map((member) => (
                 <TeamMemberCard key={member.name} member={member} showDescription={false} />
               ))}
-            </div>
-          </section>
-
-          {/* Homepage Engagement Overview */}
-          <section className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">Homepage Engagement Overview</h2>
-            <p className="text-gray-300 leading-relaxed text-base sm:text-lg">
-              We designed the homepage to reflect interactivity first. Every core feature card routes to a real page or placeholder so you can plug in your flows without clutter. The UI favors user engagement, clear actions, and real routing over decoration. No distractions, no dead buttons.
-            </p>
-            <div className="mt-6">
-              <Link 
-                href="/contact"
-                className="inline-flex items-center gap-2 text-accent-400 hover:text-accent-300 transition-colors font-medium"
-              >
-                <Mail className="w-4 h-4" />
-                Get in Touch
-              </Link>
             </div>
           </section>
         </div>
