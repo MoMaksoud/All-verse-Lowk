@@ -49,15 +49,25 @@ export default function ListingCard({
   const { currentUser } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
+  // Reset image error when imageUrl changes (e.g. new listing)
+  React.useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
   // Load favorite state on mount
   React.useEffect(() => {
     const loadFavoriteState = async () => {
       try {
         const favorites = await AsyncStorage.getItem('favorites');
         if (favorites) {
-          const favArray = JSON.parse(favorites);
-          setIsFavorited(favArray.includes(id));
+          try {
+            const parsed = JSON.parse(favorites);
+            const favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+            setIsFavorited(favArray.includes(id));
+          } catch {
+            setIsFavorited(false);
+          }
         }
       } catch (error) {
         console.error('Error loading favorite state:', error);
@@ -77,7 +87,15 @@ export default function ListingCard({
   const handleFavorite = useCallback(async () => {
     try {
       const favorites = await AsyncStorage.getItem('favorites');
-      const favArray = favorites ? JSON.parse(favorites) : [];
+      let favArray: string[] = [];
+      if (favorites) {
+        try {
+          const parsed = JSON.parse(favorites);
+          favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+        } catch {
+          favArray = [];
+        }
+      }
       
       if (isFavorited) {
         const updated = favArray.filter((fav: string) => fav !== id);
@@ -154,11 +172,18 @@ export default function ListingCard({
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        <Image
-          source={{ uri: normalizeImageUrl(imageUrl) }}
-          style={styles.listImage}
-          resizeMode="cover"
-        />
+        {imageError ? (
+          <View style={[styles.listImage, styles.imagePlaceholder]}>
+            <Ionicons name="image-outline" size={32} color="rgba(255, 255, 255, 0.4)" />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: normalizeImageUrl(imageUrl) }}
+            style={styles.listImage}
+            resizeMode="cover"
+            onError={() => setImageError(true)}
+          />
+        )}
         <View style={styles.listContent}>
           <Text style={styles.listTitle} numberOfLines={2}>
             {title}
@@ -207,11 +232,18 @@ export default function ListingCard({
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      <Image
-        source={{ uri: normalizeImageUrl(imageUrl) }}
-        style={styles.gridImage}
-        resizeMode="cover"
-      />
+      {imageError ? (
+        <View style={[styles.gridImage, styles.imagePlaceholder]}>
+          <Ionicons name="image-outline" size={40} color="rgba(255, 255, 255, 0.4)" />
+        </View>
+      ) : (
+        <Image
+          source={{ uri: normalizeImageUrl(imageUrl) }}
+          style={styles.gridImage}
+          resizeMode="cover"
+          onError={() => setImageError(true)}
+        />
+      )}
       
       <View style={styles.cardOverlay}>
         {(sold || inventory === 0) && (
@@ -282,6 +314,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: CARD_IMAGE_HEIGHT,
     backgroundColor: '#0E1526',
+  },
+  imagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardOverlay: {
     position: 'absolute',

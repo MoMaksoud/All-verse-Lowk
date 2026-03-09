@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../lib/api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,30 +18,39 @@ export function useUnreadMessages() {
   const { currentUser } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [lastOpenedTimestamp, setLastOpenedTimestamp] = useState<number>(0);
+  const lastOpenedTimestampRef = useRef<number>(0);
+
+  // Keep ref in sync with state so checkUnreadMessages can read latest without being in deps
+  useEffect(() => {
+    lastOpenedTimestampRef.current = lastOpenedTimestamp;
+  }, [lastOpenedTimestamp]);
 
   // Load last opened timestamp and refresh periodically
   useEffect(() => {
     const loadLastOpenedTimestamp = async () => {
       if (!currentUser?.uid) return;
-      
+
       try {
         const key = `${LAST_OPENED_MESSAGES_PAGE_KEY}_${currentUser.uid}`;
         const stored = await AsyncStorage.getItem(key);
         if (stored) {
-          setLastOpenedTimestamp(parseInt(stored, 10));
+          const value = parseInt(stored, 10);
+          if (!isNaN(value)) {
+            setLastOpenedTimestamp(value);
+          }
         }
       } catch (error) {
         // Ignore errors
       }
     };
-    
+
     loadLastOpenedTimestamp();
-    
+
     // Refresh timestamp every 2 seconds to catch updates from messages page
     const interval = setInterval(() => {
       loadLastOpenedTimestamp();
     }, 2000);
-    
+
     return () => clearInterval(interval);
   }, [currentUser?.uid]);
 
@@ -53,7 +62,7 @@ export function useUnreadMessages() {
 
     try {
       const response = await apiClient.get('/api/chats', true);
-      
+
       if (!response.ok || response.status === 404) {
         setUnreadCount(0);
         return;
@@ -61,6 +70,8 @@ export function useUnreadMessages() {
 
       const data = await response.json();
       const chats: Chat[] = data.success && data.data ? data.data : [];
+
+      const latestTimestamp = lastOpenedTimestampRef.current;
 
       // Calculate unread count using same logic as messages screen
       let count = 0;
@@ -70,7 +81,7 @@ export function useUnreadMessages() {
         // Convert Firestore Timestamp to milliseconds
         let lastMessageTime = 0;
         const timestamp = chat.lastMessage.timestamp;
-        
+
         if (timestamp) {
           if (typeof timestamp === 'object' && 'seconds' in timestamp) {
             lastMessageTime = timestamp.seconds * 1000;
@@ -82,9 +93,9 @@ export function useUnreadMessages() {
             lastMessageTime = timestamp;
           }
         }
-        
+
         if (lastMessageTime === 0) continue;
-        
+
         // Get when this chat was last opened
         let chatLastOpenedTime = 0;
         const chatLastOpenedAt = chat.lastOpenedAt?.[currentUser.uid];
@@ -99,12 +110,12 @@ export function useUnreadMessages() {
             chatLastOpenedTime = chatLastOpenedAt;
           }
         }
-        
+
         // Chat is unread if last message is newer than when it was last opened
         // AND the last message is from the other user (not from me)
         const isLastMessageFromMe = chat.lastMessage?.senderId === currentUser.uid;
-        const comparisonTime = Math.max(lastOpenedTimestamp, chatLastOpenedTime);
-        
+        const comparisonTime = Math.max(latestTimestamp, chatLastOpenedTime);
+
         // Only count if message is from other user and newer than last opened time
         if (!isLastMessageFromMe && lastMessageTime > comparisonTime) {
           count++;
@@ -115,17 +126,17 @@ export function useUnreadMessages() {
     } catch (error) {
       // Ignore errors, don't update count
     }
-  }, [currentUser, lastOpenedTimestamp]);
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser) {
       checkUnreadMessages();
-      
-      // Poll for new messages every 5 seconds
+
+      // Poll for new messages every 5 seconds (stable: checkUnreadMessages only depends on currentUser)
       const interval = setInterval(() => {
         checkUnreadMessages();
       }, 5000);
-      
+
       return () => clearInterval(interval);
     } else {
       setUnreadCount(0);
@@ -134,4 +145,3 @@ export function useUnreadMessages() {
 
   return unreadCount;
 }
-

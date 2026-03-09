@@ -123,12 +123,12 @@ export default function MessagesScreen() {
   useEffect(() => {
     if (currentUser) {
       fetchChats();
-      
-      // Poll for new messages every 5 seconds
+
+      // Single 5s polling interval; cleanup on unmount or when currentUser changes
       const interval = setInterval(() => {
         fetchChats();
       }, 5000);
-      
+
       return () => clearInterval(interval);
     } else {
       setLoading(false);

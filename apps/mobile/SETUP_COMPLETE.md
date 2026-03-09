@@ -37,7 +37,7 @@
 
 ### 1. Add Environment Variables
 
-Create `apps/mobile/.env`:
+**Local development only** — create `apps/mobile/.env` (this file is gitignored; never commit it):
 
 ```env
 EXPO_PUBLIC_FIREBASE_API_KEY=<copy from web .env.local>
@@ -49,6 +49,8 @@ EXPO_PUBLIC_FIREBASE_APP_ID=<copy from web .env.local>
 EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=<copy from web .env.local>
 EXPO_PUBLIC_API_URL=https://www.allversegpt.com/api
 ```
+
+For **production/preview EAS builds**, use EAS Secrets only — see [EAS_BUILD.md](./EAS_BUILD.md). Do not put real keys in `eas.json` or any committed file.
 
 ### 2. Test the App
 

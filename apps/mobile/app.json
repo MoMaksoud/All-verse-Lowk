@@ -21,6 +21,7 @@
         "NSCameraUsageDescription": "AllVerse GPT needs access to your camera to take photos of items you want to sell.",
         "NSPhotoLibraryUsageDescription": "AllVerse GPT needs access to your photo library to upload product photos.",
         "NSPhotoLibraryAddUsageDescription": "AllVerse GPT needs permission to save photos to your library.",
+        "NSLocalNetworkUsageDescription": "AllVerse GPT may use the local network to connect to services you use.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

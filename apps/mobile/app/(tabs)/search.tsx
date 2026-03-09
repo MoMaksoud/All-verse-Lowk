@@ -103,10 +103,13 @@ export default function SearchScreen() {
     try {
       const stored = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
       if (stored) {
-        setRecentSearches(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        const arr = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+        setRecentSearches(arr);
       }
     } catch (error) {
       console.error('Error loading recent searches:', error);
+      setRecentSearches([]);
     }
   };
 
@@ -115,7 +118,15 @@ export default function SearchScreen() {
     
     try {
       const stored = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
-      let searches: string[] = stored ? JSON.parse(stored) : [];
+      let searches: string[] = [];
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          searches = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+        } catch {
+          searches = [];
+        }
+      }
       
       // Remove if already exists
       searches = searches.filter(s => s.toLowerCase() !== query.toLowerCase());

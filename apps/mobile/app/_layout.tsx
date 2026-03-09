@@ -2,13 +2,15 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
 import { AuthProvider } from '../contexts/AuthContext';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <View style={styles.container}>
-        <StatusBar style="light" />
-      <Stack
+    <ErrorBoundary>
+      <AuthProvider>
+        <View style={styles.container}>
+          <StatusBar style="light" />
+        <Stack
         screenOptions={{
           headerStyle: {
             backgroundColor: '#020617',
@@ -94,6 +96,7 @@ export default function RootLayout() {
       </Stack>
       </View>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

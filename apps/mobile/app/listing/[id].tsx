@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -47,6 +48,7 @@ export default function ListingDetailScreen() {
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollViewRef = useRef<any>(null);
@@ -63,8 +65,13 @@ export default function ListingDetailScreen() {
     try {
       const favorites = await AsyncStorage.getItem('favorites');
       if (favorites) {
-        const favArray = JSON.parse(favorites);
-        setIsFavorited(favArray.includes(id));
+        try {
+          const parsed = JSON.parse(favorites);
+          const favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+          setIsFavorited(favArray.includes(id));
+        } catch {
+          setIsFavorited(false);
+        }
       }
     } catch (error) {
       console.error('Error loading favorite state:', error);
@@ -147,16 +154,58 @@ export default function ListingDetailScreen() {
     }
   };
 
-  const handleContact = () => {
+  const handleContact = async () => {
     if (!currentUser) {
       Alert.alert('Sign In Required', 'Please sign in to contact seller');
       router.push('/auth/signin');
       return;
     }
 
-    // Navigate to chat
-    if (listing?.sellerId) {
-      router.push(`/chat/${listing.sellerId}`);
+    if (!listing?.sellerId) {
+      Alert.alert('Error', 'Unable to contact seller');
+      return;
+    }
+
+    try {
+      setContactLoading(true);
+      const response = await apiClient.post('/api/chats', { otherUserId: listing.sellerId }, true);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to start chat';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          const errorText = await response.text().catch(() => '');
+          if (errorText) {
+            try {
+              const parsed = JSON.parse(errorText);
+              errorMessage = parsed.message || parsed.error || errorMessage;
+            } catch {
+              errorMessage = errorText.substring(0, 100) || errorMessage;
+            }
+          }
+        }
+        Alert.alert('Error', errorMessage);
+        return;
+      }
+
+      const data = await response.json();
+      const chatId = data.chatId || data.id;
+
+      if (!chatId) {
+        Alert.alert('Error', 'Could not start conversation. Please try again.');
+        return;
+      }
+
+      router.push(`/chat/${chatId}` as any);
+    } catch (err: any) {
+      Alert.alert(
+        'Error',
+        err?.message || 'Failed to start chat. Please try again.'
+      );
+    } finally {
+      setContactLoading(false);
     }
   };
 
@@ -171,7 +220,15 @@ export default function ListingDetailScreen() {
 
     try {
       const favorites = await AsyncStorage.getItem('favorites');
-      const favArray = favorites ? JSON.parse(favorites) : [];
+      let favArray: string[] = [];
+      if (favorites) {
+        try {
+          const parsed = JSON.parse(favorites);
+          favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+        } catch {
+          favArray = [];
+        }
+      }
 
       if (isFavorited) {
         const updated = favArray.filter((fav: string) => fav !== id);
@@ -371,9 +428,16 @@ export default function ListingDetailScreen() {
           <TouchableOpacity
             style={[styles.button, styles.contactButton]}
             onPress={handleContact}
+            disabled={contactLoading}
           >
-            <Ionicons name="chatbubble-outline" size={22} color="#fff" />
-            <Text style={styles.buttonText}>Message</Text>
+            {contactLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="chatbubble-outline" size={22} color="#fff" />
+                <Text style={styles.buttonText}>Message</Text>
+              </>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.cartButton]}
