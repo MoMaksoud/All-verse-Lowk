@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Image, Alert, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -169,6 +169,9 @@ export default function MessagesScreen() {
     }, [currentUser, fetchChats])
   );
 
+  // Prevents concurrent onPress executions from stacking async handles in the GC scope
+  const navigatingRef = useRef(false);
+
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await fetchChats();
@@ -259,58 +262,39 @@ export default function MessagesScreen() {
     }
   };
 
-  const renderChatItem = ({ item }: { item: Chat }) => {
-    // Calculate unread status based on timestamps (matching web version)
-    const hasUnread = (() => {
-      if (!currentUser?.uid || !item.lastMessage?.timestamp) return false;
-      
-      // Convert Firestore Timestamp to milliseconds
-      let lastMessageTime = 0;
-      const timestamp = item.lastMessage.timestamp;
-      
-      if (timestamp) {
-        if (typeof timestamp === 'object' && 'seconds' in timestamp) {
-          lastMessageTime = timestamp.seconds * 1000;
-        } else if (typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
-          lastMessageTime = timestamp.toDate().getTime();
-        } else if (timestamp instanceof Date) {
-          lastMessageTime = timestamp.getTime();
-        } else if (typeof timestamp === 'number') {
-          lastMessageTime = timestamp;
-        }
+  const renderChatItem = useCallback(({ item }: { item: Chat }) => {
+    // Calculate unread status based on timestamps
+    let lastMessageTime = 0;
+    const timestamp = item.lastMessage?.timestamp;
+    if (timestamp) {
+      if (typeof timestamp === 'object' && 'seconds' in timestamp) {
+        lastMessageTime = timestamp.seconds * 1000;
+      } else if (typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
+        lastMessageTime = timestamp.toDate().getTime();
+      } else if (timestamp instanceof Date) {
+        lastMessageTime = timestamp.getTime();
+      } else if (typeof timestamp === 'number') {
+        lastMessageTime = timestamp;
       }
-      
-      if (lastMessageTime === 0) return false;
-      
-      // Get when this chat was last opened
-      let chatLastOpenedTime = 0;
-      const chatLastOpenedAt = item.lastOpenedAt?.[currentUser.uid];
-      if (chatLastOpenedAt) {
-        if (typeof chatLastOpenedAt === 'object' && 'seconds' in chatLastOpenedAt) {
-          chatLastOpenedTime = chatLastOpenedAt.seconds * 1000;
-        } else if (typeof chatLastOpenedAt === 'object' && 'toDate' in chatLastOpenedAt && typeof chatLastOpenedAt.toDate === 'function') {
-          chatLastOpenedTime = chatLastOpenedAt.toDate().getTime();
-        } else if (chatLastOpenedAt instanceof Date) {
-          chatLastOpenedTime = chatLastOpenedAt.getTime();
-        } else if (typeof chatLastOpenedAt === 'number') {
-          chatLastOpenedTime = chatLastOpenedAt;
-        }
+    }
+
+    let chatLastOpenedTime = 0;
+    const chatLastOpenedAt = currentUser?.uid ? item.lastOpenedAt?.[currentUser.uid] : undefined;
+    if (chatLastOpenedAt) {
+      if (typeof chatLastOpenedAt === 'object' && 'seconds' in chatLastOpenedAt) {
+        chatLastOpenedTime = chatLastOpenedAt.seconds * 1000;
+      } else if (typeof chatLastOpenedAt === 'object' && 'toDate' in chatLastOpenedAt && typeof chatLastOpenedAt.toDate === 'function') {
+        chatLastOpenedTime = chatLastOpenedAt.toDate().getTime();
+      } else if (chatLastOpenedAt instanceof Date) {
+        chatLastOpenedTime = chatLastOpenedAt.getTime();
+      } else if (typeof chatLastOpenedAt === 'number') {
+        chatLastOpenedTime = chatLastOpenedAt;
       }
-      
-      // Chat is unread if last message is newer than when it was last opened
-      // AND the last message is from the other user (not from me)
-      const isLastMessageFromMe = item.lastMessage?.senderId === currentUser.uid;
-      const comparisonTime = Math.max(lastOpenedTimestamp, chatLastOpenedTime);
-      
-      // Only show unread if message is from other user and newer than last opened time
-      const isUnread = !isLastMessageFromMe && lastMessageTime > comparisonTime;
-      
-      return isUnread;
-    })();
-    
-    // Keep unreadCount for display (legacy support, but we use hasUnread for logic)
-    const unreadCount = item.unreadCount?.[currentUser?.uid || ''] || 0;
+    }
+
     const isLastMessageFromMe = item.lastMessage?.senderId === currentUser?.uid;
+    const comparisonTime = Math.max(lastOpenedTimestamp, chatLastOpenedTime);
+    const hasUnread = !!currentUser?.uid && lastMessageTime > 0 && !isLastMessageFromMe && lastMessageTime > comparisonTime;
     const displayName = item.otherUser?.name || 'Unknown User';
     const photoURL = item.otherUser?.photoURL;
 
@@ -318,29 +302,24 @@ export default function MessagesScreen() {
       <TouchableOpacity
         style={styles.chatItem}
         onPress={async () => {
-          // Update global timestamp when user opens a chat (not just views the list)
-          if (currentUser?.uid) {
-            try {
+          // Guard against concurrent taps stacking async handles in the GC scope
+          if (navigatingRef.current) return;
+          navigatingRef.current = true;
+          try {
+            if (currentUser?.uid) {
               const now = Date.now();
               const key = `${LAST_OPENED_MESSAGES_PAGE_KEY}_${currentUser.uid}`;
               await AsyncStorage.setItem(key, now.toString());
               setLastOpenedTimestamp(now);
-            } catch (error) {
-              // Silently fail
             }
-          }
-          
-          // Mark chat as read before navigating (optimistic update)
-          if (hasUnread && currentUser?.uid) {
-            try {
-              // Fire and forget - don't wait for response
-              apiClient.put(`/api/chats/${item.id}/read`, {}, true).catch(() => {});
-            } catch (error) {
-              // Silently fail - not critical
+            // Await instead of fire-and-forget to ensure GC scope is released cleanly
+            if (hasUnread && currentUser?.uid) {
+              await apiClient.put(`/api/chats/${item.id}/read`, {}, true).catch(() => {});
             }
+            router.push(`/chat/${item.id}` as any);
+          } finally {
+            navigatingRef.current = false;
           }
-          // Navigate to chat detail
-          router.push(`/chat/${item.id}` as any);
         }}
       >
         <View style={styles.avatarContainer}>
@@ -377,7 +356,7 @@ export default function MessagesScreen() {
         </View>
       </TouchableOpacity>
     );
-  };
+  }, [currentUser, lastOpenedTimestamp, formatTimestamp, navigatingRef]);
 
   if (!currentUser) {
     return (
@@ -438,15 +417,12 @@ export default function MessagesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {chats.length === 0 ? (
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          {renderHeader()}
+      <FlatList
+        data={chats}
+        renderItem={renderChatItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="chatbubbles-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
             <Text style={styles.emptyTitle}>No Messages</Text>
@@ -454,19 +430,16 @@ export default function MessagesScreen() {
               Start a conversation by searching for a user or messaging a seller from a listing
             </Text>
           </View>
-        </ScrollView>
-      ) : (
-        <FlatList
-          data={chats}
-          renderItem={renderChatItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />
-          }
-        />
-      )}
+        }
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />
+        }
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
+        initialNumToRender={15}
+      />
 
       {/* User Search Modal */}
       <UserSearchModal
@@ -482,9 +455,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#020617',
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
   pageHeader: {
     paddingHorizontal: 20,

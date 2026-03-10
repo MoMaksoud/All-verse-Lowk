@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TextInput,
   TouchableOpacity,
   FlatList,
@@ -62,6 +61,19 @@ interface Listing {
 
 const RECENT_SEARCHES_KEY = 'recent_searches';
 const MAX_RECENT_SEARCHES = 5;
+
+// Flat item types for virtualized search results and browse grid.
+// Pairing listings into rows avoids allocating all handles in one GC scope.
+type SearchFlatItem =
+  | { kind: 'internal-header'; count: number }
+  | { kind: 'internal-row'; left: InternalListing; right: InternalListing | null; rowIndex: number }
+  | { kind: 'external-header'; count: number }
+  | { kind: 'external-item'; item: ExternalListing; itemIndex: number }
+  | { kind: 'no-results' };
+
+type BrowseFlatItem =
+  | { kind: 'browse-header'; count: number }
+  | { kind: 'listing-row'; left: Listing; right: Listing | null; rowIndex: number };
 
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ q?: string }>();
@@ -156,17 +168,15 @@ export default function SearchScreen() {
   const fetchListings = async () => {
     try {
       setListingsLoading(true);
-      // Fetch with a higher limit to get more listings (API default is 20, we'll request more)
-      const response = await apiClient.get('/api/listings?limit=100');
+      const response = await apiClient.get('/api/listings?limit=50');
       const data = await response.json();
-      
+
       if (response.ok && data.data && Array.isArray(data.data)) {
-        setListings(data.data);
+        setListings(data.data.slice(0, 50));
       } else if (response.ok && data.data?.items) {
-        setListings(data.data.items);
+        setListings(data.data.items.slice(0, 50));
       } else if (response.ok && Array.isArray(data)) {
-        // Handle case where API returns array directly
-        setListings(data);
+        setListings(data.slice(0, 50));
       }
     } catch (error) {
       console.error('Error fetching listings:', error);
@@ -215,6 +225,176 @@ export default function SearchScreen() {
     performSearch(query);
     setShowRecentSearches(false);
   };
+
+  // Build flat data arrays so FlatList virtualizes rendering instead of
+  // allocating all JS handles at once in a single GC scope via .map().
+  const searchFlatData = useMemo<SearchFlatItem[]>(() => {
+    if (!results) return [];
+    const items: SearchFlatItem[] = [];
+    if (results.internal.length > 0) {
+      items.push({ kind: 'internal-header', count: results.internal.length });
+      for (let i = 0; i < results.internal.length; i += 2) {
+        items.push({ kind: 'internal-row', left: results.internal[i], right: results.internal[i + 1] ?? null, rowIndex: i });
+      }
+    }
+    if (results.external.length > 0) {
+      items.push({ kind: 'external-header', count: results.external.length });
+      results.external.forEach((item, itemIndex) => {
+        items.push({ kind: 'external-item', item, itemIndex });
+      });
+    }
+    if (results.internal.length === 0 && results.external.length === 0) {
+      items.push({ kind: 'no-results' });
+    }
+    return items;
+  }, [results]);
+
+  const browseFlatData = useMemo<BrowseFlatItem[]>(() => {
+    if (listings.length === 0) return [];
+    const items: BrowseFlatItem[] = [{ kind: 'browse-header', count: listings.length }];
+    for (let i = 0; i < listings.length; i += 2) {
+      items.push({ kind: 'listing-row', left: listings[i], right: listings[i + 1] ?? null, rowIndex: i });
+    }
+    return items;
+  }, [listings]);
+
+  const renderSearchItem = useCallback(({ item }: { item: SearchFlatItem }) => {
+    if (item.kind === 'internal-header') {
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>AllVerse GPT Marketplace</Text>
+            <View style={styles.badge}><Text style={styles.badgeText}>AVGPT</Text></View>
+          </View>
+          <Text style={styles.sectionSubtitle}>{item.count} result{item.count !== 1 ? 's' : ''}</Text>
+        </View>
+      );
+    }
+    if (item.kind === 'internal-row') {
+      return (
+        <View style={styles.listingsGridRow}>
+          <ListingCard
+            id={item.left.id} title={item.left.title} description={item.left.description}
+            price={item.left.price} category={item.left.category} condition={item.left.condition}
+            imageUrl={item.left.photos?.[0]} sellerId={item.left.sellerId}
+            sold={(item.left.sold ?? false) || item.left.inventory === 0}
+            inventory={item.left.inventory} variant="grid"
+          />
+          {item.right ? (
+            <ListingCard
+              id={item.right.id} title={item.right.title} description={item.right.description}
+              price={item.right.price} category={item.right.category} condition={item.right.condition}
+              imageUrl={item.right.photos?.[0]} sellerId={item.right.sellerId}
+              sold={(item.right.sold ?? false) || item.right.inventory === 0}
+              inventory={item.right.inventory} variant="grid"
+            />
+          ) : (
+            <View style={styles.gridPlaceholder} />
+          )}
+        </View>
+      );
+    }
+    if (item.kind === 'external-header') {
+      return (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>From Other Marketplaces</Text>
+          <Text style={styles.sectionSubtitle}>{item.count} result{item.count !== 1 ? 's' : ''}</Text>
+        </View>
+      );
+    }
+    if (item.kind === 'external-item') {
+      return (
+        <View style={styles.externalItemWrapper}>
+          <TouchableOpacity
+            style={styles.externalCard}
+            onPress={async () => {
+              try {
+                const supported = await Linking.canOpenURL(item.item.url);
+                if (supported) {
+                  await Linking.openURL(item.item.url);
+                } else {
+                  Alert.alert('Error', `Cannot open URL: ${item.item.url}`);
+                }
+              } catch {
+                Alert.alert('Error', 'Failed to open link');
+              }
+            }}
+          >
+            {item.item.image && (
+              <Image source={{ uri: item.item.image }} style={styles.externalImage} resizeMode="cover" />
+            )}
+            <View style={styles.externalContent}>
+              <Text style={styles.externalTitle} numberOfLines={2}>{item.item.title}</Text>
+              <View style={styles.externalMeta}>
+                <Text style={styles.externalPrice}>${item.item.price.toLocaleString()}</Text>
+                {item.item.rating && (
+                  <View style={styles.ratingContainer}>
+                    <Ionicons name="star" size={14} color="#fbbf24" />
+                    <Text style={styles.ratingText}>{item.item.rating}</Text>
+                    {item.item.reviewsCount && (
+                      <Text style={styles.reviewsText}>({item.item.reviewsCount})</Text>
+                    )}
+                  </View>
+                )}
+              </View>
+              <View style={styles.sourceBadge}>
+                <Text style={styles.sourceText}>{item.item.source}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    if (item.kind === 'no-results') {
+      return (
+        <View style={styles.noResults}>
+          <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+          <Text style={styles.noResultsText}>No results found</Text>
+          <Text style={styles.noResultsSubtext}>Try different keywords or browse categories</Text>
+        </View>
+      );
+    }
+    return null;
+  }, []);
+
+  const renderBrowseItem = useCallback(({ item }: { item: BrowseFlatItem }) => {
+    if (item.kind === 'browse-header') {
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>AllVerse GPT Marketplace</Text>
+            <View style={styles.badge}><Text style={styles.badgeText}>AVGPT</Text></View>
+          </View>
+          <Text style={styles.sectionSubtitle}>{item.count} listing{item.count !== 1 ? 's' : ''} available</Text>
+        </View>
+      );
+    }
+    if (item.kind === 'listing-row') {
+      return (
+        <View style={styles.listingsGridRow}>
+          <ListingCard
+            id={item.left.id} title={item.left.title} description={item.left.description}
+            price={item.left.price} category={item.left.category} condition={item.left.condition}
+            imageUrl={item.left.photos?.[0]} sellerId={item.left.sellerId}
+            sold={(item.left.sold ?? false) || item.left.inventory === 0}
+            inventory={item.left.inventory} variant="grid"
+          />
+          {item.right ? (
+            <ListingCard
+              id={item.right.id} title={item.right.title} description={item.right.description}
+              price={item.right.price} category={item.right.category} condition={item.right.condition}
+              imageUrl={item.right.photos?.[0]} sellerId={item.right.sellerId}
+              sold={(item.right.sold ?? false) || item.right.inventory === 0}
+              inventory={item.right.inventory} variant="grid"
+            />
+          ) : (
+            <View style={styles.gridPlaceholder} />
+          )}
+        </View>
+      );
+    }
+    return null;
+  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -279,152 +459,37 @@ export default function SearchScreen() {
       {loading ? (
         <LoadingSpinner message="Searching..." />
       ) : results ? (
-        <ScrollView style={styles.results}>
-          {/* Internal Results */}
-          {results.internal && results.internal.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>AllVerse GPT Marketplace</Text>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>AVGPT</Text>
-                </View>
-              </View>
-              <Text style={styles.sectionSubtitle}>
-                {results.internal.length} result{results.internal.length !== 1 ? 's' : ''}
-              </Text>
-              <View style={styles.listingsGrid}>
-                {results.internal.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    id={listing.id}
-                    title={listing.title}
-                    description={listing.description}
-                    price={listing.price}
-                    category={listing.category}
-                    condition={listing.condition}
-                    imageUrl={listing.photos?.[0]}
-                    sellerId={listing.sellerId}
-                    sold={(listing.sold ?? false) || listing.inventory === 0}
-                    inventory={listing.inventory}
-                    variant="grid"
-                  />
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* External Results */}
-          {results.external && results.external.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>From Other Marketplaces</Text>
-              <Text style={styles.sectionSubtitle}>
-                {results.external.length} result{results.external.length !== 1 ? 's' : ''}
-              </Text>
-              {results.external.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.externalCard}
-                  onPress={async () => {
-                    try {
-                      const supported = await Linking.canOpenURL(item.url);
-                      if (supported) {
-                        await Linking.openURL(item.url);
-                      } else {
-                        Alert.alert('Error', `Cannot open URL: ${item.url}`);
-                      }
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to open link');
-                    }
-                  }}
-                >
-                  {item.image && (
-                    <Image 
-                      source={{ uri: item.image }} 
-                      style={styles.externalImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  <View style={styles.externalContent}>
-                    <Text style={styles.externalTitle} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <View style={styles.externalMeta}>
-                      <Text style={styles.externalPrice}>${item.price.toLocaleString()}</Text>
-                      {item.rating && (
-                        <View style={styles.ratingContainer}>
-                          <Ionicons name="star" size={14} color="#fbbf24" />
-                          <Text style={styles.ratingText}>{item.rating}</Text>
-                          {item.reviewsCount && (
-                            <Text style={styles.reviewsText}>({item.reviewsCount})</Text>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.sourceBadge}>
-                      <Text style={styles.sourceText}>{item.source}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {/* No Results */}
-          {(!results.internal || results.internal.length === 0) &&
-            (!results.external || results.external.length === 0) && (
-              <View style={styles.noResults}>
-                <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
-                <Text style={styles.noResultsText}>No results found</Text>
-                <Text style={styles.noResultsSubtext}>
-                  Try different keywords or browse categories
-                </Text>
-              </View>
-            )}
-        </ScrollView>
+        <FlatList
+          data={searchFlatData}
+          renderItem={renderSearchItem}
+          keyExtractor={(item, index) => `s-${item.kind}-${index}`}
+          style={styles.results}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={true}
+          initialNumToRender={10}
+        />
+      ) : listingsLoading ? (
+        <LoadingSpinner message="Loading listings..." />
+      ) : listings.length > 0 ? (
+        <FlatList
+          data={browseFlatData}
+          renderItem={renderBrowseItem}
+          keyExtractor={(item, index) => `b-${item.kind}-${index}`}
+          style={styles.results}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={true}
+          initialNumToRender={10}
+        />
       ) : (
-        <ScrollView style={styles.results}>
-          {listingsLoading ? (
-            <LoadingSpinner message="Loading listings..." />
-          ) : listings.length > 0 ? (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>AllVerse GPT Marketplace</Text>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>AVGPT</Text>
-                </View>
-              </View>
-              <Text style={styles.sectionSubtitle}>
-                {listings.length} listing{listings.length !== 1 ? 's' : ''} available
-              </Text>
-              <View style={styles.listingsGrid}>
-                {listings.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    id={listing.id}
-                    title={listing.title}
-                    description={listing.description}
-                    price={listing.price}
-                    category={listing.category}
-                    condition={listing.condition}
-                    imageUrl={listing.photos?.[0]}
-                    sellerId={listing.sellerId}
-                    sold={(listing.sold ?? false) || listing.inventory === 0}
-                    inventory={listing.inventory}
-                    variant="grid"
-                  />
-                ))}
-              </View>
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
-              <Text style={styles.emptyText}>Search across all marketplaces</Text>
-              <Text style={styles.emptySubtext}>
-                One search. Every marketplace. AI-powered insights.
-              </Text>
-            </View>
-          )}
-        </ScrollView>
+        <View style={styles.emptyState}>
+          <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+          <Text style={styles.emptyText}>Search across all marketplaces</Text>
+          <Text style={styles.emptySubtext}>
+            One search. Every marketplace. AI-powered insights.
+          </Text>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -540,6 +605,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+  },
+  listingsGridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 4,
+  },
+  gridPlaceholder: {
+    flex: 1,
+    margin: 4,
+  },
+  externalItemWrapper: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
   externalCard: {
     backgroundColor: '#1e293b',

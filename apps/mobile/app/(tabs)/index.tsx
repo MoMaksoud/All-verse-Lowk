@@ -63,7 +63,7 @@ export default function HomeScreen() {
         // Production API structure: { data: [...], pagination: {...} }
         setListings(data.data);
         setError(null);
-      } else if (response.ok && data.data?.items) {
+      } else if (response.ok && Array.isArray(data.data?.items)) {
         // Alternative structure: { data: { items: [...] } }
         setListings(data.data.items);
         setError(null);

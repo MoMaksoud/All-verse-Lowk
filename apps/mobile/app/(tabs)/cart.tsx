@@ -71,23 +71,32 @@ export default function CartScreen() {
       if (response.ok) {
         const data = await response.json();
         const cart = data.data || data;
-        setCartItems(cart.items || []);
+        setCartItems(Array.isArray(cart.items) ? cart.items : []);
 
-        // Fetch listing details for each cart item
-        const listingPromises = (cart.items || []).map(async (item: CartItem) => {
-          try {
-            const listingResponse = await apiClient.get(`/api/listings/${item.listingId}`, false);
-            if (listingResponse.ok) {
-              const listingData = await listingResponse.json();
-              return { id: item.listingId, listing: listingData.data || listingData };
-            }
-            return null;
-          } catch (error) {
-            return null;
-          }
-        });
-
-        const listingResults = await Promise.all(listingPromises);
+        // Fetch listing details in batches of 5 to bound concurrent GC handles.
+        // Unbounded Promise.all holds all in-flight promise handles in one GC scope,
+        // which can exhaust Hermes GC scope slots.
+        const BATCH_SIZE = 5;
+        const allItems: CartItem[] = Array.isArray(cart.items) ? cart.items : [];
+        const listingResults: ({ id: string; listing: Listing } | null)[] = [];
+        for (let i = 0; i < allItems.length; i += BATCH_SIZE) {
+          const batch = allItems.slice(i, i + BATCH_SIZE);
+          const batchResults = await Promise.all(
+            batch.map(async (item: CartItem) => {
+              try {
+                const listingResponse = await apiClient.get(`/api/listings/${item.listingId}`, false);
+                if (listingResponse.ok) {
+                  const listingData = await listingResponse.json();
+                  return { id: item.listingId, listing: listingData.data || listingData };
+                }
+                return null;
+              } catch {
+                return null;
+              }
+            })
+          );
+          listingResults.push(...batchResults);
+        }
         const listingsMap: Record<string, Listing> = {};
 
         listingResults.forEach((result) => {

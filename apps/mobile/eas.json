@@ -7,7 +7,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
-        "simulator": true
+        "simulator": true,
+        "buildArtifactPaths": ["ios/build/*"]
       },
       "node": "20.19.0",
       "pnpm": "8.15.0"
@@ -27,7 +28,8 @@
         "EXPO_PUBLIC_API_URL": "https://www.allversegpt.com/api"
       },
       "ios": {
-        "cocoapods": "1.15.2"
+        "cocoapods": "1.15.2",
+        "buildArtifactPaths": ["ios/build/*"]
       }
     }
   },
@@ -36,7 +38,7 @@
       "ios": {
         "appleId": "allversegpt@gmail.com",
         "ascAppId": "6757940445",
-        "appleTeamId": "Q77QJC68XU"
+        "appleTeamId": "Q77QJC68XU"  
       }
     }
   }

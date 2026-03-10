@@ -71,7 +71,7 @@ export default function ChatDetailScreen() {
       }
 
       const data = await response.json();
-      if (data.success && data.data) {
+      if (data.success && Array.isArray(data.data)) {
         // Ensure sender data is properly formatted with username
         const formattedMessages = data.data.map((msg: any) => ({
           ...msg,
@@ -96,7 +96,7 @@ export default function ChatDetailScreen() {
       const response = await apiClient.get('/api/chats', true);
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.data) {
+        if (data.success && Array.isArray(data.data)) {
           const chat = data.data.find((c: any) => c.id === id);
           if (chat) {
             setChatInfo({ otherUser: chat.otherUser });
@@ -124,14 +124,14 @@ export default function ChatDetailScreen() {
     if (id && currentUser) {
       fetchChatInfo();
       fetchMessages();
-      markChatAsRead(); // Mark as read when chat is opened
-      
-      // Poll for new messages every 2 seconds for real-time updates
-      const interval = setInterval(() => {
-        fetchMessages();
-        // Only mark as read if user is actively viewing (not in background)
-        markChatAsRead();
-      }, 2000);
+      markChatAsRead();
+
+      // Poll for new messages every 5 seconds. Callback is async so each
+      // fetchMessages call runs to completion before the GC scope is released,
+      // preventing handle accumulation from fire-and-forget void calls.
+      const interval = setInterval(async () => {
+        await fetchMessages();
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [id, currentUser]);

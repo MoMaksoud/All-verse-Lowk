@@ -60,22 +60,30 @@ export default function FavoritesScreen() {
         return;
       }
 
-      // Fetch details for each favorite listing
-      const favoriteListings = await Promise.all(
-        favoriteIds.map(async (id: string) => {
-          try {
-            const response = await apiClient.get(`/api/listings/${id}`, false);
-            if (response.ok) {
-              const data = await response.json();
-              return data.data || data;
+      // Fetch details in batches of 5 to bound concurrent GC handles.
+      // Unbounded Promise.all holds all in-flight promise handles in one GC scope,
+      // which can exhaust Hermes GC scope slots.
+      const BATCH_SIZE = 5;
+      const favoriteListings: (Listing | null)[] = [];
+      for (let i = 0; i < favoriteIds.length; i += BATCH_SIZE) {
+        const batch = favoriteIds.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(
+          batch.map(async (id: string) => {
+            try {
+              const response = await apiClient.get(`/api/listings/${id}`, false);
+              if (response.ok) {
+                const data = await response.json();
+                return data.data || data;
+              }
+              return null;
+            } catch (error) {
+              console.error(`Error fetching listing ${id}:`, error);
+              return null;
             }
-            return null;
-          } catch (error) {
-            console.error(`Error fetching listing ${id}:`, error);
-            return null;
-          }
-        })
-      );
+          })
+        );
+        favoriteListings.push(...batchResults);
+      }
 
       // Filter out null values (deleted listings)
       const validFavorites = favoriteListings.filter((listing) => listing !== null);
@@ -269,6 +277,10 @@ export default function FavoritesScreen() {
           ListHeaderComponent={renderListHeader}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />}
           columnWrapperStyle={styles.row}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={true}
+          initialNumToRender={10}
         />
       )}
     </SafeAreaView>
