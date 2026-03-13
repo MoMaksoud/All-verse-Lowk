@@ -39,6 +39,9 @@ interface ShippingRate {
   deliveryDays?: number;
   deliveryDate?: string;
   deliveryDateGuaranteed?: boolean;
+  // Optional fields used internally for mapping Shippo services to simplified tiers
+  serviceToken?: string;
+  tierKey?: 'ECONOMY' | 'STANDARD' | 'EXPRESS' | 'OVERNIGHT';
 }
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
@@ -135,14 +138,104 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       );
     }
 
-    const rates: ShippingRate[] = shippoRates.map((rate: { objectId?: string; object_id?: string; amount?: string; currency?: string; provider?: string; servicelevel?: { name?: string; token?: string }; estimatedDays?: number }) => ({
-      id: rate.object_id ?? rate.objectId ?? '',
-      serviceName: rate.servicelevel?.name ?? rate.servicelevel?.token ?? 'Standard',
-      carrier: rate.provider ?? 'Unknown',
-      price: parseFloat(rate.amount ?? '0'),
-      currency: rate.currency ?? 'USD',
-      deliveryDays: rate.estimatedDays,
-    }));
+    const mappedRates: ShippingRate[] = shippoRates.map(
+      (rate: {
+        objectId?: string;
+        object_id?: string;
+        amount?: string;
+        currency?: string;
+        provider?: string;
+        servicelevel?: { name?: string; token?: string };
+        estimatedDays?: number;
+      }) => ({
+        id: rate.object_id ?? rate.objectId ?? '',
+        serviceName: rate.servicelevel?.name ?? rate.servicelevel?.token ?? 'Standard',
+        carrier: rate.provider ?? 'Unknown',
+        price: parseFloat(rate.amount ?? '0'),
+        currency: rate.currency ?? 'USD',
+        deliveryDays: rate.estimatedDays,
+        serviceToken: rate.servicelevel?.token,
+      })
+    );
+
+    const allowedTokensByTier: {
+      key: ShippingRate['tierKey'];
+      label: string;
+      minDays: number;
+      maxDays: number;
+      tokens: string[];
+    }[] = [
+      {
+        key: 'ECONOMY',
+        label: 'Economy',
+        minDays: 3,
+        maxDays: 5,
+        tokens: ['ups_ground_saver', 'usps_ground_advantage'],
+      },
+      {
+        key: 'STANDARD',
+        label: 'Standard (Recommended)',
+        minDays: 2,
+        maxDays: 3,
+        tokens: ['ups_ground', 'usps_priority_mail'],
+      },
+      {
+        key: 'EXPRESS',
+        label: 'Express',
+        minDays: 1,
+        maxDays: 2,
+        tokens: ['ups_2nd_day_air'],
+      },
+      {
+        key: 'OVERNIGHT',
+        label: 'Overnight',
+        minDays: 1,
+        maxDays: 1,
+        tokens: ['ups_next_day_air_saver'],
+      },
+    ];
+
+    const tieredRates: ShippingRate[] = [];
+
+    for (const tier of allowedTokensByTier) {
+      const candidates = mappedRates.filter(
+        (rate) =>
+          rate.price > 0 && rate.serviceToken && tier.tokens.includes(rate.serviceToken)
+      );
+
+      if (candidates.length === 0) continue;
+
+      const cheapest = candidates.reduce((best, current) =>
+        current.price < best.price ? current : best
+      );
+
+      tieredRates.push({
+        ...cheapest,
+        serviceName: tier.label,
+        deliveryDays: tier.maxDays,
+        tierKey: tier.key,
+      });
+    }
+
+    let rates: ShippingRate[];
+    if (tieredRates.length > 0) {
+      // Keep consistent order from slowest to fastest
+      const order: ShippingRate['tierKey'][] = [
+        'ECONOMY',
+        'STANDARD',
+        'EXPRESS',
+        'OVERNIGHT',
+      ];
+      rates = tieredRates.sort(
+        (a, b) => order.indexOf(a.tierKey!) - order.indexOf(b.tierKey!)
+      );
+    } else {
+      // Fallback to up to four cheapest generic rates if mapping fails
+      rates = mappedRates
+        .filter((rate) => rate.price > 0)
+        .sort((a, b) => a.price - b.price)
+        .slice(0, 4);
+    }
 
     const shipmentId = (shipment as { objectId?: string; object_id?: string }).object_id ?? (shipment as { objectId?: string }).objectId ?? '';
 

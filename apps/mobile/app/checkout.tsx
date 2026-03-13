@@ -396,36 +396,59 @@ export default function CheckoutScreen() {
               </View>
             ) : shippingRates.length > 0 ? (
               <View style={styles.shippingOptions}>
-                {shippingRates.map((rate) => (
-                  <TouchableOpacity
-                    key={rate.id}
-                    style={[
-                      styles.shippingOption,
-                      selectedShipping?.id === rate.id && styles.shippingOptionSelected,
-                    ]}
-                    onPress={() => setSelectedShipping(rate)}
-                  >
-                    <View style={styles.shippingOptionContent}>
-                      <View style={styles.shippingOptionLeft}>
-                        <Ionicons
-                          name={selectedShipping?.id === rate.id ? 'radio-button-on' : 'radio-button-off'}
-                          size={24}
-                          color={selectedShipping?.id === rate.id ? '#0063e1' : 'rgba(255, 255, 255, 0.5)'}
-                        />
-                        <View style={styles.shippingOptionInfo}>
-                          <Text style={styles.shippingOptionName}>{rate.serviceName}</Text>
-                          <Text style={styles.shippingOptionCarrier}>{rate.carrier}</Text>
-                          {rate.estimatedDays && (
-                            <Text style={styles.shippingOptionDays}>
-                              Estimated {rate.estimatedDays} days
-                            </Text>
-                          )}
+                {shippingRates.map((rate) => {
+                  const tierName = rate.serviceName;
+                  const isSelected = selectedShipping?.id === rate.id;
+                  const isRecommended = tierName.toLowerCase().startsWith('standard');
+
+                  let deliveryWindow = '';
+                  if (tierName.toLowerCase().startsWith('economy')) {
+                    deliveryWindow = '3–5 days';
+                  } else if (tierName.toLowerCase().startsWith('standard')) {
+                    deliveryWindow = '2–3 days';
+                  } else if (tierName.toLowerCase().startsWith('express')) {
+                    deliveryWindow = '1–2 days';
+                  } else if (tierName.toLowerCase().startsWith('overnight')) {
+                    deliveryWindow = '1 day';
+                  } else if (rate.estimatedDays) {
+                    deliveryWindow = `Estimated ${rate.estimatedDays} days`;
+                  }
+
+                  return (
+                    <TouchableOpacity
+                      key={rate.id}
+                      style={[
+                        styles.shippingOption,
+                        isSelected && styles.shippingOptionSelected,
+                      ]}
+                      onPress={() => setSelectedShipping(rate)}
+                    >
+                      <View style={styles.shippingOptionContent}>
+                        <View style={styles.shippingOptionLeft}>
+                          <Ionicons
+                            name={isSelected ? 'radio-button-on' : 'radio-button-off'}
+                            size={24}
+                            color={isSelected ? '#0063e1' : 'rgba(255, 255, 255, 0.5)'}
+                          />
+                          <View style={styles.shippingOptionInfo}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={styles.shippingOptionName}>{tierName}</Text>
+                              {isRecommended && (
+                                <View style={styles.recommendedBadge}>
+                                  <Text style={styles.recommendedBadgeText}>Recommended</Text>
+                                </View>
+                              )}
+                            </View>
+                            {!!deliveryWindow && (
+                              <Text style={styles.shippingOptionDays}>{deliveryWindow}</Text>
+                            )}
+                          </View>
                         </View>
+                        <Text style={styles.shippingOptionPrice}>${rate.price.toFixed(2)}</Text>
                       </View>
-                      <Text style={styles.shippingOptionPrice}>${rate.price.toFixed(2)}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             ) : (
               <Text style={styles.noRatesText}>Enter a valid ZIP code to see shipping options</Text>
@@ -609,7 +632,7 @@ const styles = StyleSheet.create({
   },
   shippingOptionDays: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   shippingOptionPrice: {
     fontSize: 18,
@@ -621,6 +644,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     padding: 20,
+  },
+  recommendedBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 99, 225, 0.6)',
+    backgroundColor: 'rgba(0, 99, 225, 0.15)',
+  },
+  recommendedBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#60a5fa',
   },
   errorContainer: {
     flexDirection: 'row',

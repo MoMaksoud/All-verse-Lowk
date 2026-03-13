@@ -343,20 +343,31 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
             </div>
           ) : shippingRates.length > 0 ? (
             <div className="space-y-3">
-              {shippingRates.map((rate, index) => (
-                <label
-                  key={index}
-                  className={`flex items-start p-4 border rounded-lg cursor-pointer transition-all ${
-                    selectedShipping?.rate === rate
-                      ? 'border-accent-500 bg-accent-500/10'
-                      : 'border-dark-500 bg-dark-600 hover:border-dark-400'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="shipping-option"
-                    checked={selectedShipping?.rate === rate}
-                    onChange={() => {
+              {shippingRates.map((rate, index) => {
+                const tierName = rate.serviceName;
+                const isSelected = selectedShipping?.rate === rate;
+                const isRecommended = tierName.toLowerCase().startsWith('standard');
+
+                let deliveryWindow = '';
+                if (tierName.toLowerCase().startsWith('economy')) {
+                  deliveryWindow = '3–5 days';
+                } else if (tierName.toLowerCase().startsWith('standard')) {
+                  deliveryWindow = '2–3 days';
+                } else if (tierName.toLowerCase().startsWith('express')) {
+                  deliveryWindow = '1–2 days';
+                } else if (tierName.toLowerCase().startsWith('overnight')) {
+                  deliveryWindow = '1 day';
+                } else if (rate.deliveryDays) {
+                  deliveryWindow = `${rate.deliveryDays} ${
+                    rate.deliveryDays === 1 ? 'day' : 'days'
+                  }`;
+                }
+
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
                       if (shipmentId) {
                         setSelectedShipping({
                           rate,
@@ -365,28 +376,44 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
                         });
                       }
                     }}
-                    className="mt-1 mr-4 w-4 h-4 text-accent-500 focus:ring-accent-500 focus:ring-2"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <div>
-                        <span className="font-semibold text-white">{rate.carrier}</span>
-                        <span className="text-gray-400 ml-2">{rate.serviceName}</span>
+                    className={`w-full text-left rounded-xl border px-4 py-4 md:px-5 md:py-5 transition-all flex items-center justify-between gap-4 ${
+                      isSelected
+                        ? 'border-accent-500 bg-accent-500/10 shadow-lg shadow-accent-500/20'
+                        : 'border-dark-500 bg-dark-600 hover:border-dark-400 hover:bg-dark-500'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`mt-1 h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                          isSelected ? 'border-accent-500' : 'border-gray-500'
+                        }`}
+                      >
+                        {isSelected && (
+                          <div className="h-2.5 w-2.5 rounded-full bg-accent-500" />
+                        )}
                       </div>
-                      <span className="font-semibold text-white">
-                        {formatCurrency(rate.price)}
-                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">{tierName}</span>
+                          {isRecommended && (
+                            <span className="rounded-full bg-accent-500/15 px-2 py-0.5 text-xs font-medium text-accent-300 border border-accent-500/40">
+                              Recommended
+                            </span>
+                          )}
+                        </div>
+                        {deliveryWindow && (
+                          <p className="mt-1 text-sm text-gray-400">{deliveryWindow}</p>
+                        )}
+                      </div>
                     </div>
-                    {rate.deliveryDays && (
-                      <p className="text-sm text-gray-400">
-                        Estimated delivery: {rate.deliveryDays} {rate.deliveryDays === 1 ? 'day' : 'days'}
-                        {rate.deliveryDate && ` (${new Date(rate.deliveryDate).toLocaleDateString()})`}
-                        {rate.deliveryDateGuaranteed && ' • Guaranteed'}
+                    <div className="text-right">
+                      <p className="text-base md:text-lg font-semibold text-white">
+                        {formatCurrency(rate.price)}
                       </p>
-                    )}
-                  </div>
-                </label>
-              ))}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <p className="text-gray-400 text-sm">No shipping rates available for this address.</p>
