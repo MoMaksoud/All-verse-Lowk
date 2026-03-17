@@ -247,6 +247,40 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This will:\n\n' +
+        '• Delete your account and all your data\n' +
+        '• Delete all your listings and photos\n' +
+        '• Remove your profile from search results\n' +
+        '• Prevent others from messaging you\n' +
+        '• Archive your chat history\n\n' +
+        'This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await apiClient.delete('/api/account/delete', true);
+              if (response.ok) {
+                await signOut();
+                router.replace('/auth/signin');
+              } else {
+                const data = await response.json();
+                Alert.alert('Error', data.error || data.details || 'Failed to delete account');
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'Failed to delete account. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading && isAuthenticated === null) {
     return <LoadingSpinner message="Loading profile..." />;
   }
@@ -413,6 +447,12 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Ionicons name="log-out-outline" size={20} color="#fff" />
           <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={20} color="#ef4444" />
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
         </TouchableOpacity>
 
         {/* Listings Section */}
@@ -582,6 +622,24 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    padding: 14,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    gap: 8,
+  },
+  deleteAccountText: {
+    color: '#ef4444',
     fontSize: 16,
     fontWeight: '600',
   },
