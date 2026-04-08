@@ -1,11 +1,14 @@
 import type {
     RefinementQuestion,
     RefinementQuestionResponse,
+    SearchRequest,
     SearchResults,
     SearchResultsResponse,
     SearchState,
     ServerSearchResponse,
 } from "./types";
+import { normalizeSearchState } from "./state";
+import { runPipeline } from "./pipeline/runPipeline";
 
 function isDebugSearchEnabled(value: string | undefined): boolean {
     return value === "1" || value === "true";
@@ -38,29 +41,6 @@ async function logSearchEvent(args: {
 
 function randomId() {
     return crypto.randomUUID();
-}
-
-function getServerBaseUrl(): string {
-    if (process.env.NODE_ENV !== "production") {
-        const port = process.env.PORT || "3000";
-        return `http://localhost:${port}`;
-    }
-
-    const configured =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        process.env.APP_URL ||
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        process.env.SITE_URL;
-
-    if (configured && configured.trim().length > 0) {
-        return configured.replace(/\/+$/, "");
-    }
-
-    if (process.env.VERCEL_URL) {
-        return `https://${process.env.VERCEL_URL}`;
-    }
-
-    return "http://localhost:3000";
 }
 
 /**
@@ -114,12 +94,13 @@ export async function serverSearch(args: {
     const debugSearch =
         args.debugSearch ?? isDebugSearchEnabled(process.env.DEBUG_SEARCH);
     const startedAt = Date.now();
+    let resolvedQuery = args.query;
 
     let state: SearchState = {
         rawQuery: args.query,
         category: args.category || undefined,
         brand: args.brand ? [args.brand] : undefined,
-        attributes: args.model ? { model: args.model } : undefined,
+        model: args.model?.trim() || undefined,
         refinementTurn: typeof args.refinementTurn === "number" ? Math.max(0, Math.floor(args.refinementTurn)) : 0,
         queryRewrite: args.queryRewrite?.trim() || undefined,
     };
@@ -130,13 +111,14 @@ export async function serverSearch(args: {
             const decoded = decodeURIComponent(args.searchStateParam);
             const parsed = JSON.parse(decoded) as SearchState;
             if (parsed && typeof parsed === "object") {
-                state = parsed;
+                state = normalizeSearchState(parsed);
                 if (!state.rawQuery) state.rawQuery = args.query;
             }
         } catch {
             // ignore bad searchState and fall back to generated state
         }
     }
+    state = normalizeSearchState(state);
 
     try {
         debugLog(debugSearch, searchId, "serverSearch.start", {
@@ -152,78 +134,50 @@ export async function serverSearch(args: {
             queryRewrite: args.queryRewrite,
         });
 
-        const params = new URLSearchParams({
-            q: state.rawQuery || args.query,
+        const request: SearchRequest = {
+            query: state.rawQuery || args.query,
             provider: "auto",
-            source: "both",
-            debugSearch: debugSearch ? "1" : "0",
             traceId: searchId,
+            debug: debugSearch,
+            source: "both",
+            limit: 12,
+            searchState: state,
+            refinementField: args.refinementField,
+            refinementValue: args.refinementValue,
+            refinementTurn:
+                typeof args.refinementTurn === "number" && Number.isFinite(args.refinementTurn)
+                    ? Math.max(0, Math.floor(args.refinementTurn))
+                    : state.refinementTurn,
+            queryRewrite: args.queryRewrite?.trim() || state.queryRewrite,
+            lastUserMessage: state.rawQuery || args.query,
+            conversationalMode: Boolean(args.searchStateParam || args.refinementField),
+        };
+
+        debugLog(debugSearch, searchId, "serverSearch.pipeline.request", {
+            query: request.query,
+            provider: request.provider,
+            source: request.source,
+            conversationalMode: request.conversationalMode,
+            refinementField: request.refinementField,
         });
 
-        // conversational mode if state/refinement exists
-        if (args.searchStateParam || args.refinementField) {
-            params.set("conversational", "1");
-        }
-
-        // always pass state if we have it
-        params.set("searchState", JSON.stringify(state));
-        params.set("lastUserMessage", state.rawQuery || args.query);
-
-        if (args.refinementField) {
-            params.set("refinementField", args.refinementField);
-        }
-        if (args.refinementValue) {
-            params.set("refinementValue", args.refinementValue);
-        }
-        if (typeof args.refinementTurn === "number" && Number.isFinite(args.refinementTurn)) {
-            params.set("refinementTurn", String(Math.max(0, Math.floor(args.refinementTurn))));
-        }
-        if (args.queryRewrite?.trim()) {
-            params.set("queryRewrite", args.queryRewrite.trim());
-        }
-
-        debugLog(debugSearch, searchId, "serverSearch.api.request", {
-            baseUrl: getServerBaseUrl(),
-            path: "/api/search",
-            params: params.toString(),
-        });
-
-        const response = await fetch(
-            `${getServerBaseUrl()}/api/search?${params.toString()}`,
-            {
-                method: "GET",
-                cache: "no-store",
-                headers: {
-                    "x-search-trace-id": searchId,
-                    "x-search-debug": debugSearch ? "1" : "0",
-                },
-            }
-        );
-
-        debugLog(debugSearch, searchId, "serverSearch.api.response", {
-            status: response.status,
-            ok: response.ok,
-            durationMs: Date.now() - startedAt,
-        });
-
-        if (!response.ok) {
-            const errorPayload = await response
-                .json()
-                .catch(() => ({} as { error?: string; traceId?: string }));
-
-            debugLog(debugSearch, searchId, "serverSearch.api.error", errorPayload);
-
-            throw new Error(errorPayload.error || "Search failed.");
-        }
-
-        const payload = (await response.json()) as
+        const payload = (await runPipeline(request)) as
             | ApiResultsPayload
             | ApiRefinementPayload;
+
+        debugLog(debugSearch, searchId, "serverSearch.pipeline.response", {
+            durationMs: Date.now() - startedAt,
+            type: isApiRefinementPayload(payload) ? "refinement_question" : "results",
+        });
 
         let results: SearchResults | null = null;
         let refinementQuestion: RefinementQuestion | null = null;
 
         if (isApiRefinementPayload(payload)) {
+            resolvedQuery =
+                payload.searchState?.queryRewrite?.trim() ||
+                payload.searchState?.rawQuery?.trim() ||
+                args.query;
             refinementQuestion = {
                 field: payload.field,
                 question: payload.question,
@@ -235,6 +189,9 @@ export async function serverSearch(args: {
                 reason: payload.reason ?? "Need one more detail to improve precision.",
             };
         } else if (isApiResultsPayload(payload)) {
+            resolvedQuery =
+                (typeof payload.data.query === "string" && payload.data.query.trim()) ||
+                args.query;
             results = {
                 summary: payload.data.summary ?? null,
                 internalResults: payload.data.internalResults ?? [],
@@ -264,7 +221,7 @@ export async function serverSearch(args: {
         });
 
         return {
-            query: args.query,
+            query: resolvedQuery,
             imageSearch: args.imageSearch,
             results,
             refinementQuestion,
@@ -278,7 +235,7 @@ export async function serverSearch(args: {
         });
 
         return {
-            query: args.query,
+            query: resolvedQuery,
             imageSearch: args.imageSearch,
             results: null,
             refinementQuestion: null,

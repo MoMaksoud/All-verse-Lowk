@@ -1,5 +1,9 @@
 # Search Architecture Baseline
 
+> Note:
+> This file captures the earlier baseline architecture.
+> For the current upgraded `/search` system, read [SEARCH_REFINEMENT_UPGRADE_README.md](./SEARCH_REFINEMENT_UPGRADE_README.md).
+
 This document captures the current search architecture baseline for `apps/web`, why recent changes were made, known issues, and the next upgrade path.
 
 ## 0) Idea Origin

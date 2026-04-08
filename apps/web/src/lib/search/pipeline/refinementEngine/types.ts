@@ -18,6 +18,9 @@ export type VerticalSlotConfig = {
     priority: SlotPriority;
     optionGeneration: OptionGenerationStrategy;
     taxonomyOptions?: string[];
+    askOnBroadQuery?: boolean;
+    triggerKeywords?: string[];
+    satisfiedByQueryKeywords?: string[];
 };
 
 export type VerticalSchema = {
