@@ -32,6 +32,7 @@ export function DynamicBackground({
   const mouseRef = useRef({ x: 0, y: 0 });
   const lastTimeRef = useRef(0);
   const [isVisible, setIsVisible] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const intensitySettings = {
     low: { elementCount: 5, speed: 0.08, opacity: 0.08 },
@@ -268,9 +269,24 @@ export function DynamicBackground({
     };
   }, [showParticles, setupCanvas, initElements, animate, handleMouseMove, handleVisibilityChange]);
 
-  // Check for reduced motion preference
-  const prefersReducedMotion = typeof window !== 'undefined' && 
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+
+    updatePreference();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updatePreference);
+      return () => mediaQuery.removeEventListener('change', updatePreference);
+    }
+
+    mediaQuery.addListener(updatePreference);
+    return () => mediaQuery.removeListener(updatePreference);
+  }, []);
 
   if (prefersReducedMotion) {
     return (
@@ -307,4 +323,3 @@ export const cleanupDynamicBackground = () => {
   // This would be called when unmounting or route changes
   // The useEffect cleanup handles most of this automatically
 };
-

@@ -3,6 +3,10 @@ import { firestoreServices } from '@/lib/services/firestore';
 import { shippo } from '@/lib/shippo';
 import { ProfileService } from '@/lib/firestore';
 import { calculateCheckoutTotals, DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
+import {
+  findMatchingShippingRate,
+  normalizeShippoRates,
+} from '@/lib/payments/shippingRates';
 
 type CartItemInput = {
   listingId: string;
@@ -21,6 +25,7 @@ type ShippingAddressInput = {
 };
 
 type SelectedShippingInput = {
+  rateId?: string;
   carrier?: string;
   serviceName?: string;
 };
@@ -100,10 +105,6 @@ function getPackageDimensions(
   };
 }
 
-function normalizeRateKey(carrier?: string, serviceName?: string) {
-  return `${(carrier || '').trim().toLowerCase()}::${(serviceName || '').trim().toLowerCase()}`;
-}
-
 async function quoteTrustedShipping(params: {
   sellerId: string;
   buyerAddress: ReturnType<typeof sanitizeShippingAddress>;
@@ -155,34 +156,23 @@ async function quoteTrustedShipping(params: {
     (shipment as { object_id?: string; objectId?: string }).objectId ??
     '';
 
-  const rates = (shipment.rates ?? []).map((rate) => ({
-    carrier: rate.provider ?? 'Unknown',
-    serviceName: rate.servicelevel?.name ?? rate.servicelevel?.token ?? 'Standard',
-    price: Number.parseFloat(rate.amount ?? '0'),
-    rateId: (rate as { object_id?: string; objectId?: string }).object_id ?? (rate as { object_id?: string; objectId?: string }).objectId ?? '',
-  }));
+  const rates = normalizeShippoRates(shipment.rates ?? []);
 
   if (rates.length === 0) {
     throw new Error('No shipping rates available for this cart');
   }
 
-  const sortedRates = [...rates].sort((a, b) => a.price - b.price);
-  const requestedRateKey = normalizeRateKey(
-    params.selectedShipping?.carrier,
-    params.selectedShipping?.serviceName
-  );
+  const selectedRate = findMatchingShippingRate(rates, params.selectedShipping) ?? rates[0];
 
-  const selectedRate =
-    requestedRateKey !== '::'
-      ? sortedRates.find((rate) => normalizeRateKey(rate.carrier, rate.serviceName) === requestedRateKey)
-      : sortedRates[0];
-
-  if (!selectedRate || !selectedRate.rateId || !shipmentId) {
+  if (!selectedRate || !selectedRate.id || !shipmentId) {
     throw new Error('Selected shipping option is no longer available');
   }
 
   return {
-    ...selectedRate,
+    carrier: selectedRate.carrier,
+    serviceName: selectedRate.serviceName,
+    price: selectedRate.price,
+    rateId: selectedRate.id,
     shipmentId,
   };
 }
