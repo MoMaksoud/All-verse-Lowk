@@ -95,8 +95,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
   const calculateTotals = () => {
     const subtotal = cartItems.reduce((sum, item) => sum + (item.priceAtAdd * item.qty), 0);
     const tax = subtotal * 0.08; // 8% tax
-    const fees = subtotal * 0.029 + 0.30; // Stripe fees
     const shipping = selectedShipping?.rate.price || 0;
+    const fees = (subtotal + tax + shipping) * 0.029 + 0.30; // Stripe fees
     const total = subtotal + tax + fees + shipping;
 
     setTotals({ subtotal, tax, fees, shipping, total });
@@ -104,6 +104,15 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
 
   const fetchShippingRates = async () => {
     if (!shippingAddress.zip || shippingAddress.zip.length < 5) {
+      return;
+    }
+
+    const toZip = shippingAddress.zip.replace(/[^\d]/g, '').slice(0, 5);
+    if (toZip.length < 5) {
+      setRatesError('ZIP code must be at least 5 digits');
+      setShippingRates([]);
+      setSelectedShipping(null);
+      setShipmentId(null);
       return;
     }
 
@@ -171,7 +180,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
         width: shipping.width || 8,
         height: shipping.height || 6,
         fromZip,
-        toZip: shippingAddress.zip,
+        toZip,
       });
 
       if (!ratesResponse.ok) {
@@ -303,7 +312,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
             <input
               type="text"
               value={shippingAddress.zip}
-              onChange={(e) => setShippingAddress(prev => ({ ...prev, zip: e.target.value }))}
+              onChange={(e) => setShippingAddress(prev => ({
+                ...prev,
+                zip: e.target.value.replace(/[^\d\s-]/g, ''),
+              }))}
               className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
               required
             />

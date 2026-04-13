@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -185,8 +186,8 @@ export default function CheckoutScreen() {
   const calculateTotals = () => {
     const subtotal = cartItems.reduce((sum, item) => sum + item.priceAtAdd * item.qty, 0);
     const tax = subtotal * 0.08; // 8% tax
-    const fees = subtotal * 0.029 + 0.30; // Stripe fees
     const shipping = selectedShipping?.price || 0;
+    const fees = (subtotal + tax + shipping) * 0.029 + 0.30; // Stripe fees
     const total = subtotal + tax + fees + shipping;
 
     return { subtotal, tax, fees, shipping, total };
@@ -213,9 +214,9 @@ export default function CheckoutScreen() {
     try {
       setProcessing(true);
 
-      // Create payment intent
+      // Create hosted Stripe Checkout session
       const response = await apiClient.post(
-        '/api/payments/create-intent',
+        '/api/payments/create-checkout-session',
         {
           cartItems,
           shippingAddress,
@@ -233,25 +234,14 @@ export default function CheckoutScreen() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || data.message || 'Failed to create payment intent');
+        throw new Error(data.error || data.message || 'Failed to create checkout session');
       }
 
-      // For mobile, we'll redirect to a web checkout or use Stripe's payment sheet
-      // For now, show success and redirect
-      Alert.alert(
-        'Payment Intent Created',
-        'Redirecting to payment...',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // TODO: Integrate Stripe Payment Sheet for mobile
-              // For now, redirect to orders page
-              router.push('/(tabs)/profile');
-            },
-          },
-        ]
-      );
+      if (!data.url) {
+        throw new Error('No checkout URL returned');
+      }
+
+      await Linking.openURL(data.url);
     } catch (error: any) {
       console.error('Checkout error:', error);
       Alert.alert('Checkout Failed', error?.message || 'Failed to process checkout');
@@ -722,4 +712,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
