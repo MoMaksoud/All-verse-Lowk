@@ -12,10 +12,14 @@ import { SellCTASection } from "@/components/search/SellCTASection";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 import { getPopularSearches } from "@/lib/searchAnalytics";
+import { normalizeSearchState } from "@/lib/search/state";
 import type {
     ClientRefinementQuestion,
     ClientSearchResults,
+    RefinementQuestionResponse,
     SearchState,
+    SearchResponse,
+    SearchResultsResponse,
     ServerRefinementQuestion,
     ServerSearchResults,
 } from "@/lib/search/types";
@@ -175,9 +179,49 @@ function getRefinementSearchState(
 ): SearchState | null {
     if (!refinement || typeof refinement !== "object") return null;
     if ("searchState" in refinement && refinement.searchState && typeof refinement.searchState === "object") {
-        return refinement.searchState;
+        return normalizeSearchState(refinement.searchState);
     }
     return null;
+}
+
+function normalizeRefinementQuestion(
+    refinement: ShellRefinementQuestion | null
+): ShellRefinementQuestion | null {
+    if (!refinement) return null;
+    const searchState = getRefinementSearchState(refinement);
+    return searchState ? { ...refinement, searchState } : refinement;
+}
+
+function buildSearchPageUrl(args: {
+    query: string;
+    searchState?: SearchState | null;
+    debugSearch: boolean;
+    imageSearch: boolean;
+}): string {
+    const params = new URLSearchParams();
+    params.set("query", args.query);
+
+    if (args.searchState) {
+        params.set("searchState", JSON.stringify(args.searchState));
+    }
+
+    if (args.debugSearch) {
+        params.set("debugSearch", "1");
+    }
+
+    if (args.imageSearch) {
+        params.set("imageSearch", "true");
+    }
+
+    return `/search?${params.toString()}`;
+}
+
+function isRefinementResponse(payload: SearchResponse): payload is RefinementQuestionResponse {
+    return "type" in payload && payload.type === "refinement_question";
+}
+
+function isResultsResponse(payload: SearchResponse): payload is SearchResultsResponse {
+    return "data" in payload;
 }
 
 // MAIN COMPONENT
@@ -193,20 +237,36 @@ export default function SearchClientShell({
     console.warn(`[search-debug][${searchId}] SearchClientShell rendered with initialQuery="${initialQuery}", imageSearch=${imageSearch}, hasInitialResults=${Boolean(initialResults)}, hasInitialRefinementQuestion=${Boolean(initialRefinementQuestion)}, initialError=${initialError ? "yes" : "no"}`);
     const router = useRouter();
 
+    const normalizedInitialResults = useMemo(() => normalizeSearchResults(initialResults), [initialResults]);
+    const normalizedInitialRefinement = useMemo(
+        () => normalizeRefinementQuestion(initialRefinementQuestion),
+        [initialRefinementQuestion]
+    );
+
     const [searchInput, setSearchInput] = useState(initialQuery);
+    const [activeQuery, setActiveQuery] = useState(initialQuery);
+    const [activeResults, setActiveResults] = useState<ClientSearchResults | null>(normalizedInitialResults);
+    const [activeRefinement, setActiveRefinement] = useState<ShellRefinementQuestion | null>(normalizedInitialRefinement);
+    const [activeError, setActiveError] = useState<string | null>(initialError);
+    const [activeSearchState, setActiveSearchState] = useState<SearchState | null>(
+        getRefinementSearchState(normalizedInitialRefinement)
+    );
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         setSearchInput(initialQuery);
-    }, [initialQuery]);
+        setActiveQuery(initialQuery);
+        setActiveResults(normalizedInitialResults);
+        setActiveRefinement(normalizedInitialRefinement);
+        setActiveError(initialError);
+        setActiveSearchState(getRefinementSearchState(normalizedInitialRefinement));
+        setLoading(false);
+    }, [initialQuery, normalizedInitialResults, normalizedInitialRefinement, initialError]);
 
-    const normalizedInitialResults = useMemo(() => normalizeSearchResults(initialResults), [initialResults]);
-
-    const effectiveResults = normalizedInitialResults;
-    const effectiveRefinement = initialRefinementQuestion;
-    const effectiveError = initialError;
-
-    const loading = false;
-    const query = initialQuery || "";
+    const effectiveResults = activeResults;
+    const effectiveRefinement = activeRefinement;
+    const effectiveError = activeError;
+    const query = activeQuery || "";
     const internalResults = effectiveResults?.internalResults ?? [];
     const externalResults = effectiveResults?.externalResults ?? [];
     const totalCount = internalResults.length + externalResults.length;
@@ -238,33 +298,130 @@ export default function SearchClientShell({
         router.push(searchHref(q));
     };
 
-    const handleRefinementOption = (option: string) => {
+    const handleRefinementOption = async (option: string) => {
         if (!effectiveRefinement) return;
 
         const value = optionToValue(effectiveRefinement.field, option);
+        const refinementSearchState =
+            getRefinementSearchState(effectiveRefinement) ?? activeSearchState;
+        const rawQuery = refinementSearchState?.rawQuery?.trim() || query || initialQuery;
+        if (!rawQuery) return;
 
         const params = new URLSearchParams();
-        params.set("query", initialQuery);
+        params.set("q", rawQuery);
+        params.set("source", "both");
+        params.set("provider", "auto");
+        params.set("conversational", "1");
+        params.set("lastUserMessage", rawQuery);
+        params.set("refinementField", effectiveRefinement.field);
+        params.set("refinementValue", value);
 
         if (debugSearch) {
             params.set("debugSearch", "1");
         }
 
-        const refinementSearchState = getRefinementSearchState(effectiveRefinement);
         if (refinementSearchState) {
             params.set("searchState", JSON.stringify(refinementSearchState));
-            if (typeof refinementSearchState.refinementTurn === "number") {
-                params.set("refinementTurn", String(refinementSearchState.refinementTurn));
-            }
-            if (typeof refinementSearchState.queryRewrite === "string" && refinementSearchState.queryRewrite.trim()) {
-                params.set("queryRewrite", refinementSearchState.queryRewrite.trim());
-            }
         }
 
-        params.set("refinementField", effectiveRefinement.field);
-        params.set("refinementValue", value);
+        setLoading(true);
+        setActiveError(null);
 
-        router.push(`/search?${params.toString()}`);
+        try {
+            const response = await fetch(`/api/search?${params.toString()}`, {
+                method: "GET",
+                cache: "no-store",
+            });
+
+            const payload = await response.json().catch(() => null);
+            if (!response.ok || !payload) {
+                const errorMessage =
+                    payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
+                        ? payload.error
+                        : "Search failed.";
+                throw new Error(errorMessage);
+            }
+
+            const searchPayload = payload as SearchResponse;
+
+            if (isRefinementResponse(searchPayload)) {
+                const nextSearchState = normalizeSearchState(searchPayload.searchState);
+                const nextQuery =
+                    nextSearchState.queryRewrite?.trim() ||
+                    nextSearchState.rawQuery?.trim() ||
+                    query;
+
+                const nextRefinement = normalizeRefinementQuestion({
+                    field: searchPayload.field,
+                    question: searchPayload.question,
+                    options: searchPayload.options,
+                    searchState: nextSearchState,
+                    turn: searchPayload.turn,
+                    maxTurns: searchPayload.maxTurns,
+                    vertical: searchPayload.vertical,
+                    reason: searchPayload.reason,
+                });
+
+                setActiveQuery(nextQuery);
+                setSearchInput(nextQuery);
+                setActiveResults(null);
+                setActiveRefinement(nextRefinement);
+                setActiveSearchState(nextSearchState);
+
+                window.history.replaceState(
+                    {},
+                    "",
+                    buildSearchPageUrl({
+                        query: nextQuery,
+                        searchState: nextSearchState,
+                        debugSearch,
+                        imageSearch,
+                    })
+                );
+
+                return;
+            }
+
+            if (!isResultsResponse(searchPayload)) {
+                throw new Error("Unexpected search response shape.");
+            }
+
+            const nextSearchState = searchPayload.data.searchState
+                ? normalizeSearchState(searchPayload.data.searchState)
+                : refinementSearchState;
+            const nextQuery =
+                (typeof searchPayload.data.query === "string" && searchPayload.data.query.trim()) ||
+                nextSearchState?.queryRewrite?.trim() ||
+                nextSearchState?.rawQuery?.trim() ||
+                query;
+
+            setActiveQuery(nextQuery);
+            setSearchInput(nextQuery);
+            setActiveResults(
+                normalizeSearchResults({
+                    summary: searchPayload.data.summary ?? null,
+                    internalResults: searchPayload.data.internalResults ?? [],
+                    externalResults: searchPayload.data.externalResults ?? [],
+                })
+            );
+            setActiveRefinement(null);
+            setActiveSearchState(nextSearchState ?? null);
+
+            window.history.replaceState(
+                {},
+                "",
+                buildSearchPageUrl({
+                    query: nextQuery,
+                    searchState: nextSearchState,
+                    debugSearch,
+                    imageSearch,
+                })
+            );
+        } catch (error) {
+            setActiveError(error instanceof Error ? error.message : "Search failed.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -384,8 +541,9 @@ export default function SearchClientShell({
                                 <button
                                     key={option}
                                     type="button"
+                                    disabled={loading}
                                     onClick={() => handleRefinementOption(option)}
-                                    className="px-5 py-2.5 bg-white/10 hover:bg-accent-500/20 border border-white/20 hover:border-accent-500/50 rounded-xl text-white font-medium transition-colors"
+                                    className="px-5 py-2.5 bg-white/10 hover:bg-accent-500/20 border border-white/20 hover:border-accent-500/50 rounded-xl text-white font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
                                     {option}
                                 </button>

@@ -8,6 +8,7 @@ import type {
     SearchVertical,
 } from "../../types";
 import { getVerticalSchema } from "./verticalSchemas";
+import type { SlotPriority, VerticalSlotConfig } from "./types";
 
 function normalize(text: string): string {
     return text.trim().toLowerCase();
@@ -21,9 +22,25 @@ function capitalizePhrase(value: string): string {
         .join(" ");
 }
 
+const GENERIC_QUERY_HINTS: Partial<Record<SearchVertical, string[]>> = {
+    electronics: ["laptop", "notebook", "computer", "pc", "phone", "smartphone", "tablet", "camera", "monitor", "headphones"],
+    fashion: ["shoe", "shoes", "sneaker", "sneakers", "boot", "boots", "shirt", "dress", "jacket", "hoodie", "bag"],
+    home: ["sofa", "couch", "sectional", "chair", "table", "bed", "mattress", "lamp", "appliance"],
+    sports: ["bike", "bicycle", "golf", "tennis", "fitness"],
+};
+
+function tokenizeQuery(value: string): string[] {
+    return value
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2);
+}
+
 function readFieldValue(field: SearchRefinementField, state: SearchState): unknown {
     if (field === "brand") return state.brand;
     if (field === "model") return state.model ?? state.attributes?.model;
+    if (field === "shoe_type") return state.attributes?.shoe_type ?? state.attributes?.dress_shoe_style;
     if (field === "category") return state.category;
     if (field === "condition") return state.condition;
     if (field === "priceIntent") return state.priceIntent;
@@ -112,24 +129,114 @@ function buildOptions(args: {
     return limited.slice(0, 6);
 }
 
-function chooseCandidateField(
-    state: SearchState,
-    missingSlots: MissingImportantSlots,
-    quality: ResultQuality
-): SearchRefinementField | null {
-    if (quality.band === "good") return null;
+function priorityMatches(priority: SlotPriority, accepted: SlotPriority[]): boolean {
+    return accepted.includes(priority);
+}
 
-    if (missingSlots.highValue.length > 0) {
-        const field = missingSlots.highValue.find((slot) => isMissing(slot.field, state))?.field;
-        if (field) return field;
-    }
+function queryContainsAnyKeyword(query: string, keywords?: string[]): boolean {
+    if (!keywords || keywords.length === 0) return true;
+    const normalizedQuery = normalize(query);
+    return keywords.some((keyword) => normalizedQuery.includes(normalize(keyword)));
+}
 
-    if (quality.bad && missingSlots.mediumValue.length > 0) {
-        const field = missingSlots.mediumValue.find((slot) => isMissing(slot.field, state))?.field;
-        if (field) return field;
+function queryAlreadySatisfiesSlot(query: string, slot: VerticalSlotConfig): boolean {
+    if (!slot.satisfiedByQueryKeywords || slot.satisfiedByQueryKeywords.length === 0) return false;
+    const normalizedQuery = normalize(query);
+    return slot.satisfiedByQueryKeywords.some((keyword) => normalizedQuery.includes(normalize(keyword)));
+}
+
+function isBroadQuery(
+    query: string,
+    vertical: SearchVertical
+): boolean {
+    const tokens = tokenizeQuery(query);
+    if (tokens.length === 0 || tokens.length > 2) return false;
+
+    const hints = GENERIC_QUERY_HINTS[vertical] ?? [];
+    return tokens.some((token) => hints.includes(token));
+}
+
+function findFirstMissingSlot(args: {
+    schemaSlots: VerticalSlotConfig[];
+    state: SearchState;
+    priorities: SlotPriority[];
+    query?: string;
+    requireBroadTrigger?: boolean;
+    respectTriggerKeywords?: boolean;
+    skipQuerySatisfied?: boolean;
+}): VerticalSlotConfig | null {
+    for (const slot of args.schemaSlots) {
+        if (!priorityMatches(slot.priority, args.priorities)) continue;
+        if (!isMissing(slot.field, args.state)) continue;
+        if (args.respectTriggerKeywords && !queryContainsAnyKeyword(args.query ?? "", slot.triggerKeywords)) {
+            continue;
+        }
+        if (args.skipQuerySatisfied && queryAlreadySatisfiesSlot(args.query ?? "", slot)) {
+            continue;
+        }
+        if (args.requireBroadTrigger) {
+            if (!slot.askOnBroadQuery) continue;
+            if (!queryContainsAnyKeyword(args.query ?? "", slot.triggerKeywords)) continue;
+            if (queryAlreadySatisfiesSlot(args.query ?? "", slot)) continue;
+        }
+        return slot;
     }
 
     return null;
+}
+
+function chooseCandidateSlot(
+    query: string,
+    schemaSlots: VerticalSlotConfig[],
+    state: SearchState,
+    vertical: SearchVertical,
+    quality: ResultQuality
+): VerticalSlotConfig | null {
+    const broadQuery = isBroadQuery(query, vertical);
+
+    if (broadQuery) {
+        const exploratorySlot = findFirstMissingSlot({
+            schemaSlots,
+            state,
+            priorities: ["required", "highValue"],
+            query,
+            requireBroadTrigger: true,
+            respectTriggerKeywords: true,
+            skipQuerySatisfied: true,
+        });
+        if (exploratorySlot) return exploratorySlot;
+
+        const broadHighValueSlot = findFirstMissingSlot({
+            schemaSlots,
+            state,
+            priorities: ["required", "highValue"],
+            query,
+            respectTriggerKeywords: true,
+            skipQuerySatisfied: true,
+        });
+        if (broadHighValueSlot) return broadHighValueSlot;
+    }
+
+    if (quality.band !== "bad") return null;
+
+    return (
+        findFirstMissingSlot({
+            schemaSlots,
+            state,
+            priorities: ["required", "highValue"],
+            query,
+            respectTriggerKeywords: true,
+            skipQuerySatisfied: true,
+        }) ??
+        findFirstMissingSlot({
+            schemaSlots,
+            state,
+            priorities: ["mediumValue"],
+            query,
+            respectTriggerKeywords: true,
+            skipQuerySatisfied: true,
+        })
+    );
 }
 
 export function chooseNextQuestion(args: {
@@ -144,15 +251,18 @@ export function chooseNextQuestion(args: {
     const currentTurn = args.state.refinementTurn ?? 0;
     if (currentTurn >= args.maxTurns) return null;
 
-    const field = chooseCandidateField(args.state, args.missingSlots, args.quality);
-    if (!field) return null;
-
     const schema = getVerticalSchema(args.vertical);
-    const slotConfig = schema.slots.find((slot) => slot.field === field);
+    const slotConfig = chooseCandidateSlot(
+        args.query,
+        schema.slots,
+        args.state,
+        args.vertical,
+        args.quality
+    );
     if (!slotConfig) return null;
 
     const options = buildOptions({
-        field,
+        field: slotConfig.field,
         query: args.query,
         results: args.results,
         taxonomyOptions: slotConfig.taxonomyOptions,
@@ -161,7 +271,7 @@ export function chooseNextQuestion(args: {
     if (options.length < 2) return null;
 
     return {
-        field,
+        field: slotConfig.field,
         question: slotConfig.question,
         options,
         searchState: args.state,

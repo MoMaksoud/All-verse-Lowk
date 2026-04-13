@@ -9,7 +9,7 @@ export type SearchState = {
     rawQuery?: string;
     category?: string;
     brand?: string[];
-    model?: string;
+    model?: string; // Canonical model field; legacy callers may still send attributes.model
     condition?: Condition;
     priceIntent?: PriceIntent;
     attributes?: Record<string, string>;

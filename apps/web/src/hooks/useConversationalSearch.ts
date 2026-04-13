@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { SearchState } from '@/lib/search/types';
+import { normalizeSearchState, setSearchStateModel } from '@/lib/search/state';
 
 export interface SearchResults {
   externalResults: Array<{
@@ -89,7 +90,7 @@ export function useConversationalSearch() {
           vertical: data.vertical,
           reason: data.reason,
         });
-        setSearchState(data.searchState ?? state);
+        setSearchState(normalizeSearchState(data.searchState ?? state));
       } else if ('data' in data) {
         setResults({
           internalResults: data.data.internalResults ?? [],
@@ -97,7 +98,7 @@ export function useConversationalSearch() {
           summary: data.data.summary ?? null,
         });
         setRefinementQuestion(null);
-        setSearchState(state);
+        setSearchState(normalizeSearchState(state));
       } else {
         throw new Error('Unexpected search response shape');
       }
@@ -111,7 +112,7 @@ export function useConversationalSearch() {
 
   const search = useCallback(
     (query: string) => {
-      const state: SearchState = { rawQuery: query.trim() };
+      const state: SearchState = normalizeSearchState({ rawQuery: query.trim() });
       setSearchState(state);
       runSearch(state);
     },
@@ -120,7 +121,7 @@ export function useConversationalSearch() {
 
   const searchWithState = useCallback(
     (state: SearchState) => {
-      const normalized = { ...state, rawQuery: (state.rawQuery || '').trim() };
+      const normalized = normalizeSearchState({ ...state, rawQuery: (state.rawQuery || '').trim() });
       if (!normalized.rawQuery) {
         setError('Query is required');
         return;
@@ -139,9 +140,10 @@ export function useConversationalSearch() {
       else if (field === 'condition' && (v === 'new' || v === 'used')) next.condition = v as 'new' | 'used';
       else if (field === 'category') next.category = value.trim().toLowerCase() || undefined;
       else if (field === 'brand') next.brand = value.trim() ? [value.trim()] : undefined;
+      else if (field === 'model') Object.assign(next, setSearchStateModel(searchState, value));
       else if (field && value) next.attributes = { ...searchState.attributes, [field]: value };
 
-      const mergedState = { ...searchState, ...next };
+      const mergedState = normalizeSearchState({ ...searchState, ...next });
       setSearchState(mergedState);
       runSearch(mergedState, field, value);
     },

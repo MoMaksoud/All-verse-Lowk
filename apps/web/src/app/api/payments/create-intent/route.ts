@@ -1,57 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPaymentIntent, calculateTotalWithFees } from '@/lib/stripe';
+import { createPaymentIntent } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
 import { CreatePaymentInput } from '@/lib/types/firestore';
 import { withApi } from '@/lib/withApi';
+import { prepareTrustedCheckout } from '@/lib/payments/checkout';
+import { DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-
     const body = await req.json();
-    const { cartItems, shippingAddress, selectedShipping, taxRate = 0.08 } = body;
-
-    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
-      return NextResponse.json({ error: 'Cart items are required' }, { status: 400 });
-    }
-
-    if (!shippingAddress) {
-      return NextResponse.json({ error: 'Shipping address is required' }, { status: 400 });
-    }
-
-    // Calculate totals
-    let subtotal = 0;
-    const orderItems = [];
-
-    for (const cartItem of cartItems) {
-      const listing = await firestoreServices.listings.getListing(cartItem.listingId);
-      if (!listing) {
-        return NextResponse.json({ error: `Listing ${cartItem.listingId} not found` }, { status: 404 });
-      }
-
-      if (!listing.isActive || listing.inventory < cartItem.qty) {
-        return NextResponse.json({ 
-          error: `Listing ${listing.title} is not available or insufficient inventory` 
-        }, { status: 400 });
-      }
-
-      const itemTotal = cartItem.priceAtAdd * cartItem.qty;
-      subtotal += itemTotal;
-
-      orderItems.push({
-        listingId: cartItem.listingId,
-        title: listing.title,
-        qty: cartItem.qty,
-        unitPrice: cartItem.priceAtAdd,
-        sellerId: cartItem.sellerId,
-      });
-    }
-
-    const tax = subtotal * taxRate;
-    const shippingCost = selectedShipping?.price || 0;
-    const { fees, total } = calculateTotalWithFees(subtotal + shippingCost, tax);
+    const { cartItems, shippingAddress, selectedShipping } = body;
+    const checkout = await prepareTrustedCheckout({
+      cartItems,
+      shippingAddress,
+      selectedShipping,
+      taxRate: DEFAULT_TAX_RATE,
+    });
 
     // Prepare metadata for payment intent
     const metadata: Record<string, string> = {
@@ -61,17 +28,15 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     };
 
     // Add shipping metadata if selected
-    if (selectedShipping) {
-      metadata.shippingCarrier = selectedShipping.carrier;
-      metadata.shippingService = selectedShipping.serviceName;
-      metadata.shippingPrice = selectedShipping.price.toString();
-      metadata.shippingRateId = selectedShipping.rateId;
-      metadata.shippingShipmentId = selectedShipping.shipmentId;
-    }
+    metadata.shippingCarrier = checkout.shippingRate.carrier;
+    metadata.shippingService = checkout.shippingRate.serviceName;
+    metadata.shippingPrice = checkout.shippingRate.price.toString();
+    metadata.shippingRateId = checkout.shippingRate.rateId;
+    metadata.shippingShipmentId = checkout.shippingRate.shipmentId;
 
     // Create payment intent with application fee for Stripe Connect
     // Note: For Connect, we'll use transfers instead of application fees for simplicity
-    const paymentResult = await createPaymentIntent(total, 'usd', metadata);
+    const paymentResult = await createPaymentIntent(checkout.total, 'usd', metadata);
 
     if (!paymentResult.success) {
       return NextResponse.json({ error: paymentResult.error }, { status: 500 });
@@ -80,26 +45,16 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     // Create order in database
     const orderData: any = {
       buyerId: req.userId,
-      items: orderItems,
-      subtotal,
-      fees,
-      tax,
-      total,
+      items: checkout.orderItems,
+      subtotal: checkout.subtotal,
+      fees: checkout.fees,
+      tax: checkout.tax,
+      total: checkout.total,
       currency: 'USD',
       paymentIntentId: paymentResult.paymentIntentId!,
-      shippingAddress,
+      shippingAddress: checkout.shippingAddress,
+      shipping: checkout.shippingRate,
     };
-
-    // Include shipping metadata if available
-    if (selectedShipping) {
-      orderData.shipping = {
-        carrier: selectedShipping.carrier,
-        serviceName: selectedShipping.serviceName,
-        price: selectedShipping.price,
-        rateId: selectedShipping.rateId,
-        shipmentId: selectedShipping.shipmentId,
-      };
-    }
 
     const orderId = await firestoreServices.orders.createOrder(orderData);
 
@@ -125,7 +80,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     const paymentData: CreatePaymentInput = {
       orderId,
       userId: req.userId, // Track which user made the payment
-      amount: total,
+      amount: checkout.total,
       currency: 'USD',
       stripeEventId: paymentResult.paymentIntentId!,
       status: 'pending',
@@ -138,12 +93,16 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       clientSecret: paymentResult.clientSecret,
       orderId,
       paymentIntentId: paymentResult.paymentIntentId,
-      total,
-      fees,
-      tax,
+      total: checkout.total,
+      fees: checkout.fees,
+      tax: checkout.tax,
+      shipping: checkout.shippingRate.price,
     });
   } catch (error) {
     console.error('Error creating payment intent:', error);
-    return NextResponse.json({ error: 'Failed to create payment intent' }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to create payment intent' },
+      { status: error instanceof Error ? 400 : 500 }
+    );
   }
 });

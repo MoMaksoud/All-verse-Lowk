@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { loadStripe } from '@stripe/stripe-js';
+import { calculateStripeFees as calculateStripeFeesBase } from '@/lib/payments/pricing';
 
 // Server-side Stripe instance
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -49,6 +49,7 @@ export async function createCheckoutSession(params: {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
+      client_reference_id: params.orderId,
       line_items: [
         {
           quantity: 1,
@@ -66,6 +67,11 @@ export async function createCheckoutSession(params: {
       cancel_url: params.cancelUrl,
       metadata: {
         orderId: params.orderId,
+      },
+      payment_intent_data: {
+        metadata: {
+          orderId: params.orderId,
+        },
       },
     });
 
@@ -123,9 +129,7 @@ export function verifyWebhookSignature(payload: string, signature: string, secre
 
 // Calculate fees (example: 2.9% + $0.30)
 export function calculateStripeFees(amount: number): number {
-  const percentageFee = amount * 0.029; // 2.9%
-  const fixedFee = 0.30; // $0.30
-  return percentageFee + fixedFee;
+  return calculateStripeFeesBase(amount);
 }
 
 // Calculate total with fees
@@ -135,7 +139,7 @@ export function calculateTotalWithFees(subtotal: number, tax: number = 0): {
   fees: number;
   total: number;
 } {
-  const fees = calculateStripeFees(subtotal + tax);
+  const fees = calculateStripeFeesBase(subtotal + tax);
   const total = subtotal + tax + fees;
 
   return {

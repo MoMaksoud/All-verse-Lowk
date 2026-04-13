@@ -1,4 +1,5 @@
 import type { ExternalProvider, SearchState } from "../types";
+import { getSearchStateModel, normalizeSearchState, setSearchStateModel } from "../state";
 
 type LegacyRefinementQuestion = {
     field: string;
@@ -30,8 +31,7 @@ export function applyRefinementToState(prev: SearchState, field: string, value: 
     if (field === "brand") return { ...prev, brand: v ? [v] : undefined };
 
     if (field === "model") {
-        // model is stored under attributes
-        return setAttr(prev, "model", v || undefined);
+        return setSearchStateModel(prev, v || undefined);
     }
 
     if (field === "category") return { ...prev, category: v.toLowerCase() || undefined };
@@ -65,7 +65,7 @@ export function updateSearchState(
     refinementValue?: string,
     rawQuery?: string
 ): SearchState {
-    let state: SearchState = { ...baseState };
+    let state: SearchState = normalizeSearchState({ ...baseState });
     if (rawQuery && !state.rawQuery) state.rawQuery = rawQuery;
     if (state.refinementTurn == null) state.refinementTurn = 0;
 
@@ -75,7 +75,7 @@ export function updateSearchState(
         state.lastRefinementField = refinementField;
     }
 
-    return state;
+    return normalizeSearchState(state);
 }
 
 // --- heuristics helpers ---
@@ -114,7 +114,7 @@ export function decideRefinementQuestion(args: {
     const { query, state, resultCount, provider } = args;
 
     const missingBrand = !state.brand || state.brand.length === 0;
-    const missingModel = !state.attributes?.model;
+    const missingModel = !getSearchStateModel(state);
 
     // 1) If provider=auto OR shopping and query is generic for cars/parts, ask brand/model
     if ((provider === "auto" || provider === "shopping") && isGenericQuery(query) && (looksLikeCarQuery(query) || looksLikePartQuery(query))) {

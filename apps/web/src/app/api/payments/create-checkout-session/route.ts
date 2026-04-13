@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession, calculateTotalWithFees } from '@/lib/stripe';
+import { createCheckoutSession } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
 import { withApi } from '@/lib/withApi';
 import { assertStripeAndSendGridConfig } from '@/lib/config';
+import { prepareTrustedCheckout, getCheckoutBaseUrl } from '@/lib/payments/checkout';
+import { DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const baseUrl =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : 'https://allversegpt.com';
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
@@ -22,72 +19,34 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
   try {
     const body = await req.json();
-    const { cartItems, shippingAddress, selectedShipping, taxRate = 0.08 } = body;
-
-    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
-      return NextResponse.json({ error: 'Cart items are required' }, { status: 400 });
-    }
-
-    if (!shippingAddress) {
-      return NextResponse.json({ error: 'Shipping address is required' }, { status: 400 });
-    }
-
-    let subtotal = 0;
-    const orderItems: Array<{ listingId: string; title: string; qty: number; unitPrice: number; sellerId: string }> = [];
-
-    for (const cartItem of cartItems) {
-      const listing = await firestoreServices.listings.getListing(cartItem.listingId);
-      if (!listing) {
-        return NextResponse.json({ error: `Listing ${cartItem.listingId} not found` }, { status: 404 });
-      }
-      if (!listing.isActive || listing.inventory < cartItem.qty) {
-        return NextResponse.json({
-          error: `Listing ${listing.title} is not available or insufficient inventory`,
-        }, { status: 400 });
-      }
-      const itemTotal = cartItem.priceAtAdd * cartItem.qty;
-      subtotal += itemTotal;
-      orderItems.push({
-        listingId: cartItem.listingId,
-        title: listing.title,
-        qty: cartItem.qty,
-        unitPrice: cartItem.priceAtAdd,
-        sellerId: cartItem.sellerId,
-      });
-    }
-
-    const tax = subtotal * taxRate;
-    const shippingCost = selectedShipping?.price || 0;
-    const { fees, total } = calculateTotalWithFees(subtotal + shippingCost, tax);
+    const { cartItems, shippingAddress, selectedShipping } = body;
+    const checkout = await prepareTrustedCheckout({
+      cartItems,
+      shippingAddress,
+      selectedShipping,
+      taxRate: DEFAULT_TAX_RATE,
+    });
 
     const orderData: Record<string, unknown> = {
       buyerId: req.userId,
-      items: orderItems,
-      subtotal,
-      fees,
-      tax,
-      total,
+      items: checkout.orderItems,
+      subtotal: checkout.subtotal,
+      fees: checkout.fees,
+      tax: checkout.tax,
+      total: checkout.total,
       currency: 'USD',
-      shippingAddress,
+      shippingAddress: checkout.shippingAddress,
+      shipping: checkout.shippingRate,
     };
-
-    if (selectedShipping) {
-      (orderData as any).shipping = {
-        carrier: selectedShipping.carrier,
-        serviceName: selectedShipping.serviceName,
-        price: selectedShipping.price,
-        rateId: selectedShipping.rateId,
-        shipmentId: selectedShipping.shipmentId,
-      };
-    }
 
     const orderId = await firestoreServices.orders.createOrder(orderData as any);
 
+    const baseUrl = getCheckoutBaseUrl();
     const successUrl = `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${baseUrl}/cart`;
     
     const result = await createCheckoutSession({
-      amountTotalCents: Math.round(total * 100),
+      amountTotalCents: Math.round(checkout.total * 100),
       orderId,
       successUrl,
       cancelUrl,
@@ -101,17 +60,35 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       );
     }
 
+    await firestoreServices.orders.updateOrder(orderId, {
+      checkoutSessionId: result.sessionId,
+    });
+
+    await firestoreServices.payments.createPayment({
+      orderId,
+      userId: req.userId,
+      amount: checkout.total,
+      currency: 'USD',
+      stripeEventId: result.sessionId!,
+      status: 'pending',
+    });
+
     return NextResponse.json({
       success: true,
       url: result.url,
       sessionId: result.sessionId,
       orderId,
+      total: checkout.total,
+      subtotal: checkout.subtotal,
+      tax: checkout.tax,
+      fees: checkout.fees,
+      shipping: checkout.shippingRate.price,
     });
   } catch (error) {
     console.error('Create checkout session error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Server error' },
-      { status: 500 }
+      { status: error instanceof Error ? 400 : 500 }
     );
   }
 });

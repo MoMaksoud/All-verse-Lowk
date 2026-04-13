@@ -142,6 +142,14 @@ export interface ShippingAddress {
   country: string;
 }
 
+export interface OrderShippingSelection {
+  carrier: string;
+  serviceName: string;
+  price: number;
+  rateId: string;
+  shipmentId: string;
+}
+
 export interface FirestoreOrder {
   buyerId: string;
   items: OrderItem[];
@@ -153,15 +161,23 @@ export interface FirestoreOrder {
   currency: string;
   status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   paymentIntentId?: string; // Optional when using Stripe Checkout (session has its own payment intent)
+  checkoutSessionId?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   shippingAddress: ShippingAddress;
+  shipping?: OrderShippingSelection;
   /** Set to true after order/seller emails sent (idempotency). */
   emailSent?: boolean;
   /** When order/seller emails were sent. */
   emailSentAt?: Timestamp;
   /** When payment was completed (fulfillment idempotency). */
   paidAt?: Timestamp;
+  inventoryAdjusted?: boolean;
+  inventoryAdjustedAt?: Timestamp;
+  payoutsProcessed?: boolean;
+  payoutsProcessedAt?: Timestamp;
+  cartCleared?: boolean;
+  cartClearedAt?: Timestamp;
 }
 
 export interface CreateOrderInput {
@@ -174,14 +190,24 @@ export interface CreateOrderInput {
   currency: string;
   paymentIntentId?: string; // Optional when using Stripe Checkout
   shippingAddress: ShippingAddress;
+  shipping?: OrderShippingSelection;
+  checkoutSessionId?: string;
 }
 
 export interface UpdateOrderInput {
   status?: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   paymentIntentId?: string;
+  checkoutSessionId?: string;
+  shipping?: OrderShippingSelection;
   emailSent?: boolean;
   emailSentAt?: Timestamp;
   paidAt?: Timestamp;
+  inventoryAdjusted?: boolean;
+  inventoryAdjustedAt?: Timestamp;
+  payoutsProcessed?: boolean;
+  payoutsProcessedAt?: Timestamp;
+  cartCleared?: boolean;
+  cartClearedAt?: Timestamp;
 }
 
 // ============================================================================

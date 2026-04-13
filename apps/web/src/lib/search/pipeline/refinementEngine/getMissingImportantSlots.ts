@@ -10,6 +10,7 @@ import { getVerticalSchema } from "./verticalSchemas";
 function readSlotValue(field: SearchRefinementField, state: SearchState): unknown {
     if (field === "brand") return state.brand;
     if (field === "model") return state.model ?? state.attributes?.model;
+    if (field === "shoe_type") return state.attributes?.shoe_type ?? state.attributes?.dress_shoe_style;
     if (field === "category") return state.category;
     if (field === "condition") return state.condition;
     if (field === "priceIntent") return state.priceIntent;

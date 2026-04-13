@@ -19,8 +19,10 @@ import {
     inferVertical,
     runRefinementEngine,
 } from "./refinementEngine";
+import { buildDeterministicRewrite } from "./refinementEngine/rewriteQuery";
 
 import { updateSearchState } from "./refinements";
+import { applyDeterministicQueryUnderstanding } from "./queryUnderstanding";
 
 const MAX_REFINEMENT_TURNS = 2;
 const SEARCH_REFINEMENT_V2_ENABLED = process.env.SEARCH_REFINEMENT_V2 !== "0";
@@ -154,13 +156,41 @@ export async function runPipeline(req: SearchRequest): Promise<SearchResponse> {
     if (typeof req.refinementTurn === "number" && Number.isFinite(req.refinementTurn) && state.refinementTurn == null) {
         state.refinementTurn = Math.max(0, Math.floor(req.refinementTurn));
     }
-    let effectiveState: SearchState = { ...state };
-    let effectiveQuery = state.queryRewrite?.trim() || req.query;
+    const understanding = applyDeterministicQueryUnderstanding(
+        state.queryRewrite?.trim() || req.query,
+        state
+    );
+    let effectiveState: SearchState = { ...understanding.state };
+    let effectiveQuery = understanding.query;
     let confidenceScore: number | undefined;
     let confidenceReasons: SearchResultsResponse["meta"]["confidenceReasons"];
     let inferredVertical = inferVertical(effectiveQuery, effectiveState);
-    let rewriteUsed = false;
+    let rewriteUsed = effectiveQuery.trim().toLowerCase() !== req.query.trim().toLowerCase();
     let refinementTriggered = false;
+
+    if (req.refinementField && req.refinementValue) {
+        const deterministicRefinedQuery = buildDeterministicRewrite({
+            query: effectiveState.rawQuery?.trim() || req.query,
+            state: effectiveState,
+            vertical: inferredVertical,
+        });
+
+        if (
+            deterministicRefinedQuery &&
+            deterministicRefinedQuery.trim().toLowerCase() !== effectiveQuery.trim().toLowerCase()
+        ) {
+            effectiveQuery = deterministicRefinedQuery;
+            effectiveState.queryRewrite = deterministicRefinedQuery;
+            rewriteUsed = true;
+        }
+    }
+
+    debugLog(req.debug, req.traceId, "pipeline.query_understanding", {
+        appliedRule: understanding.appliedRule ?? null,
+        effectiveQuery,
+        brand: effectiveState.brand ?? null,
+        category: effectiveState.category ?? null,
+    });
 
     // 2) resolve provider (auto -> organic/shopping)
     let provider: ExternalProvider =
@@ -200,7 +230,7 @@ export async function runPipeline(req: SearchRequest): Promise<SearchResponse> {
         effectiveState = decision.state;
         confidenceScore = decision.resultQuality.score;
         confidenceReasons = decision.resultQuality.reasons;
-        rewriteUsed = decision.rewriteUsed;
+        rewriteUsed = rewriteUsed || decision.rewriteUsed;
 
         if (decision.action === "ask" && decision.question) {
             refinementTriggered = true;
@@ -247,6 +277,7 @@ export async function runPipeline(req: SearchRequest): Promise<SearchResponse> {
         if (decision.rewriteUsed && decision.rewrittenQuery && decision.rewrittenQuery !== effectiveQuery) {
             effectiveQuery = decision.rewrittenQuery;
             effectiveState.queryRewrite = decision.rewrittenQuery;
+            rewriteUsed = true;
             provider = req.provider === "auto"
                 ? chooseProviderAuto(effectiveQuery, effectiveState)
                 : req.provider;

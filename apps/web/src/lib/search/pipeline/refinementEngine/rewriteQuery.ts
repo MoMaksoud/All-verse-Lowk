@@ -23,13 +23,34 @@ export function buildDeterministicRewrite(args: {
     state: SearchState;
     vertical: SearchVertical;
 }): string {
+    const prioritizedAttributeKeys = [
+        "part_type",
+        "engine_model",
+        "phone_focus",
+        "camera_use",
+        "usage_profile",
+        "dress_shoe_style",
+        "shoe_type",
+        "sofa_style",
+        "bike_type",
+        "size",
+        "make",
+        "year_range",
+    ];
     const parts: string[] = [];
-    pushIfPresent(parts, args.state.attributes?.part_type);
-    pushIfPresent(parts, args.state.attributes?.engine_model);
+    for (const key of prioritizedAttributeKeys) {
+        pushIfPresent(parts, args.state.attributes?.[key]);
+    }
+    pushIfPresent(parts, args.state.priceIntent);
+    pushIfPresent(parts, args.state.condition);
     pushIfPresent(parts, args.state.brand?.[0]);
     pushIfPresent(parts, args.state.model ?? args.state.attributes?.model);
-    pushIfPresent(parts, args.state.attributes?.make);
-    pushIfPresent(parts, args.state.attributes?.year_range);
+
+    for (const [key, value] of Object.entries(args.state.attributes ?? {})) {
+        if (key === "model" || prioritizedAttributeKeys.includes(key)) continue;
+        pushIfPresent(parts, value);
+    }
+
     pushIfPresent(parts, args.state.category);
     pushIfPresent(parts, args.query);
 
