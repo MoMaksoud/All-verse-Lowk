@@ -12,9 +12,7 @@ import {
   MessageCircle, 
   ShoppingBag, 
   Heart, 
-  Bot, 
   LogOut, 
-  Settings, 
   ChevronDown, 
   UserCircle, 
   ShoppingCart, 
@@ -32,7 +30,6 @@ import { useChats } from '@/hooks/useChats';
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
   { name: 'Marketplace', href: '/listings', icon: ShoppingBag },
-  { name: 'AI Assistant', href: '/ai', icon: Bot },
   { name: 'Messages', href: '/messages', icon: MessageCircle },
 ];
 
@@ -336,14 +333,6 @@ const Navigation = memo(function Navigation() {
                           View Profile
                         </Link>
                         <Link
-                          href="/settings"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <Settings className="w-4 h-4 mr-3 shrink-0" />
-                          Settings
-                        </Link>
-                        <Link
                           href="/my-listings"
                           className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
@@ -602,13 +591,6 @@ const Navigation = memo(function Navigation() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Profile
-                    </Link>
-                    <Link
-                      href="/settings"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Settings
                     </Link>
                     <Link
                       href="/my-listings"

@@ -101,26 +101,15 @@ export default function MyListingsPage() {
   const { isDeleting, deleteListing } = useFirebaseCleanup();
 
   useEffect(() => {
-    console.log('🔍 Auth state check:', {
-      authLoading,
-      currentUser: currentUser ? { uid: currentUser.uid, email: currentUser.email } : null,
-      hasUid: !!currentUser?.uid
-    });
-
-    // Wait for auth to finish loading
     if (authLoading) {
-      console.log('⏳ Auth still loading, waiting...');
       return;
     }
 
     if (!currentUser?.uid) {
-      console.warn('⚠️ No current user, cannot fetch listings');
-      console.warn('⚠️ Auth state:', { currentUser, authLoading });
       setError('Please sign in to view your listings');
       setLoading(false);
       return;
     }
-    console.log('✅ User authenticated, fetching listings for:', currentUser.uid);
     fetchMyListings();
   }, [currentUser, authLoading]);
 
@@ -128,12 +117,8 @@ export default function MyListingsPage() {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 Starting fetchMyListings...');
       const { apiGet } = await import('@/lib/api-client');
       const response = await apiGet('/api/my-listings');
-      
-      console.log('🔍 API response status:', response.status);
-      console.log('🔍 API response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.status === 401) {
         // User not authenticated - redirect to login or show message
@@ -236,7 +221,7 @@ export default function MyListingsPage() {
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-            <p className="text-zinc-400 text-lg">Loading...</p>
+            <p className="text-zinc-400 text-lg">Loading your listings...</p>
           </div>
         </div>
       </div>

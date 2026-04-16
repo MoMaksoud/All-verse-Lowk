@@ -12,7 +12,7 @@ import { ChatList } from '@/components/chat/ChatList';
 import { ChatView } from '@/components/chat/ChatView';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { UserSearchModal } from '@/components/UserSearchModal';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Plus } from 'lucide-react';
 import { firestoreServices } from '@/lib/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -111,13 +111,13 @@ export default function MessagesPage() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <p className="text-gray-300 text-lg mb-6">
-              Sign up to start messaging other users.
+              Please sign in to view your messages.
             </p>
             <Link
-              href="/signup"
+              href="/signin"
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
             >
-              Sign Up
+              Sign In
             </Link>
           </div>
         </div>
@@ -129,7 +129,10 @@ export default function MessagesPage() {
   if (authLoading || chatsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <LoadingSpinner />
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="text-zinc-400 mt-3">Loading conversations...</p>
+        </div>
       </div>
     );
   }
@@ -217,7 +220,9 @@ export default function MessagesPage() {
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    <div className="text-6xl mb-4">💬</div>
+                    <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                      <MessageCircle className="w-7 h-7 text-zinc-300" />
+                    </div>
                     <h3 className="text-lg font-medium text-white mb-2">
                       Select a conversation
                     </h3>

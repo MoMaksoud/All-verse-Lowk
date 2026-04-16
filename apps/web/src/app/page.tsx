@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain, Bot, Sparkles, ArrowRight } from 'lucide-react';
+import { TrendingUp, MessageCircle, ShoppingBag, Bot, Plus, ArrowRight } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 // Import Navigation directly - it's used on every page so lazy loading doesn't help
 import { Navigation } from '@/components/Navigation';
@@ -208,68 +208,68 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* AI Action Cards */}
+      {/* Marketplace Action Cards */}
       <section className="py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 sm:mb-4">
-              AI-Powered Features
+              Marketplace Actions
             </h2>
             <p className="text-base sm:text-lg text-gray-400 px-4">
-              Experience the future of marketplace interactions
+              Follow the core buyer and seller journey
             </p>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <button
-              onClick={() => router.push('/chat')}
+              onClick={() => router.push('/messages')}
               className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
             >
               <div className="p-4 sm:p-6 text-center">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
                   <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Smart Chat</h3>
-                <p className="text-gray-400 text-xs sm:text-sm px-2">AI-powered conversations with sellers</p>
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Messages</h3>
+                <p className="text-gray-400 text-xs sm:text-sm px-2">Chat directly with buyers and sellers</p>
               </div>
             </button>
             
             <button
-              onClick={() => router.push('/offers')}
-              className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
-            >
-              <div className="p-4 sm:p-6 text-center">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
-                  <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Instant Offers</h3>
-                <p className="text-gray-400 text-xs sm:text-sm px-2">Make offers with AI assistance</p>
-              </div>
-            </button>
-            
-            <button
-              onClick={() => router.push('/pricing')}
-              className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
-            >
-              <div className="p-4 sm:p-6 text-center">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
-                  <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Smart Pricing</h3>
-                <p className="text-gray-400 text-xs sm:text-sm px-2">AI-suggested fair prices</p>
-              </div>
-            </button>
-            
-            <button
-              onClick={() => router.push('/discover')}
+              onClick={() => router.push('/listings')}
               className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
             >
               <div className="p-4 sm:p-6 text-center">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
                   <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Smart Discovery</h3>
-                <p className="text-gray-400 text-xs sm:text-sm px-2">Find exactly what you need</p>
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Browse Listings</h3>
+                <p className="text-gray-400 text-xs sm:text-sm px-2">Explore inventory and find what you need</p>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => router.push('/sell')}
+              className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
+            >
+              <div className="p-4 sm:p-6 text-center">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
+                  <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                </div>
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">Sell an Item</h3>
+                <p className="text-gray-400 text-xs sm:text-sm px-2">Create and manage listings with AI assistance</p>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => router.push('/search')}
+              className="card hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-dark-900"
+            >
+              <div className="p-4 sm:p-6 text-center">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 group-hover:glow transition-all duration-200 group-active:scale-90">
+                  <Bot className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                </div>
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 sm:mb-2">AI Search</h3>
+                <p className="text-gray-400 text-xs sm:text-sm px-2">Use conversational search to find exact matches</p>
               </div>
             </button>
           </div>

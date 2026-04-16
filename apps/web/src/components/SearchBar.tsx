@@ -124,7 +124,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
       addToRecentSearches(searchQuery);
       
       // Navigate to AI Assistant page with query parameter
-      router.push(`/ai-assistant?query=${encodeURIComponent(searchQuery)}`);
+      router.push(`/ai?query=${encodeURIComponent(searchQuery)}`);
       
       setShowSuggestions(false);
     }
