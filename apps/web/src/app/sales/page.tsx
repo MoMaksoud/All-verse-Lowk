@@ -115,6 +115,8 @@ interface ShippingInfo {
   updatedAt?: any;
 }
 
+const SUCCESSFUL_ORDER_STATUSES = new Set(['paid', 'shipped', 'delivered']);
+
 export default function SalesPage() {
   const [sales, setSales] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,7 +164,10 @@ export default function SalesPage() {
           })
           .filter((order: any) => {
             // Check if any item in the order has this user as seller
-            return order.items?.some((item: OrderItem) => item.sellerId === currentUser.uid);
+            return (
+              SUCCESSFUL_ORDER_STATUSES.has(order.status) &&
+              order.items?.some((item: OrderItem) => item.sellerId === currentUser.uid)
+            );
           })
           .map(order => {
             // Filter items to only show items sold by this seller

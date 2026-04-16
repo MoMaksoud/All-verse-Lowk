@@ -4,7 +4,6 @@ import { checkRateLimit, getIp } from '@/lib/rateLimit';
 import { getAdminFirestore } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestoreServices } from '@/lib/services/firestore';
-import { ProfileService } from '@/lib/firestore';
 import { shippo } from '@/lib/shippo';
 
 export const runtime = 'nodejs';
@@ -60,18 +59,8 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    const sellerId = order.items[0]?.sellerId;
-    if (!sellerId) {
-      return NextResponse.json({ error: 'Seller ID not found in order' }, { status: 400 });
-    }
-
-    const sellerProfile = await ProfileService.getProfile(sellerId);
-    if (!sellerProfile?.shippingAddress?.zip) {
-      return NextResponse.json(
-        { error: 'Seller shipping address not configured. Please ask the seller to add their shipping address in their profile.' },
-        { status: 400 }
-      );
-    }
+    // The selected rate is already tied to a pre-created shipment from checkout flow.
+    // At label purchase time, Shippo only requires a valid rateId/shipment context.
 
     const transaction = await shippo.transactions.create({
       rate: rateId,

@@ -137,6 +137,7 @@ export interface SellerNotificationData {
   total: number;
   orderId: string;
   stripeReference?: string;
+  sellerOrdersUrl?: string;
 }
 
 export async function sendSellerNotificationEmail(
@@ -165,6 +166,8 @@ export async function sendSellerNotificationEmail(
         orderId: data.orderId,
         orderIdShort: data.orderId.slice(0, 8),
         stripeReference: data.stripeReference,
+        sellerOrdersUrl: data.sellerOrdersUrl,
+        orderDetailsUrl: data.sellerOrdersUrl,
       },
     });
     return { success: true };

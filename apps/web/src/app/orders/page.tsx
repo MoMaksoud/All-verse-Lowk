@@ -112,6 +112,8 @@ interface ShippingInfo {
   updatedAt?: any;
 }
 
+const SUCCESSFUL_ORDER_STATUSES = new Set(['paid', 'shipped', 'delivered']);
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,15 +149,17 @@ export default function OrdersPage() {
       q,
       (snapshot) => {
         console.log('📦 Orders subscription fired:', snapshot.docs.length, 'orders');
-        const ordersList = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-            updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-          };
-        }) as Order[];
+        const ordersList = snapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+              updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+            };
+          })
+          .filter((order: any) => SUCCESSFUL_ORDER_STATUSES.has(order.status)) as Order[];
 
         setOrders(ordersList);
         setLoading(false);

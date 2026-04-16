@@ -47,6 +47,9 @@ export async function createCheckoutSession(params: {
   description?: string;
 }) {
   try {
+    // Auto-expire unpaid checkout sessions faster to reduce stale pending orders.
+    const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       client_reference_id: params.orderId,
@@ -65,6 +68,7 @@ export async function createCheckoutSession(params: {
       ],
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
+      expires_at: expiresAt,
       metadata: {
         orderId: params.orderId,
       },

@@ -12,6 +12,17 @@ import { assertStripeAndSendGridConfig } from '@/lib/config';
 
 const WEBHOOK_LOCK_TTL_MS = 5 * 60 * 1000;
 
+function getAppBaseUrl(): string {
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, '');
+  }
+
+  return process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000'
+    : 'https://allversegpt.com';
+}
+
 function getPaymentIntentId(session: Stripe.Checkout.Session): string | undefined {
   if (typeof session.payment_intent === 'string') {
     return session.payment_intent;
@@ -119,6 +130,29 @@ async function markOrderPaid(orderId: string, paymentIntentId: string | undefine
     payments
       .filter((payment) => payment.status !== 'succeeded')
       .map((payment) => firestoreServices.payments.updatePayment((payment as any).id, { status: 'succeeded' }))
+  );
+}
+
+async function markOrderCancelled(orderId: string, checkoutSessionId: string) {
+  const order = await firestoreServices.orders.getOrder(orderId);
+  if (!order || order.status !== 'pending') {
+    return;
+  }
+
+  await firestoreServices.orders.updateOrder(orderId, {
+    status: 'cancelled',
+    checkoutSessionId,
+  } as any);
+
+  const payments = await firestoreServices.payments.getPaymentsByOrder(orderId);
+  if (payments.length === 0) {
+    return;
+  }
+
+  await Promise.all(
+    payments
+      .filter((payment) => payment.status === 'pending')
+      .map((payment) => firestoreServices.payments.updatePayment((payment as any).id, { status: 'failed' }))
   );
 }
 
@@ -231,6 +265,7 @@ async function processOrderEmails(params: {
         total: itemTotal,
         orderId: params.orderId,
         stripeReference: params.sessionId,
+        sellerOrdersUrl: `${getAppBaseUrl()}/sales`,
       });
 
       await logEmail(
@@ -289,6 +324,31 @@ export async function POST(req: NextRequest) {
     }
 
     const event = verification.event;
+    if (
+      event.type === 'checkout.session.expired' ||
+      event.type === 'checkout.session.async_payment_failed'
+    ) {
+      const lock = await acquireEventLock(event.id, event.type);
+      eventRef = lock.eventRef;
+
+      if (lock.result === 'processed') {
+        return NextResponse.json({ received: true, idempotent: true }, { status: 200 });
+      }
+
+      if (lock.result === 'processing') {
+        return NextResponse.json({ received: true, processing: true }, { status: 200 });
+      }
+
+      const session = event.data.object as Stripe.Checkout.Session;
+      const orderId = typeof session.metadata?.orderId === 'string' ? session.metadata.orderId.trim() : '';
+      if (orderId) {
+        await markOrderCancelled(orderId, session.id);
+      }
+
+      await markEventCompleted(eventRef, orderId || 'n/a');
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
     if (event.type !== 'checkout.session.completed') {
       return NextResponse.json({ received: true }, { status: 200 });
     }
