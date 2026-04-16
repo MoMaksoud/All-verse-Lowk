@@ -25,7 +25,8 @@ function SuccessContent() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/payments/confirm?session_id=${encodeURIComponent(sessionId.trim())}`);
+        const { apiGet } = await import('@/lib/api-client');
+        const res = await apiGet(`/api/payments/confirm?session_id=${encodeURIComponent(sessionId.trim())}`);
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) {

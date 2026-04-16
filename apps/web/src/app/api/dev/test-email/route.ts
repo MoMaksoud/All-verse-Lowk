@@ -1,6 +1,16 @@
 import { sendOrderConfirmationEmail } from '@/lib/email';
+import { NextRequest, NextResponse } from 'next/server';
+import { withApi } from '@/lib/withApi';
+import { isDevOrTestRouteAllowed } from '@/lib/authz';
 
-export async function GET() {
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+export const GET = withApi(async (req: NextRequest & { userId: string }) => {
+  if (!isDevOrTestRouteAllowed(process.env.NODE_ENV, req.headers.get('x-dev-admin-token'), process.env.DEV_ADMIN_TOKEN)) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
     const result = await sendOrderConfirmationEmail({
       orderId: "TEST1234",
@@ -16,9 +26,9 @@ export async function GET() {
 
     console.log("[DEV TEST EMAIL RESULT]", result);
 
-    return Response.json(result);
+    return NextResponse.json(result);
   } catch (err) {
     console.error("[DEV TEST EMAIL ERROR]", err);
-    return Response.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
-}
+});

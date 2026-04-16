@@ -2,11 +2,11 @@ import { createPartFromUri, createUserContent, GoogleGenAI } from '@google/genai
 import { GEMINI_MODELS } from '@/lib/ai/models';
 
 // Initialize Gemini AI
-const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
   console.error('❌ GEMINI_API_KEY is not configured for AI Analysis');
-  console.error('❌ Check environment variables: NEXT_PUBLIC_GEMINI_API_KEY or GEMINI_API_KEY');
+  console.error('❌ Check server environment variable: GEMINI_API_KEY');
 }
 
 const genAi = apiKey ? new GoogleGenAI({ apiKey: apiKey }) : null;

@@ -25,6 +25,11 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return NextResponse.json({ error: 'Listing ID is required' }, { status: 400 });
     }
 
+    const listing = await firestoreServices.listings.getListing(listingId);
+    if (listing && listing.sellerId !== req.userId) {
+      return NextResponse.json({ error: 'You can only upload photos for your own listings' }, { status: 403 });
+    }
+
     if (!files || files.length === 0) {
       console.log('❌ No files provided');
       return NextResponse.json({ error: 'At least one photo is required' }, { status: 400 });
@@ -130,6 +135,14 @@ export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
     
     if (!listingId) {
       return NextResponse.json({ error: 'Listing ID is required' }, { status: 400 });
+    }
+
+    const listing = await firestoreServices.listings.getListing(listingId);
+    if (!listing) {
+      return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
+    }
+    if (listing.sellerId !== req.userId) {
+      return NextResponse.json({ error: 'You can only delete photos for your own listings' }, { status: 403 });
     }
 
     // Get current listing photos

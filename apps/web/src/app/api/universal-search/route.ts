@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
       return NextResponse.json(
         { error: 'Image search is not configured. Missing Gemini API key.' },
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
     const resultCount = sortedInternalResults.length + externalResults.length;
     const lastUserMessage = searchParams.get('lastUserMessage')?.trim() || query;
 
-    const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
     if (geminiApiKey && conversationalMode) {
       const step = await GeminiService.decideSearchRefinement(
         { ...searchState, rawQuery: query },
@@ -340,7 +340,7 @@ async function searchInternalListings(query: string, filters?: SearchFilters): P
     console.log(`📦 Using ${candidates.length} candidates for Gemini ranking`);
 
     // Use Gemini to intelligently find matching listings
-    const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
       console.warn('⚠️ Gemini API key not configured, using simple keyword search');
       const queryLower = query.toLowerCase();
@@ -1022,7 +1022,7 @@ async function buildSummary(
   const deterministic = buildDeterministicSummary(query, externalResults, internalResults);
   if (!deterministic) return null;
 
-  const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) return deterministic;
 
   const externalSnippet = externalResults.slice(0, 6).map(r => `${r.title} ($${r.price}, ${r.source})`).join('\n');

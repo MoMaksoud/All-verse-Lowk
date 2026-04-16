@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
+import { withApi } from '@/lib/withApi';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
  * Retrieves Checkout Session from Stripe, reads metadata.orderId, fetches order from Firestore.
  * Returns sanitized order summary. Do not trust query params for order lookup.
  */
-export async function GET(req: NextRequest) {
+export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   const sessionId = req.nextUrl.searchParams.get('session_id');
   if (!sessionId?.trim()) {
     return NextResponse.json({ error: 'Missing session_id' }, { status: 400 });
@@ -31,6 +32,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
+    if (order.buyerId !== req.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     return NextResponse.json({
       success: true,
       order: {
@@ -48,4 +53,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

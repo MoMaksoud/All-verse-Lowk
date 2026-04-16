@@ -11,7 +11,7 @@ export async function imageToSearchQuery(args: {
     image: Blob;
     traceId: string;
 }): Promise<ImageExtractResult> {
-    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
         throw new Error("Missing GEMINI_API_KEY. Image search is not configured.");
     }

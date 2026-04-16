@@ -21,17 +21,13 @@ async function verifyFirebaseToken(req: NextRequest): Promise<string> {
   const authHeader = req.headers.get('authorization');
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.error('❌ Missing or invalid Authorization header');
-    console.error('❌ Headers received:', Object.fromEntries(req.headers.entries()));
     throw new Error('Missing or invalid Authorization header');
   }
 
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-  console.log('🔍 Verifying token (length:', token.length, ')');
   
   try {
     const decodedToken = await verifyIdToken(token);
-    console.log('✅ Token verified, user ID:', decodedToken.uid);
     return decodedToken.uid;
   } catch (err: any) {
     console.error('❌ Token verification error:', err?.message || err);

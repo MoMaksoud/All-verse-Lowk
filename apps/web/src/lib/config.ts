@@ -13,8 +13,7 @@ function getMissingEnv(keys: readonly string[]): string[] {
 
 /**
  * Asserts that Stripe and SendGrid required env vars are set.
- * In development: throws a descriptive error if any are missing.
- * In production: logs a clear message if any are missing (does not throw).
+ * Throws a descriptive error if any are missing.
  */
 export function assertStripeAndSendGridConfig(): void {
   const missingStripe = getMissingEnv(REQUIRED_STRIPE);
@@ -25,9 +24,5 @@ export function assertStripeAndSendGridConfig(): void {
 
   const message = `Missing required env: ${missing.join(', ')}. Set these in .env.local.`;
 
-  if (process.env.NODE_ENV === 'development') {
-    throw new Error(message);
-  }
-
-  console.error(`[config] ${message}`);
+  throw new Error(message);
 }

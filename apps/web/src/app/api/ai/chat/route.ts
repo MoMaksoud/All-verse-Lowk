@@ -150,7 +150,7 @@ export const POST = withApi(async (request: NextRequest & { userId?: string }) =
   
   try {
     // Check if Gemini API key is configured before processing
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error('❌ GEMINI_API_KEY is not configured');
       return NextResponse.json({

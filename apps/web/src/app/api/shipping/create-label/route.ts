@@ -5,6 +5,7 @@ import { getAdminFirestore } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestoreServices } from '@/lib/services/firestore';
 import { shippo } from '@/lib/shippo';
+import { canCreateShippingLabel } from '@/lib/authz';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,13 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     const order = await firestoreServices.orders.getOrder(orderId);
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    if (!canCreateShippingLabel(order as any, req.userId)) {
+      return NextResponse.json(
+        { error: 'Only the seller for a paid order can create shipping labels' },
+        { status: 403 }
+      );
     }
 
     // The selected rate is already tied to a pre-created shipment from checkout flow.

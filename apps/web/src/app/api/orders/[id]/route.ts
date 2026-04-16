@@ -4,6 +4,7 @@ import { firestoreServices } from "@/lib/services/firestore";
 import { success, error } from "@/lib/response";
 import { notFound, badRequest, unauthorized } from "@marketplace/shared-logic";
 import { UpdateOrderInput } from "@/lib/types/firestore";
+import { canAccessOrder, canTransitionOrderStatus, getOrderActorRole } from "@/lib/authz";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,8 +16,7 @@ export const GET = withApi(async (req: NextRequest & { userId: string }, { param
       return error(notFound("Order not found"));
     }
 
-    // Check if user has permission to view this order
-    if (order.buyerId !== req.userId && !order.items.some(item => item.sellerId === req.userId)) {
+    if (!canAccessOrder(order as any, req.userId)) {
       return error(unauthorized("You don't have permission to view this order"));
     }
 
@@ -34,13 +34,24 @@ export const PATCH = withApi(async (req: NextRequest & { userId: string }, { par
       return error(notFound("Order not found"));
     }
 
-    // Check if user has permission to update this order
-    if (order.buyerId !== req.userId && !order.items.some(item => item.sellerId === req.userId)) {
+    if (!canAccessOrder(order as any, req.userId)) {
       return error(unauthorized("You don't have permission to update this order"));
     }
 
     const updates = await req.json() as UpdateOrderInput;
-    await firestoreServices.orders.updateOrder(params.id, updates);
+    // Restrict mutable fields from this endpoint to a single status transition.
+    const updateKeys = Object.keys(updates || {});
+    if (updateKeys.length !== 1 || !('status' in updates) || !updates.status) {
+      return error(badRequest("Only order status updates are allowed from this endpoint"));
+    }
+
+    const actorRole = getOrderActorRole(order as any, req.userId);
+    const canTransition = canTransitionOrderStatus(order.status as any, updates.status, actorRole);
+    if (!canTransition) {
+      return error(unauthorized("You don't have permission for this status transition"));
+    }
+
+    await firestoreServices.orders.updateOrder(params.id, { status: updates.status });
     
     const updatedOrder = await firestoreServices.orders.getOrder(params.id);
     return success(updatedOrder);
