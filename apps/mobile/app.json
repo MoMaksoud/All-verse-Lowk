@@ -2,7 +2,7 @@
   "expo": {
     "name": "AllVerse GPT",
     "slug": "allverse-gpt",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.allversegpt.mobile",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "infoPlist": {
         "NSCameraUsageDescription": "AllVerse GPT needs access to your camera to take photos of items you want to sell.",
         "NSPhotoLibraryUsageDescription": "AllVerse GPT needs access to your photo library to upload product photos.",
