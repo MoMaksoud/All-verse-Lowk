@@ -55,7 +55,7 @@ That handler:
 
 ## Important Notes
 
-- `POST /api/payments/create-intent` is still present, but mobile now uses hosted Checkout instead of the incomplete PaymentIntent flow.
+- Legacy `POST /api/payments/create-intent` has been removed. Hosted Checkout (`/api/payments/create-checkout-session`) is the only supported payment creation path.
 - The hosted Stripe page is the final amount the buyer should trust if a cart has gone stale.
 - Order docs now store fulfillment flags so webhook retries do not repeat inventory, payouts, or cart clearing.
 

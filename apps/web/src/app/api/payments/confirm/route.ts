@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
 import { withApi } from '@/lib/withApi';
+import { fail, ok } from '@/lib/api/responses';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   const sessionId = req.nextUrl.searchParams.get('session_id');
   if (!sessionId?.trim()) {
-    return NextResponse.json({ error: 'Missing session_id' }, { status: 400 });
+    return fail({ status: 400, code: 'MISSING_SESSION_ID', message: 'Missing session_id' });
   }
 
   try {
@@ -24,20 +25,31 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
 
     const orderId = typeof session.metadata?.orderId === 'string' ? session.metadata.orderId.trim() : null;
     if (!orderId) {
-      return NextResponse.json({ error: 'Invalid session or missing order' }, { status: 400 });
+      return fail({ status: 400, code: 'INVALID_SESSION', message: 'Invalid session or missing order' });
     }
 
     const order = await firestoreServices.orders.getOrder(orderId);
     if (!order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      return fail({ status: 404, code: 'ORDER_NOT_FOUND', message: 'Order not found' });
     }
 
     if (order.buyerId !== req.userId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return fail({ status: 403, code: 'FORBIDDEN', message: 'Forbidden' });
     }
 
-    return NextResponse.json({
-      success: true,
+    if (session.payment_status !== 'paid') {
+      return fail({ status: 409, code: 'PAYMENT_NOT_SETTLED', message: 'Payment is not completed yet' });
+    }
+
+    const expectedAmountCents = Math.round(order.total * 100);
+    if (typeof session.amount_total === 'number' && session.amount_total !== expectedAmountCents) {
+      return fail({ status: 409, code: 'PAYMENT_AMOUNT_MISMATCH', message: 'Payment amount mismatch' });
+    }
+    if (typeof session.currency === 'string' && session.currency.toLowerCase() !== order.currency.toLowerCase()) {
+      return fail({ status: 409, code: 'PAYMENT_CURRENCY_MISMATCH', message: 'Payment currency mismatch' });
+    }
+
+    return ok({
       order: {
         orderId: (order as any).id,
         orderIdShort: ((order as any).id as string).slice(0, 8),
@@ -48,9 +60,6 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
     });
   } catch (err) {
     console.error('[payments/confirm]', err);
-    return NextResponse.json(
-      { error: 'Failed to confirm session' },
-      { status: 500 }
-    );
+    return fail({ status: 500, code: 'PAYMENT_CONFIRM_FAILED', message: 'Failed to confirm session' });
   }
 });

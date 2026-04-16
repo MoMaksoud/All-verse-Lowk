@@ -9,6 +9,7 @@ import { sendOrderConfirmationEmail, sendSellerNotificationEmail } from '@/lib/e
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { logEmail } from '@/lib/emailLog';
 import { assertStripeAndSendGridConfig } from '@/lib/config';
+import { canTransitionOrderStatus } from '@/lib/authz';
 
 const WEBHOOK_LOCK_TTL_MS = 5 * 60 * 1000;
 
@@ -109,11 +110,29 @@ async function markEventFailed(eventRef: FirebaseFirestore.DocumentReference, er
 }
 
 async function markOrderPaid(orderId: string, paymentIntentId: string | undefined, checkoutSessionId: string) {
+  const current = await firestoreServices.orders.getOrder(orderId);
+  if (!current) {
+    throw new Error(`Order ${orderId} not found before paid transition`);
+  }
+  if (current.status === 'cancelled') {
+    throw new Error(`Cannot mark cancelled order ${orderId} as paid`);
+  }
+
+  const alreadySettled = current.status === 'paid' || current.status === 'shipped' || current.status === 'delivered';
+  if (!alreadySettled) {
+    const canSystemMarkPaid = canTransitionOrderStatus(current.status, 'paid', 'system');
+    if (!canSystemMarkPaid) {
+      throw new Error(`Invalid system transition ${current.status} -> paid for ${orderId}`);
+    }
+  }
+
   const updates: Record<string, unknown> = {
-    status: 'paid',
-    paidAt: serverTimestamp() as any,
     checkoutSessionId,
   };
+  if (!alreadySettled) {
+    updates.status = 'paid';
+    updates.paidAt = serverTimestamp() as any;
+  }
 
   if (paymentIntentId) {
     updates.paymentIntentId = paymentIntentId;
@@ -135,7 +154,14 @@ async function markOrderPaid(orderId: string, paymentIntentId: string | undefine
 
 async function markOrderCancelled(orderId: string, checkoutSessionId: string) {
   const order = await firestoreServices.orders.getOrder(orderId);
-  if (!order || order.status !== 'pending') {
+  if (!order) {
+    return;
+  }
+  if (order.status === 'cancelled') {
+    return;
+  }
+  const canSystemCancel = canTransitionOrderStatus(order.status, 'cancelled', 'system');
+  if (!canSystemCancel) {
     return;
   }
 
@@ -154,6 +180,39 @@ async function markOrderCancelled(orderId: string, checkoutSessionId: string) {
       .filter((payment) => payment.status === 'pending')
       .map((payment) => firestoreServices.payments.updatePayment((payment as any).id, { status: 'failed' }))
   );
+}
+
+function assertSessionMatchesOrder(session: Stripe.Checkout.Session, order: Awaited<ReturnType<typeof firestoreServices.orders.getOrder>>) {
+  if (!order) {
+    throw new Error('Order missing for reconciliation');
+  }
+
+  if (session.payment_status !== 'paid') {
+    throw new Error(`Checkout session ${session.id} is not paid (status: ${session.payment_status})`);
+  }
+
+  if (typeof session.client_reference_id === 'string' && session.client_reference_id.trim()) {
+    if ((order as any).id && session.client_reference_id.trim() !== (order as any).id) {
+      throw new Error(
+        `Checkout reference mismatch for ${session.id}: expected ${(order as any).id}, got ${session.client_reference_id}`
+      );
+    }
+  }
+
+  if (typeof session.amount_total === 'number') {
+    const expectedAmountCents = Math.round(order.total * 100);
+    if (session.amount_total !== expectedAmountCents) {
+      throw new Error(
+        `Checkout amount mismatch for ${session.id}: expected ${expectedAmountCents}, got ${session.amount_total}`
+      );
+    }
+  }
+
+  if (typeof session.currency === 'string' && session.currency.toLowerCase() !== order.currency.toLowerCase()) {
+    throw new Error(
+      `Checkout currency mismatch for ${session.id}: expected ${order.currency}, got ${session.currency}`
+    );
+  }
 }
 
 async function ensurePaymentRecord(params: {
@@ -324,10 +383,7 @@ export async function POST(req: NextRequest) {
     }
 
     const event = verification.event;
-    if (
-      event.type === 'checkout.session.expired' ||
-      event.type === 'checkout.session.async_payment_failed'
-    ) {
+    if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') {
       const lock = await acquireEventLock(event.id, event.type);
       eventRef = lock.eventRef;
 
@@ -349,7 +405,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
-    if (event.type !== 'checkout.session.completed') {
+    if (
+      event.type !== 'checkout.session.completed' &&
+      event.type !== 'checkout.session.async_payment_succeeded'
+    ) {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
@@ -376,6 +435,7 @@ export async function POST(req: NextRequest) {
     if (!order) {
       throw new Error(`Order not found for orderId ${orderId}`);
     }
+    assertSessionMatchesOrder(fullSession, order);
 
     const paymentIntentId = getPaymentIntentId(fullSession);
     await markOrderPaid(orderId, paymentIntentId, fullSession.id);
@@ -411,7 +471,12 @@ export async function POST(req: NextRequest) {
         const sellerProfile = await ProfileService.getProfile(item.sellerId);
 
         if (sellerProfile?.stripeConnectAccountId && sellerProfile?.stripeConnectOnboardingComplete) {
-          await transferToSeller(sellerProfile.stripeConnectAccountId, sellerPayout, orderId);
+          const transferResult = await transferToSeller(sellerProfile.stripeConnectAccountId, sellerPayout, orderId);
+          if (!transferResult.success) {
+            throw new Error(
+              `Failed seller payout transfer for seller ${item.sellerId}: ${transferResult.error || 'unknown error'}`
+            );
+          }
         }
       }
 

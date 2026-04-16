@@ -6,35 +6,6 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-08-27.basil',
 });
 
-
-// Payment intent creation
-export async function createPaymentIntent(amount: number, currency: string = 'usd', metadata?: Record<string, string>) {
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency,
-      metadata: metadata || {},
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
-
-    return {
-      success: true,
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-      paymentIntent, // Return full object for metadata updates
-    };
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create payment intent',
-    };
-  }
-}
-
-
 /**
  * Create a Stripe Checkout Session (mode: payment).
  * Call this after creating the order in Firestore; pass orderId in metadata.
@@ -93,26 +64,6 @@ export async function createCheckoutSession(params: {
     };
   }
 }
-
-// Retrieve payment intent
-export async function retrievePaymentIntent(paymentIntentId: string) {
-  try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    return {
-      success: true,
-      paymentIntent,
-    };
-  } catch (error) {
-    console.error('Error retrieving payment intent:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to retrieve payment intent',
-    };
-  }
-}
-
-
-
 
 // Verify webhook signature
 export function verifyWebhookSignature(payload: string, signature: string, secret: string) {

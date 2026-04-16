@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createCheckoutSession } from '@/lib/stripe';
 import { firestoreServices } from '@/lib/services/firestore';
 import { withApi } from '@/lib/withApi';
 import { assertStripeAndSendGridConfig } from '@/lib/config';
 import { prepareTrustedCheckout, getCheckoutBaseUrl } from '@/lib/payments/checkout';
 import { DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
+import { fail, ok } from '@/lib/api/responses';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,12 +15,24 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     assertStripeAndSendGridConfig();
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Config validation failed';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return fail({ status: 500, code: 'ENV_CONFIG_MISSING', message: msg });
   }
 
   try {
     const body = await req.json();
-    const { cartItems, shippingAddress, selectedShipping } = body;
+    const { shippingAddress, selectedShipping } = body;
+
+    // Source of truth: user's server-side cart, not client-submitted cart payload.
+    const userCart = await firestoreServices.carts.getCart(req.userId);
+    const cartItems = userCart?.items ?? [];
+    if (cartItems.length === 0) {
+      return fail({
+        status: 400,
+        code: 'EMPTY_CART',
+        message: 'Your cart is empty. Add items before checkout.',
+      });
+    }
+
     const checkout = await prepareTrustedCheckout({
       cartItems,
       shippingAddress,
@@ -54,10 +67,11 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     });
 
     if (!result.success || !result.url) {
-      return NextResponse.json(
-        { error: result.error || 'Failed to create checkout session' },
-        { status: 500 }
-      );
+      return fail({
+        status: 500,
+        code: 'CHECKOUT_SESSION_CREATE_FAILED',
+        message: result.error || 'Failed to create checkout session',
+      });
     }
 
     await firestoreServices.orders.updateOrder(orderId, {
@@ -73,8 +87,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       status: 'pending',
     });
 
-    return NextResponse.json({
-      success: true,
+    return ok({
       url: result.url,
       sessionId: result.sessionId,
       orderId,
@@ -86,9 +99,10 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     });
   } catch (error) {
     console.error('Create checkout session error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Server error' },
-      { status: error instanceof Error ? 400 : 500 }
-    );
+    return fail({
+      status: error instanceof Error ? 400 : 500,
+      code: 'CHECKOUT_VALIDATION_FAILED',
+      message: error instanceof Error ? error.message : 'Server error',
+    });
   }
 });

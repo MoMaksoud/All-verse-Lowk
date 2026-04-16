@@ -1,6 +1,25 @@
 import type { FirestoreOrder } from '@/lib/types/firestore';
 
-export type OrderActorRole = 'buyer' | 'seller' | 'none';
+export type OrderActorRole = 'buyer' | 'seller' | 'system' | 'none';
+export type AllowedOrderStatus = FirestoreOrder['status'];
+
+export const ORDER_STATE_TRANSITIONS: Record<
+  AllowedOrderStatus,
+  Partial<Record<Exclude<OrderActorRole, 'none'>, AllowedOrderStatus[]>>
+> = {
+  pending: {
+    buyer: ['cancelled'],
+    system: ['paid', 'cancelled'],
+  },
+  paid: {
+    seller: ['shipped'],
+  },
+  shipped: {
+    buyer: ['delivered'],
+  },
+  delivered: {},
+  cancelled: {},
+};
 
 export function isOrderBuyer(order: FirestoreOrder, userId: string): boolean {
   return order.buyerId === userId;
@@ -23,8 +42,6 @@ export function canAccessOrder(order: FirestoreOrder, userId: string): boolean {
   return getOrderActorRole(order, userId) !== 'none';
 }
 
-export type AllowedOrderStatus = FirestoreOrder['status'];
-
 export function canTransitionOrderStatus(
   currentStatus: AllowedOrderStatus,
   nextStatus: AllowedOrderStatus,
@@ -32,25 +49,17 @@ export function canTransitionOrderStatus(
 ): boolean {
   if (currentStatus === nextStatus) return true;
   if (actorRole === 'none') return false;
+  const allowed = ORDER_STATE_TRANSITIONS[currentStatus][actorRole] || [];
+  return allowed.includes(nextStatus);
+}
 
-  // Buyer actions: cancel pending order, or confirm delivery for shipped order.
-  if (actorRole === 'buyer') {
-    return (
-      (currentStatus === 'pending' && nextStatus === 'cancelled') ||
-      (currentStatus === 'shipped' && nextStatus === 'delivered')
-    );
-  }
-
-  // Seller action: mark paid order as shipped.
-  if (actorRole === 'seller') {
-    return currentStatus === 'paid' && nextStatus === 'shipped';
-  }
-
-  return false;
+export function getPrimarySellerId(order: FirestoreOrder): string | null {
+  return order.items[0]?.sellerId ?? null;
 }
 
 export function canCreateShippingLabel(order: FirestoreOrder, userId: string): boolean {
-  if (!isOrderSeller(order, userId)) return false;
+  const primarySellerId = getPrimarySellerId(order);
+  if (!primarySellerId || userId !== primarySellerId) return false;
   return order.status === 'paid' || order.status === 'shipped' || order.status === 'delivered';
 }
 

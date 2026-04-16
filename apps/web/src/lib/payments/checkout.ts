@@ -238,6 +238,10 @@ export async function prepareTrustedCheckout(params: {
   if (!primarySellerId) {
     throw new Error('Unable to determine seller for checkout');
   }
+  const uniqueSellerIds = new Set(orderItems.map((item) => item.sellerId));
+  if (uniqueSellerIds.size > 1) {
+    throw new Error('Checkout currently supports one seller per order. Split your cart by seller and try again.');
+  }
 
   const trustedShipping = await quoteTrustedShipping({
     sellerId: primarySellerId,
