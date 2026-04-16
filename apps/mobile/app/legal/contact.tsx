@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
 } from 'react-native';
+import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -27,7 +28,7 @@ export default function ContactScreen() {
       description: 'Get help via email',
       action: 'info@allversegpt.com',
       onPress: handleEmailPress,
-      color: '#0063e1',
+      color: colors.brand.DEFAULT,
     },
     {
       icon: 'globe',
@@ -35,7 +36,7 @@ export default function ContactScreen() {
       description: 'Visit our website',
       action: 'www.allversegpt.com',
       onPress: handleWebsitePress,
-      color: '#10b981',
+      color: colors.success.DEFAULT,
     },
   ];
 
@@ -43,7 +44,7 @@ export default function ContactScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Contact Us</Text>
       </View>
@@ -51,7 +52,7 @@ export default function ContactScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
           <View style={styles.iconContainer}>
-            <Ionicons name="mail" size={48} color="#0063e1" />
+            <Ionicons name="mail" size={48} color={colors.brand.DEFAULT} />
           </View>
           <Text style={styles.title}>Get in Touch</Text>
           <Text style={styles.subtitle}>
@@ -76,7 +77,7 @@ export default function ContactScreen() {
                   {method.action}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="rgba(255, 255, 255, 0.5)" />
+              <Ionicons name="chevron-forward" size={24} color={colors.text.muted} />
             </TouchableOpacity>
           ))}
         </View>
@@ -106,7 +107,7 @@ export default function ContactScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   header: {
     flexDirection: 'row',
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border.subtle,
   },
   backButton: {
     marginRight: 12,
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 99, 225, 0.2)',
+    backgroundColor: colors.brand.soft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -149,13 +150,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -166,11 +167,11 @@ const styles = StyleSheet.create({
   contactCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a2332',
+    backgroundColor: colors.bg.surface,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     gap: 16,
   },
   iconWrapper: {
@@ -186,12 +187,12 @@ const styles = StyleSheet.create({
   contactTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 4,
   },
   contactDescription: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     marginBottom: 8,
   },
   contactAction: {
@@ -199,22 +200,22 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   infoSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.bg.glass,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     padding: 20,
     marginBottom: 16,
   },
   infoTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 12,
   },
   infoText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     lineHeight: 22,
   },
 });

@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -176,7 +177,7 @@ export default function CartScreen() {
   const ListHeader = () => (
     <View style={styles.pageHeader}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color="#fff" />
+        <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
       </TouchableOpacity>
       <Text style={styles.pageTitle}>Cart</Text>
     </View>
@@ -202,7 +203,7 @@ export default function CartScreen() {
               />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Ionicons name="image-outline" size={32} color="rgba(255, 255, 255, 0.3)" />
+                <Ionicons name="image-outline" size={32} color={colors.text.muted} />
               </View>
             )}
             {/* Show SOLD badge if item is sold (match website logic: sold || inventory === 0) */}
@@ -224,7 +225,7 @@ export default function CartScreen() {
                 style={styles.removeButton}
                 onPress={() => removeFromCart(item.listingId)}
               >
-                <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                <Ionicons name="trash-outline" size={20} color={colors.error.DEFAULT} />
               </TouchableOpacity>
             </View>
 
@@ -245,14 +246,14 @@ export default function CartScreen() {
                   style={styles.quantityButton}
                   onPress={() => updateCartItem(item.listingId, Math.max(1, item.qty - 1))}
                 >
-                  <Ionicons name="remove" size={18} color="#fff" />
+                  <Ionicons name="remove" size={18} color={colors.text.primary} />
                 </TouchableOpacity>
                 <Text style={styles.quantityText}>{item.qty}</Text>
                 <TouchableOpacity
                   style={styles.quantityButton}
                   onPress={() => updateCartItem(item.listingId, item.qty + 1)}
                 >
-                  <Ionicons name="add" size={18} color="#fff" />
+                  <Ionicons name="add" size={18} color={colors.text.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -267,7 +268,7 @@ export default function CartScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <ListHeader />
         <View style={styles.emptyState}>
-          <Ionicons name="cart-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+          <Ionicons name="cart-outline" size={80} color={colors.text.muted} />
           <Text style={styles.emptyTitle}>Sign In Required</Text>
           <Text style={styles.emptyText}>Please sign in to view your cart</Text>
           <TouchableOpacity
@@ -296,7 +297,7 @@ export default function CartScreen() {
         <>
           <ListHeader />
           <View style={styles.emptyState}>
-            <Ionicons name="cart-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+            <Ionicons name="cart-outline" size={80} color={colors.text.muted} />
             <Text style={styles.emptyTitle}>Your cart is empty</Text>
             <Text style={styles.emptyText}>Add some items to get started!</Text>
             <TouchableOpacity
@@ -314,7 +315,7 @@ export default function CartScreen() {
             renderItem={renderCartItem}
             keyExtractor={(item) => item.listingId}
             contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand.DEFAULT} />}
             ListHeaderComponent={ListHeader}
           />
 
@@ -350,7 +351,7 @@ export default function CartScreen() {
                 onPress={() => router.push('/checkout' as any)}
               >
                 <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                <Ionicons name="arrow-forward" size={20} color={colors.text.primary} />
               </TouchableOpacity>
 
               <Text style={styles.checkoutNote}>Secure checkout powered by Stripe</Text>
@@ -365,7 +366,7 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   pageHeader: {
     flexDirection: 'row',
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     flex: 1,
   },
   listContent: {
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     paddingBottom: 200, // Space for summary
   },
   cartItem: {
-    backgroundColor: '#1a2332',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     padding: 14,
     marginBottom: 14,
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
     height: 110,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.bg.raised,
     marginRight: 14,
     position: 'relative',
   },
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     left: 6,
-    backgroundColor: 'rgba(239, 68, 68, 0.95)',
+    backgroundColor: colors.error.DEFAULT,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
   cartSoldText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     letterSpacing: 0.5,
   },
   itemDetails: {
@@ -445,7 +446,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     flex: 1,
     marginRight: 12,
     lineHeight: 22,
@@ -462,19 +463,19 @@ const styles = StyleSheet.create({
   },
   itemCategory: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     marginBottom: 8,
     textTransform: 'capitalize',
   },
   itemPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.bg.raised,
     borderRadius: 8,
     padding: 4,
     gap: 4,
@@ -483,14 +484,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 6,
-    backgroundColor: '#1a2332',
+    backgroundColor: colors.bg.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginHorizontal: 12,
     minWidth: 24,
     textAlign: 'center',
@@ -508,35 +509,35 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     marginBottom: 24,
   },
   signInButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
   signInButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   browseButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
   browseButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -545,9 +546,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#1a2332',
+    backgroundColor: colors.bg.surface,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: colors.border.subtle,
     paddingTop: 16,
     paddingBottom: 32,
     paddingHorizontal: 16,
@@ -560,7 +561,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 16,
   },
   summaryRow: {
@@ -570,29 +571,29 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
   summaryValue: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
     marginVertical: 12,
   },
   summaryTotalLabel: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   summaryTotalValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   checkoutButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -602,14 +603,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   checkoutButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
   },
   checkoutNote: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.text.muted,
     textAlign: 'center',
     marginTop: 12,
   },

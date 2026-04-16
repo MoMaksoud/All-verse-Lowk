@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../lib/api/client';
+import { colors, spacing, radii, typography, palette } from '../constants/theme';
 
 interface Profile {
   userId: string;
@@ -131,7 +132,7 @@ export default function EditProfileModal({ profile, onClose, onUpdate }: EditPro
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#fff" />
+            <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <TouchableOpacity
@@ -140,7 +141,7 @@ export default function EditProfileModal({ profile, onClose, onUpdate }: EditPro
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color="#60a5fa" />
+              <ActivityIndicator color={palette.primary[400]} />
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}
@@ -161,7 +162,7 @@ export default function EditProfileModal({ profile, onClose, onUpdate }: EditPro
               value={formData.username}
               onChangeText={(text) => setFormData({ ...formData, username: text })}
               placeholder="username"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.text.disabled}
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -175,7 +176,7 @@ export default function EditProfileModal({ profile, onClose, onUpdate }: EditPro
               value={formData.displayName}
               onChangeText={(text) => setFormData({ ...formData, displayName: text })}
               placeholder="Your display name"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.text.disabled}
             />
           </View>
 
@@ -186,7 +187,7 @@ export default function EditProfileModal({ profile, onClose, onUpdate }: EditPro
               value={formData.bio}
               onChangeText={(text) => setFormData({ ...formData, bio: text })}
               placeholder="Tell us about yourself..."
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.text.disabled}
               multiline
               numberOfLines={4}
               maxLength={280}
@@ -201,7 +202,7 @@ export default function EditProfileModal({ profile, onClose, onUpdate }: EditPro
               value={formData.age}
               onChangeText={(text) => setFormData({ ...formData, age: text.replace(/[^0-9]/g, '') })}
               placeholder="Age (13-120)"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.text.disabled}
               keyboardType="numeric"
               maxLength={3}
             />
@@ -214,7 +215,7 @@ export default function EditProfileModal({ profile, onClose, onUpdate }: EditPro
               value={formData.phoneNumber}
               onChangeText={(text) => setFormData({ ...formData, phoneNumber: text })}
               placeholder="Phone number"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.text.disabled}
               keyboardType="phone-pad"
             />
           </View>
@@ -227,75 +228,75 @@ export default function EditProfileModal({ profile, onClose, onUpdate }: EditPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: colors.bg.raised,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
+    borderBottomColor: colors.border.divider,
   },
   closeButton: {
-    padding: 8,
+    padding: spacing.sm,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
   },
   saveButton: {
-    padding: 8,
+    padding: spacing.sm,
   },
   saveButtonText: {
-    color: '#60a5fa',
-    fontSize: 16,
-    fontWeight: '600',
+    color: palette.primary[400],
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: spacing.xl,
   },
   errorContainer: {
-    backgroundColor: '#1a1a1a',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
+    backgroundColor: colors.error.soft,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    marginBottom: spacing.xl,
   },
   errorText: {
-    color: '#ef4444',
-    fontSize: 14,
+    color: colors.error.DEFAULT,
+    fontSize: typography.size.base,
   },
   formGroup: {
-    marginBottom: 24,
+    marginBottom: spacing['2xl'],
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 8,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.bg.surface,
     borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 8,
-    padding: 12,
-    color: '#fff',
-    fontSize: 16,
+    borderColor: colors.border.default,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    color: colors.text.primary,
+    fontSize: typography.size.lg,
   },
   textArea: {
     minHeight: 100,
     textAlignVertical: 'top',
   },
   helpText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    fontSize: typography.size.sm,
+    color: colors.text.disabled,
+    marginTop: spacing.xs,
   },
 });
 

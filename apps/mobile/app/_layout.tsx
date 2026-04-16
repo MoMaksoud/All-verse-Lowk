@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
+import {colors} from '../constants/theme';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
@@ -13,20 +14,20 @@ export default function RootLayout() {
         <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#020617',
+            backgroundColor: colors.bg.base,
             elevation: 0,
             shadowOpacity: 0,
             borderBottomWidth: 1,
-            borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+            borderBottomColor: colors.border.subtle,
           },
-          headerTintColor: '#0063e1',
+          headerTintColor: colors.brand.DEFAULT,
           headerTitleStyle: {
             fontWeight: '700',
             fontSize: 18,
-            color: '#fff',
+            color: colors.text.primary,
           },
           contentStyle: {
-            backgroundColor: '#020617',
+            backgroundColor: colors.bg.base,
           },
           headerBackTitleVisible: false,
         }}
@@ -86,12 +87,19 @@ export default function RootLayout() {
             headerShown: false,
           }} 
         />
-        <Stack.Screen 
-          name="legal/contact" 
-          options={{ 
+        <Stack.Screen
+          name="legal/contact"
+          options={{
             title: 'Contact Us',
             headerShown: false,
-          }} 
+          }}
+        />
+        <Stack.Screen
+          name="legal/about"
+          options={{
+            title: 'About Us',
+            headerShown: false,
+          }}
         />
       </Stack>
       </View>
@@ -103,7 +111,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: colors.bg.base,
   },
 });
 

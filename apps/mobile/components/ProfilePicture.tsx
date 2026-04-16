@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
+import { colors, typography, palette } from '../constants/theme';
 
 interface ProfilePictureProps {
   src?: string | null;
@@ -107,16 +108,16 @@ export default function ProfilePicture({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    backgroundColor: '#0E1526',
+    backgroundColor: colors.bg.raised,
   },
   fallback: {
-    backgroundColor: '#6366f1',
+    backgroundColor: palette.primary[500],
     justifyContent: 'center',
     alignItems: 'center',
   },
   initials: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.text.primary,
+    fontWeight: typography.weight.semibold,
   },
 });
 

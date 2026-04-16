@@ -10,6 +10,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -329,7 +330,7 @@ export default function SearchScreen() {
                 <Text style={styles.externalPrice}>${item.item.price.toLocaleString()}</Text>
                 {item.item.rating && (
                   <View style={styles.ratingContainer}>
-                    <Ionicons name="star" size={14} color="#fbbf24" />
+                    <Ionicons name="star" size={14} color={palette.amber[400]} />
                     <Text style={styles.ratingText}>{item.item.rating}</Text>
                     {item.item.reviewsCount && (
                       <Text style={styles.reviewsText}>({item.item.reviewsCount})</Text>
@@ -348,7 +349,7 @@ export default function SearchScreen() {
     if (item.kind === 'no-results') {
       return (
         <View style={styles.noResults}>
-          <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+          <Ionicons name="search-outline" size={64} color={colors.text.muted} />
           <Text style={styles.noResultsText}>No results found</Text>
           <Text style={styles.noResultsSubtext}>Try different keywords or browse categories</Text>
         </View>
@@ -401,11 +402,11 @@ export default function SearchScreen() {
       {/* Search Bar at top */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.5)" />
+          <Ionicons name="search" size={20} color={colors.text.muted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search across all marketplaces..."
-            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            placeholderTextColor={colors.text.muted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
@@ -418,7 +419,7 @@ export default function SearchScreen() {
               setSearchQuery('');
               setShowRecentSearches(true);
             }}>
-              <Ionicons name="close-circle" size={20} color="rgba(255, 255, 255, 0.5)" />
+              <Ionicons name="close-circle" size={20} color={colors.text.muted} />
             </TouchableOpacity>
           )}
         </View>
@@ -438,7 +439,7 @@ export default function SearchScreen() {
                 style={styles.recentSearchItem}
                 onPress={() => handleRecentSearchPress(search)}
               >
-                <Ionicons name="time-outline" size={18} color="rgba(255, 255, 255, 0.6)" />
+                <Ionicons name="time-outline" size={18} color={colors.text.tertiary} />
                 <Text style={styles.recentSearchText}>{search}</Text>
                 <TouchableOpacity
                   onPress={async () => {
@@ -448,7 +449,7 @@ export default function SearchScreen() {
                   }}
                   style={styles.removeButton}
                 >
-                  <Ionicons name="close" size={16} color="rgba(255, 255, 255, 0.5)" />
+                  <Ionicons name="close" size={16} color={colors.text.muted} />
                 </TouchableOpacity>
               </TouchableOpacity>
             ))}
@@ -484,7 +485,7 @@ export default function SearchScreen() {
         />
       ) : (
         <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+          <Ionicons name="search-outline" size={64} color={colors.text.muted} />
           <Text style={styles.emptyText}>Search across all marketplaces</Text>
           <Text style={styles.emptySubtext}>
             One search. Every marketplace. AI-powered insights.
@@ -498,22 +499,22 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   searchContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border.subtle,
     position: 'relative',
     zIndex: 10,
   },
   recentSearchesContainer: {
     marginTop: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     padding: 12,
     maxHeight: 300,
   },
@@ -526,11 +527,11 @@ const styles = StyleSheet.create({
   recentSearchesTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.text.secondary,
   },
   clearButton: {
     fontSize: 13,
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     fontWeight: '600',
   },
   recentSearchItem: {
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
   recentSearchText: {
     flex: 1,
     fontSize: 15,
-    color: '#fff',
+    color: colors.text.primary,
     marginLeft: 10,
   },
   removeButton: {
@@ -553,18 +554,18 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   searchInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: '#fff',
+    color: colors.text.primary,
   },
   results: {
     flex: 1,
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
   section: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: colors.bg.glass,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -582,11 +583,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     marginRight: 8,
   },
   badge: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -594,11 +595,11 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     marginBottom: 16,
   },
   listingsGrid: {
@@ -621,18 +622,18 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   externalCard: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     overflow: 'hidden',
     flexDirection: 'row',
   },
   externalImage: {
     width: 100,
     height: 100,
-    backgroundColor: '#0E1526',
+    backgroundColor: colors.bg.raised,
   },
   externalContent: {
     flex: 1,
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
   externalTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 8,
   },
   externalMeta: {
@@ -653,7 +654,7 @@ const styles = StyleSheet.create({
   externalPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -662,27 +663,27 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    color: '#fbbf24',
+    color: palette.amber[400],
     fontWeight: '600',
   },
   reviewsText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
   },
   sourceBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0, 99, 225, 0.2)',
+    backgroundColor: colors.brand.soft,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 99, 225, 0.3)',
+    borderColor: colors.brand.ring,
   },
   sourceText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   emptyState: {
     flex: 1,
@@ -693,13 +694,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 16,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     marginTop: 8,
     textAlign: 'center',
   },
@@ -712,12 +713,12 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 16,
   },
   noResultsSubtext: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     marginTop: 8,
     textAlign: 'center',
   },

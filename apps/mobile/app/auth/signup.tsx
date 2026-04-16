@@ -10,6 +10,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,7 +77,7 @@ export default function SignUpScreen() {
                 }
               }}
             >
-              <Ionicons name="arrow-back" size={24} color="#0063e1" />
+              <Ionicons name="arrow-back" size={24} color={colors.brand.DEFAULT} />
             </TouchableOpacity>
 
             {/* Header */}
@@ -88,11 +89,11 @@ export default function SignUpScreen() {
             {/* Form */}
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color="rgba(255, 255, 255, 0.5)" />
+                <Ionicons name="mail-outline" size={20} color={colors.text.muted} />
                 <TextInput
                   style={styles.input}
                   placeholder="Email"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  placeholderTextColor={colors.text.muted}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -102,11 +103,11 @@ export default function SignUpScreen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="rgba(255, 255, 255, 0.5)" />
+                <Ionicons name="lock-closed-outline" size={20} color={colors.text.muted} />
                 <TextInput
                   style={styles.input}
                   placeholder="Password"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  placeholderTextColor={colors.text.muted}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -116,17 +117,17 @@ export default function SignUpScreen() {
                   <Ionicons
                     name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
-                    color="rgba(255, 255, 255, 0.5)"
+                    color={colors.text.muted}
                   />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="rgba(255, 255, 255, 0.5)" />
+                <Ionicons name="lock-closed-outline" size={20} color={colors.text.muted} />
                 <TextInput
                   style={styles.input}
                   placeholder="Confirm Password"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  placeholderTextColor={colors.text.muted}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
@@ -136,7 +137,7 @@ export default function SignUpScreen() {
                   <Ionicons
                     name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
-                    color="rgba(255, 255, 255, 0.5)"
+                    color={colors.text.muted}
                   />
                 </TouchableOpacity>
               </View>
@@ -150,6 +151,31 @@ export default function SignUpScreen() {
                   {loading ? 'Creating Account...' : 'Sign Up'}
                 </Text>
               </TouchableOpacity>
+
+              {/*
+                App Store / Play Store compliance: the account-creation flow
+                must surface Terms of Service and Privacy Policy with tappable
+                links that navigate to the actual documents. Wired to the
+                existing /legal/terms and /legal/privacy screens registered
+                in app/_layout.tsx.
+              */}
+              <Text style={styles.disclaimer}>
+                By signing up, you agree to our{' '}
+                <Text
+                  style={styles.disclaimerLink}
+                  onPress={() => router.push('/legal/terms' as any)}
+                >
+                  Terms of Service
+                </Text>
+                {' '}and{' '}
+                <Text
+                  style={styles.disclaimerLink}
+                  onPress={() => router.push('/legal/privacy' as any)}
+                >
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
 
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account? </Text>
@@ -168,7 +194,7 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   keyboardView: {
     flex: 1,
@@ -195,12 +221,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
   form: {
     gap: 16,
@@ -208,21 +234,21 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   input: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: '#fff',
+    color: colors.text.primary,
   },
   button: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -234,7 +260,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   footer: {
     flexDirection: 'row',
@@ -243,12 +269,24 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
   link: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
+  },
+  disclaimer: {
+    fontSize: 12,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 16,
+    paddingHorizontal: 8,
+  },
+  disclaimerLink: {
+    color: colors.brand.DEFAULT,
+    fontWeight: '600',
   },
 });
 

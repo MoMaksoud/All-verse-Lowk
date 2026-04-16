@@ -11,6 +11,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,7 +44,10 @@ interface ChatInfo {
 }
 
 export default function ChatDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, text: initialText } = useLocalSearchParams<{
+    id: string;
+    text?: string;
+  }>();
   const { currentUser } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatInfo, setChatInfo] = useState<ChatInfo | null>(null);
@@ -51,6 +55,18 @@ export default function ChatDetailScreen() {
   const [sending, setSending] = useState(false);
   const [messageText, setMessageText] = useState('');
   const flatListRef = useRef<FlatList>(null);
+  const didPrefillRef = useRef(false);
+
+  // Pre-fill the message input once if the caller passed a `?text=...` param.
+  // Used by the listing-detail "Message Seller" flow to seed
+  //   `Hi! I'm interested in "{listingTitle}"`.
+  useEffect(() => {
+    if (didPrefillRef.current) return;
+    if (typeof initialText === 'string' && initialText.length > 0) {
+      setMessageText(initialText);
+      didPrefillRef.current = true;
+    }
+  }, [initialText]);
 
   const fetchMessages = async () => {
     if (!id || !currentUser) {
@@ -278,7 +294,7 @@ export default function ChatDetailScreen() {
               <Image source={{ uri: photoURL }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={16} color="rgba(255, 255, 255, 0.6)" />
+                <Ionicons name="person" size={16} color={colors.text.tertiary} />
               </View>
             )}
           </View>
@@ -314,14 +330,14 @@ export default function ChatDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           {otherUser?.photoURL ? (
             <Image source={{ uri: otherUser.photoURL }} style={styles.headerAvatar} />
           ) : (
             <View style={styles.headerAvatarPlaceholder}>
-              <Ionicons name="person" size={20} color="rgba(255, 255, 255, 0.6)" />
+              <Ionicons name="person" size={20} color={colors.text.tertiary} />
             </View>
           )}
           <View style={styles.headerText}>
@@ -368,7 +384,7 @@ export default function ChatDetailScreen() {
           }}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="chatbubbles-outline" size={64} color="rgba(255, 255, 255, 0.3)" />
+              <Ionicons name="chatbubbles-outline" size={64} color={colors.text.muted} />
               <Text style={styles.emptyText}>No messages yet</Text>
               <Text style={styles.emptySubtext}>Start the conversation!</Text>
             </View>
@@ -380,7 +396,7 @@ export default function ChatDetailScreen() {
           <TextInput
             style={styles.input}
             placeholder="Type a message..."
-            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            placeholderTextColor={colors.text.muted}
             value={messageText}
             onChangeText={setMessageText}
             multiline
@@ -396,9 +412,9 @@ export default function ChatDetailScreen() {
             disabled={!messageText.trim() || sending}
           >
             {sending ? (
-              <Ionicons name="hourglass-outline" size={24} color="rgba(255, 255, 255, 0.5)" />
+              <Ionicons name="hourglass-outline" size={24} color={colors.text.muted} />
             ) : (
-              <Ionicons name="send" size={24} color="#fff" />
+              <Ionicons name="send" size={24} color={colors.text.primary} />
             )}
           </TouchableOpacity>
         </View>
@@ -410,7 +426,7 @@ export default function ChatDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   flex1: {
     flex: 1,
@@ -421,8 +437,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: '#1a2332',
+    borderBottomColor: colors.border.subtle,
+    backgroundColor: colors.bg.surface,
   },
   backButton: {
     marginRight: 12,
@@ -438,14 +454,14 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginRight: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
   },
   headerAvatarPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -455,11 +471,11 @@ const styles = StyleSheet.create({
   headerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   headerUsername: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     marginTop: 2,
   },
   messagesList: {
@@ -485,13 +501,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
   },
   avatarPlaceholder: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -502,34 +518,34 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   myMessageBubble: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     borderBottomRightRadius: 4,
   },
   otherMessageBubble: {
-    backgroundColor: '#1a2332',
+    backgroundColor: colors.bg.surface,
     borderBottomLeftRadius: 4,
   },
   senderName: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     marginBottom: 4,
   },
   messageText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: colors.text.secondary,
     lineHeight: 20,
   },
   myMessageText: {
-    color: '#fff',
+    color: colors.text.primary,
   },
   timestamp: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.text.muted,
     marginTop: 4,
   },
   myTimestamp: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.text.secondary,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -537,32 +553,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: '#1a2332',
+    borderTopColor: colors.border.subtle,
+    backgroundColor: colors.bg.surface,
   },
   input: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.bg.raised,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 15,
     maxHeight: 100,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   sendButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: 'rgba(0, 99, 225, 0.3)',
+    backgroundColor: colors.brand.ring,
   },
   emptyState: {
     flex: 1,
@@ -573,12 +589,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.text.muted,
     marginTop: 8,
   },
 });

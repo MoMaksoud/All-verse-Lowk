@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -294,7 +295,7 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.signInPrompt}>
-            <Ionicons name="person-circle-outline" size={80} color="#0063e1" />
+            <Ionicons name="person-circle-outline" size={80} color={colors.brand.DEFAULT} />
             <Text style={styles.signInTitle}>Sign In Required</Text>
             <Text style={styles.signInSubtitle}>
               Please sign in to view your profile and manage your listings
@@ -325,7 +326,7 @@ export default function ProfileScreen() {
           <RefreshControl 
             refreshing={refreshing} 
             onRefresh={onRefresh}
-            tintColor="#0063e1"
+            tintColor={colors.brand.DEFAULT}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -369,7 +370,7 @@ export default function ProfileScreen() {
               style={styles.editButton}
               onPress={() => setShowEditModal(true)}
             >
-              <Ionicons name="create-outline" size={18} color="#0063e1" />
+              <Ionicons name="create-outline" size={18} color={colors.brand.DEFAULT} />
               <Text style={styles.editButtonText}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
@@ -377,7 +378,7 @@ export default function ProfileScreen() {
           <View style={styles.profileCard}>
             <View style={styles.profileHeader}>
               <View style={styles.avatarContainer}>
-                <Ionicons name="person-circle-outline" size={80} color="#0063e1" />
+                <Ionicons name="person-circle-outline" size={80} color={colors.brand.DEFAULT} />
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.name}>Welcome!</Text>
@@ -396,69 +397,54 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Legal & Support Section */}
-        <View style={styles.legalSection}>
-          <Text style={styles.sectionTitle}>Legal & Support</Text>
-          <View style={styles.legalList}>
+        {/*
+          Profile is the account hub. Group menu items by buyer/seller concern
+          so both personas can find their own workflows quickly. Mirrors the
+          web profile dropdown which splits My Orders (buyer) from My Listings
+          / My Sales (seller). Cart and Favorites live here too because their
+          tab routes are hidden via `href: null` in (tabs)/_layout.tsx.
+        */}
+
+        {/* My Buying */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>My Buying</Text>
+          <View style={styles.menuList}>
             <TouchableOpacity
-              style={styles.legalItem}
-              onPress={() => router.push('/legal/faq' as any)}
+              style={styles.menuItem}
+              onPress={() => router.push('/(tabs)/cart' as any)}
             >
-              <Ionicons name="help-circle-outline" size={24} color="#0063e1" />
-              <Text style={styles.legalItemText}>FAQ</Text>
-              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
+              <Ionicons name="cart-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>Cart</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.legalItem}
-              onPress={() => router.push('/legal/help' as any)}
+              style={[styles.menuItem, styles.menuItemLast]}
+              onPress={() => router.push('/(tabs)/favorites' as any)}
             >
-              <Ionicons name="chatbubbles-outline" size={24} color="#0063e1" />
-              <Text style={styles.legalItemText}>Help Center</Text>
-              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.legalItem}
-              onPress={() => router.push('/legal/privacy' as any)}
-            >
-              <Ionicons name="shield-outline" size={24} color="#0063e1" />
-              <Text style={styles.legalItemText}>Privacy Policy</Text>
-              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.legalItem}
-              onPress={() => router.push('/legal/terms' as any)}
-            >
-              <Ionicons name="document-text-outline" size={24} color="#0063e1" />
-              <Text style={styles.legalItemText}>Terms of Service</Text>
-              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.legalItem}
-              onPress={() => router.push('/legal/contact' as any)}
-            >
-              <Ionicons name="mail-outline" size={24} color="#0063e1" />
-              <Text style={styles.legalItemText}>Contact Us</Text>
-              <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.5)" />
+              <Ionicons name="heart-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>Favorites</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Sign Out Button */}
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+        {/* My Selling */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>My Selling</Text>
+          <View style={styles.menuList}>
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemLast]}
+              onPress={() => router.push('/(tabs)/sell')}
+            >
+              <Ionicons name="add-circle-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>Create New Listing</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+          </View>
 
-        {/* Delete Account Button */}
-        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
-          <Ionicons name="trash-outline" size={20} color="#ef4444" />
-          <Text style={styles.deleteAccountText}>Delete Account</Text>
-        </TouchableOpacity>
-
-        {/* Listings Section */}
-        {listings.length > 0 && (
-          <View style={styles.listingsSection}>
-            <Text style={styles.sectionTitle}>My Listings</Text>
+          {/* My Listings grid lives inside the Selling section so all seller
+              management actions (create + view + delete) sit together. */}
+          {listings.length > 0 ? (
             <View style={styles.listingsGrid}>
               {listings.map((listing) => (
                 <View key={listing.id} style={styles.listingWrapper}>
@@ -478,26 +464,85 @@ export default function ProfileScreen() {
                     style={styles.deleteButton}
                     onPress={() => handleDeleteListing(listing.id)}
                   >
-                    <Ionicons name="trash-outline" size={20} color="#fff" />
+                    <Ionicons name="trash-outline" size={20} color={colors.text.primary} />
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
-          </View>
-        )}
+          ) : (
+            !loading && (
+              <Text style={styles.emptyHint}>
+                No listings yet. Tap "Create New Listing" above to get started.
+              </Text>
+            )
+          )}
+        </View>
 
-        {listings.length === 0 && !loading && (
-          <View style={styles.emptyState}>
-            <Ionicons name="cube-outline" size={64} color="#666" />
-            <Text style={styles.emptyText}>No listings yet</Text>
+        {/* Support */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Support</Text>
+          <View style={styles.menuList}>
             <TouchableOpacity
-              style={styles.createButton}
-              onPress={() => router.push('/(tabs)/sell')}
+              style={styles.menuItem}
+              onPress={() => router.push('/legal/faq' as any)}
             >
-              <Text style={styles.createButtonText}>Create Your First Listing</Text>
+              <Ionicons name="help-circle-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>FAQ</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/legal/help' as any)}
+            >
+              <Ionicons name="chatbubbles-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>Help Center</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemLast]}
+              onPress={() => router.push('/legal/contact' as any)}
+            >
+              <Ionicons name="mail-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>Contact Us</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
             </TouchableOpacity>
           </View>
-        )}
+        </View>
+
+        {/* Legal */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <View style={styles.menuList}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/legal/privacy' as any)}
+            >
+              <Ionicons name="shield-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>Privacy Policy</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemLast]}
+              onPress={() => router.push('/legal/terms' as any)}
+            >
+              <Ionicons name="document-text-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>Terms of Service</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Sign Out Button */}
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={20} color={colors.text.primary} />
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={20} color={colors.error.DEFAULT} />
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
+        </TouchableOpacity>
 
         {error && isAuthenticated && (
           <View style={styles.errorContainer}>
@@ -524,7 +569,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   scrollContent: {
     paddingBottom: 20,
@@ -537,15 +582,15 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
   },
   profileCard: {
-    backgroundColor: '#1a2332',
+    backgroundColor: colors.bg.surface,
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: palette.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -563,7 +608,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.bg.surface,
   },
   profileInfo: {
     flex: 1,
@@ -571,48 +616,59 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 4,
   },
   email: {
     fontSize: 14,
-    color: '#999',
+    color: colors.text.muted,
     marginBottom: 8,
   },
   bio: {
     fontSize: 14,
-    color: '#ccc',
+    color: colors.text.tertiary,
     lineHeight: 20,
     marginTop: 8,
   },
-  legalSection: {
+  menuSection: {
     marginTop: 20,
     marginHorizontal: 20,
   },
-  legalList: {
-    backgroundColor: '#1a2332',
+  menuList: {
+    backgroundColor: colors.bg.surface,
     borderRadius: 16,
     overflow: 'hidden',
   },
-  legalItem: {
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: colors.bg.glass,
     gap: 12,
   },
-  legalItemText: {
+  menuItemLast: {
+    borderBottomWidth: 0,
+  },
+  menuItemText: {
     flex: 1,
     fontSize: 16,
-    color: '#fff',
+    color: colors.text.primary,
     fontWeight: '500',
+  },
+  emptyHint: {
+    fontSize: 14,
+    color: colors.text.muted,
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 8,
+    fontStyle: 'italic',
   },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.error.DEFAULT,
     padding: 14,
     borderRadius: 12,
     marginHorizontal: 20,
@@ -621,7 +677,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   signOutText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -631,7 +687,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#ef4444',
+    borderColor: colors.error.DEFAULT,
     padding: 14,
     borderRadius: 12,
     marginHorizontal: 20,
@@ -639,18 +695,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   deleteAccountText: {
-    color: '#ef4444',
+    color: colors.error.DEFAULT,
     fontSize: 16,
     fontWeight: '600',
-  },
-  listingsSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 16,
   },
   listingsGrid: {
@@ -658,6 +710,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 16,
+    marginTop: 16,
   },
   listingWrapper: {
     width: (width - 56) / 2,
@@ -667,7 +720,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.error.DEFAULT,
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -675,36 +728,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 10,
   },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  createButton: {
-    backgroundColor: '#0063e1',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   errorContainer: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.bg.surface,
     padding: 16,
     borderRadius: 12,
     marginTop: 20,
   },
   errorText: {
-    color: '#ef4444',
+    color: colors.error.DEFAULT,
     textAlign: 'center',
   },
   signInPrompt: {
@@ -716,19 +747,19 @@ const styles = StyleSheet.create({
   signInTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 24,
     marginBottom: 12,
   },
   signInSubtitle: {
     fontSize: 16,
-    color: '#999',
+    color: colors.text.muted,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
   },
   signInButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
@@ -737,7 +768,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   signInButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -749,16 +780,16 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#0063e1',
+    borderColor: colors.brand.DEFAULT,
   },
   signUpButtonText: {
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     fontSize: 16,
     fontWeight: '600',
   },
   username: {
     fontSize: 14,
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     marginBottom: 4,
   },
   editButton: {
@@ -767,30 +798,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#0063e1',
+    borderColor: colors.brand.DEFAULT,
     padding: 12,
     borderRadius: 12,
     gap: 8,
   },
   editButtonText: {
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     fontSize: 16,
     fontWeight: '600',
   },
   createProfileButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     padding: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
   createProfileButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   createProfileText: {
     fontSize: 14,
-    color: '#999',
+    color: colors.text.muted,
     marginTop: 4,
   },
 });

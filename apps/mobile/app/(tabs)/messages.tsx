@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Image, Alert } from 'react-native';
+import {colors} from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -327,7 +328,7 @@ export default function MessagesScreen() {
             <Image source={{ uri: photoURL }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={24} color="rgba(255, 255, 255, 0.6)" />
+              <Ionicons name="person" size={24} color={colors.text.tertiary} />
             </View>
           )}
         </View>
@@ -362,7 +363,7 @@ export default function MessagesScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.emptyState}>
-          <Ionicons name="chatbubbles-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+          <Ionicons name="chatbubbles-outline" size={80} color={colors.text.muted} />
           <Text style={styles.emptyTitle}>Sign In to Chat</Text>
           <Text style={styles.emptyText}>
             Sign in to start conversations with buyers and sellers
@@ -386,7 +387,7 @@ export default function MessagesScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.emptyState}>
-          <Ionicons name="alert-circle-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+          <Ionicons name="alert-circle-outline" size={80} color={colors.text.muted} />
           <Text style={styles.emptyTitle}>Error Loading Messages</Text>
           <Text style={styles.emptyText}>{error}</Text>
           <TouchableOpacity style={styles.signInButton} onPress={fetchChats}>
@@ -409,7 +410,7 @@ export default function MessagesScreen() {
         style={styles.newMessageButton}
         onPress={() => setShowUserSearch(true)}
       >
-        <Ionicons name="create-outline" size={24} color="#fff" />
+        <Ionicons name="create-outline" size={24} color={colors.text.primary} />
         <Text style={styles.newMessageText}>New Message</Text>
       </TouchableOpacity>
     </>
@@ -424,7 +425,7 @@ export default function MessagesScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+            <Ionicons name="chatbubbles-outline" size={80} color={colors.text.muted} />
             <Text style={styles.emptyTitle}>No Messages</Text>
             <Text style={styles.emptyText}>
               Start a conversation by searching for a user or messaging a seller from a listing
@@ -433,7 +434,7 @@ export default function MessagesScreen() {
         }
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand.DEFAULT} />
         }
         windowSize={5}
         maxToRenderPerBatch={10}
@@ -454,7 +455,7 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   pageHeader: {
     paddingHorizontal: 20,
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
   },
   emptyState: {
     flex: 1,
@@ -475,18 +476,18 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 20,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     marginBottom: 24,
   },
   signInButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
   signInButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   listContent: {
     paddingVertical: 8,
@@ -503,9 +504,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: colors.bg.glass,
   },
   avatarContainer: {
     marginRight: 12,
@@ -514,13 +515,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
   },
   avatarPlaceholder: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -537,12 +538,12 @@ const styles = StyleSheet.create({
   chatName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     flex: 1,
   },
   timestamp: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.text.muted,
     marginLeft: 8,
   },
   chatFooter: {
@@ -552,11 +553,11 @@ const styles = StyleSheet.create({
   },
   lastMessage: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     flex: 1,
   },
   unreadMessage: {
-    color: '#fff',
+    color: colors.text.primary,
     fontWeight: '500',
   },
   unreadBadge: {
@@ -569,18 +570,18 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
   },
   unreadText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   newMessageButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     marginHorizontal: 20,
     marginTop: 12,
     marginBottom: 24,
@@ -590,7 +591,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   newMessageText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },

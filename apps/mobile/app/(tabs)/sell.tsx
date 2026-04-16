@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -493,7 +494,7 @@ export default function SellScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.emptyState}>
-          <Ionicons name="add-circle-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+          <Ionicons name="add-circle-outline" size={80} color={colors.text.muted} />
           <Text style={styles.emptyTitle}>Sign In to Sell</Text>
           <Text style={styles.emptyText}>
             Create an account or sign in to start listing your items
@@ -523,7 +524,7 @@ export default function SellScreen() {
               {photos.length === 0 ? (
                 <View style={styles.centerPhotoContainer}>
                   <TouchableOpacity style={styles.addPhotoButtonLarge} onPress={pickImages}>
-                    <Ionicons name="camera-outline" size={48} color="rgba(0, 99, 225, 0.8)" />
+                    <Ionicons name="camera-outline" size={48} color={colors.brand.DEFAULT} />
                     <Text style={styles.addPhotoTextLarge}>Tap to Upload</Text>
                     <Text style={styles.addPhotoSubtext}>or select from gallery</Text>
                   </TouchableOpacity>
@@ -548,13 +549,13 @@ export default function SellScreen() {
                         style={styles.removePhotoButton}
                         onPress={() => removePhoto(index)}
                       >
-                        <Ionicons name="close-circle" size={24} color="#ef4444" />
+                        <Ionicons name="close-circle" size={24} color={colors.error.DEFAULT} />
                       </TouchableOpacity>
                     </View>
                   ))}
                   {photos.length < 6 && (
                     <TouchableOpacity style={styles.addPhotoButton} onPress={pickImages}>
-                      <Ionicons name="camera-outline" size={32} color="rgba(255, 255, 255, 0.6)" />
+                      <Ionicons name="camera-outline" size={32} color={colors.text.tertiary} />
                       <Text style={styles.addPhotoText}>Add Photo</Text>
                     </TouchableOpacity>
                   )}
@@ -568,7 +569,7 @@ export default function SellScreen() {
               disabled={photos.length === 0}
             >
               <Text style={styles.buttonText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
+              <Ionicons name="arrow-forward" size={20} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
         );
@@ -581,12 +582,12 @@ export default function SellScreen() {
                 style={styles.stepBackButton}
                 onPress={() => setCurrentStep(currentStep - 1)}
               >
-                <Ionicons name="chevron-back" size={20} color="#0063e1" />
+                <Ionicons name="chevron-back" size={20} color={colors.brand.DEFAULT} />
                 <Text style={styles.stepBackButtonText}>Back</Text>
               </TouchableOpacity>
             )}
             <View style={styles.iconContainer}>
-              <Ionicons name="bulb-outline" size={48} color="#0063e1" />
+              <Ionicons name="bulb-outline" size={48} color={colors.brand.DEFAULT} />
             </View>
             <Text style={styles.stepTitle}>AI Analysis</Text>
             <Text style={styles.stepSubtitle}>
@@ -595,14 +596,14 @@ export default function SellScreen() {
 
             {aiAnalyzing ? (
               <View style={styles.analyzingContainer}>
-                <ActivityIndicator size="large" color="#0063e1" />
+                <ActivityIndicator size="large" color={colors.brand.DEFAULT} />
                 <Text style={styles.analyzingText}>Analyzing your photos...</Text>
                 <Text style={styles.analyzingSubtext}>This may take a few moments</Text>
               </View>
             ) : (
               <View style={styles.buttonGroup}>
                 <TouchableOpacity style={styles.primaryButton} onPress={analyzeWithAI}>
-                  <Ionicons name="sparkles" size={20} color="#fff" />
+                  <Ionicons name="sparkles" size={20} color={colors.text.primary} />
                   <Text style={styles.buttonText}>Analyze with AI</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -633,12 +634,12 @@ export default function SellScreen() {
                   }
                 }}
               >
-                <Ionicons name="chevron-back" size={20} color="#0063e1" />
+                <Ionicons name="chevron-back" size={20} color={colors.brand.DEFAULT} />
                 <Text style={styles.stepBackButtonText}>Back</Text>
               </TouchableOpacity>
             )}
             <View style={styles.questionHeader}>
-              <Ionicons name="chatbubbles-outline" size={32} color="#0063e1" />
+              <Ionicons name="chatbubbles-outline" size={32} color={colors.brand.DEFAULT} />
               <Text style={styles.questionProgress}>
                 Question {currentQuestionIndex + 1} of {missingInfoQuestions.length}
               </Text>
@@ -672,7 +673,7 @@ export default function SellScreen() {
               <TextInput
                 style={styles.input}
                 placeholder={currentQuestion.placeholder}
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                placeholderTextColor={colors.text.muted}
                 value={currentAnswer}
                 onChangeText={setCurrentAnswer}
               />
@@ -689,7 +690,7 @@ export default function SellScreen() {
               <Text style={styles.buttonText}>
                 {currentQuestionIndex === missingInfoQuestions.length - 1 ? 'Complete' : 'Next'}
               </Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
+              <Ionicons name="arrow-forward" size={20} color={colors.text.primary} />
             </TouchableOpacity>
 
             {/* Progress bar */}
@@ -722,7 +723,7 @@ export default function SellScreen() {
                   }
                 }}
               >
-                <Ionicons name="chevron-back" size={20} color="#0063e1" />
+                <Ionicons name="chevron-back" size={20} color={colors.brand.DEFAULT} />
                 <Text style={styles.stepBackButtonText}>Back</Text>
               </TouchableOpacity>
             )}
@@ -739,7 +740,7 @@ export default function SellScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="e.g., iPhone 14 Pro Max"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                placeholderTextColor={colors.text.muted}
                 value={title}
                 onChangeText={setTitle}
               />
@@ -751,7 +752,7 @@ export default function SellScreen() {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Describe your item..."
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                placeholderTextColor={colors.text.muted}
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -768,7 +769,7 @@ export default function SellScreen() {
                 <TextInput
                   style={[styles.input, styles.priceField]}
                   placeholder="0.00"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  placeholderTextColor={colors.text.muted}
                   value={price}
                   onChangeText={setPrice}
                   keyboardType="decimal-pad"
@@ -837,7 +838,7 @@ export default function SellScreen() {
               <Text style={styles.buttonText}>
                 {loading ? 'Creating...' : 'Publish Listing'}
               </Text>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Ionicons name="checkmark-circle" size={20} color={colors.text.primary} />
             </TouchableOpacity>
           </ScrollView>
         );
@@ -877,7 +878,7 @@ export default function SellScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -885,15 +886,15 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   headerCard: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 20,
     padding: 20,
     marginTop: 20,
     marginBottom: 32,
     marginHorizontal: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 99, 225, 0.3)',
-    shadowColor: '#0063e1',
+    borderColor: colors.brand.ring,
+    shadowColor: colors.brand.DEFAULT,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -908,11 +909,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(0, 99, 225, 0.15)',
+    backgroundColor: colors.brand.soft,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 99, 225, 0.4)',
+    borderColor: colors.brand.ring,
   },
   logo: {
     width: 36,
@@ -924,13 +925,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 6,
     letterSpacing: 0.3,
   },
   subtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     lineHeight: 20,
   },
   stepContent: {
@@ -939,13 +940,13 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     textAlign: 'left',
     marginBottom: 8,
   },
   stepSubtitle: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     textAlign: 'left',
     marginBottom: 24,
     lineHeight: 22,
@@ -971,15 +972,15 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 16,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   removePhotoButton: {
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
     borderRadius: 12,
     padding: 2,
   },
@@ -987,9 +988,9 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 16,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderWidth: 2,
-    borderColor: 'rgba(0, 99, 225, 0.3)',
+    borderColor: colors.brand.ring,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
@@ -999,9 +1000,9 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 20,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderWidth: 2.5,
-    borderColor: 'rgba(0, 99, 225, 0.4)',
+    borderColor: colors.brand.ring,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1010,18 +1011,18 @@ const styles = StyleSheet.create({
   },
   addPhotoText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     fontWeight: '500',
   },
   addPhotoTextLarge: {
     fontSize: 18,
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   addPhotoSubtext: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     fontWeight: '400',
   },
   uploadInfo: {
@@ -1031,7 +1032,7 @@ const styles = StyleSheet.create({
   },
   uploadInfoText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.text.muted,
     textAlign: 'center',
   },
   analyzingContainer: {
@@ -1042,17 +1043,17 @@ const styles = StyleSheet.create({
   analyzingText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   analyzingSubtext: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
   },
   buttonGroup: {
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 24,
@@ -1060,7 +1061,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    shadowColor: '#0063e1',
+    shadowColor: colors.brand.DEFAULT,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1069,7 +1070,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     letterSpacing: 0.3,
   },
   buttonDisabled: {
@@ -1082,13 +1083,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: colors.border.strong,
     alignItems: 'center',
   },
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
   questionHeader: {
     alignItems: 'center',
@@ -1097,25 +1098,25 @@ const styles = StyleSheet.create({
   },
   questionProgress: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
   },
   questionText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 20,
     textAlign: 'center',
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 2,
     marginTop: 20,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
   },
   previewImage: {
     width: '100%',
@@ -1130,17 +1131,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   input: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#fff',
+    color: colors.text.primary,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   textArea: {
     height: 100,
@@ -1155,7 +1156,7 @@ const styles = StyleSheet.create({
     left: 16,
     fontSize: 16,
     fontWeight: '600',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     zIndex: 1,
   },
   priceField: {
@@ -1168,24 +1169,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   option: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   optionSelected: {
-    backgroundColor: '#0063e1',
-    borderColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
+    borderColor: colors.brand.DEFAULT,
   },
   optionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
   optionTextSelected: {
-    color: '#fff',
+    color: colors.text.primary,
   },
   stepBackButton: {
     flexDirection: 'row',
@@ -1198,7 +1199,7 @@ const styles = StyleSheet.create({
   stepBackButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     marginLeft: 4,
   },
   emptyState: {
@@ -1210,18 +1211,18 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 20,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     marginBottom: 24,
   },
   signInButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
@@ -1229,6 +1230,6 @@ const styles = StyleSheet.create({
   signInButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
 });

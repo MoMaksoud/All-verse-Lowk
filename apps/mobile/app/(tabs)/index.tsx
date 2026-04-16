@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   TextInput,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +16,14 @@ import { router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { apiClient } from '../../lib/api/client';
 import ListingCard from '../../components/ListingCard';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import SkeletonCard from '../../components/SkeletonCard';
+import ImageSearchModal from '../../components/ImageSearchModal';
+import { getPopularSearches } from '../../lib/searchAnalytics';
+import { useFavoritesCount } from '../../hooks/useFavoritesCount';
+import { colors, spacing, radii, typography, palette } from '../../constants/theme';
+
+// Trending queries from the shared search-analytics util. Mirrors web hero.
+const POPULAR_SEARCHES = getPopularSearches(4).map((q) => q.query);
 
 const logoSource = require('../../assets/icon.png');
 
@@ -40,6 +48,8 @@ export default function HomeScreen() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageSearchOpen, setImageSearchOpen] = useState(false);
+  const favoritesCount = useFavoritesCount();
 
   useEffect(() => {
     fetchListings();
@@ -56,7 +66,8 @@ export default function HomeScreen() {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.get('/api/listings');
+      // Match web hero: only ask for the 4 items we render in the grid.
+      const response = await apiClient.get('/api/listings?limit=4');
       const data = await response.json();
       
       if (response.ok && data.data && Array.isArray(data.data)) {
@@ -89,19 +100,15 @@ export default function HomeScreen() {
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner message="Loading listings..." />;
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#0063e1"
+            tintColor={colors.brand.DEFAULT}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -121,13 +128,20 @@ export default function HomeScreen() {
               style={styles.headerIconButton}
               onPress={() => router.push('/(tabs)/favorites')}
             >
-              <Ionicons name="heart-outline" size={24} color="#fff" />
+              <Ionicons name="heart-outline" size={24} color={colors.text.primary} />
+              {favoritesCount > 0 && (
+                <View style={styles.headerBadge}>
+                  <Text style={styles.headerBadgeText}>
+                    {favoritesCount > 99 ? '99+' : favoritesCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconButton}
               onPress={() => router.push('/(tabs)/cart')}
             >
-              <Ionicons name="cart-outline" size={24} color="#fff" />
+              <Ionicons name="cart-outline" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -135,7 +149,7 @@ export default function HomeScreen() {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.badge}>
-            <Ionicons name="sparkles" size={16} color="#0063e1" />
+            <Ionicons name="sparkles" size={16} color={colors.brand.DEFAULT} />
             <Text style={styles.badgeText}>Universal AI Shopping Search</Text>
           </View>
           
@@ -147,29 +161,36 @@ export default function HomeScreen() {
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.7)" />
+              <Ionicons name="search" size={20} color={colors.text.tertiary} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search for electronics, fashion, home goods..."
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                placeholderTextColor={colors.text.muted}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 onSubmitEditing={handleSearch}
                 returnKeyType="search"
               />
-              <TouchableOpacity 
+              <TouchableOpacity
+                onPress={() => setImageSearchOpen(true)}
+                style={styles.cameraButton}
+                accessibilityLabel="Search with image"
+              >
+                <Ionicons name="camera-outline" size={20} color={colors.text.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={handleSearch}
                 style={[styles.searchButton, !searchQuery.trim() && styles.searchButtonDisabled]}
                 disabled={!searchQuery.trim()}
               >
-                <Ionicons name="search" size={18} color="#fff" />
+                <Ionicons name="search" size={18} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
 
             {/* Popular Searches */}
             <View style={styles.popularSearches}>
               <Text style={styles.popularLabel}>Popular:</Text>
-              {['iPhone 14', 'Nike Shoes', 'MacBook', 'Gaming Chair'].map((term) => (
+              {POPULAR_SEARCHES.map((term) => (
                 <TouchableOpacity
                   key={term}
                   style={styles.popularTag}
@@ -197,7 +218,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/search')}
             >
               <Text style={styles.viewAllText}>View All</Text>
-              <Ionicons name="arrow-forward" size={16} color="#0063e1" />
+              <Ionicons name="arrow-forward" size={16} color={colors.brand.DEFAULT} />
             </TouchableOpacity>
           </View>
           
@@ -206,7 +227,13 @@ export default function HomeScreen() {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
-          {listings.length > 0 ? (
+          {loading ? (
+            <View style={styles.listingsGrid}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonCard key={`skeleton-${i}`} />
+              ))}
+            </View>
+          ) : listings.length > 0 ? (
             <View style={styles.listingsGrid}>
               {listings.slice(0, 4).map((listing) => (
                 <ListingCard
@@ -233,18 +260,22 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* AI-Powered Features */}
+        {/* AI-Powered Features — centered to mirror apps/web hero */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>AI-Powered Features</Text>
-          <Text style={styles.sectionSubtitle}>Experience the future of marketplace interactions</Text>
-          
+          <View style={styles.featuresHeader}>
+            <Text style={[styles.sectionTitle, styles.featuresTitle]}>AI-Powered Features</Text>
+            <Text style={[styles.sectionSubtitle, styles.featuresSubtitle]}>
+              Experience the future of marketplace interactions
+            </Text>
+          </View>
+
           <View style={styles.featuresGrid}>
             <TouchableOpacity 
               style={styles.featureCard}
               onPress={() => router.push('/(tabs)/messages')}
             >
               <View style={styles.featureIcon}>
-                <Ionicons name="chatbubbles" size={24} color="#fff" />
+                <Ionicons name="chatbubbles" size={24} color={colors.text.primary} />
               </View>
               <Text style={styles.featureTitle}>Smart Chat</Text>
               <Text style={styles.featureDescription}>AI-powered conversations with sellers</Text>
@@ -255,7 +286,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/search')}
             >
               <View style={styles.featureIcon}>
-                <Ionicons name="flash" size={24} color="#fff" />
+                <Ionicons name="flash" size={24} color={colors.text.primary} />
               </View>
               <Text style={styles.featureTitle}>Smart Search</Text>
               <Text style={styles.featureDescription}>AI-powered search and discovery</Text>
@@ -266,7 +297,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/sell' as any)}
             >
               <View style={styles.featureIcon}>
-                <Ionicons name="bulb" size={24} color="#fff" />
+                <Ionicons name="bulb" size={24} color={colors.text.primary} />
               </View>
               <Text style={styles.featureTitle}>AI Pricing</Text>
               <Text style={styles.featureDescription}>AI-suggested fair prices</Text>
@@ -277,7 +308,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/search')}
             >
               <View style={styles.featureIcon}>
-                <Ionicons name="bag" size={24} color="#fff" />
+                <Ionicons name="bag" size={24} color={colors.text.primary} />
               </View>
               <Text style={styles.featureTitle}>Smart Discovery</Text>
               <Text style={styles.featureDescription}>Find exactly what you need</Text>
@@ -299,16 +330,76 @@ export default function HomeScreen() {
             <Text style={styles.ctaSubtitle}>
               Turn your items into earnings with AI-assisted listing and pricing.
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.ctaButton}
               onPress={() => router.push('/(tabs)/sell')}
             >
               <Text style={styles.ctaButtonText}>Start Selling</Text>
-              <Ionicons name="arrow-forward" size={18} color="#fff" />
+              <Ionicons name="arrow-forward" size={18} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
         </View>
+
+        {/*
+          Footer — mobile port of apps/web/src/app/page.tsx footer (lines
+          280-346). Web uses a 3-column grid; we stack vertically to respect
+          the narrow viewport. Contact email mirrors legal/contact.tsx.
+        */}
+        <View style={styles.footer}>
+          <View style={styles.footerDivider} />
+
+          {/* Contact */}
+          <View style={styles.footerSection}>
+            <Text style={styles.footerHeading}>CONTACT</Text>
+            <TouchableOpacity
+              style={styles.footerLinkRow}
+              onPress={() => Linking.openURL('mailto:info@allversegpt.com')}
+            >
+              <Ionicons name="mail-outline" size={16} color={colors.text.tertiary} />
+              <Text style={styles.footerLink}>info@allversegpt.com</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Quick Links */}
+          <View style={styles.footerSection}>
+            <Text style={styles.footerHeading}>QUICK LINKS</Text>
+            <TouchableOpacity onPress={() => router.push('/legal/about' as any)}>
+              <Text style={styles.footerLink}>About</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/legal/privacy' as any)}>
+              <Text style={styles.footerLink}>Privacy Policy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/legal/terms' as any)}>
+              <Text style={styles.footerLink}>Terms of Service</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Resources */}
+          <View style={styles.footerSection}>
+            <Text style={styles.footerHeading}>RESOURCES</Text>
+            <TouchableOpacity onPress={() => router.push('/legal/help' as any)}>
+              <Text style={styles.footerLink}>Help Center</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/legal/faq' as any)}>
+              <Text style={styles.footerLink}>FAQ</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/legal/contact' as any)}>
+              <Text style={styles.footerLink}>Contact</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footerDivider} />
+          <Text style={styles.footerCopyright}>
+            © {new Date().getFullYear()} All Verse GPT. All rights reserved.
+          </Text>
+        </View>
       </ScrollView>
+
+      {/* Image search modal (camera / library) */}
+      <ImageSearchModal
+        isOpen={imageSearchOpen}
+        onClose={() => setImageSearchOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -316,16 +407,16 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   scrollContent: {
-    paddingBottom: 10,
-    paddingTop: 10,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.md,
   },
   scrollableHeader: {
-    paddingTop: 20,
-    paddingBottom: 8,
-    paddingHorizontal: 20,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -333,90 +424,110 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     flex: 1,
     justifyContent: 'center',
   },
   headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   headerIconButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: radii.full,
+    backgroundColor: colors.bg.glassHover,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: colors.error.DEFAULT,
+    borderWidth: 2,
+    borderColor: colors.bg.base,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBadgeText: {
+    color: colors.text.primary,
+    fontSize: 10,
+    fontWeight: typography.weight.bold,
+    lineHeight: 12,
   },
   headerLogo: {
     width: 28,
     height: 28,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 0.5,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    letterSpacing: typography.letterSpacing.wide,
   },
   logoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 0,
-    paddingBottom: 8,
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
   },
   logo: {
     width: 32,
     height: 32,
   },
   logoText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 0.5,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    letterSpacing: typography.letterSpacing.wide,
   },
   heroSection: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
     alignItems: 'center',
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 99, 225, 0.1)',
+    backgroundColor: colors.brand.softer,
     borderWidth: 1,
-    borderColor: 'rgba(0, 99, 225, 0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginBottom: 16,
-    gap: 6,
+    borderColor: colors.info.border,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    marginBottom: spacing.lg,
+    gap: spacing.xs + 2,
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0063e1',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold,
+    color: colors.brand.DEFAULT,
   },
   heroTitle: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: typography.size['7xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
     lineHeight: 44,
   },
   heroSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: typography.size.lg,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: spacing['2xl'],
     lineHeight: 24,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
   searchContainer: {
     width: '100%',
@@ -424,28 +535,39 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    backgroundColor: colors.bg.glassHover,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    marginBottom: 12,
+    borderColor: colors.border.strong,
+    marginBottom: spacing.md,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    color: '#fff',
+    marginLeft: spacing.md,
+    fontSize: typography.size.lg,
+    color: colors.text.primary,
+  },
+  cameraButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.lg,
+    backgroundColor: colors.bg.glass,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
   },
   searchButton: {
-    backgroundColor: '#0063e1',
-    borderRadius: 12,
-    padding: 10,
-    marginLeft: 8,
+    backgroundColor: colors.brand.DEFAULT,
+    borderRadius: radii.lg,
+    padding: spacing.sm + 2,
+    marginLeft: spacing.sm,
   },
   searchButtonDisabled: {
-    backgroundColor: '#4b5563',
+    backgroundColor: palette.gray[600],
     opacity: 0.5,
   },
   popularSearches: {
@@ -453,173 +575,220 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   popularLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: typography.size.sm,
+    color: colors.text.tertiary,
   },
   popularTag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.bg.glass,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderColor: colors.border.subtle,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
   },
   popularTagText: {
-    fontSize: 12,
-    color: '#fff',
+    fontSize: typography.size.sm,
+    color: colors.text.primary,
   },
   section: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing['3xl'],
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
+    fontSize: typography.size['3xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   sectionSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: typography.size.base,
+    color: colors.text.tertiary,
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   viewAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0063e1',
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.brand.DEFAULT,
   },
   errorContainer: {
-    padding: 16,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: 12,
-    marginBottom: 16,
+    padding: spacing.lg,
+    backgroundColor: colors.error.soft,
+    borderRadius: radii.lg,
+    marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: colors.error.border,
   },
   errorText: {
-    color: '#ef4444',
-    fontSize: 14,
+    color: colors.error.DEFAULT,
+    fontSize: typography.size.base,
   },
   listingsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
   },
   emptyState: {
-    padding: 32,
+    padding: spacing['3xl'],
     alignItems: 'center',
   },
   placeholderText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginBottom: 8,
+    fontSize: typography.size.base,
+    color: colors.text.muted,
+    marginBottom: spacing.sm,
   },
   emptyStateSubtext: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.4)',
+    fontSize: typography.size.sm,
+    color: colors.text.disabled,
+  },
+  featuresHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  featuresTitle: {
+    textAlign: 'center',
+    marginBottom: spacing.xs + 2,
+  },
+  featuresSubtitle: {
+    textAlign: 'center',
   },
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 8,
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
   featureCard: {
     width: (width - 52) / 2,
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: colors.bg.surface,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   featureIcon: {
     width: 56,
     height: 56,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 99, 225, 0.2)',
+    borderRadius: radii.xl,
+    backgroundColor: colors.brand.soft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 6,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs + 2,
     textAlign: 'center',
   },
   featureDescription: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: typography.size.sm,
+    color: colors.text.tertiary,
     textAlign: 'center',
     lineHeight: 16,
   },
   ctaSection: {
-    paddingHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 32,
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.sm,
+    marginBottom: spacing['3xl'],
   },
   ctaCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 24,
-    padding: 24,
+    backgroundColor: colors.bg.glass,
+    borderRadius: radii['2xl'],
+    padding: spacing['2xl'],
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   ctaLogoContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
-    padding: 8,
-    marginBottom: 16,
+    backgroundColor: colors.bg.glassHover,
+    borderRadius: radii.full,
+    padding: spacing.sm,
+    marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: colors.border.strong,
   },
   ctaLogo: {
     width: 24,
     height: 24,
   },
   ctaTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
+    fontSize: typography.size['4xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   ctaSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: typography.size.base,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
     lineHeight: 20,
   },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0063e1',
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    gap: 8,
+    backgroundColor: colors.brand.DEFAULT,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing['2xl'],
+    paddingVertical: spacing.md + 2,
+    gap: spacing.sm,
   },
   ctaButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+  },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+  },
+  footerDivider: {
+    height: 1,
+    backgroundColor: colors.border.subtle,
+    marginVertical: spacing.lg,
+  },
+  footerSection: {
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  footerHeading: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    letterSpacing: typography.letterSpacing.wide,
+    marginBottom: spacing.xs,
+  },
+  footerLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  footerLink: {
+    fontSize: typography.size.sm,
+    color: colors.text.tertiary,
+    paddingVertical: spacing.xs,
+  },
+  footerCopyright: {
+    fontSize: typography.size.xs,
+    color: colors.text.muted,
+    textAlign: 'center',
+    marginTop: spacing.xs,
   },
 });

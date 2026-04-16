@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
+import { colors, palette } from '../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -259,12 +260,12 @@ export default function CheckoutScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Checkout</Text>
         </View>
         <View style={styles.emptyState}>
-          <Ionicons name="cart-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+          <Ionicons name="cart-outline" size={80} color={colors.text.muted} />
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
           <TouchableOpacity
             style={styles.browseButton}
@@ -283,7 +284,7 @@ export default function CheckoutScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
       </View>
@@ -298,7 +299,7 @@ export default function CheckoutScreen() {
             <TextInput
               style={styles.input}
               placeholder="Enter your full name"
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              placeholderTextColor={colors.text.muted}
               value={shippingAddress.name}
               onChangeText={(text) => setShippingAddress(prev => ({ ...prev, name: text }))}
             />
@@ -309,7 +310,7 @@ export default function CheckoutScreen() {
             <TextInput
               style={styles.input}
               placeholder="Enter street address"
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              placeholderTextColor={colors.text.muted}
               value={shippingAddress.street}
               onChangeText={(text) => setShippingAddress(prev => ({ ...prev, street: text }))}
             />
@@ -321,7 +322,7 @@ export default function CheckoutScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="City"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                placeholderTextColor={colors.text.muted}
                 value={shippingAddress.city}
                 onChangeText={(text) => setShippingAddress(prev => ({ ...prev, city: text }))}
               />
@@ -332,7 +333,7 @@ export default function CheckoutScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="State"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                placeholderTextColor={colors.text.muted}
                 value={shippingAddress.state}
                 onChangeText={(text) => setShippingAddress(prev => ({ ...prev, state: text }))}
               />
@@ -345,7 +346,7 @@ export default function CheckoutScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="ZIP"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                placeholderTextColor={colors.text.muted}
                 value={shippingAddress.zip}
                 onChangeText={(text) => {
                   // Only allow digits, spaces, and dashes
@@ -362,7 +363,7 @@ export default function CheckoutScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Country"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                placeholderTextColor={colors.text.muted}
                 value={shippingAddress.country}
                 onChangeText={(text) => setShippingAddress(prev => ({ ...prev, country: text }))}
               />
@@ -376,12 +377,12 @@ export default function CheckoutScreen() {
             <Text style={styles.sectionTitle}>Shipping Options</Text>
             {loadingRates ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#0063e1" />
+                <ActivityIndicator size="small" color={colors.brand.DEFAULT} />
                 <Text style={styles.loadingText}>Loading shipping rates...</Text>
               </View>
             ) : ratesError ? (
               <View style={styles.errorContainer}>
-                <Ionicons name="alert-circle" size={20} color="#ef4444" />
+                <Ionicons name="alert-circle" size={20} color={colors.error.DEFAULT} />
                 <Text style={styles.errorText}>{ratesError}</Text>
               </View>
             ) : shippingRates.length > 0 ? (
@@ -418,7 +419,7 @@ export default function CheckoutScreen() {
                           <Ionicons
                             name={isSelected ? 'radio-button-on' : 'radio-button-off'}
                             size={24}
-                            color={isSelected ? '#0063e1' : 'rgba(255, 255, 255, 0.5)'}
+                            color={isSelected ? colors.brand.DEFAULT : colors.text.muted}
                           />
                           <View style={styles.shippingOptionInfo}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -489,13 +490,13 @@ export default function CheckoutScreen() {
           disabled={processing || !selectedShipping}
         >
           {processing ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.text.primary} />
           ) : (
             <>
               <Text style={styles.checkoutButtonText}>
                 Pay ${total.toFixed(2)}
               </Text>
-              <Ionicons name="lock-closed" size={20} color="#fff" />
+              <Ionicons name="lock-closed" size={20} color={colors.text.primary} />
             </>
           )}
         </TouchableOpacity>
@@ -508,7 +509,7 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   header: {
     flexDirection: 'row',
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border.subtle,
   },
   backButton: {
     marginRight: 12,
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
@@ -541,7 +542,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 16,
   },
   inputGroup: {
@@ -557,18 +558,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.text.secondary,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -578,22 +579,22 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     fontSize: 14,
   },
   shippingOptions: {
     gap: 12,
   },
   shippingOption: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   shippingOptionSelected: {
-    borderColor: '#0063e1',
-    backgroundColor: 'rgba(0, 99, 225, 0.1)',
+    borderColor: colors.brand.DEFAULT,
+    backgroundColor: colors.brand.softer,
   },
   shippingOptionContent: {
     flexDirection: 'row',
@@ -612,25 +613,25 @@ const styles = StyleSheet.create({
   shippingOptionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 4,
   },
   shippingOptionCarrier: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     marginBottom: 2,
   },
   shippingOptionDays: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
   },
   shippingOptionPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   noRatesText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     fontSize: 14,
     textAlign: 'center',
     padding: 20,
@@ -640,27 +641,27 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(0, 99, 225, 0.6)',
-    backgroundColor: 'rgba(0, 99, 225, 0.15)',
+    borderColor: colors.brand.DEFAULT,
+    backgroundColor: colors.brand.soft,
   },
   recommendedBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#60a5fa',
+    color: palette.primary[400],
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: colors.error.soft,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: colors.error.border,
     borderRadius: 12,
     padding: 16,
   },
   errorText: {
     flex: 1,
-    color: '#ef4444',
+    color: colors.error.DEFAULT,
     fontSize: 14,
   },
   summaryRow: {
@@ -670,36 +671,36 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
   summaryValue: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
     marginVertical: 12,
   },
   summaryTotalLabel: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
   },
   summaryTotalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   footer: {
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: colors.border.subtle,
     padding: 20,
     paddingBottom: 32,
   },
   checkoutButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,
@@ -710,16 +711,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   checkoutButtonDisabled: {
-    backgroundColor: 'rgba(0, 99, 225, 0.5)',
+    backgroundColor: colors.brand.hover,
+    opacity: 0.5,
   },
   checkoutButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 18,
     fontWeight: '700',
   },
   secureText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.text.muted,
     textAlign: 'center',
   },
   emptyState: {
@@ -731,19 +733,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 20,
     marginBottom: 8,
   },
   browseButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 20,
   },
   browseButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },

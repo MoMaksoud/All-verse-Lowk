@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../lib/api/client';
+import { colors, spacing, radii, typography } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 56) / 2; // 2 columns with spacing
@@ -174,7 +175,7 @@ export default function ListingCard({
       >
         {imageError ? (
           <View style={[styles.listImage, styles.imagePlaceholder]}>
-            <Ionicons name="image-outline" size={32} color="rgba(255, 255, 255, 0.4)" />
+            <Ionicons name="image-outline" size={32} color={colors.text.muted} />
           </View>
         ) : (
           <Image
@@ -202,10 +203,10 @@ export default function ListingCard({
               disabled={addingToCart}
             >
               {addingToCart ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.text.primary} />
               ) : (
                 <>
-                  <Ionicons name="cart-outline" size={16} color="#fff" />
+                  <Ionicons name="cart-outline" size={16} color={colors.text.primary} />
                   <Text style={styles.addToCartText}>Add to Cart</Text>
                 </>
               )}
@@ -219,7 +220,7 @@ export default function ListingCard({
           <Ionicons
             name={isFavorited ? 'heart' : 'heart-outline'}
             size={24}
-            color={isFavorited ? '#ef4444' : '#fff'}
+            color={isFavorited ? colors.error.DEFAULT : colors.text.primary}
           />
         </TouchableOpacity>
       </TouchableOpacity>
@@ -234,7 +235,7 @@ export default function ListingCard({
     >
       {imageError ? (
         <View style={[styles.gridImage, styles.imagePlaceholder]}>
-          <Ionicons name="image-outline" size={40} color="rgba(255, 255, 255, 0.4)" />
+          <Ionicons name="image-outline" size={40} color={colors.text.muted} />
         </View>
       ) : (
         <Image
@@ -259,7 +260,7 @@ export default function ListingCard({
           <Ionicons
             name={isFavorited ? 'heart' : 'heart-outline'}
             size={20}
-            color={isFavorited ? '#ef4444' : '#fff'}
+            color={isFavorited ? colors.error.DEFAULT : colors.text.primary}
           />
         </TouchableOpacity>
       </View>
@@ -286,10 +287,10 @@ export default function ListingCard({
             disabled={addingToCart}
           >
             {addingToCart ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={colors.text.primary} />
             ) : (
               <>
-                <Ionicons name="cart-outline" size={16} color="#fff" />
+                <Ionicons name="cart-outline" size={16} color={colors.text.primary} />
                 <Text style={styles.addToCartText}>Add to Cart</Text>
               </>
             )}
@@ -303,17 +304,17 @@ export default function ListingCard({
 const styles = StyleSheet.create({
   // Grid variant styles
   gridCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
+    backgroundColor: colors.bg.surface,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   gridImage: {
     width: '100%',
     height: CARD_IMAGE_HEIGHT,
-    backgroundColor: '#0E1526',
+    backgroundColor: colors.bg.raised,
   },
   imagePlaceholder: {
     justifyContent: 'center',
@@ -329,21 +330,21 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   gridContent: {
-    padding: 14,
+    padding: spacing.md + 2,
     minHeight: 120,
   },
   gridTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 6,
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs + 2,
     lineHeight: 20,
     minHeight: 40,
   },
   gridDescription: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 10,
+    fontSize: typography.size.base - 1,
+    color: colors.text.tertiary,
+    marginBottom: spacing.sm + 2,
     lineHeight: 18,
     minHeight: 36,
   },
@@ -355,11 +356,11 @@ const styles = StyleSheet.create({
   },
   gridFavoriteButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 20,
-    padding: 8,
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.bg.overlay,
+    borderRadius: radii.full,
+    padding: spacing.sm,
     zIndex: 15,
     width: 36,
     height: 36,
@@ -369,106 +370,107 @@ const styles = StyleSheet.create({
 
   // List variant styles
   listCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
+    backgroundColor: colors.bg.surface,
+    borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     flexDirection: 'row',
-    padding: 12,
-    marginBottom: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     overflow: 'hidden',
   },
   listImage: {
     width: 100,
     height: 100,
-    borderRadius: 12,
-    backgroundColor: '#0E1526',
+    borderRadius: radii.lg,
+    backgroundColor: colors.bg.raised,
   },
   listContent: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: spacing.md,
     justifyContent: 'space-between',
   },
   listTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 4,
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   listDescription: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 8,
+    fontSize: typography.size.base - 1,
+    color: colors.text.tertiary,
+    marginBottom: spacing.sm,
   },
   listFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
 
   // Shared styles
   price: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#0063e1',
+    fontWeight: typography.weight.bold,
+    color: colors.brand.DEFAULT,
   },
   category: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: typography.size.sm,
+    color: colors.text.tertiary,
   },
   conditionBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: colors.success.soft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.md,
   },
   conditionText: {
     fontSize: 10,
-    color: '#10b981',
-    fontWeight: '600',
+    color: colors.success.DEFAULT,
+    fontWeight: typography.weight.semibold,
   },
   soldBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    top: spacing.sm,
+    left: spacing.sm,
+    backgroundColor: colors.error.DEFAULT,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radii.md,
     zIndex: 12,
     maxWidth: '60%',
   },
   soldText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
   },
   favoriteButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 20,
-    padding: 8,
+    top: spacing.md,
+    right: spacing.md,
+    backgroundColor: colors.bg.overlay,
+    borderRadius: radii.full,
+    padding: spacing.sm,
   },
   addToCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0063e1',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginTop: 10,
-    gap: 6,
+    backgroundColor: colors.brand.DEFAULT,
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm + 2,
+    gap: spacing.xs + 2,
   },
   addToCartButtonDisabled: {
-    backgroundColor: 'rgba(0, 99, 225, 0.5)',
+    backgroundColor: colors.brand.DEFAULT,
+    opacity: 0.5,
   },
   addToCartText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
+    color: colors.text.primary,
+    fontSize: typography.size.base - 1,
+    fontWeight: typography.weight.semibold,
   },
 });
 

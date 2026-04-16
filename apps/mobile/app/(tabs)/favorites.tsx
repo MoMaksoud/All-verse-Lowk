@@ -10,6 +10,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -145,7 +146,7 @@ export default function FavoritesScreen() {
       {/* Page Header */}
       <View style={styles.pageHeader}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>My Favorites</Text>
       </View>
@@ -163,17 +164,17 @@ export default function FavoritesScreen() {
         <View style={styles.filtersContainer}>
           {/* Search */}
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.5)" style={styles.searchIcon} />
+            <Ionicons name="search" size={20} color={colors.text.muted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search favorites..."
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              placeholderTextColor={colors.text.muted}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color="rgba(255, 255, 255, 0.5)" />
+                <Ionicons name="close-circle" size={20} color={colors.text.muted} />
               </TouchableOpacity>
             )}
           </View>
@@ -222,7 +223,7 @@ export default function FavoritesScreen() {
         <>
           <ListHeader />
           <View style={styles.emptyState}>
-            <Ionicons name="heart-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+            <Ionicons name="heart-outline" size={80} color={colors.text.muted} />
             <Text style={styles.emptyTitle}>No Favorites Yet</Text>
             <Text style={styles.emptyText}>
               Start exploring and click the heart icon on items you like to add them here.
@@ -239,7 +240,7 @@ export default function FavoritesScreen() {
         <>
           <ListHeader />
           <View style={styles.emptyState}>
-            <Ionicons name="filter-outline" size={80} color="rgba(255, 255, 255, 0.3)" />
+            <Ionicons name="filter-outline" size={80} color={colors.text.muted} />
             <Text style={styles.emptyTitle}>No Matches</Text>
             <Text style={styles.emptyText}>Try adjusting your search or filter criteria.</Text>
             <TouchableOpacity
@@ -275,7 +276,7 @@ export default function FavoritesScreen() {
           numColumns={2}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={renderListHeader}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0063e1" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand.DEFAULT} />}
           columnWrapperStyle={styles.row}
           windowSize={5}
           maxToRenderPerBatch={10}
@@ -290,7 +291,7 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   pageHeader: {
     flexDirection: 'row',
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     flex: 1,
     marginBottom: 4,
   },
@@ -317,12 +318,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a2332',
+    backgroundColor: colors.bg.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   searchIcon: {
     marginRight: 8,
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 44,
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
   },
   clearButton: {
@@ -346,26 +347,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#1a2332',
+    backgroundColor: colors.bg.surface,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   categoryChipActive: {
-    backgroundColor: '#0063e1',
-    borderColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
+    borderColor: colors.brand.DEFAULT,
   },
   categoryChipText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     fontSize: 14,
     fontWeight: '500',
   },
   categoryChipTextActive: {
-    color: '#fff',
+    color: colors.text.primary,
   },
   resultsCount: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     textAlign: 'center',
   },
   listContent: {
@@ -384,24 +385,24 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     marginBottom: 24,
   },
   browseButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
   browseButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },

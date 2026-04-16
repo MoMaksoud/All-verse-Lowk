@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../lib/api/client';
+import { colors, spacing, radii, typography, palette } from '../constants/theme';
 
 interface User {
   userId: string;
@@ -98,7 +99,7 @@ export default function UserSearchModal({ isOpen, onClose, onSelectUser }: UserS
           <Image source={{ uri: item.profilePicture }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={24} color="rgba(255, 255, 255, 0.6)" />
+            <Ionicons name="person" size={24} color={colors.text.tertiary} />
           </View>
         )}
       </View>
@@ -111,7 +112,7 @@ export default function UserSearchModal({ isOpen, onClose, onSelectUser }: UserS
           <Text style={styles.bio} numberOfLines={1}>{item.bio}</Text>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={20} color="rgba(255, 255, 255, 0.4)" />
+      <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
     </TouchableOpacity>
   );
 
@@ -126,7 +127,7 @@ export default function UserSearchModal({ isOpen, onClose, onSelectUser }: UserS
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#fff" />
+            <Ionicons name="close" size={24} color={colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>New Message</Text>
           <View style={styles.closeButton} />
@@ -134,12 +135,12 @@ export default function UserSearchModal({ isOpen, onClose, onSelectUser }: UserS
 
         {/* Search Input */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.5)" style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color={colors.text.muted} style={styles.searchIcon} />
           <TextInput
             ref={inputRef}
             style={styles.searchInput}
             placeholder="Search by @username"
-            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            placeholderTextColor={colors.text.muted}
             value={searchTerm}
             onChangeText={setSearchTerm}
             autoCapitalize="none"
@@ -147,7 +148,7 @@ export default function UserSearchModal({ isOpen, onClose, onSelectUser }: UserS
           />
           {searchTerm.length > 0 && (
             <TouchableOpacity onPress={() => setSearchTerm('')} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="rgba(255, 255, 255, 0.5)" />
+              <Ionicons name="close-circle" size={20} color={colors.text.muted} />
             </TouchableOpacity>
           )}
         </View>
@@ -155,7 +156,7 @@ export default function UserSearchModal({ isOpen, onClose, onSelectUser }: UserS
         {/* Results */}
         {loading && (
           <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color="#60a5fa" />
+            <ActivityIndicator size="large" color={palette.primary[400]} />
             <Text style={styles.centerText}>Searching...</Text>
           </View>
         )}
@@ -194,16 +195,16 @@ export default function UserSearchModal({ isOpen, onClose, onSelectUser }: UserS
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1b2e',
+    backgroundColor: colors.bg.raised,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border.subtle,
   },
   closeButton: {
     width: 40,
@@ -212,74 +213,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginVertical: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#1a2332',
-    borderRadius: 12,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    backgroundColor: colors.bg.surface,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   searchInput: {
     flex: 1,
-    color: '#fff',
-    fontSize: 16,
+    color: colors.text.primary,
+    fontSize: typography.size.lg,
   },
   clearButton: {
-    marginLeft: 8,
-    padding: 4,
+    marginLeft: spacing.sm,
+    padding: spacing.xs,
   },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: spacing['4xl'],
   },
   centerText: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 14,
-    marginTop: 12,
+    color: colors.text.muted,
+    fontSize: typography.size.base,
+    marginTop: spacing.md,
   },
   errorText: {
-    color: '#ef4444',
-    fontSize: 14,
+    color: colors.error.DEFAULT,
+    fontSize: typography.size.base,
   },
   listContent: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   userItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: colors.bg.glass,
   },
   avatarContainer: {
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
   },
   avatarPlaceholder: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.bg.glassHover,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -287,19 +288,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   username: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
     marginBottom: 2,
   },
   displayName: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: typography.size.base,
+    color: colors.text.tertiary,
     marginBottom: 2,
   },
   bio: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.4)',
+    fontSize: typography.size.sm,
+    color: colors.text.muted,
   },
 });
 

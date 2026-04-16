@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
 } from 'react-native';
+import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -19,7 +20,7 @@ export default function HelpScreen() {
   const helpSections = [
     {
       icon: 'search',
-      iconColor: '#10b981',
+      iconColor: colors.success.DEFAULT,
       title: 'Getting Started',
       items: [
         'Create an account using your email.',
@@ -29,7 +30,7 @@ export default function HelpScreen() {
     },
     {
       icon: 'create-outline',
-      iconColor: '#a855f7',
+      iconColor: palette.violet[500],
       title: 'Managing Your Listings',
       items: [
         'Edit title, description, price, and photos anytime.',
@@ -39,7 +40,7 @@ export default function HelpScreen() {
     },
     {
       icon: 'bag-outline',
-      iconColor: '#3b82f6',
+      iconColor: palette.primary[500],
       title: 'Buying Items',
       items: [
         'Browse listings or search using keywords.',
@@ -49,7 +50,7 @@ export default function HelpScreen() {
     },
     {
       icon: 'cube-outline',
-      iconColor: '#f97316',
+      iconColor: palette.orange[500],
       title: 'Shipping & Delivery',
       items: [
         'Sellers can ship items through integrated carriers.',
@@ -59,7 +60,7 @@ export default function HelpScreen() {
     },
     {
       icon: 'shield-outline',
-      iconColor: '#ef4444',
+      iconColor: colors.error.DEFAULT,
       title: 'Account & Security',
       items: [
         'Reset your password anytime from the login page.',
@@ -69,7 +70,7 @@ export default function HelpScreen() {
     },
     {
       icon: 'card-outline',
-      iconColor: '#10b981',
+      iconColor: colors.success.DEFAULT,
       title: 'Payments',
       items: [
         'Secure checkout powered by our payment partners.',
@@ -79,7 +80,7 @@ export default function HelpScreen() {
     },
     {
       icon: 'time-outline',
-      iconColor: '#0063e1',
+      iconColor: colors.brand.DEFAULT,
       title: 'Support Response Times',
       items: [
         'Typical response: 1–12 hours.',
@@ -92,7 +93,7 @@ export default function HelpScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help Center</Text>
       </View>
@@ -100,7 +101,7 @@ export default function HelpScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
           <View style={styles.badge}>
-            <Ionicons name="chatbubbles" size={20} color="#0063e1" />
+            <Ionicons name="chatbubbles" size={20} color={colors.brand.DEFAULT} />
             <Text style={styles.badgeText}>Help Center</Text>
           </View>
           <Text style={styles.title}>All Verse GPT – Help Center</Text>
@@ -108,7 +109,7 @@ export default function HelpScreen() {
             We're here to support you as you buy, sell, and manage listings across the All Verse GPT platform.
           </Text>
           <View style={styles.contactBanner}>
-            <Ionicons name="mail" size={20} color="#0063e1" />
+            <Ionicons name="mail" size={20} color={colors.brand.DEFAULT} />
             <Text style={styles.contactBannerText}>
               Need help? Contact us at{' '}
               <Text style={styles.contactLink} onPress={handleEmailPress}>info@allversegpt.com</Text>
@@ -152,7 +153,7 @@ export default function HelpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   header: {
     flexDirection: 'row',
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border.subtle,
   },
   backButton: {
     marginRight: 12,
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
@@ -190,26 +191,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 99, 225, 0.1)',
+    backgroundColor: colors.brand.softer,
     borderWidth: 1,
-    borderColor: 'rgba(0, 99, 225, 0.2)',
+    borderColor: colors.brand.soft,
     marginBottom: 24,
   },
   badgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
@@ -220,18 +221,18 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: colors.brand.softer,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
+    borderColor: colors.brand.soft,
     borderRadius: 12,
   },
   contactBannerText: {
     fontSize: 15,
-    color: 'rgba(147, 197, 253, 1)',
+    color: palette.primary[300],
   },
   contactLink: {
     fontWeight: '600',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     textDecorationLine: 'underline',
   },
   sectionsList: {
@@ -239,10 +240,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   sectionCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.bg.glass,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     padding: 20,
   },
   sectionHeader: {
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     flex: 1,
   },
   sectionItems: {
@@ -280,26 +281,26 @@ const styles = StyleSheet.create({
   itemText: {
     flex: 1,
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     lineHeight: 22,
   },
   footerSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.bg.glass,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     padding: 24,
     alignItems: 'center',
   },
   footerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 8,
   },
   footerText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     lineHeight: 22,
   },

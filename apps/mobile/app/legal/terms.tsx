@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
 } from 'react-native';
+import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -24,7 +25,7 @@ export default function TermsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Terms of Service</Text>
       </View>
@@ -32,7 +33,7 @@ export default function TermsScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
           <View style={styles.iconContainer}>
-            <Ionicons name="document-text" size={32} color="#fff" />
+            <Ionicons name="document-text" size={32} color={colors.text.primary} />
           </View>
           <Text style={styles.title}>Terms of Service</Text>
           <Text style={styles.lastUpdated}>
@@ -164,7 +165,7 @@ export default function TermsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   header: {
     flexDirection: 'row',
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border.subtle,
   },
   backButton: {
     marginRight: 12,
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
-    backgroundColor: 'rgba(0, 99, 225, 0.2)',
+    backgroundColor: colors.brand.soft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -207,12 +208,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 8,
   },
   lastUpdated: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.text.muted,
   },
   content: {
     gap: 24,
@@ -223,62 +224,62 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 12,
   },
   subsectionTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 16,
     marginBottom: 8,
   },
   sectionText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     lineHeight: 22,
   },
   bold: {
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   bulletPoint: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     lineHeight: 22,
     marginBottom: 8,
     paddingLeft: 8,
   },
   contactBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.bg.glass,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     marginTop: 12,
   },
   contactText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     lineHeight: 22,
   },
   contactLabel: {
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
   },
   link: {
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
     textDecorationLine: 'underline',
   },
   footerNote: {
     marginTop: 24,
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: colors.border.subtle,
   },
   footerText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: colors.text.muted,
     textAlign: 'center',
     lineHeight: 20,
   },

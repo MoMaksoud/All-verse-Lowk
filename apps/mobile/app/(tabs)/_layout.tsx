@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
+import { colors, spacing, radii, typography } from '../../constants/theme';
 
 const logoSource = require('../../assets/icon.png');
 
@@ -42,28 +43,28 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#0063e1', // Accent blue color
-        tabBarInactiveTintColor: '#71717a', // Gray
+        tabBarActiveTintColor: colors.tab.active,
+        tabBarInactiveTintColor: colors.tab.inactive,
         tabBarStyle: {
-          backgroundColor: '#020617',
-          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: colors.tab.background,
+          borderTopColor: colors.tab.border,
           borderTopWidth: 1,
           height: 70,
           paddingBottom: 20,
           paddingTop: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: typography.size.sm,
+          fontWeight: typography.weight.semibold,
         },
         headerStyle: {
-          backgroundColor: '#020617',
+          backgroundColor: colors.bg.base,
           elevation: 0,
           shadowOpacity: 0,
           borderBottomWidth: 0,
           height: 100,
         },
-        headerTintColor: '#fff',
+        headerTintColor: colors.text.primary,
       }}
     >
       <Tabs.Screen
@@ -146,12 +147,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     height: 44,
-    paddingTop: 10,
+    paddingTop: spacing.md,
   },
   centerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   centerTitleContainer: {
     flex: 1,
@@ -163,26 +164,26 @@ const styles = StyleSheet.create({
     height: 28,
   },
   navbarTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 0.5,
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    letterSpacing: typography.letterSpacing.wide,
   },
   centerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 16,
-    gap: 4,
+    paddingLeft: spacing.lg,
+    gap: spacing.xs,
   },
   backButtonText: {
     fontSize: 17,
-    color: '#0063e1',
-    fontWeight: '600',
+    color: colors.brand.DEFAULT,
+    fontWeight: typography.weight.semibold,
   },
   iconContainer: {
     position: 'relative',
@@ -193,10 +194,10 @@ const styles = StyleSheet.create({
     right: -2,
     width: 12,
     height: 12,
-    borderRadius: 6,
-    backgroundColor: '#ef4444',
+    borderRadius: radii.full,
+    backgroundColor: colors.error.DEFAULT,
     borderWidth: 2,
-    borderColor: '#020617',
+    borderColor: colors.bg.base,
   },
 });
 

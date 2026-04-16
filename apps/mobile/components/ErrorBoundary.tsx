@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors, spacing, radii, typography } from '../constants/theme';
 
 interface Props {
   children: ReactNode;
@@ -50,31 +51,31 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#020617',
-    padding: 24,
+    backgroundColor: colors.bg.base,
+    padding: spacing['2xl'],
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 12,
+    fontSize: typography.size['2xl'],
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   message: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: typography.size.md,
+    color: colors.text.tertiary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: spacing['2xl'],
   },
   button: {
-    backgroundColor: '#0063e1',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    backgroundColor: colors.brand.DEFAULT,
+    paddingHorizontal: spacing['2xl'],
+    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
   },
   buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
   },
 });

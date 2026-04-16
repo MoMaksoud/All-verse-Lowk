@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Linking,
 } from 'react-native';
+import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -63,7 +64,7 @@ export default function FAQScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>FAQ</Text>
       </View>
@@ -71,7 +72,7 @@ export default function FAQScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerSection}>
           <View style={styles.badge}>
-            <Ionicons name="help-circle" size={20} color="#0063e1" />
+            <Ionicons name="help-circle" size={20} color={colors.brand.DEFAULT} />
             <Text style={styles.badgeText}>Frequently Asked Questions</Text>
           </View>
           <Text style={styles.title}>All Verse GPT – FAQ</Text>
@@ -92,13 +93,13 @@ export default function FAQScreen() {
         </View>
 
         <View style={styles.ctaSection}>
-          <Ionicons name="mail" size={48} color="#0063e1" />
+          <Ionicons name="mail" size={48} color={colors.brand.DEFAULT} />
           <Text style={styles.ctaTitle}>Still have questions?</Text>
           <Text style={styles.ctaText}>
             If your question is not listed, email us at info@allversegpt.com
           </Text>
           <TouchableOpacity style={styles.contactButton} onPress={handleContactSupport}>
-            <Ionicons name="mail" size={20} color="#fff" />
+            <Ionicons name="mail" size={20} color={colors.text.primary} />
             <Text style={styles.contactButtonText}>Contact Support</Text>
           </TouchableOpacity>
         </View>
@@ -110,7 +111,7 @@ export default function FAQScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   header: {
     flexDirection: 'row',
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border.subtle,
   },
   backButton: {
     marginRight: 12,
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
@@ -148,26 +149,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 99, 225, 0.1)',
+    backgroundColor: colors.brand.softer,
     borderWidth: 1,
-    borderColor: 'rgba(0, 99, 225, 0.2)',
+    borderColor: colors.brand.soft,
     marginBottom: 24,
   },
   badgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -176,46 +177,46 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   faqItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.bg.glass,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
     padding: 20,
   },
   faqQuestion: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 12,
     lineHeight: 26,
   },
   faqNumber: {
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   faqAnswer: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     lineHeight: 22,
     paddingLeft: 24,
   },
   ctaSection: {
-    backgroundColor: 'rgba(0, 99, 225, 0.1)',
+    backgroundColor: colors.brand.softer,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 99, 225, 0.2)',
+    borderColor: colors.brand.soft,
     padding: 32,
     alignItems: 'center',
   },
   ctaTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginTop: 16,
     marginBottom: 8,
   },
   ctaText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 22,
@@ -224,13 +225,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
   contactButtonText: {
-    color: '#fff',
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -198,7 +199,13 @@ export default function ListingDetailScreen() {
         return;
       }
 
-      router.push(`/chat/${chatId}` as any);
+      // Pre-fill the chat input with a reference to this listing (mirrors web
+      // behaviour where "Message Seller" opens a modal seeded with the same
+      // template). The chat screen reads this `text` param on mount.
+      const initialMessage = `Hi! I'm interested in "${listing.title}"`;
+      router.push(
+        `/chat/${chatId}?text=${encodeURIComponent(initialMessage)}` as any,
+      );
     } catch (err: any) {
       Alert.alert(
         'Error',
@@ -276,7 +283,7 @@ export default function ListingDetailScreen() {
           <Ionicons
             name={isFavorited ? 'heart' : 'heart-outline'}
             size={24}
-            color={isFavorited ? '#ef4444' : '#fff'}
+            color={isFavorited ? colors.error.DEFAULT : colors.text.primary}
           />
         </TouchableOpacity>
 
@@ -320,7 +327,7 @@ export default function ListingDetailScreen() {
                       });
                     }}
                   >
-                    <Ionicons name="chevron-back" size={24} color="#fff" />
+                    <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
                   </TouchableOpacity>
                 )}
                 {currentImageIndex < listing.photos.length - 1 && (
@@ -334,7 +341,7 @@ export default function ListingDetailScreen() {
                       });
                     }}
                   >
-                    <Ionicons name="chevron-forward" size={24} color="#fff" />
+                    <Ionicons name="chevron-forward" size={24} color={colors.text.primary} />
                   </TouchableOpacity>
                 )}
               </>
@@ -377,12 +384,12 @@ export default function ListingDetailScreen() {
           {/* Meta Info */}
           <View style={styles.metaContainer}>
             <View style={styles.metaChip}>
-              <Ionicons name="pricetag" size={14} color="#0063e1" />
+              <Ionicons name="pricetag" size={14} color={colors.brand.DEFAULT} />
               <Text style={styles.metaText}>{listing.category}</Text>
             </View>
             {listing.condition && (
               <View style={styles.metaChip}>
-                <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+                <Ionicons name="checkmark-circle" size={14} color={colors.success.DEFAULT} />
                 <Text style={styles.metaText}>{listing.condition}</Text>
               </View>
             )}
@@ -415,7 +422,7 @@ export default function ListingDetailScreen() {
                     Member since {new Date(seller.createdAt || Date.now()).getFullYear()}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
+                <Ionicons name="chevron-forward" size={20} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
           )}
@@ -431,10 +438,10 @@ export default function ListingDetailScreen() {
             disabled={contactLoading}
           >
             {contactLoading ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={colors.text.primary} />
             ) : (
               <>
-                <Ionicons name="chatbubble-outline" size={22} color="#fff" />
+                <Ionicons name="chatbubble-outline" size={22} color={colors.text.primary} />
                 <Text style={styles.buttonText}>Message</Text>
               </>
             )}
@@ -444,7 +451,7 @@ export default function ListingDetailScreen() {
             onPress={handleAddToCart}
             disabled={addingToCart}
           >
-            <Ionicons name="cart-outline" size={22} color="#fff" />
+            <Ionicons name="cart-outline" size={22} color={colors.text.primary} />
             <Text style={styles.buttonText}>
               {addingToCart ? 'Adding...' : 'Add to Cart'}
             </Text>
@@ -454,7 +461,7 @@ export default function ListingDetailScreen() {
       {((listing.sold ?? false) || listing.inventory === 0) && (
         <View style={styles.actionBar}>
           <View style={styles.soldButton}>
-            <Ionicons name="close-circle" size={22} color="#ef4444" />
+            <Ionicons name="close-circle" size={22} color={colors.error.DEFAULT} />
             <Text style={styles.soldButtonText}>Item Sold</Text>
           </View>
         </View>
@@ -466,7 +473,7 @@ export default function ListingDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   scrollView: {
     flex: 1,
@@ -476,7 +483,7 @@ const styles = StyleSheet.create({
     top: 40,
     right: 20,
     zIndex: 100,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: colors.bg.overlay,
     borderRadius: 24,
     width: 48,
     height: 48,
@@ -497,13 +504,13 @@ const styles = StyleSheet.create({
   image: {
     width: width - 40,
     height: (width - 40) * 0.85,
-    backgroundColor: '#0E1526',
+    backgroundColor: colors.bg.raised,
   },
   navArrow: {
     position: 'absolute',
     top: '50%',
     transform: [{ translateY: -20 }],
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: colors.bg.overlay,
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -530,11 +537,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: colors.text.muted,
   },
   paginationDotActive: {
     width: 20,
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
   },
   content: {
     padding: 20,
@@ -548,7 +555,7 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -556,25 +563,25 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#0063e1',
+    color: colors.brand.DEFAULT,
   },
   soldBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: colors.error.softStrong,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: colors.error.border,
   },
   soldText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#ef4444',
+    color: colors.error.DEFAULT,
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 16,
     lineHeight: 30,
   },
@@ -587,46 +594,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 99, 225, 0.1)',
+    backgroundColor: colors.brand.softer,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 99, 225, 0.2)',
+    borderColor: colors.brand.soft,
   },
   metaText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.text.secondary,
     fontWeight: '500',
     textTransform: 'capitalize',
   },
   descriptionSection: {
     marginBottom: 24,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: colors.bg.glass,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 10,
   },
   description: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.text.secondary,
     lineHeight: 24,
   },
   sellerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border.subtle,
   },
   sellerInfo: {
     flex: 1,
@@ -635,12 +642,12 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.primary,
     marginBottom: 4,
   },
   sellerMeta: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.text.tertiary,
   },
   actionBar: {
     position: 'absolute',
@@ -650,10 +657,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     gap: 12,
-    backgroundColor: '#1e293b',
+    backgroundColor: colors.bg.surface,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000',
+    borderTopColor: colors.border.subtle,
+    shadowColor: palette.black,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -669,15 +676,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   contactButton: {
-    backgroundColor: '#374151',
+    backgroundColor: palette.gray[700],
   },
   cartButton: {
-    backgroundColor: '#0063e1',
+    backgroundColor: colors.brand.DEFAULT,
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.text.primary,
   },
   soldButton: {
     flex: 1,
@@ -687,24 +694,24 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     gap: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: colors.error.softStrong,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: colors.error.border,
   },
   soldButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ef4444',
+    color: colors.error.DEFAULT,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#020617',
+    backgroundColor: colors.bg.base,
   },
   errorText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.text.tertiary,
   },
 });
 
