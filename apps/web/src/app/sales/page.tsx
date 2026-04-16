@@ -65,7 +65,11 @@ const formatCurrency = (amount: number) => {
 };
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  const parsed = new Date(dateString);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Unknown date';
+  }
+  return parsed.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -126,6 +130,7 @@ export default function SalesPage() {
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(null);
   const [loadingShipping, setLoadingShipping] = useState(false);
   const [generatingLabel, setGeneratingLabel] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -136,11 +141,13 @@ export default function SalesPage() {
 
     if (!db || !isFirebaseConfigured()) {
       console.error('Database not initialized');
+      setError('Database is not configured. Please try again later.');
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null);
 
     // Real-time subscription to orders where current user is a seller
     const ordersRef = collection(db, 'orders');
@@ -149,15 +156,25 @@ export default function SalesPage() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        console.log('💰 Sales subscription fired:', snapshot.docs.length, 'total orders');
-        
         // Filter orders where current user is the seller
         const salesList = snapshot.docs
           .map(doc => {
             const data = doc.data();
+            const shippingAddress = data.shippingAddress && typeof data.shippingAddress === 'object'
+              ? data.shippingAddress
+              : {};
             return {
               id: doc.id,
               ...data,
+              items: Array.isArray(data.items) ? data.items : [],
+              shippingAddress: {
+                name: (shippingAddress as any).name || 'N/A',
+                street: (shippingAddress as any).street || 'N/A',
+                city: (shippingAddress as any).city || '',
+                state: (shippingAddress as any).state || '',
+                zip: (shippingAddress as any).zip || '',
+                country: (shippingAddress as any).country || 'N/A',
+              },
               createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
               updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
             };
@@ -171,7 +188,7 @@ export default function SalesPage() {
           })
           .map(order => {
             // Filter items to only show items sold by this seller
-            const sellerItems = (order as any).items.filter((item: OrderItem) => 
+            const sellerItems = ((order as any).items || []).filter((item: OrderItem) => 
               item.sellerId === currentUser.uid
             );
             
@@ -193,12 +210,12 @@ export default function SalesPage() {
             } as Order;
           }) as Order[];
 
-        console.log(`✅ Found ${salesList.length} sales for seller ${currentUser.uid}`);
         setSales(salesList);
         setLoading(false);
       },
       (error) => {
         console.error('❌ Error in sales subscription:', error);
+        setError('Unable to load sales right now.');
         setLoading(false);
       }
     );
@@ -237,16 +254,17 @@ export default function SalesPage() {
   };
 
   const handleGenerateLabel = async () => {
-    if (!selectedSale) return;
+    if (!selectedSale || generatingLabel) return;
 
     // Check if order has shipping metadata from payment intent
     const orderShipping = (selectedSale as any).shipping;
     if (!orderShipping?.rateId || !orderShipping?.shipmentId) {
-      alert('Shipping rate information not found. Please contact support.');
+      setError('Shipping rate information was not found for this sale.');
       return;
     }
 
     setGeneratingLabel(true);
+    setError(null);
     try {
       const { apiPost } = await import('@/lib/api-client');
       const response = await apiPost('/api/shipping/create-label', {
@@ -256,19 +274,15 @@ export default function SalesPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to generate shipping label');
       }
-
-      const data = await response.json();
       
       // Refresh shipping info
       await fetchShippingInfo(selectedSale.id);
-      
-      alert('Shipping label generated successfully!');
     } catch (error) {
       console.error('Error generating label:', error);
-      alert(error instanceof Error ? error.message : 'Failed to generate shipping label');
+      setError(error instanceof Error ? error.message : 'Failed to generate shipping label');
     } finally {
       setGeneratingLabel(false);
     }
@@ -376,6 +390,11 @@ export default function SalesPage() {
             <h1 className="text-5xl font-bold text-white mb-2">My Sales</h1>
             <p className="text-gray-400">Track your sold items and earnings</p>
           </div>
+          {error && (
+            <div className="mb-6 rounded-lg border border-red-500/30 bg-red-900/20 p-4 text-red-300">
+              {error}
+            </div>
+          )}
 
           {/* Stripe Connect Setup */}
           {!loadingAccount && (!stripeAccount?.hasAccount || !stripeAccount?.payoutsEnabled) && (

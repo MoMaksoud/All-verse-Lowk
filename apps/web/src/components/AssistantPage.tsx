@@ -25,6 +25,23 @@ interface Message {
   }>;
 }
 
+const normalizeListingItems = (items: unknown): Message['items'] => {
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .map((item) => {
+      const title = typeof item.title === 'string' && item.title.trim().length > 0
+        ? item.title
+        : 'Untitled listing';
+      const price = typeof item.price === 'number' && Number.isFinite(item.price) ? item.price : 0;
+      const image = typeof item.image === 'string' ? item.image : '';
+      const url = typeof item.url === 'string' && item.url.trim().length > 0 ? item.url : '/listings';
+
+      return { title, price, image, url };
+    });
+};
+
 export default function AssistantPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -54,7 +71,20 @@ export default function AssistantPage() {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setMessages(parsed);
+          const normalizedMessages: Message[] = parsed
+            .filter((msg): msg is Partial<Message> => !!msg && typeof msg === 'object')
+            .map((msg): Message => ({
+              id: typeof msg.id === 'string' ? msg.id : crypto.randomUUID(),
+              role: (msg.role === 'user' ? 'user' : 'ai') as Message['role'],
+              content: typeof msg.content === 'string' ? msg.content : '',
+              timestamp: typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString(),
+              mediaUrl: typeof msg.mediaUrl === 'string' ? msg.mediaUrl : undefined,
+              mediaType: msg.mediaType === 'image' || msg.mediaType === 'video' ? msg.mediaType : undefined,
+              type: msg.type === 'listings' ? 'listings' as const : undefined,
+              items: msg.type === 'listings' ? normalizeListingItems(msg.items) : undefined,
+            }))
+            .filter((msg) => msg.content || msg.mediaUrl || (msg.type === 'listings' && msg.items && msg.items.length > 0));
+          setMessages(normalizedMessages);
         }
       }
     } catch (error) {
@@ -230,7 +260,14 @@ export default function AssistantPage() {
         requestBody.mediaType = mediaType;
       }
 
-      const response = await apiPost('/api/ai/chat', requestBody);
+      const abortController = new AbortController();
+      const timeout = setTimeout(() => abortController.abort(), 35000);
+      let response: Response;
+      try {
+        response = await apiPost('/api/ai/chat', requestBody, { signal: abortController.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -254,13 +291,14 @@ export default function AssistantPage() {
       
       // Check if response is already in listings format
       if (responseData && typeof responseData === 'object' && responseData.type === 'listings' && Array.isArray(responseData.items)) {
+        const normalizedItems = normalizeListingItems(responseData.items);
         aiMsg = {
           id: crypto.randomUUID(),
           role: 'ai',
           content: responseData.message || 'Here are some items:',
           timestamp: new Date().toISOString(),
           type: 'listings',
-          items: responseData.items,
+          items: normalizedItems,
         };
       } else {
         // Regular text response
@@ -275,10 +313,15 @@ export default function AssistantPage() {
       setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
       console.error('Error:', error);
+      const errorMessage = error instanceof Error && error.name === 'AbortError'
+        ? 'The AI response is taking longer than expected. Please try again.'
+        : error instanceof Error
+          ? error.message
+          : 'Sorry, I encountered an error. Please try again.';
       const errorMsg: Message = {
         id: crypto.randomUUID(),
         role: 'ai',
-        content: error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again.',
+        content: errorMessage,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMsg]);

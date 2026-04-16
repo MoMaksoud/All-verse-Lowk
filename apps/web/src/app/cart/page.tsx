@@ -47,7 +47,10 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [listings, setListings] = useState<Record<string, Listing>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [updatingItems, setUpdatingItems] = useState<Record<string, boolean>>({});
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const { currentUser } = useAuth();
   const router = useRouter();
 
@@ -60,66 +63,97 @@ export default function CartPage() {
   const fetchCart = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { apiGet } = await import('@/lib/api-client');
       const response = await apiGet('/api/carts');
 
-      if (response.ok) {
-        const data = await response.json();
-        const cart = data.data || data;
-        setCartItems(cart.items || []);
-
-        // Fetch listing details for each cart item
-        const { apiGet: apiGetPublic } = await import('@/lib/api-client');
-        const listingPromises = cart.items.map(async (item: CartItem) => {
-          const listingResponse = await apiGetPublic(`/api/listings/${item.listingId}`, { requireAuth: false });
-          if (listingResponse.ok) {
-            const listingData = await listingResponse.json();
-            return { id: item.listingId, listing: listingData.data || listingData };
-          }
-          return null;
-        });
-
-        const listingResults = await Promise.all(listingPromises);
-        const listingsMap: Record<string, Listing> = {};
-        
-        listingResults.forEach(result => {
-          if (result) {
-            listingsMap[result.id] = result.listing;
-          }
-        });
-
-        setListings(listingsMap);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch cart');
       }
+
+      const data = await response.json();
+      const cart = data.data || data;
+      const rawItems = Array.isArray(cart.items) ? cart.items : [];
+      setCartItems(rawItems);
+
+      // Fetch listing details for each cart item
+      const { apiGet: apiGetPublic } = await import('@/lib/api-client');
+      const listingPromises = rawItems.map(async (item: CartItem) => {
+        const listingResponse = await apiGetPublic(`/api/listings/${item.listingId}`, { requireAuth: false });
+        if (listingResponse.ok) {
+          const listingData = await listingResponse.json();
+          const listing = listingData.data || listingData;
+          if (listing && typeof listing === 'object') {
+            return { id: item.listingId, listing };
+          }
+        }
+        return null;
+      });
+
+      const listingResults = await Promise.all(listingPromises);
+      const listingsMap: Record<string, Listing> = {};
+      
+      listingResults.forEach(result => {
+        if (result) {
+          listingsMap[result.id] = result.listing;
+        }
+      });
+
+      // Remove cart items whose listings are no longer available.
+      const availableItems = rawItems.filter((item: CartItem) => !!listingsMap[item.listingId]);
+      if (availableItems.length !== rawItems.length) {
+        setCartItems(availableItems);
+      }
+
+      setListings(listingsMap);
     } catch (error) {
       console.error('Error fetching cart:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch cart');
     } finally {
       setLoading(false);
     }
   };
 
   const updateCartItem = async (listingId: string, qty: number) => {
+    if (updatingItems[listingId]) return;
     try {
+      setUpdatingItems(prev => ({ ...prev, [listingId]: true }));
       const { apiPut } = await import('@/lib/api-client');
       const response = await apiPut('/api/carts', { listingId, qty });
 
       if (response.ok) {
         fetchCart(); // Refresh cart
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || 'Failed to update cart item');
       }
     } catch (error) {
       console.error('Error updating cart item:', error);
+      setError('Failed to update cart item');
+    } finally {
+      setUpdatingItems(prev => ({ ...prev, [listingId]: false }));
     }
   };
 
   const removeFromCart = async (listingId: string) => {
+    if (updatingItems[listingId]) return;
     try {
+      setUpdatingItems(prev => ({ ...prev, [listingId]: true }));
       const { apiDelete } = await import('@/lib/api-client');
       const response = await apiDelete(`/api/carts?listingId=${listingId}`);
 
       if (response.ok) {
         fetchCart(); // Refresh cart
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || 'Failed to remove item from cart');
       }
     } catch (error) {
       console.error('Error removing from cart:', error);
+      setError('Failed to remove item from cart');
+    } finally {
+      setUpdatingItems(prev => ({ ...prev, [listingId]: false }));
     }
   };
 
@@ -128,11 +162,13 @@ export default function CartPage() {
   };
 
   const handleCheckout = () => {
-    if (cartItems.length === 0) return;
+    if (checkoutLoading || cartItems.length === 0) return;
+    setCheckoutLoading(true);
     setShowCheckout(true);
   };
 
   const handleBackFromCheckout = () => {
+    setCheckoutLoading(false);
     setShowCheckout(false);
     fetchCart(); // Refresh cart in case items were purchased
   };
@@ -186,6 +222,17 @@ export default function CartPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
             </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <h2 className="text-xl font-semibold text-white mb-2">Unable to load cart</h2>
+              <p className="text-gray-400 mb-6">{error}</p>
+              <button
+                onClick={fetchCart}
+                className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           ) : cartItems.length === 0 ? (
             <div className="text-center py-12">
               <ShoppingBag className="w-16 h-16 text-gray-500 mx-auto mb-4" />
@@ -237,6 +284,7 @@ export default function CartPage() {
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => updateCartItem(item.listingId, Math.max(1, item.qty - 1))}
+                                disabled={!!updatingItems[item.listingId]}
                                 className="w-8 h-8 bg-dark-600 hover:bg-dark-500 rounded-lg flex items-center justify-center text-white transition-colors"
                               >
                                 <Minus className="w-4 h-4" />
@@ -244,6 +292,7 @@ export default function CartPage() {
                               <span className="text-white font-medium w-8 text-center">{item.qty}</span>
                               <button
                                 onClick={() => updateCartItem(item.listingId, item.qty + 1)}
+                                disabled={!!updatingItems[item.listingId]}
                                 className="w-8 h-8 bg-dark-600 hover:bg-dark-500 rounded-lg flex items-center justify-center text-white transition-colors"
                               >
                                 <Plus className="w-4 h-4" />
@@ -253,6 +302,7 @@ export default function CartPage() {
                             {/* Remove Button */}
                             <button
                               onClick={() => removeFromCart(item.listingId)}
+                              disabled={!!updatingItems[item.listingId]}
                               className="w-8 h-8 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center text-white transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -293,10 +343,20 @@ export default function CartPage() {
 
                   <button
                     onClick={handleCheckout}
+                    disabled={checkoutLoading}
                     className="w-full bg-accent-500 hover:bg-accent-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
                   >
-                    <ArrowRight className="w-5 h-5 mr-2" />
-                    Proceed to Checkout
+                    {checkoutLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Opening Checkout...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight className="w-5 h-5 mr-2" />
+                        Proceed to Checkout
+                      </>
+                    )}
                   </button>
 
                   <p className="text-gray-400 text-xs text-center mt-4">

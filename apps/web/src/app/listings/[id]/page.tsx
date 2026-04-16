@@ -66,22 +66,32 @@ export default function ListingDetailPage() {
   const [priceSuggestionLoading, setPriceSuggestionLoading] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [similarListings, setSimilarListings] = useState<SimpleListing[]>([]);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!params.id) return;
     
     try {
       setLoading(true);
+      setPageError(null);
       const { apiGet } = await import('@/lib/api-client');
       const response = await apiGet(`/api/listings/${params.id}`, { requireAuth: false });
       if (response.ok) {
         const data = await response.json();
-        setListing(data);
+        const listingData = data?.data || data;
+        if (listingData && typeof listingData === 'object' && listingData.id) {
+          setListing(listingData);
+        } else {
+          throw new Error('Listing data was malformed');
+        }
       } else {
-        throw new Error('Failed to fetch listing');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch listing');
       }
     } catch (error) {
       console.error('Error fetching listing:', error);
+      setListing(null);
+      setPageError(error instanceof Error ? error.message : 'Failed to fetch listing');
     } finally {
       setLoading(false);
     }
@@ -295,9 +305,14 @@ export default function ListingDetailPage() {
 
   const addToCart = useCallback(async () => {
     if (!listing) return;
+    if (addingToCart) return;
     
     if (!currentUser) {
       showError('Please sign in to add items to cart');
+      return;
+    }
+    if ((listing.sold ?? false) === true) {
+      showError('This item has already been sold');
       return;
     }
 
@@ -314,7 +329,8 @@ export default function ListingDetailPage() {
       if (response.ok) {
         showSuccess('Added to cart!');
       } else {
-        showError('Failed to add to cart');
+        const errorData = await response.json().catch(() => ({}));
+        showError(errorData.error || 'Failed to add to cart');
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -322,7 +338,7 @@ export default function ListingDetailPage() {
     } finally {
       setAddingToCart(false);
     }
-  }, [listing, currentUser]);
+  }, [listing, currentUser, addingToCart, showError, showSuccess]);
 
   const handleDeleteListing = useCallback(async () => {
     if (!listing || !currentUser) return;
@@ -360,7 +376,9 @@ export default function ListingDetailPage() {
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
-            <p className="text-gray-400">The listing you're looking for doesn't exist.</p>
+            <p className="text-gray-400">
+              {pageError || "The listing you're looking for doesn't exist."}
+            </p>
             <button
               onClick={() => router.push('/listings')}
               className="mt-4 btn btn-primary"

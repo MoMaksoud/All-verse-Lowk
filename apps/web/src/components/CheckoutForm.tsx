@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { loadStripe } from '@stripe/stripe-js';
@@ -30,7 +30,6 @@ interface CartItem {
 
 interface CheckoutFormProps {
   cartItems: CartItem[];
-  onSuccess: (orderId: string) => void;
   onError: (error: string) => void;
 }
 
@@ -51,7 +50,7 @@ interface SelectedShipping {
   rateId: string;
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onError }) => {
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [shippingAddress, setShippingAddress] = useState({
@@ -76,6 +75,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
   const [loadingRates, setLoadingRates] = useState(false);
   const [ratesError, setRatesError] = useState<string | null>(null);
   const [shipmentId, setShipmentId] = useState<string | null>(null);
+  const ratesRequestIdRef = useRef(0);
 
   useEffect(() => {
     calculateTotals();
@@ -116,6 +116,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
       return;
     }
 
+    const requestId = ratesRequestIdRef.current + 1;
+    ratesRequestIdRef.current = requestId;
     setLoadingRates(true);
     setRatesError(null);
 
@@ -126,7 +128,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
         cartItems.map(async (item) => {
           const response = await apiGet(`/api/listings/${item.listingId}`, { requireAuth: false });
           if (response.ok) {
-            return await response.json();
+            const payload = await response.json();
+            return payload?.data || payload || null;
           }
           return null;
         })
@@ -135,7 +138,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
       // Aggregate shipping dimensions (use first item's shipping or defaults)
       // For simplicity, we'll use defaults if shipping info is not available
       // In production, you'd want to aggregate all items properly
-      const firstListing = listings.find(l => l && l.shipping);
+      const firstListing = listings.find((l) => l && typeof l === 'object' && (l as any).shipping);
       const shipping = firstListing?.shipping || {
         weight: 2, // Default 2 lbs
         length: 12,
@@ -184,27 +187,35 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
       });
 
       if (!ratesResponse.ok) {
-        const errorData = await ratesResponse.json();
+        const errorData = await ratesResponse.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to fetch shipping rates');
       }
 
       const ratesData = await ratesResponse.json();
-      setShippingRates(ratesData.rates || []);
-      setShipmentId(ratesData.shipmentId || null);
+      if (requestId !== ratesRequestIdRef.current) {
+        return;
+      }
+
+      const normalizedRates = Array.isArray(ratesData.rates) ? ratesData.rates : [];
+      setShippingRates(normalizedRates);
+      setShipmentId(typeof ratesData.shipmentId === 'string' ? ratesData.shipmentId : null);
       
       // Auto-select first (cheapest) rate
-      if (ratesData.rates && ratesData.rates.length > 0 && ratesData.shipmentId) {
-        const firstRate = ratesData.rates[0];
+      if (normalizedRates.length > 0 && ratesData.shipmentId) {
+        const firstRate = normalizedRates[0];
         setSelectedShipping({
           rate: firstRate,
           shipmentId: ratesData.shipmentId,
           rateId: firstRate.id || '',
         });
+      } else {
+        setSelectedShipping(null);
       }
     } catch (error) {
       console.error('Error fetching shipping rates:', error);
       setRatesError(error instanceof Error ? error.message : 'Failed to load shipping rates');
       setShippingRates([]);
+      setSelectedShipping(null);
     } finally {
       setLoadingRates(false);
     }
@@ -212,6 +223,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (loading || loadingRates) return;
+
+    const requiresShippingSelection = shippingAddress.zip.replace(/[^\d]/g, '').length >= 5;
+    if (requiresShippingSelection && !selectedShipping) {
+      onError('Please select a shipping option before checkout.');
+      return;
+    }
 
     setLoading(true);
 
@@ -229,7 +247,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
         } : null,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!data.success) {
         throw new Error(data.error || 'Failed to create checkout session');
@@ -477,7 +495,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onSuccess, onErr
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || loadingRates || cartItems.length === 0 || (!!shippingAddress.zip && shippingAddress.zip.length >= 5 && !selectedShipping)}
         className="w-full bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
       >
         {loading ? (
@@ -576,7 +594,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBack }) => {
       <Elements stripe={stripePromise}>
         <CheckoutForm
           cartItems={cartItems}
-          onSuccess={handleSuccess}
           onError={handleError}
         />
       </Elements>
