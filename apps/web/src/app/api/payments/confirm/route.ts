@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { firestoreServices } from '@/lib/services/firestore';
+import { getOrderAdmin } from '@/lib/server/adminOrders';
 import { withApi } from '@/lib/withApi';
 import { fail, ok } from '@/lib/api/responses';
 
@@ -28,7 +28,7 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
       return fail({ status: 400, code: 'INVALID_SESSION', message: 'Invalid session or missing order' });
     }
 
-    const order = await firestoreServices.orders.getOrder(orderId);
+    const order = await getOrderAdmin(orderId);
     if (!order) {
       return fail({ status: 404, code: 'ORDER_NOT_FOUND', message: 'Order not found' });
     }

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
 import { getAdminFirestore } from '@/lib/firebase-admin';
-import { firestoreServices } from '@/lib/services/firestore';
+import { getOrderAdmin } from '@/lib/server/adminOrders';
 import { canCreateShippingLabel } from '@/lib/authz';
 import { fail, ok } from '@/lib/api/responses';
 import {
@@ -64,7 +64,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
     console.log('📦 Creating shipping label (Shippo):', { rateId, shipmentId, orderId });
 
-    const order = await firestoreServices.orders.getOrder(orderId);
+    const order = await getOrderAdmin(orderId);
     if (!order) {
       return fail({ status: 404, code: 'ORDER_NOT_FOUND', message: 'Order not found' });
     }

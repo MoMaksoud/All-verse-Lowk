@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { withApi } from "@/lib/withApi";
-import { firestoreServices } from "@/lib/services/firestore";
 import { UpdateOrderInput } from "@/lib/types/firestore";
+import { getOrderAdmin, updateOrderAdmin } from "@/lib/server/adminOrders";
 import { canAccessOrder, canTransitionOrderStatus, getOrderActorRole } from "@/lib/authz";
 import { fail, ok } from "@/lib/api/responses";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const GET = withApi(async (req: NextRequest & { userId: string }, { params }: { params: { id: string } }) => {
   try {
-    const order = await firestoreServices.orders.getOrder(params.id);
+    const order = await getOrderAdmin(params.id);
     if (!order) {
       return fail({ status: 404, code: "ORDER_NOT_FOUND", message: "Order not found" });
     }
@@ -28,7 +28,7 @@ export const GET = withApi(async (req: NextRequest & { userId: string }, { param
 
 export const PATCH = withApi(async (req: NextRequest & { userId: string }, { params }: { params: { id: string } }) => {
   try {
-    const order = await firestoreServices.orders.getOrder(params.id);
+    const order = await getOrderAdmin(params.id);
     if (!order) {
       return fail({ status: 404, code: "ORDER_NOT_FOUND", message: "Order not found" });
     }
@@ -58,9 +58,9 @@ export const PATCH = withApi(async (req: NextRequest & { userId: string }, { par
       });
     }
 
-    await firestoreServices.orders.updateOrder(params.id, { status: updates.status });
-    
-    const updatedOrder = await firestoreServices.orders.getOrder(params.id);
+    await updateOrderAdmin(params.id, { status: updates.status });
+
+    const updatedOrder = await getOrderAdmin(params.id);
     return ok({ order: updatedOrder as any });
   } catch (err) {
     console.error('Error updating order:', err);
