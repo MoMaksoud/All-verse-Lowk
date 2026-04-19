@@ -18,6 +18,16 @@ import {
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
+function getApiErrorMessage(payload: unknown, fallback: string): string {
+  if (payload && typeof payload === 'object') {
+    const p = payload as Record<string, unknown>;
+    if (typeof p.message === 'string' && p.message.trim()) return p.message;
+    if (typeof p.error === 'string' && p.error.trim()) return p.error;
+    if (typeof p.code === 'string' && p.code.trim()) return `${fallback} (${p.code})`;
+  }
+  return fallback;
+}
+
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -160,7 +170,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
             fromZip = sellerData.data?.shippingAddress?.zip || '10001';
             
             if (!sellerData.data?.shippingAddress?.zip) {
-              console.warn('⚠️ Seller does not have shipping address configured. Using default ZIP.');
+              console.warn('Seller does not have shipping address configured. Using default ZIP.');
             }
           } else if (sellerResponse.status === 404) {
             // Profile not found - silently use fallback (expected for users without profiles)
@@ -249,12 +259,17 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
 
       const data = await response.json().catch(() => ({}));
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to create checkout session');
+      if (!response.ok || !data || typeof data !== 'object') {
+        throw new Error(getApiErrorMessage(data, 'Failed to create checkout session'));
       }
 
-      if (data.url) {
-        window.location.href = data.url;
+      if ((data as { success?: boolean }).success === false) {
+        throw new Error(getApiErrorMessage(data, 'Failed to create checkout session'));
+      }
+
+      const checkoutUrl = (data as { url?: string }).url;
+      if (typeof checkoutUrl === 'string' && checkoutUrl.trim()) {
+        window.location.href = checkoutUrl;
         return;
       }
 

@@ -9,6 +9,7 @@ import { prepareTrustedCheckout, getCheckoutBaseUrl } from '@/lib/payments/check
 import { DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
 import { fail, ok } from '@/lib/api/responses';
 import type { CreateOrderInput } from '@/lib/types/firestore';
+import { serverLogger } from '@/lib/server/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -89,6 +90,12 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       stripeEventId: result.sessionId!,
       status: 'pending',
     });
+    serverLogger.info('checkout_session_created', {
+      route: 'api/payments/create-checkout-session',
+      orderId,
+      userId: req.userId,
+      sessionId: result.sessionId,
+    });
 
     return ok({
       url: result.url,
@@ -101,7 +108,11 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       shipping: checkout.shippingRate.price,
     });
   } catch (error) {
-    console.error('Create checkout session error:', error);
+    serverLogger.error('checkout_session_create_failed', {
+      route: 'api/payments/create-checkout-session',
+      userId: req.userId,
+      error: error instanceof Error ? error.message : 'Server error',
+    });
     return fail({
       status: error instanceof Error ? 400 : 500,
       code: 'CHECKOUT_VALIDATION_FAILED',

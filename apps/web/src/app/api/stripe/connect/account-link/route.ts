@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { createAccountLink } from '@/lib/stripe';
-import { ProfileService } from '@/lib/firestore';
+import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
     // Get user's Connect account ID
-    const profile = await ProfileService.getProfile(req.userId);
+    const profile = await getProfileDocumentAdmin(req.userId);
     
     if (!profile?.stripeConnectAccountId) {
       return NextResponse.json(

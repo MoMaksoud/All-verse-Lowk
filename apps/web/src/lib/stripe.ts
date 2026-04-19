@@ -195,7 +195,12 @@ export async function getConnectAccount(accountId: string) {
  * Transfer funds to seller's Connect account
  * This is called after payment succeeds
  */
-export async function transferToSeller(accountId: string, amount: number, orderId: string) {
+export async function transferToSeller(
+  accountId: string,
+  amount: number,
+  orderId: string,
+  idempotencyKey?: string
+) {
   try {
     // Amount in cents
     const amountInCents = Math.round(amount * 100);
@@ -208,7 +213,7 @@ export async function transferToSeller(accountId: string, amount: number, orderI
         orderId,
         type: 'seller_payout',
       },
-    });
+    }, idempotencyKey ? { idempotencyKey } : undefined);
 
     return {
       success: true,

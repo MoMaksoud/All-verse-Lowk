@@ -27,7 +27,10 @@ export async function mergeProfileAdmin(userId: string, data: Record<string, unk
     );
 }
 
-async function isUsernameAvailableAdmin(normalizedUsername: string, excludeUserId?: string): Promise<boolean> {
+export async function isUsernameAvailableAdmin(
+  normalizedUsername: string,
+  excludeUserId?: string
+): Promise<boolean> {
   const snap = await getAdminFirestore()
     .collection('profiles')
     .where('username', '==', normalizedUsername)

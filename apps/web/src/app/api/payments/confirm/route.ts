@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe';
 import { getOrderAdmin } from '@/lib/server/adminOrders';
 import { withApi } from '@/lib/withApi';
 import { fail, ok } from '@/lib/api/responses';
+import { serverLogger } from '@/lib/server/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,13 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
     if (typeof session.currency === 'string' && session.currency.toLowerCase() !== order.currency.toLowerCase()) {
       return fail({ status: 409, code: 'PAYMENT_CURRENCY_MISMATCH', message: 'Payment currency mismatch' });
     }
+    serverLogger.info('payment_confirm_ok', {
+      route: 'api/payments/confirm',
+      orderId,
+      userId: req.userId,
+      sessionId: session.id,
+      paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : undefined,
+    });
 
     return ok({
       order: {
@@ -59,7 +67,11 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
       },
     });
   } catch (err) {
-    console.error('[payments/confirm]', err);
+    serverLogger.error('payment_confirm_failed', {
+      route: 'api/payments/confirm',
+      userId: req.userId,
+      error: err instanceof Error ? err.message : 'Failed to confirm session',
+    });
     return fail({ status: 500, code: 'PAYMENT_CONFIRM_FAILED', message: 'Failed to confirm session' });
   }
 });

@@ -23,6 +23,16 @@ import { formatPrice } from '@/lib/format';
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
+function getApiErrorMessage(payload: unknown, fallback: string): string {
+  if (payload && typeof payload === 'object') {
+    const p = payload as Record<string, unknown>;
+    if (typeof p.message === 'string' && p.message.trim()) return p.message;
+    if (typeof p.error === 'string' && p.error.trim()) return p.error;
+    if (typeof p.code === 'string' && p.code.trim()) return `${fallback} (${p.code})`;
+  }
+  return fallback;
+}
+
 interface CartItem {
   listingId: string;
   sellerId: string;
@@ -69,7 +79,7 @@ export default function CartPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch cart');
+        throw new Error(getApiErrorMessage(errorData, 'Failed to fetch cart'));
       }
 
       const data = await response.json();
@@ -126,7 +136,7 @@ export default function CartPage() {
         fetchCart(); // Refresh cart
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setError(errorData.error || 'Failed to update cart item');
+        setError(getApiErrorMessage(errorData, 'Failed to update cart item'));
       }
     } catch (error) {
       console.error('Error updating cart item:', error);
@@ -147,7 +157,7 @@ export default function CartPage() {
         fetchCart(); // Refresh cart
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setError(errorData.error || 'Failed to remove item from cart');
+        setError(getApiErrorMessage(errorData, 'Failed to remove item from cart'));
       }
     } catch (error) {
       console.error('Error removing from cart:', error);

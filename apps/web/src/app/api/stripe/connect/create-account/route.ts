@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { createConnectAccount } from '@/lib/stripe';
-import { ProfileService } from '@/lib/firestore';
+import { getProfileDocumentAdmin, mergeProfileAdmin } from '@/lib/server/adminProfiles';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     }
 
     // Check if user already has a Connect account
-    const profile = await ProfileService.getProfile(req.userId);
+    const profile = await getProfileDocumentAdmin(req.userId);
     if (profile?.stripeConnectAccountId) {
       return NextResponse.json({
         success: true,
@@ -33,7 +33,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     }
 
     // Save account ID to profile
-    await ProfileService.updateProfile(req.userId, {
+    await mergeProfileAdmin(req.userId, {
       stripeConnectAccountId: result.accountId,
       stripeConnectOnboardingComplete: false,
     });

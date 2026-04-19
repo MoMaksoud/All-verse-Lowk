@@ -75,6 +75,16 @@ const formatDate = (dateString: string) => {
   });
 };
 
+function getApiErrorMessage(payload: unknown, fallback: string): string {
+  if (payload && typeof payload === 'object') {
+    const p = payload as Record<string, unknown>;
+    if (typeof p.message === 'string' && p.message.trim()) return p.message;
+    if (typeof p.error === 'string' && p.error.trim()) return p.error;
+    if (typeof p.code === 'string' && p.code.trim()) return `${fallback} (${p.code})`;
+  }
+  return fallback;
+}
+
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'paid':
@@ -183,7 +193,7 @@ export default function OrdersPage() {
         setLoading(false);
       },
       (error) => {
-        console.error('❌ Error in orders subscription:', error);
+        console.error('Error in orders subscription:', error);
         setError('Unable to load orders right now.');
         setLoading(false);
       }
@@ -244,7 +254,7 @@ export default function OrdersPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to generate shipping label');
+        throw new Error(getApiErrorMessage(errorData, 'Failed to generate shipping label'));
       }
       
       // Refresh shipping info

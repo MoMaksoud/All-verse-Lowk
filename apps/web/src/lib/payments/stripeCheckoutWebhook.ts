@@ -16,7 +16,7 @@ import {
 import { clearCartAdmin } from '@/lib/server/adminCarts';
 import { updateInventoryAdmin } from '@/lib/server/adminListings';
 import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
-import type { FirestoreOrder } from '@/lib/types/firestore';
+import type { FirestoreOrder, PayoutTransferRecord } from '@/lib/types/firestore';
 import { serverLogger } from '@/lib/server/logger';
 
 const WEBHOOK_LOCK_TTL_MS = 5 * 60 * 1000;
@@ -363,15 +363,27 @@ async function processOrderEmails(params: {
 }
 
 type PayoutFailureRecord = { sellerId: string; error: string; listingId: string };
+type PayoutTransferWrite = Omit<PayoutTransferRecord, 'at'> & { at: unknown };
+type PayoutTransferAttempt = {
+  failures: PayoutFailureRecord[];
+  successes: PayoutTransferWrite[];
+};
 
 /**
  * Attempts Stripe Connect transfers per line item. Does not throw on transfer failure;
  * returns structured failures for persistence on the order document.
  */
-async function transferToSellersForOrder(order: FirestoreOrder & { id: string }): Promise<PayoutFailureRecord[]> {
+async function transferToSellersForOrder(order: FirestoreOrder & { id: string }): Promise<PayoutTransferAttempt> {
   const failures: PayoutFailureRecord[] = [];
+  const successes: PayoutTransferWrite[] = [];
+  const alreadyTransferredKeys = new Set((order.payoutTransferIds || []).map((t) => t.lineKey));
 
-  for (const item of order.items) {
+  for (const [lineIndex, item] of order.items.entries()) {
+    const lineKey = `${order.id}:${lineIndex}:${item.listingId}:${item.sellerId}`;
+    if (alreadyTransferredKeys.has(lineKey)) {
+      continue;
+    }
+
     const itemTotal = item.unitPrice * item.qty;
     const { sellerPayout } = calculateSellerPayout(itemTotal, PLATFORM_SERVICE_FEE_PERCENT);
     const sellerProfile = await getProfileDocumentAdmin(item.sellerId);
@@ -380,17 +392,34 @@ async function transferToSellersForOrder(order: FirestoreOrder & { id: string })
       continue;
     }
 
-    const transferResult = await transferToSeller(sellerProfile.stripeConnectAccountId, sellerPayout, order.id);
+    const transferIdempotencyKey = `payout_${order.id}_${lineIndex}_${item.listingId}_${item.sellerId}`
+      .replace(/[^a-zA-Z0-9_]/g, '')
+      .slice(0, 200);
+    const transferResult = await transferToSeller(
+      sellerProfile.stripeConnectAccountId,
+      sellerPayout,
+      order.id,
+      transferIdempotencyKey
+    );
     if (!transferResult.success) {
       failures.push({
         sellerId: item.sellerId,
         listingId: item.listingId,
         error: transferResult.error || 'unknown error',
       });
+    } else if (transferResult.transferId) {
+      successes.push({
+        lineKey,
+        sellerId: item.sellerId,
+        listingId: item.listingId,
+        transferId: transferResult.transferId,
+        amount: sellerPayout,
+        at: Timestamp.fromDate(new Date()),
+      });
     }
   }
 
-  return failures;
+  return { failures, successes };
 }
 
 export async function POST(req: NextRequest) {
@@ -422,6 +451,11 @@ export async function POST(req: NextRequest) {
     }
 
     const event = verification.event;
+    serverLogger.info('stripe_webhook_event_received', {
+      route: 'api/stripe/webhook',
+      eventId: event.id,
+      eventType: event.type,
+    });
     if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') {
       const lock = await acquireEventLock(event.id, event.type);
       eventRef = lock.eventRef;
@@ -453,6 +487,12 @@ export async function POST(req: NextRequest) {
 
     const lock = await acquireEventLock(event.id, event.type);
     eventRef = lock.eventRef;
+    serverLogger.info('stripe_webhook_lock_status', {
+      route: 'api/stripe/webhook',
+      eventId: event.id,
+      eventType: event.type,
+      lockResult: lock.result,
+    });
 
     if (lock.result === 'processed') {
       return NextResponse.json({ received: true, idempotent: true }, { status: 200 });
@@ -475,8 +515,22 @@ export async function POST(req: NextRequest) {
       throw new Error(`Order not found for orderId ${orderId}`);
     }
     assertSessionMatchesOrder(fullSession, order);
+    if (
+      order.lastStripeCheckoutSessionId === fullSession.id &&
+      order.checkoutWebhookSettledAt
+    ) {
+      await markEventCompleted(eventRef, orderId);
+      return NextResponse.json({ received: true, idempotent: true, orderId }, { status: 200 });
+    }
 
     const paymentIntentId = getPaymentIntentId(fullSession);
+    serverLogger.info('stripe_webhook_processing_paid', {
+      route: 'api/stripe/webhook',
+      eventId: event.id,
+      orderId,
+      sessionId: fullSession.id,
+      paymentIntentId,
+    });
     await markOrderPaid(orderId, paymentIntentId, fullSession.id);
     await ensurePaymentRecord({
       orderId,
@@ -500,22 +554,36 @@ export async function POST(req: NextRequest) {
         inventoryAdjusted: true,
         inventoryAdjustedAt: FieldValue.serverTimestamp(),
       });
+      serverLogger.info('stripe_webhook_inventory_adjusted', {
+        route: 'api/stripe/webhook',
+        eventId: event.id,
+        orderId,
+      });
       order.inventoryAdjusted = true;
     }
 
     if (order.payoutsProcessed !== true) {
-      const payoutFailures = await transferToSellersForOrder(order);
+      const payoutResult = await transferToSellersForOrder(order);
+      const mergedTransfers = [...(order.payoutTransferIds || []), ...payoutResult.successes];
 
-      if (payoutFailures.length === 0) {
+      if (payoutResult.failures.length === 0) {
         await updateOrderAdmin(orderId, {
           payoutsProcessed: true,
           payoutsProcessedAt: FieldValue.serverTimestamp(),
           payoutStatus: 'complete',
           payoutRetryable: false,
+          payoutFailures: [],
+          payoutTransferIds: mergedTransfers,
+        });
+        serverLogger.info('stripe_webhook_payout_complete', {
+          route: 'api/stripe/webhook',
+          eventId: event.id,
+          orderId,
+          sessionId: fullSession.id,
         });
         order.payoutsProcessed = true;
       } else {
-        const stamped = payoutFailures.map((f) => ({
+        const stamped = payoutResult.failures.map((f) => ({
           sellerId: f.sellerId,
           listingId: f.listingId,
           error: f.error,
@@ -526,6 +594,14 @@ export async function POST(req: NextRequest) {
           payoutStatus: 'partial_failed',
           payoutFailures: stamped,
           payoutRetryable: true,
+          payoutTransferIds: mergedTransfers,
+        });
+        serverLogger.warn('stripe_webhook_payout_partial_failed', {
+          route: 'api/stripe/webhook',
+          eventId: event.id,
+          orderId,
+          sessionId: fullSession.id,
+          failureCount: stamped.length,
         });
       }
     }
@@ -538,6 +614,12 @@ export async function POST(req: NextRequest) {
         cartCleared: true,
         cartClearedAt: FieldValue.serverTimestamp(),
       });
+      serverLogger.info('stripe_webhook_cart_cleared', {
+        route: 'api/stripe/webhook',
+        eventId: event.id,
+        orderId,
+        userId: order.buyerId,
+      });
       order.cartCleared = true;
     }
 
@@ -545,6 +627,17 @@ export async function POST(req: NextRequest) {
       orderId,
       sessionId: fullSession.id,
       order,
+    });
+    await updateOrderAdmin(orderId, {
+      lastStripeCheckoutSessionId: fullSession.id,
+      checkoutWebhookSettledAt: FieldValue.serverTimestamp(),
+    });
+    serverLogger.info('stripe_webhook_settled', {
+      route: 'api/stripe/webhook',
+      eventId: event.id,
+      orderId,
+      sessionId: fullSession.id,
+      paymentIntentId,
     });
 
     await markEventCompleted(eventRef, orderId);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
-import { ProfileService } from '@/lib/firestore';
+import { isUsernameAvailableAdmin } from '@/lib/server/adminProfiles';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,15 +17,16 @@ export const GET = withApi(async (req: NextRequest & { userId?: string }) => {
       );
     }
 
-    const isAvailable = await ProfileService.isUsernameAvailable(
-      username,
+    const normalized = username.toLowerCase().trim().replace(/^@/, '').replace(/\s+/g, '');
+    const isAvailable = await isUsernameAvailableAdmin(
+      normalized,
       req.userId // Exclude current user's username when checking
     );
 
     return NextResponse.json({
       success: true,
       available: isAvailable,
-      username: username.toLowerCase().trim().replace(/^@/, '').replace(/\s+/g, '')
+      username: normalized
     });
   } catch (error: any) {
     console.error('Error checking username:', error);

@@ -86,7 +86,9 @@ export default function ListingDetailPage() {
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch listing');
+        const msg =
+          errorData?.message || errorData?.error || (errorData?.code ? `Failed to fetch listing (${errorData.code})` : null);
+        throw new Error(msg || 'Failed to fetch listing');
       }
     } catch (error) {
       console.error('Error fetching listing:', error);
@@ -113,7 +115,13 @@ export default function ListingDetailPage() {
         );
         if (response.ok) {
           const data = await response.json();
-          const items = Array.isArray(data.data) ? data.data : [];
+          const items = Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data?.items)
+              ? data.items
+              : Array.isArray(data)
+                ? data
+                : [];
           const similar = items
             .filter((l: SimpleListing) => l.id !== listing.id && !(l.sold ?? false))
             .slice(0, 4);

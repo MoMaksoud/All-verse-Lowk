@@ -13,7 +13,6 @@ import { ChatView } from '@/components/chat/ChatView';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { UserSearchModal } from '@/components/UserSearchModal';
 import { ArrowLeft, MessageCircle, Plus } from 'lucide-react';
-import { firestoreServices } from '@/lib/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -89,8 +88,13 @@ export default function MessagesPage() {
     }
     
     try {
-      // Create or get existing chat
-      const chatId = await firestoreServices.chats.getOrCreateChat(currentUser.uid, userId);
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/chats', { otherUserId: userId });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.chatId) {
+        throw new Error(payload?.message || payload?.error || 'Failed to start chat');
+      }
+      const chatId = payload.chatId as string;
       
       // Navigate to the chat
       router.push(`/messages?chatId=${chatId}`);

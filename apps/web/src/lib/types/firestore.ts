@@ -160,6 +160,15 @@ export interface OrderShippingSelection {
   shipmentId: string;
 }
 
+export interface PayoutTransferRecord {
+  lineKey: string;
+  sellerId: string;
+  listingId: string;
+  transferId: string;
+  amount: number;
+  at: Timestamp;
+}
+
 export interface FirestoreOrder {
   buyerId: string;
   items: OrderItem[];
@@ -191,6 +200,11 @@ export interface FirestoreOrder {
   payoutFailures?: Array<{ sellerId: string; error: string; listingId?: string; at: Timestamp }>;
   /** True when a payout failed but core payment + fulfillment state is safe to leave committed. */
   payoutRetryable?: boolean;
+  /** Idempotency ledger for successful seller transfers per order line. */
+  payoutTransferIds?: PayoutTransferRecord[];
+  /** Session-level settlement guard for distinct Stripe event IDs on same Checkout Session. */
+  lastStripeCheckoutSessionId?: string;
+  checkoutWebhookSettledAt?: Timestamp;
   cartCleared?: boolean;
   cartClearedAt?: Timestamp;
 }
@@ -224,6 +238,9 @@ export interface UpdateOrderInput {
   payoutStatus?: 'pending' | 'complete' | 'partial_failed';
   payoutFailures?: Array<{ sellerId: string; error: string; listingId?: string; at: Timestamp }>;
   payoutRetryable?: boolean;
+  payoutTransferIds?: PayoutTransferRecord[];
+  lastStripeCheckoutSessionId?: string;
+  checkoutWebhookSettledAt?: Timestamp;
   cartCleared?: boolean;
   cartClearedAt?: Timestamp;
 }
