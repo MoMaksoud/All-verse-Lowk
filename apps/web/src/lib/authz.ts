@@ -58,8 +58,7 @@ export function getPrimarySellerId(order: FirestoreOrder): string | null {
 }
 
 export function canCreateShippingLabel(order: FirestoreOrder, userId: string): boolean {
-  const primarySellerId = getPrimarySellerId(order);
-  if (!primarySellerId || userId !== primarySellerId) return false;
+  if (!isOrderSeller(order, userId)) return false;
   return order.status === 'paid' || order.status === 'shipped' || order.status === 'delivered';
 }
 

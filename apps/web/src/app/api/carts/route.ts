@@ -1,6 +1,12 @@
 import { NextRequest } from "next/server";
 import { withApi } from "@/lib/withApi";
-import { firestoreServices } from "@/lib/services/firestore";
+import {
+  addToCartAdmin,
+  clearCartAdmin,
+  getCartAdmin,
+  removeFromCartAdmin,
+  updateCartItemAdmin,
+} from "@/lib/server/adminCarts";
 import { success, error } from "@/lib/response";
 import { badRequest, unauthorized } from "@marketplace/shared-logic";
 import { AddToCartInput } from "@/lib/types/firestore";
@@ -10,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const cart = await firestoreServices.carts.getCart(req.userId);
+    const cart = await getCartAdmin(req.userId);
     return success(cart || { items: [], updatedAt: new Date() });
   } catch (err) {
     console.error('Error fetching cart:', err);
@@ -27,8 +33,8 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return error(badRequest("Missing required fields: listingId, sellerId, qty, priceAtAdd"));
     }
 
-    await firestoreServices.carts.addToCart(req.userId, body);
-    const updatedCart = await firestoreServices.carts.getCart(req.userId);
+    await addToCartAdmin(req.userId, body);
+    const updatedCart = await getCartAdmin(req.userId);
     
     return success(updatedCart, { status: 201 });
   } catch (err) {
@@ -45,8 +51,8 @@ export const PUT = withApi(async (req: NextRequest & { userId: string }) => {
       return error(badRequest("Missing required fields: listingId, qty"));
     }
 
-    await firestoreServices.carts.updateCartItem(req.userId, body);
-    const updatedCart = await firestoreServices.carts.getCart(req.userId);
+    await updateCartItemAdmin(req.userId, body);
+    const updatedCart = await getCartAdmin(req.userId);
     
     return success(updatedCart);
   } catch (err) {
@@ -62,13 +68,13 @@ export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
     
     if (listingId) {
       // Remove specific item
-      await firestoreServices.carts.removeFromCart(req.userId, listingId);
+      await removeFromCartAdmin(req.userId, listingId);
     } else {
       // Clear entire cart
-      await firestoreServices.carts.clearCart(req.userId);
+      await clearCartAdmin(req.userId);
     }
     
-    const updatedCart = await firestoreServices.carts.getCart(req.userId);
+    const updatedCart = await getCartAdmin(req.userId);
     return success(updatedCart);
   } catch (err) {
     console.error('Error clearing cart:', err);

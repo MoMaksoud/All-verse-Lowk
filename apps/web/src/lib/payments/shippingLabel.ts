@@ -127,6 +127,12 @@ type ShippoTxShape = {
   servicelevel?: { name?: string; token?: string };
 };
 
+/** Heuristic: Shippo often returns generic messages; expand as you observe real API errors. */
+export function isLikelyExpiredShippoRateError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return /expired|stale|invalid.*rate|rate.*invalid|no longer valid|not available|obsolete/i.test(msg);
+}
+
 export async function createAndResolveShippoLabel(rateId: string): Promise<{
   trackingNumber: string;
   labelUrl: string;

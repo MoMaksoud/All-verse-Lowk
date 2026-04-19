@@ -1,11 +1,14 @@
 import { NextRequest } from 'next/server';
 import { createCheckoutSession } from '@/lib/stripe';
-import { firestoreServices } from '@/lib/services/firestore';
 import { withApi } from '@/lib/withApi';
+import { getCartAdmin } from '@/lib/server/adminCarts';
+import { createOrderAdmin, updateOrderAdmin } from '@/lib/server/adminOrders';
+import { createPaymentAdmin } from '@/lib/server/adminPayments';
 import { assertStripeAndSendGridConfig } from '@/lib/config';
 import { prepareTrustedCheckout, getCheckoutBaseUrl } from '@/lib/payments/checkout';
 import { DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
 import { fail, ok } from '@/lib/api/responses';
+import type { CreateOrderInput } from '@/lib/types/firestore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,7 +26,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     const { shippingAddress, selectedShipping } = body;
 
     // Source of truth: user's server-side cart, not client-submitted cart payload.
-    const userCart = await firestoreServices.carts.getCart(req.userId);
+    const userCart = await getCartAdmin(req.userId);
     const cartItems = userCart?.items ?? [];
     if (cartItems.length === 0) {
       return fail({
@@ -40,7 +43,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       taxRate: DEFAULT_TAX_RATE,
     });
 
-    const orderData: Record<string, unknown> = {
+    const orderData: CreateOrderInput = {
       buyerId: req.userId,
       items: checkout.orderItems,
       subtotal: checkout.subtotal,
@@ -52,7 +55,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       shipping: checkout.shippingRate,
     };
 
-    const orderId = await firestoreServices.orders.createOrder(orderData as any);
+    const orderId = await createOrderAdmin(orderData);
 
     const baseUrl = getCheckoutBaseUrl();
     const successUrl = `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
@@ -74,11 +77,11 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       });
     }
 
-    await firestoreServices.orders.updateOrder(orderId, {
+    await updateOrderAdmin(orderId, {
       checkoutSessionId: result.sessionId,
     });
 
-    await firestoreServices.payments.createPayment({
+    await createPaymentAdmin({
       orderId,
       userId: req.userId,
       amount: checkout.total,

@@ -2,12 +2,15 @@ import { NextRequest } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
 import { getAdminFirestore } from '@/lib/firebase-admin';
-import { getOrderAdmin } from '@/lib/server/adminOrders';
+import { getOrderAdmin, updateOrderAdmin } from '@/lib/server/adminOrders';
 import { canCreateShippingLabel } from '@/lib/authz';
 import { fail, ok } from '@/lib/api/responses';
+import { serverLogger } from '@/lib/server/logger';
+import { requoteShippingForPaidOrder } from '@/lib/payments/checkout';
 import {
   acquireShippingLabelLock,
   createAndResolveShippoLabel,
+  isLikelyExpiredShippoRateError,
   markShippingLabelFailed,
   markShippingLabelSuccess,
 } from '@/lib/payments/shippingLabel';
@@ -62,14 +65,14 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       });
     }
 
-    console.log('📦 Creating shipping label (Shippo):', { rateId, shipmentId, orderId });
+    serverLogger.info('shippo_create_label_start', { rateId, shipmentId, orderId });
 
     const order = await getOrderAdmin(orderId);
     if (!order) {
       return fail({ status: 404, code: 'ORDER_NOT_FOUND', message: 'Order not found' });
     }
 
-    if (!canCreateShippingLabel(order as any, req.userId)) {
+    if (!canCreateShippingLabel(order, req.userId)) {
       return fail({
         status: 403,
         code: 'FORBIDDEN',
@@ -118,7 +121,45 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       });
     }
 
-    const shippoResult = await createAndResolveShippoLabel(rateId);
+    let effectiveRateId = rateId;
+    let effectiveShipmentId = shipmentId;
+    let rateRefreshed = false;
+
+    let shippoResult: Awaited<ReturnType<typeof createAndResolveShippoLabel>>;
+    try {
+      shippoResult = await createAndResolveShippoLabel(effectiveRateId);
+    } catch (firstErr) {
+      if (!isLikelyExpiredShippoRateError(firstErr)) {
+        throw firstErr;
+      }
+      const newShipping = await requoteShippingForPaidOrder(order);
+      await updateOrderAdmin(orderId, { shipping: newShipping });
+      effectiveRateId = newShipping.rateId;
+      effectiveShipmentId = newShipping.shipmentId;
+      rateRefreshed = true;
+      try {
+        shippoResult = await createAndResolveShippoLabel(effectiveRateId);
+      } catch (secondErr) {
+        try {
+          await markShippingLabelFailed({
+            adminDb,
+            orderId,
+            error: secondErr,
+          });
+        } catch (lockError) {
+          serverLogger.warn('shippo_label_lock_cleanup_failed', {
+            error: lockError instanceof Error ? lockError.message : String(lockError),
+          });
+        }
+        return fail({
+          status: 502,
+          code: 'SHIPPO_DECLINED',
+          message: 'Shipping carrier declined the label after refreshing the rate. Try again or pick another service.',
+          details: secondErr instanceof Error ? secondErr.message : String(secondErr),
+        });
+      }
+    }
+
     await markShippingLabelSuccess({
       adminDb,
       orderId,
@@ -126,20 +167,26 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       labelUrl: shippoResult.labelUrl,
       carrier: shippoResult.carrier,
       service: shippoResult.service,
-      rateId,
-      shipmentId,
+      rateId: effectiveRateId,
+      shipmentId: effectiveShipmentId,
     });
-    console.log('📦 Shipping information stored in Firestore');
+    serverLogger.info('shippo_create_label_ok', { orderId });
 
     return ok(
       {
         trackingNumber: shippoResult.trackingNumber,
         labelUrl: shippoResult.labelUrl,
+        code: rateRefreshed ? 'RATE_REFRESHED' : undefined,
+        shipping: rateRefreshed
+          ? { rateId: effectiveRateId, shipmentId: effectiveShipmentId }
+          : undefined,
       },
       200
     );
   } catch (error: unknown) {
-    console.error('❌ Error creating shipping label:', error);
+    serverLogger.error('shippo_create_label_exception', {
+      error: error instanceof Error ? error.message : String(error),
+    });
 
     let errorMessage = 'Failed to create shipping label';
     let statusCode = 500;
@@ -169,7 +216,9 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
           error,
         });
       } catch (lockError) {
-        console.error('❌ Failed to release shipping label lock after error:', lockError);
+        serverLogger.warn('shippo_label_lock_release_failed', {
+          error: lockError instanceof Error ? lockError.message : String(lockError),
+        });
       }
     }
 

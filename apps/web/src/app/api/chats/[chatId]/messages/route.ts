@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
-import { firestoreServices } from '@/lib/services/firestore';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getChatDocumentAdmin, getChatMessagesAdmin, sendMessageAdmin } from '@/lib/server/adminChats';
+import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
+import { getUserAdmin } from '@/lib/server/adminUsers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,26 +42,22 @@ export const POST = withApi(async (req: NextRequest & { userId: string }, { para
       );
     }
 
-    // Verify user is a participant in this chat
-    const chatRef = doc(db, 'chats', chatId);
-    const chatDoc = await getDoc(chatRef);
-    if (!chatDoc.exists()) {
+    const chatDoc = await getChatDocumentAdmin(chatId);
+    if (!chatDoc) {
       return NextResponse.json(
         { error: 'Not Found', message: 'Chat not found' },
         { status: 404 }
       );
     }
 
-    const chat = chatDoc.data() as any;
-    if (!chat.participants || !chat.participants.includes(userId)) {
+    if (!chatDoc.participants || !chatDoc.participants.includes(userId)) {
       return NextResponse.json(
         { error: 'Forbidden', message: 'You do not have access to this chat' },
         { status: 403 }
       );
     }
 
-    // Send the message
-    const messageId = await firestoreServices.chats.sendMessage(
+    const messageId = await sendMessageAdmin(
       chatId,
       userId,
       text.trim(),
@@ -72,12 +68,12 @@ export const POST = withApi(async (req: NextRequest & { userId: string }, { para
       success: true,
       messageId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error sending message:', error);
     return NextResponse.json(
       {
         error: 'Failed to send message',
-        message: error?.message || 'Unknown error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
@@ -103,73 +99,56 @@ export const GET = withApi(async (req: NextRequest & { userId: string }, { param
       );
     }
 
-    // Verify user is a participant in this chat
-    const chatRef = doc(db, 'chats', chatId);
-    const chatDoc = await getDoc(chatRef);
-    if (!chatDoc.exists()) {
+    const chatDoc = await getChatDocumentAdmin(chatId);
+    if (!chatDoc) {
       return NextResponse.json(
         { error: 'Not Found', message: 'Chat not found' },
         { status: 404 }
       );
     }
 
-    const chat = chatDoc.data() as any;
-    if (!chat.participants || !chat.participants.includes(userId)) {
+    if (!chatDoc.participants || !chatDoc.participants.includes(userId)) {
       return NextResponse.json(
         { error: 'Forbidden', message: 'You do not have access to this chat' },
         { status: 403 }
       );
     }
 
-    // Fetch messages for the chat (same as web app)
-    const chatMessages = await firestoreServices.chats.getChatMessages(chatId);
+    const chatMessages = await getChatMessagesAdmin(chatId);
 
-    // Enrich and normalize messages (ensure timestamp/chatId exist) - matching web app logic
     const enrichedMessages = await Promise.all(
       chatMessages.map(async (message) => {
         try {
-          // Try to get profile first (has username), fallback to users collection
-          let profileData: any = null;
-          try {
-            const profileDoc = await getDoc(doc(db, 'profiles', message.senderId));
-            if (profileDoc.exists()) {
-              profileData = profileDoc.data();
-            }
-          } catch (profileError) {
-            // Silently continue to users collection
-          }
+          const profileData = await getProfileDocumentAdmin(message.senderId);
+          const sender = await getUserAdmin(message.senderId);
 
-          // Get user data as fallback
-          const sender = await firestoreServices.users.getUser(message.senderId);
-          
-          // Prefer profile data, fallback to user data
-          const username = (profileData?.username || (sender as any)?.username || '').trim();
-          // Use displayName from profile, or from user, or email, but never show "User {id}"
+          const username = (profileData?.username || sender?.username || '').trim();
           let displayName = profileData?.displayName || sender?.displayName;
           if (!displayName) {
-            // If we have email, use it, otherwise use a generic name
             displayName = sender?.email || 'Unknown User';
           }
-          const photoURL = profileData?.profilePicture || sender?.photoURL || (sender as any)?.profilePic || '';
-          
-          const normalized = {
-            ...(message as any),
-            chatId: (message as any).chatId ?? chatId,
-            timestamp: (message as any).timestamp ?? (message as any).createdAt,
+          const photoURL =
+            profileData?.profilePicture || sender?.photoURL || sender?.profilePic || '';
+
+          const m = message as unknown as Record<string, unknown>;
+          return {
+            ...m,
+            chatId: (m.chatId as string) ?? chatId,
+            timestamp: m.timestamp ?? m.createdAt,
             sender: {
               id: message.senderId,
               name: displayName,
-              username: username || null, // Include null if empty so mobile can check for it
+              username: username || null,
               email: sender?.email || '',
-              photoURL: photoURL,
+              photoURL,
             },
           };
-          return normalized;
-        } catch (error) {
-          const normalized = {
-            ...(message as any),
-            chatId: (message as any).chatId ?? chatId,
-            timestamp: (message as any).timestamp ?? (message as any).createdAt,
+        } catch {
+          const m = message as unknown as Record<string, unknown>;
+          return {
+            ...m,
+            chatId: (m.chatId as string) ?? chatId,
+            timestamp: m.timestamp ?? m.createdAt,
             sender: {
               id: message.senderId,
               name: 'Unknown User',
@@ -178,7 +157,6 @@ export const GET = withApi(async (req: NextRequest & { userId: string }, { param
               photoURL: '',
             },
           };
-          return normalized;
         }
       })
     );
@@ -187,15 +165,14 @@ export const GET = withApi(async (req: NextRequest & { userId: string }, { param
       success: true,
       data: enrichedMessages,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching messages:', error);
     return NextResponse.json(
       {
         error: 'Failed to fetch messages',
-        message: error?.message || 'Unknown error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
   }
 });
-

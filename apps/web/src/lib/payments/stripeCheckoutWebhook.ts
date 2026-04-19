@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { FieldValue } from 'firebase-admin/firestore';
-import { serverTimestamp } from 'firebase/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { verifyWebhookSignature, transferToSeller, calculateSellerPayout, PLATFORM_SERVICE_FEE_PERCENT, stripe } from '@/lib/stripe';
-import { firestoreServices } from '@/lib/services/firestore';
-import { ProfileService } from '@/lib/firestore';
 import { sendOrderConfirmationEmail, sendSellerNotificationEmail } from '@/lib/email';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { logEmail } from '@/lib/emailLog';
 import { assertStripeAndSendGridConfig } from '@/lib/config';
 import { canTransitionOrderStatus } from '@/lib/authz';
+import { getOrderAdmin, updateOrderAdmin } from '@/lib/server/adminOrders';
+import {
+  createPaymentAdmin,
+  getPaymentsByOrderAdmin,
+  updatePaymentAdmin,
+} from '@/lib/server/adminPayments';
+import { clearCartAdmin } from '@/lib/server/adminCarts';
+import { updateInventoryAdmin } from '@/lib/server/adminListings';
+import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
+import type { FirestoreOrder } from '@/lib/types/firestore';
+import { serverLogger } from '@/lib/server/logger';
 
 const WEBHOOK_LOCK_TTL_MS = 5 * 60 * 1000;
 
@@ -110,7 +118,7 @@ async function markEventFailed(eventRef: FirebaseFirestore.DocumentReference, er
 }
 
 async function markOrderPaid(orderId: string, paymentIntentId: string | undefined, checkoutSessionId: string) {
-  const current = await firestoreServices.orders.getOrder(orderId);
+  const current = await getOrderAdmin(orderId);
   if (!current) {
     throw new Error(`Order ${orderId} not found before paid transition`);
   }
@@ -131,16 +139,16 @@ async function markOrderPaid(orderId: string, paymentIntentId: string | undefine
   };
   if (!alreadySettled) {
     updates.status = 'paid';
-    updates.paidAt = serverTimestamp() as any;
+    updates.paidAt = FieldValue.serverTimestamp();
   }
 
   if (paymentIntentId) {
     updates.paymentIntentId = paymentIntentId;
   }
 
-  await firestoreServices.orders.updateOrder(orderId, updates as any);
+  await updateOrderAdmin(orderId, updates);
 
-  const payments = await firestoreServices.payments.getPaymentsByOrder(orderId);
+  const payments = await getPaymentsByOrderAdmin(orderId);
   if (payments.length === 0) {
     return;
   }
@@ -148,12 +156,12 @@ async function markOrderPaid(orderId: string, paymentIntentId: string | undefine
   await Promise.all(
     payments
       .filter((payment) => payment.status !== 'succeeded')
-      .map((payment) => firestoreServices.payments.updatePayment((payment as any).id, { status: 'succeeded' }))
+      .map((payment) => updatePaymentAdmin(payment.id, { status: 'succeeded' }))
   );
 }
 
 async function markOrderCancelled(orderId: string, checkoutSessionId: string) {
-  const order = await firestoreServices.orders.getOrder(orderId);
+  const order = await getOrderAdmin(orderId);
   if (!order) {
     return;
   }
@@ -165,12 +173,12 @@ async function markOrderCancelled(orderId: string, checkoutSessionId: string) {
     return;
   }
 
-  await firestoreServices.orders.updateOrder(orderId, {
+  await updateOrderAdmin(orderId, {
     status: 'cancelled',
     checkoutSessionId,
-  } as any);
+  });
 
-  const payments = await firestoreServices.payments.getPaymentsByOrder(orderId);
+  const payments = await getPaymentsByOrderAdmin(orderId);
   if (payments.length === 0) {
     return;
   }
@@ -178,11 +186,11 @@ async function markOrderCancelled(orderId: string, checkoutSessionId: string) {
   await Promise.all(
     payments
       .filter((payment) => payment.status === 'pending')
-      .map((payment) => firestoreServices.payments.updatePayment((payment as any).id, { status: 'failed' }))
+      .map((payment) => updatePaymentAdmin(payment.id, { status: 'failed' }))
   );
 }
 
-function assertSessionMatchesOrder(session: Stripe.Checkout.Session, order: Awaited<ReturnType<typeof firestoreServices.orders.getOrder>>) {
+function assertSessionMatchesOrder(session: Stripe.Checkout.Session, order: (FirestoreOrder & { id: string }) | null) {
   if (!order) {
     throw new Error('Order missing for reconciliation');
   }
@@ -192,9 +200,9 @@ function assertSessionMatchesOrder(session: Stripe.Checkout.Session, order: Awai
   }
 
   if (typeof session.client_reference_id === 'string' && session.client_reference_id.trim()) {
-    if ((order as any).id && session.client_reference_id.trim() !== (order as any).id) {
+    if (order.id && session.client_reference_id.trim() !== order.id) {
       throw new Error(
-        `Checkout reference mismatch for ${session.id}: expected ${(order as any).id}, got ${session.client_reference_id}`
+        `Checkout reference mismatch for ${session.id}: expected ${order.id}, got ${session.client_reference_id}`
       );
     }
   }
@@ -222,17 +230,17 @@ async function ensurePaymentRecord(params: {
   currency: string;
   stripeReference: string;
 }) {
-  const existingPayments = await firestoreServices.payments.getPaymentsByOrder(params.orderId);
+  const existingPayments = await getPaymentsByOrderAdmin(params.orderId);
   if (existingPayments.length > 0) {
     await Promise.all(
       existingPayments
         .filter((payment) => payment.status !== 'succeeded')
-        .map((payment) => firestoreServices.payments.updatePayment((payment as any).id, { status: 'succeeded' }))
+        .map((payment) => updatePaymentAdmin(payment.id, { status: 'succeeded' }))
     );
     return;
   }
 
-  await firestoreServices.payments.createPayment({
+  await createPaymentAdmin({
     orderId: params.orderId,
     userId: params.userId,
     amount: params.amount,
@@ -245,7 +253,7 @@ async function ensurePaymentRecord(params: {
 async function processOrderEmails(params: {
   orderId: string;
   sessionId: string;
-  order: Awaited<ReturnType<typeof firestoreServices.orders.getOrder>>;
+  order: FirestoreOrder | null;
 }) {
   const order = params.order;
   if (!order) {
@@ -257,7 +265,7 @@ async function processOrderEmails(params: {
   }
 
   const auth = getAdminAuth();
-  const buyerProfile = await ProfileService.getProfile(order.buyerId);
+  const buyerProfile = await getProfileDocumentAdmin(order.buyerId);
   const buyerUser = auth ? await auth.getUser(order.buyerId) : null;
   const buyerEmail = buyerUser?.email;
   let allEmailsOk = true;
@@ -301,7 +309,7 @@ async function processOrderEmails(params: {
   }
 
   for (const item of order.items) {
-    const sellerProfile = await ProfileService.getProfile(item.sellerId);
+    const sellerProfile = await getProfileDocumentAdmin(item.sellerId);
     if (!sellerProfile) {
       continue;
     }
@@ -347,11 +355,42 @@ async function processOrderEmails(params: {
   }
 
   if (allEmailsOk) {
-    await firestoreServices.orders.updateOrder(params.orderId, {
+    await updateOrderAdmin(params.orderId, {
       emailSent: true,
-      emailSentAt: serverTimestamp() as any,
+      emailSentAt: FieldValue.serverTimestamp(),
     });
   }
+}
+
+type PayoutFailureRecord = { sellerId: string; error: string; listingId: string };
+
+/**
+ * Attempts Stripe Connect transfers per line item. Does not throw on transfer failure;
+ * returns structured failures for persistence on the order document.
+ */
+async function transferToSellersForOrder(order: FirestoreOrder & { id: string }): Promise<PayoutFailureRecord[]> {
+  const failures: PayoutFailureRecord[] = [];
+
+  for (const item of order.items) {
+    const itemTotal = item.unitPrice * item.qty;
+    const { sellerPayout } = calculateSellerPayout(itemTotal, PLATFORM_SERVICE_FEE_PERCENT);
+    const sellerProfile = await getProfileDocumentAdmin(item.sellerId);
+
+    if (!sellerProfile?.stripeConnectAccountId || !sellerProfile?.stripeConnectOnboardingComplete) {
+      continue;
+    }
+
+    const transferResult = await transferToSeller(sellerProfile.stripeConnectAccountId, sellerPayout, order.id);
+    if (!transferResult.success) {
+      failures.push({
+        sellerId: item.sellerId,
+        listingId: item.listingId,
+        error: transferResult.error || 'unknown error',
+      });
+    }
+  }
+
+  return failures;
 }
 
 export async function POST(req: NextRequest) {
@@ -431,7 +470,7 @@ export async function POST(req: NextRequest) {
       throw new Error('Missing session.metadata.orderId');
     }
 
-    let order = await firestoreServices.orders.getOrder(orderId);
+    let order = await getOrderAdmin(orderId);
     if (!order) {
       throw new Error(`Order not found for orderId ${orderId}`);
     }
@@ -447,51 +486,57 @@ export async function POST(req: NextRequest) {
       stripeReference: paymentIntentId || fullSession.id,
     });
 
-    order = await firestoreServices.orders.getOrder(orderId);
+    order = await getOrderAdmin(orderId);
     if (!order) {
       throw new Error(`Order not found after payment update for ${orderId}`);
     }
 
     if (order.inventoryAdjusted !== true) {
       for (const item of order.items) {
-        await firestoreServices.listings.updateInventory(item.listingId, item.qty);
+        await updateInventoryAdmin(item.listingId, item.qty);
       }
 
-      await firestoreServices.orders.updateOrder(orderId, {
+      await updateOrderAdmin(orderId, {
         inventoryAdjusted: true,
-        inventoryAdjustedAt: serverTimestamp() as any,
+        inventoryAdjustedAt: FieldValue.serverTimestamp(),
       });
       order.inventoryAdjusted = true;
     }
 
     if (order.payoutsProcessed !== true) {
-      for (const item of order.items) {
-        const itemTotal = item.unitPrice * item.qty;
-        const { sellerPayout } = calculateSellerPayout(itemTotal, PLATFORM_SERVICE_FEE_PERCENT);
-        const sellerProfile = await ProfileService.getProfile(item.sellerId);
+      const payoutFailures = await transferToSellersForOrder(order);
 
-        if (sellerProfile?.stripeConnectAccountId && sellerProfile?.stripeConnectOnboardingComplete) {
-          const transferResult = await transferToSeller(sellerProfile.stripeConnectAccountId, sellerPayout, orderId);
-          if (!transferResult.success) {
-            throw new Error(
-              `Failed seller payout transfer for seller ${item.sellerId}: ${transferResult.error || 'unknown error'}`
-            );
-          }
-        }
+      if (payoutFailures.length === 0) {
+        await updateOrderAdmin(orderId, {
+          payoutsProcessed: true,
+          payoutsProcessedAt: FieldValue.serverTimestamp(),
+          payoutStatus: 'complete',
+          payoutRetryable: false,
+        });
+        order.payoutsProcessed = true;
+      } else {
+        const stamped = payoutFailures.map((f) => ({
+          sellerId: f.sellerId,
+          listingId: f.listingId,
+          error: f.error,
+          at: Timestamp.fromDate(new Date()),
+        }));
+        await updateOrderAdmin(orderId, {
+          payoutsProcessed: false,
+          payoutStatus: 'partial_failed',
+          payoutFailures: stamped,
+          payoutRetryable: true,
+        });
       }
-
-      await firestoreServices.orders.updateOrder(orderId, {
-        payoutsProcessed: true,
-        payoutsProcessedAt: serverTimestamp() as any,
-      });
-      order.payoutsProcessed = true;
     }
 
+    order = (await getOrderAdmin(orderId)) ?? order;
+
     if (order.cartCleared !== true) {
-      await firestoreServices.carts.clearCart(order.buyerId);
-      await firestoreServices.orders.updateOrder(orderId, {
+      await clearCartAdmin(order.buyerId);
+      await updateOrderAdmin(orderId, {
         cartCleared: true,
-        cartClearedAt: serverTimestamp() as any,
+        cartClearedAt: FieldValue.serverTimestamp(),
       });
       order.cartCleared = true;
     }
@@ -509,7 +554,9 @@ export async function POST(req: NextRequest) {
       await markEventFailed(eventRef, error);
     }
 
-    console.error('[stripe/webhook] Fatal error', error);
+    serverLogger.error('stripe_webhook_fatal', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return new Response('Webhook error', { status: 500 });
   }
 }

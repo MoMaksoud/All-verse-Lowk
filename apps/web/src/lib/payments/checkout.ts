@@ -1,7 +1,8 @@
 import { DistanceUnitEnum, WeightUnitEnum } from 'shippo';
-import { firestoreServices } from '@/lib/services/firestore';
 import { shippo } from '@/lib/shippo';
-import { ProfileService } from '@/lib/firestore';
+import { getListingAdmin } from '@/lib/server/adminListings';
+import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
+import type { FirestoreOrder, OrderShippingSelection } from '@/lib/types/firestore';
 import { calculateCheckoutTotals, DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
 import {
   findMatchingShippingRate,
@@ -105,7 +106,7 @@ function getPackageDimensions(
   };
 }
 
-async function quoteTrustedShipping(params: {
+export async function quoteTrustedShipping(params: {
   sellerId: string;
   buyerAddress: ReturnType<typeof sanitizeShippingAddress>;
   selectedShipping?: SelectedShippingInput | null;
@@ -115,7 +116,7 @@ async function quoteTrustedShipping(params: {
   let fromZip = '10001';
 
   try {
-    const sellerProfile = await ProfileService.getProfile(params.sellerId);
+    const sellerProfile = await getProfileDocumentAdmin(params.sellerId);
     const sellerZip = sellerProfile?.shippingAddress?.zip;
     if (sellerZip) {
       fromZip = normalizeZip(sellerZip);
@@ -209,7 +210,7 @@ export async function prepareTrustedCheckout(params: {
       throw new Error('Each cart item must include a valid quantity');
     }
 
-    const listing = await firestoreServices.listings.getListing(cartItem.listingId.trim());
+    const listing = await getListingAdmin(cartItem.listingId.trim());
     if (!listing) {
       throw new Error(`Listing ${cartItem.listingId} not found`);
     }
@@ -261,6 +262,56 @@ export async function prepareTrustedCheckout(params: {
     orderItems,
     shippingAddress: trustedShippingAddress,
     shippingRate: trustedShipping,
+  };
+}
+
+/**
+ * Re-run Shippo quoting for a paid order (same inputs as checkout) when a stored rate may be stale.
+ */
+export async function requoteShippingForPaidOrder(
+  order: FirestoreOrder & { id: string }
+): Promise<OrderShippingSelection> {
+  const primarySellerId = order.items[0]?.sellerId;
+  if (!primarySellerId) {
+    throw new Error('Unable to determine seller for shipping re-quote');
+  }
+
+  const listingDocs = await Promise.all(order.items.map((i) => getListingAdmin(i.listingId)));
+  const loadedListings: Array<{ shipping?: ListingShippingShape | null }> = [];
+  for (let idx = 0; idx < listingDocs.length; idx++) {
+    const l = listingDocs[idx];
+    if (!l) {
+      throw new Error(`Listing ${order.items[idx].listingId} not found`);
+    }
+    loadedListings.push({ shipping: (l as { shipping?: ListingShippingShape | null }).shipping });
+  }
+
+  const trusted = await quoteTrustedShipping({
+    sellerId: primarySellerId,
+    buyerAddress: {
+      name: order.shippingAddress.name,
+      street: order.shippingAddress.street,
+      city: order.shippingAddress.city,
+      state: order.shippingAddress.state,
+      zip: order.shippingAddress.zip,
+      country: order.shippingAddress.country,
+    },
+    selectedShipping: order.shipping
+      ? {
+          rateId: order.shipping.rateId,
+          carrier: order.shipping.carrier,
+          serviceName: order.shipping.serviceName,
+        }
+      : null,
+    listings: loadedListings,
+  });
+
+  return {
+    carrier: trusted.carrier,
+    serviceName: trusted.serviceName,
+    price: trusted.price,
+    rateId: trusted.rateId,
+    shipmentId: trusted.shipmentId,
   };
 }
 

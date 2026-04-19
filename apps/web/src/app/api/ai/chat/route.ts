@@ -3,6 +3,7 @@ import { GeminiService } from '@/lib/gemini';
 import { assertTokenBudget, addUsage } from '@/lib/aiUsage';
 import { withApi } from '@/lib/withApi';
 import { getAdminStorage } from '@/lib/firebase-admin';
+import { searchListingsAdmin } from '@/lib/server/adminListings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -124,17 +125,6 @@ const isOutOfScope = (s: string) => {
   return blockedPatterns.test(lower);
 };
 
-// Helper to get firestore services
-async function getFirestoreServices() {
-  try {
-    const { firestoreServices } = await import('@/lib/services/firestore');
-    return firestoreServices;
-  } catch (error) {
-    console.error('Error loading firestore services:', error);
-    throw new Error('Failed to load database services');
-  }
-}
-
 export const POST = withApi(async (request: NextRequest & { userId?: string }) => {
   // Validate userId - return handled JSON error if missing
   if (!request.userId || typeof request.userId !== 'string' || request.userId.trim().length === 0) {
@@ -221,12 +211,10 @@ export const POST = withApi(async (request: NextRequest & { userId?: string }) =
     if (mode === 'buyer') {
       try {
         console.log('🔵 Fetching listings from database for buyer mode...');
-        const firestoreServices = await getFirestoreServices();
-        
-        // Fetch active listings (limit to 50 most recent for context)
-        const allListings = await firestoreServices.listings.searchListings(
+        const allListings = await searchListingsAdmin(
           { isActive: true },
-          { field: 'createdAt', direction: 'desc' as const }
+          { field: 'createdAt', direction: 'desc' as const },
+          80
         );
         
         if (allListings.items && allListings.items.length > 0) {

@@ -61,6 +61,14 @@ export interface FirestoreListing {
   soldCount: number;
 }
 
+export interface ListingShippingDimsInput {
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  labelScanUrl?: string;
+}
+
 export interface CreateListingInput {
   title: string;
   description: string;
@@ -75,6 +83,8 @@ export interface CreateListingInput {
   brand?: string;
   model?: string;
   gtin?: string;
+  /** Used at checkout time for Shippo quotes (sell flow). */
+  shipping?: ListingShippingDimsInput;
 }
 
 export interface UpdateListingInput {
@@ -176,6 +186,11 @@ export interface FirestoreOrder {
   inventoryAdjustedAt?: Timestamp;
   payoutsProcessed?: boolean;
   payoutsProcessedAt?: Timestamp;
+  /** When any Connect transfer fails, set so ops can inspect and retry out-of-band. */
+  payoutStatus?: 'pending' | 'complete' | 'partial_failed';
+  payoutFailures?: Array<{ sellerId: string; error: string; listingId?: string; at: Timestamp }>;
+  /** True when a payout failed but core payment + fulfillment state is safe to leave committed. */
+  payoutRetryable?: boolean;
   cartCleared?: boolean;
   cartClearedAt?: Timestamp;
 }
@@ -206,6 +221,9 @@ export interface UpdateOrderInput {
   inventoryAdjustedAt?: Timestamp;
   payoutsProcessed?: boolean;
   payoutsProcessedAt?: Timestamp;
+  payoutStatus?: 'pending' | 'complete' | 'partial_failed';
+  payoutFailures?: Array<{ sellerId: string; error: string; listingId?: string; at: Timestamp }>;
+  payoutRetryable?: boolean;
   cartCleared?: boolean;
   cartClearedAt?: Timestamp;
 }

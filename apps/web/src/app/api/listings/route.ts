@@ -2,17 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { CreateListingInput } from "@/lib/types/firestore";
 import { withApi } from "@/lib/withApi";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-
-// Import firestore services dynamically to avoid webpack issues
-async function getFirestoreServices() {
-  try {
-    const { firestoreServices } = await import("@/lib/services/firestore");
-    return firestoreServices;
-  } catch (err) {
-    console.error('Failed to import firestore services:', err);
-    throw new Error('Database services not available');
-  }
-}
+import { createListingAdmin, getListingAdmin, searchListingsAdmin } from "@/lib/server/adminListings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,8 +14,6 @@ const LISTINGS_CACHE_TTL_MS = 15_000; // 15 seconds
 
 export async function GET(req: NextRequest) {
   try {
-    const firestoreServices = await getFirestoreServices();
-
     const url = new URL(req.url);
     const q = url.searchParams.get('q') || undefined;
     const category = url.searchParams.get('category') || undefined;
@@ -95,7 +83,7 @@ export async function GET(req: NextRequest) {
       ? 100
       : Math.min(page * limit * 5, 200);
 
-    const result = await firestoreServices.listings.searchListings(filters, sortOptions, maxResults);
+    const result = await searchListingsAdmin(filters, sortOptions, maxResults);
       
     // Apply keyword search (client-side, as Firestore doesn't support full-text search)
     let filteredData = [...result.items];
@@ -303,8 +291,6 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const firestoreServices = await getFirestoreServices();
-
     const listingData = {
       ...body,
       sellerId: req.userId, // Use verified userId from token
@@ -313,12 +299,12 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       condition: body.condition || 'good',
     };
     
-    const listingId = await firestoreServices.listings.createListing(listingData);
-    const listing = await firestoreServices.listings.getListing(listingId);
+    const listingId = await createListingAdmin(listingData);
+    const listing = await getListingAdmin(listingId);
     
     return NextResponse.json({ id: listingId, ...listing }, { status: 201 });
   } catch (error) {
-    console.error('❌ Error creating listing:', error);
+    console.error('Error creating listing:', error);
     console.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,

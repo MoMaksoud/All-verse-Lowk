@@ -4,17 +4,7 @@ import { success, error } from "@/lib/response";
 import { badRequest, notFound } from "@marketplace/shared-logic";
 import { UpdateListingInput } from "@/lib/types/firestore";
 import { FirebaseCleanupService } from "@/lib/firebaseCleanup";
-
-// Import firestore services dynamically to avoid webpack issues
-async function getFirestoreServices() {
-  try {
-    const { firestoreServices } = await import("@/lib/services/firestore");
-    return firestoreServices;
-  } catch (err) {
-    console.error('Failed to import firestore services:', err);
-    throw new Error('Database services not available');
-  }
-}
+import { getListingAdmin, markAsSoldAdmin, updateListingAdmin } from "@/lib/server/adminListings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,8 +14,7 @@ export const GET = withApi(async (
   { params }: { params: { id: string } }
 ) => {
   try {
-    const firestoreServices = await getFirestoreServices();
-    const listing = await firestoreServices.listings.getListing(params.id);
+    const listing = await getListingAdmin(params.id);
     
     if (!listing) {
       return error(notFound("Listing not found"));
@@ -62,10 +51,8 @@ export const PUT = withApi(async (
   try {
     const body = await req.json() as UpdateListingInput;
     
-    const firestoreServices = await getFirestoreServices();
-    
     // Get the existing listing to check ownership
-    const existingListing = await firestoreServices.listings.getListing(params.id);
+    const existingListing = await getListingAdmin(params.id);
     if (!existingListing) {
       return error(notFound("Listing not found"));
     }
@@ -77,22 +64,22 @@ export const PUT = withApi(async (
 
     // Mark as sold (manual): only owner can set; server always sets soldThroughAllVerse false
     if (body.sold === true) {
-      await firestoreServices.listings.markAsSold(params.id);
+      await markAsSoldAdmin(params.id);
       const { sold, soldAt, ...rest } = body;
       const safeRest = { ...rest } as Record<string, unknown>;
       delete safeRest.soldThroughAllVerse;
       if (Object.keys(safeRest).length > 0) {
-        await firestoreServices.listings.updateListing(params.id, safeRest as UpdateListingInput);
+        await updateListingAdmin(params.id, safeRest as UpdateListingInput);
       }
     } else {
       // Never allow client to set soldThroughAllVerse to true
       const safeBody = { ...body } as Record<string, unknown>;
       delete safeBody.soldThroughAllVerse;
-      await firestoreServices.listings.updateListing(params.id, safeBody as UpdateListingInput);
+      await updateListingAdmin(params.id, safeBody as UpdateListingInput);
     }
     
     // Get the updated listing
-    const updatedListing = await firestoreServices.listings.getListing(params.id);
+    const updatedListing = await getListingAdmin(params.id);
     
     if (!updatedListing) {
       return error(notFound("Listing not found after update"));

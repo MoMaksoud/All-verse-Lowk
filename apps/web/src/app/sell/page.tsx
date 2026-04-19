@@ -13,8 +13,10 @@ import { PhotoUpload } from '@/components/PhotoUpload';
 import { AIListingAssistant } from '@/components/AIListingAssistant';
 import Select from '@/components/Select';
 import { useAuth } from '@/contexts/AuthContext';
-import { firestoreServices } from '@/lib/services/firestore';
-import { Toast, ToastType } from '@/components/Toast';
+import { Toast } from '@/components/Toast';
+import { SellListingStepper } from '@/app/sell/components/SellListingStepper';
+import { useSellToasts } from '@/app/sell/hooks/useSellToasts';
+import { buildSellListingPayload } from '@/app/sell/mapListingSubmit';
 import { isCloudUrl } from '@/types/photos';
 import { uploadListingPhotoFile } from '@/lib/storage';
 import { formatPrice } from '@/lib/format';
@@ -30,16 +32,7 @@ const steps = [
 export default function SellPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
-
-  // Toast helper functions
-  const addToast = (type: ToastType, title: string, message?: string) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, type, title, message }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
+  const { toasts, addToast, removeToast } = useSellToasts();
 
   // Photo state management
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
@@ -68,7 +61,6 @@ export default function SellPage() {
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [priceSuggesting, setPriceSuggesting] = useState(false);
   const [lastPriceSuggestionTime, setLastPriceSuggestionTime] = useState(0);
-  const [toasts, setToasts] = useState<Array<{ id: string; type: ToastType; title: string; message?: string }>>([]);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [aiAssistantComplete, setAiAssistantComplete] = useState(false);
@@ -471,42 +463,14 @@ export default function SellPage() {
     try {
       setLoading(true);
       
-      // First, create the listing without photos
-      const listingData: any = {
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        category: formData.category,
-        images: photoUrls, // Use cloud URLs directly
-        condition: formData.condition || 'good',
-        inventory: 1,
-        isActive: true,
-        sellerId: currentUser?.uid || '',
-      };
-      // Populate optional product identifiers from AI analysis for search and exact-item matching
-      const brand = initialEvidence?.brand ?? aiAnalysis?.brand;
-      const model = initialEvidence?.model_exact ?? initialEvidence?.model_range ?? aiAnalysis?.model;
-      if (brand) listingData.brand = brand;
-      if (model) listingData.model = model;
-      if (initialEvidence?.gtin) listingData.gtin = initialEvidence.gtin;
+      const listingData = buildSellListingPayload({
+        formData,
+        photoUrls,
+        sellerId: currentUser.uid,
+        aiAnalysis,
+        initialEvidence,
+      });
 
-      // Add shipping information if provided
-      if (formData.shipping && (
-        formData.shipping.weight || 
-        formData.shipping.length || 
-        formData.shipping.width || 
-        formData.shipping.height || 
-        formData.shipping.labelScanUrl
-      )) {
-        listingData.shipping = {
-          weight: formData.shipping.weight ? parseFloat(formData.shipping.weight) : undefined,
-          length: formData.shipping.length ? parseFloat(formData.shipping.length) : undefined,
-          width: formData.shipping.width ? parseFloat(formData.shipping.width) : undefined,
-          height: formData.shipping.height ? parseFloat(formData.shipping.height) : undefined,
-          labelScanUrl: formData.shipping.labelScanUrl || undefined,
-        };
-      }
-      
       const { apiPost: apiPostListing } = await import('@/lib/api-client');
       const response = await apiPostListing('/api/listings', listingData);
       
@@ -1614,91 +1578,7 @@ export default function SellPage() {
           <p className="text-base sm:text-sm lg:text-base text-zinc-300 leading-7 px-4">Upload a photo and let AI do the work for you</p>
         </header>
 
-        {/* Stepper */}
-        <div className="mb-8 sm:mb-10">
-          {/* Mobile: Show only first 3 steps prominently */}
-          <div className="lg:hidden space-y-3 max-w-sm mx-auto">
-            {steps.slice(0, 3).map((step) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.id;
-              const isCompleted = currentStep > step.id;
-              
-              return (
-                <div 
-                  key={step.id} 
-                  className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
-                    isActive 
-                      ? 'bg-blue-600/20 border-2 border-blue-500' 
-                      : isCompleted 
-                        ? 'bg-zinc-800/40 border border-blue-500/30' 
-                        : 'bg-zinc-800/20 border border-zinc-700'
-                  }`}
-                >
-                  <div 
-                    className={`flex items-center justify-center w-12 h-12 rounded-full shrink-0 ${
-                      isActive 
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50' 
-                        : isCompleted 
-                          ? 'bg-blue-500 text-white' 
-                          : 'bg-zinc-700 text-zinc-400'
-                    }`}
-                  >
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-base font-semibold ${
-                      isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-400'
-                    }`}>
-                      {step.title}
-                    </div>
-                    <div className="text-sm text-zinc-400">{step.description}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Desktop: Horizontal stepper */}
-          <div className="hidden lg:flex items-center justify-center gap-2">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.id;
-              const isCompleted = currentStep > step.id;
-              
-              return (
-                <div key={step.id} className="flex items-center">
-                  <div className="flex flex-row items-center gap-3">
-                    <div 
-                      className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-200 ${
-                        isActive 
-                          ? 'bg-blue-600 text-white' 
-                          : isCompleted 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-zinc-800 text-zinc-300'
-                      }`}
-                      aria-current={isActive ? "step" : undefined}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <div className={`text-sm font-medium ${
-                        isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-500'
-                      }`}>
-                        {step.title}
-                      </div>
-                      <div className="text-xs text-zinc-500">{step.description}</div>
-                    </div>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className={`w-12 h-0.5 mx-4 transition-all duration-200 ${
-                      isCompleted ? 'bg-blue-500' : 'bg-zinc-800'
-                    }`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <SellListingStepper steps={steps} currentStep={currentStep} />
 
         {/* Form Content */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">

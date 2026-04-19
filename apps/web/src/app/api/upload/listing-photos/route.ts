@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import StorageService, { uploadListingPhotoFile } from '@/lib/storage';
-import { firestoreServices } from '@/lib/services/firestore';
+import { getListingAdmin, updateListingAdmin } from '@/lib/server/adminListings';
+import {
+  deleteListingPhotosAdmin,
+  getListingPhotosAdmin,
+  saveListingPhotosAdmin,
+} from '@/lib/server/adminPhotos';
 import { ListingPhotoUpload } from '@/lib/types/firestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { withApi } from '@/lib/withApi';
@@ -25,7 +30,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return NextResponse.json({ error: 'Listing ID is required' }, { status: 400 });
     }
 
-    const listing = await firestoreServices.listings.getListing(listingId);
+    const listing = await getListingAdmin(listingId);
     if (listing && listing.sellerId !== req.userId) {
       return NextResponse.json({ error: 'You can only upload photos for your own listings' }, { status: 403 });
     }
@@ -97,7 +102,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
         uploadedAt: new Date() as any, // Will be converted to Timestamp in service
       };
 
-      await firestoreServices.listingPhotos.saveListingPhotos(photoData);
+      await saveListingPhotosAdmin(photoData);
     } else {
       console.log('📸 Firebase not configured, skipping metadata save');
     }
@@ -105,7 +110,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     // Update listing with new photo URLs (only if listing exists)
     console.log('📸 Updating listing with photo URLs...');
     try {
-      await firestoreServices.listings.updateListing(listingId, {
+      await updateListingAdmin(listingId, {
         images: photoUrls,
       });
       console.log('📸 Listing updated successfully');
@@ -137,7 +142,7 @@ export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
       return NextResponse.json({ error: 'Listing ID is required' }, { status: 400 });
     }
 
-    const listing = await firestoreServices.listings.getListing(listingId);
+    const listing = await getListingAdmin(listingId);
     if (!listing) {
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
     }
@@ -146,7 +151,7 @@ export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
     }
 
     // Get current listing photos
-    const photoData = await firestoreServices.listingPhotos.getListingPhotos(listingId);
+    const photoData = await getListingPhotosAdmin(listingId);
     
     if (photoData) {
       // Delete from Firebase Storage
@@ -155,10 +160,10 @@ export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
       }
       
       // Delete from Firestore
-      await firestoreServices.listingPhotos.deleteListingPhotos(listingId);
+      await deleteListingPhotosAdmin(listingId);
       
       // Update listing to remove photo URLs
-      await firestoreServices.listings.updateListing(listingId, {
+      await updateListingAdmin(listingId, {
         images: [],
       });
     }
