@@ -1,13 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS } from '@/lib/ai/models';
+import { GEMINI_MODELS, resolveGeminiModel, type GeminiModelOption } from '@/lib/ai/models';
 
-export type GeminiModelOption = keyof typeof GEMINI_MODELS | string;
-
-function resolveModel(modelOption?: GeminiModelOption): string {
-  if (modelOption == null) return GEMINI_MODELS.FAST;
-  if (modelOption in GEMINI_MODELS) return GEMINI_MODELS[modelOption as keyof typeof GEMINI_MODELS];
-  return modelOption;
-}
+export type { GeminiModelOption };
 
 // Lazy initialization function to avoid module-level errors
 function getGenAI() {
@@ -169,7 +163,7 @@ Always end with a short, encouraging call-to-action question.
       }
 
       console.log('🔵 Calling Gemini generateContent, prompt length:', fullPrompt.length);
-      const modelName = resolveModel(options?.model);
+      const modelName = resolveGeminiModel(options?.model);
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(fullPrompt);
       console.log('✅ Gemini generateContent completed');
@@ -220,7 +214,7 @@ Always end with a short, encouraging call-to-action question.
   static async generateResponse(prompt: string, options?: { model?: GeminiModelOption }): Promise<ChatResponse> {
     try {
       const genAI = getGenAI();
-      const modelName = resolveModel(options?.model);
+      const modelName = resolveGeminiModel(options?.model);
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const response = await result.response;
