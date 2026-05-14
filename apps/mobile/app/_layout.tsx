@@ -30,7 +30,7 @@ export default function RootLayout() {
             backgroundColor: colors.bg.base,
           },
           headerBackTitleVisible: false,
-        }}
+        } as any}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
@@ -41,7 +41,15 @@ export default function RootLayout() {
             headerShown: true,
             headerBackTitle: 'Home',
             headerBackTitleVisible: true,
-          }} 
+          } as any} 
+        />
+        <Stack.Screen
+          name="profile/[userId]"
+          options={{
+            title: 'Seller Profile',
+            headerShown: true,
+            headerBackTitle: 'Back',
+          }}
         />
         <Stack.Screen 
           name="chat/[id]" 
@@ -50,7 +58,7 @@ export default function RootLayout() {
             headerShown: false,
             headerBackTitle: 'Back',
             headerBackTitleVisible: true,
-          }} 
+          } as any} 
         />
         <Stack.Screen 
           name="checkout" 
@@ -114,4 +122,3 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg.base,
   },
 });
-

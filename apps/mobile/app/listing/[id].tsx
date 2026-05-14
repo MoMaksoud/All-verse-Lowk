@@ -216,6 +216,19 @@ export default function ListingDetailScreen() {
     }
   };
 
+  const handleSellerProfilePress = () => {
+    const sellerId = listing?.sellerId?.trim();
+    if (!sellerId) {
+      Alert.alert('Error', 'Seller profile is unavailable');
+      return;
+    }
+
+    router.push({
+      pathname: '/profile/[userId]',
+      params: { userId: sellerId },
+    } as any);
+  };
+
   const handleFavorite = async () => {
     if (!currentUser) {
       Alert.alert('Sign In Required', 'Please sign in to favorite items');
@@ -266,7 +279,7 @@ export default function ListingDetailScreen() {
     );
   }
 
-  const normalizeImageUrl = (url?: string): string => {
+  const normalizeImageUrl = (url?: string | null): string => {
     if (!url) return 'https://via.placeholder.com/400';
     if (url.startsWith('http')) return url;
     return 'https://via.placeholder.com/400';
@@ -407,7 +420,7 @@ export default function ListingDetailScreen() {
               <Text style={styles.sectionTitle}>Seller</Text>
               <TouchableOpacity
                 style={styles.sellerCard}
-                onPress={() => router.push(`/profile/${listing.sellerId}`)}
+                onPress={handleSellerProfilePress}
               >
                 <ProfilePicture
                   src={seller.profilePicture}
@@ -626,6 +639,9 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     lineHeight: 24,
   },
+  section: {
+    marginBottom: 24,
+  },
   sellerCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -714,4 +730,3 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
   },
 });
-

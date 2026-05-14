@@ -10,8 +10,11 @@ import {
   initializeAuth,
   browserLocalPersistence,
   Auth,
-  getReactNativePersistence,
 } from 'firebase/auth';
+
+const { getReactNativePersistence } = require('firebase/auth') as {
+  getReactNativePersistence: (storage: typeof AsyncStorage) => any;
+};
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
