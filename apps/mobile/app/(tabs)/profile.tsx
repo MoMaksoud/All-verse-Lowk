@@ -248,6 +248,13 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleEditListingPrice = (listingId: string) => {
+    router.push({
+      pathname: '/listing/[id]/edit',
+      params: { id: listingId },
+    } as any);
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
@@ -465,6 +472,13 @@ export default function ProfileScreen() {
                     onPress={() => handleDeleteListing(listing.id)}
                   >
                     <Ionicons name="trash-outline" size={20} color={colors.text.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.editListingButton}
+                    onPress={() => handleEditListingPrice(listing.id)}
+                  >
+                    <Ionicons name="create-outline" size={16} color={colors.text.primary} />
+                    <Text style={styles.editListingButtonText}>Edit Price</Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -727,6 +741,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
+  },
+  editListingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.brand.DEFAULT,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 6,
+    marginTop: -8,
+    marginBottom: 16,
+  },
+  editListingButtonText: {
+    color: colors.text.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
   errorContainer: {
     backgroundColor: colors.bg.surface,

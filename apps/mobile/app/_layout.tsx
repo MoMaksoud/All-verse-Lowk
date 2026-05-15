@@ -44,6 +44,14 @@ export default function RootLayout() {
           } as any} 
         />
         <Stack.Screen
+          name="listing/[id]/edit"
+          options={{
+            title: 'Edit Listing',
+            headerShown: true,
+            headerBackTitle: 'Back',
+          }}
+        />
+        <Stack.Screen
           name="profile/[userId]"
           options={{
             title: 'Seller Profile',

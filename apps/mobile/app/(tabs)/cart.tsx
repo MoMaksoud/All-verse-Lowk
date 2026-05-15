@@ -171,7 +171,10 @@ export default function CartScreen() {
   };
 
   const calculateTotal = () => {
-    return cartItems.reduce((sum, item) => sum + item.priceAtAdd * item.qty, 0);
+    return cartItems.reduce((sum, item) => {
+      const currentPrice = listings[item.listingId]?.price ?? item.priceAtAdd;
+      return sum + currentPrice * item.qty;
+    }, 0);
   };
 
   const ListHeader = () => (
@@ -186,6 +189,7 @@ export default function CartScreen() {
   const renderCartItem = ({ item }: { item: CartItem }) => {
     const listing = listings[item.listingId];
     if (!listing) return null;
+    const currentPrice = listing.price ?? item.priceAtAdd;
 
     return (
       <View style={styles.cartItem}>
@@ -236,7 +240,7 @@ export default function CartScreen() {
                   {listing.category}
                 </Text>
                 <Text style={styles.itemPrice} numberOfLines={1}>
-                  ${item.priceAtAdd.toFixed(2)}
+                  ${currentPrice.toFixed(2)}
                 </Text>
               </View>
               
@@ -615,4 +619,3 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 });
-

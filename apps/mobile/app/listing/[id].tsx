@@ -229,6 +229,15 @@ export default function ListingDetailScreen() {
     } as any);
   };
 
+  const handleEditListingPrice = () => {
+    if (!listing?.id) return;
+
+    router.push({
+      pathname: '/listing/[id]/edit',
+      params: { id: listing.id },
+    } as any);
+  };
+
   const handleFavorite = async () => {
     if (!currentUser) {
       Alert.alert('Sign In Required', 'Please sign in to favorite items');
@@ -284,6 +293,9 @@ export default function ListingDetailScreen() {
     if (url.startsWith('http')) return url;
     return 'https://via.placeholder.com/400';
   };
+
+  const isOwner = Boolean(currentUser?.uid && listing.sellerId && currentUser.uid === listing.sellerId);
+  const isSold = (listing.sold ?? false) || listing.inventory === 0;
 
   return (
     <View style={styles.container}>
@@ -384,7 +396,7 @@ export default function ListingDetailScreen() {
               <Text style={styles.priceLabel}>Price</Text>
               <Text style={styles.price}>${listing.price.toLocaleString()}</Text>
             </View>
-            {((listing.sold ?? false) || listing.inventory === 0) && (
+            {isSold && (
               <View style={styles.soldBadge}>
                 <Text style={styles.soldText}>SOLD</Text>
               </View>
@@ -443,7 +455,18 @@ export default function ListingDetailScreen() {
       </ScrollView>
 
       {/* Action Buttons */}
-      {!listing.sold && (
+      {isOwner && !isSold && (
+        <View style={styles.actionBar}>
+          <TouchableOpacity
+            style={[styles.button, styles.editPriceButton]}
+            onPress={handleEditListingPrice}
+          >
+            <Ionicons name="create-outline" size={22} color={colors.text.primary} />
+            <Text style={styles.buttonText}>Edit Price</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {!isOwner && !isSold && (
         <View style={styles.actionBar}>
           <TouchableOpacity
             style={[styles.button, styles.contactButton]}
@@ -471,7 +494,7 @@ export default function ListingDetailScreen() {
           </TouchableOpacity>
         </View>
       )}
-      {((listing.sold ?? false) || listing.inventory === 0) && (
+      {isSold && (
         <View style={styles.actionBar}>
           <View style={styles.soldButton}>
             <Ionicons name="close-circle" size={22} color={colors.error.DEFAULT} />
@@ -695,6 +718,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.gray[700],
   },
   cartButton: {
+    backgroundColor: colors.brand.DEFAULT,
+  },
+  editPriceButton: {
     backgroundColor: colors.brand.DEFAULT,
   },
   buttonText: {

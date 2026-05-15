@@ -16,11 +16,7 @@ async function getFirestoreServices() {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const revalidate = 10; // Cache for 10 seconds
-
-// Server-side in-memory cache for listing queries (survives warm serverless instances)
-const listingsCache = new Map<string, { data: any; expiresAt: number }>();
-const LISTINGS_CACHE_TTL_MS = 15_000; // 15 seconds
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   try {
@@ -80,15 +76,6 @@ export async function GET(req: NextRequest) {
       field: sortField,
       direction: sortDirection,
     };
-
-    // Check server-side cache
-    const cacheKey = JSON.stringify({ filters, sortOptions, page, limit });
-    const cached = listingsCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      const response = NextResponse.json(cached.data);
-      response.headers.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
-      return response;
-    }
 
     // Cap Firestore reads: tight limit when no keyword search, larger cap when keyword needs client-side filtering
     const maxResults = filters.keyword
@@ -262,11 +249,8 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    // Store in server-side cache
-    listingsCache.set(cacheKey, { data: responseBody, expiresAt: Date.now() + LISTINGS_CACHE_TTL_MS });
-
     const response = NextResponse.json(responseBody);
-    response.headers.set('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
+    response.headers.set('Cache-Control', 'no-store');
     return response;
   } catch (error) {
     console.error('Error fetching listings:', error);

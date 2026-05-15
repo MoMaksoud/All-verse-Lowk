@@ -25,6 +25,11 @@ interface CartItem {
   priceAtAdd: number;
 }
 
+interface Listing {
+  id: string;
+  price: number;
+}
+
 interface ShippingRate {
   id: string;
   carrier: string;
@@ -45,6 +50,7 @@ interface ShippingAddress {
 export default function CheckoutScreen() {
   const { currentUser } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [listingPrices, setListingPrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
@@ -80,7 +86,9 @@ export default function CheckoutScreen() {
       if (response.ok) {
         const data = await response.json();
         const cart = data.data || data;
-        setCartItems(cart.items || []);
+        const items = Array.isArray(cart.items) ? cart.items : [];
+        setCartItems(items);
+        setListingPrices(await fetchListingPrices(items));
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
@@ -88,6 +96,39 @@ export default function CheckoutScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchListingPrices = async (items: CartItem[]) => {
+    const prices: Record<string, number> = {};
+    const BATCH_SIZE = 5;
+
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      const batch = items.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async (item) => {
+          try {
+            const response = await apiClient.get(`/api/listings/${item.listingId}`, false);
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            const listing = (data.data || data) as Listing;
+            if (typeof listing.price !== 'number') return null;
+
+            return { listingId: item.listingId, price: listing.price };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      results.forEach((result) => {
+        if (result) {
+          prices[result.listingId] = result.price;
+        }
+      });
+    }
+
+    return prices;
   };
 
   useEffect(() => {
@@ -185,7 +226,10 @@ export default function CheckoutScreen() {
   };
 
   const calculateTotals = () => {
-    const subtotal = cartItems.reduce((sum, item) => sum + item.priceAtAdd * item.qty, 0);
+    const subtotal = cartItems.reduce((sum, item) => {
+      const currentPrice = listingPrices[item.listingId] ?? item.priceAtAdd;
+      return sum + currentPrice * item.qty;
+    }, 0);
     const tax = subtotal * 0.08; // 8% tax
     const shipping = selectedShipping?.price || 0;
     const fees = (subtotal + tax + shipping) * 0.029 + 0.30; // Stripe fees
