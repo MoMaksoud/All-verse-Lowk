@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
 import { GEMINI_MODELS } from '@/lib/ai/models';
+import { formatMarketPricingForPrompt, getMarketPricing } from '@/lib/marketPricing';
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
 export const dynamic = 'force-dynamic';
@@ -35,29 +36,18 @@ export async function POST(req: NextRequest) {
 
     console.log('🔍 Starting AI market analysis for:', { title, category, condition });
 
-    // Fetch live external results to ground the analysis
-    let liveMarketBlock = '';
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      const searchQuery = [brand, model, title].filter(Boolean).join(' ').trim() || title;
-      const searchRes = await fetch(
-        `${baseUrl}/api/search?q=${encodeURIComponent(searchQuery.slice(0, 80))}&source=both&provider=auto`
-      );
-      if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        const external = searchData?.data?.externalResults || [];
-        const internal = searchData?.data?.internalResults || [];
-        if (external.length > 0 || internal.length > 0) {
-          const lines = [
-            ...external.slice(0, 8).map((r: { title: string; price: number; source: string }) => `${r.source}: $${r.price} — ${r.title}`),
-            ...internal.slice(0, 4).map((r: { title: string; price: number }) => `Our marketplace: $${r.price} — ${r.title}`),
-          ];
-          liveMarketBlock = `\n\nLIVE MARKET DATA (current search results for this product):\n${lines.join('\n')}\n\nUse this live data to inform suggestedPrice, priceRange, and reasoning.`;
-        }
-      }
-    } catch (e) {
-      console.warn('Could not fetch live market data for market analysis:', e);
-    }
+    const marketPricing = await getMarketPricing({
+      title,
+      description,
+      category,
+      condition,
+      brand,
+      model,
+      limit: 12,
+      traceId: crypto.randomUUID(),
+    });
+
+    const liveMarketBlock = `\n\nLIVE MARKET DATA (current search results for this product):\n${formatMarketPricingForPrompt(marketPricing)}\n\nUse this data to inform suggestedPrice, priceRange, confidence, and reasoning. If comparable count is low or confidence is below 0.40, say the seller should verify pricing.`;
 
     const model_ai = genAI.getGenerativeModel({ 
       model: GEMINI_MODELS.SMART,

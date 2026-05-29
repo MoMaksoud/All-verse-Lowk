@@ -27,6 +27,11 @@ const steps = [
   { id: 5, title: 'Publish', description: 'Final review and publish', icon: Send },
 ];
 
+type AssistantAnswerValue = {
+  question: string;
+  answer: string;
+};
+
 export default function SellPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
@@ -81,6 +86,9 @@ export default function SellPage() {
       priceRange: { min: number; max: number };
       marketDemand: 'high' | 'medium' | 'low';
       competitorCount: number;
+      priceConfidence?: number;
+      comparableCount?: number;
+      notes?: string;
     };
     condition?: string;
     size?: string;
@@ -125,13 +133,13 @@ export default function SellPage() {
   const handleInputChange = (field: keyof typeof formData, value: string | number) => {
     setFormData((prev) => {
       const newData = { ...prev, [field]: value };
-      
+
       // Reset size category and size when changing main category
       if (field === 'category') {
         newData.sizeCategory = undefined;
         newData.size = '';
       }
-      
+
       return newData;
     });
     
@@ -171,6 +179,7 @@ export default function SellPage() {
         if (!formData.title?.trim()) stepErrors.title = 'Title is required';
         if (!formData.description?.trim()) stepErrors.description = 'Description is required';
         if (!formData.category) stepErrors.category = 'Category is required';
+        if (!formData.condition) stepErrors.condition = 'Condition is required';
         if (!formData.price || parseFloat(formData.price) <= 0) stepErrors.price = 'Valid price is required';
         break;
     }
@@ -193,6 +202,72 @@ export default function SellPage() {
   };
 
   // Removed legacy fallback analysis tester (no corresponding API route)
+
+  const getUsableMarketResearch = (analysis: any) => {
+    const research = analysis?.marketResearch;
+    if (!research || !Number.isFinite(Number(research.averagePrice)) || Number(research.averagePrice) <= 0) {
+      return undefined;
+    }
+    if (typeof research.priceConfidence === 'number' && research.priceConfidence < 0.4) {
+      return undefined;
+    }
+    return research;
+  };
+
+  const applyFinalAnalysis = (finalAnalysis: any) => {
+    const price = Number(finalAnalysis?.suggestedPrice);
+    setFormData(prev => ({
+      ...prev,
+      title: finalAnalysis.title || prev.title,
+      description: finalAnalysis.description || prev.description,
+      category: finalAnalysis.category || prev.category,
+      price: Number.isFinite(price) && price > 0 ? price.toString() : '',
+      condition: finalAnalysis.condition || '',
+      marketResearch: getUsableMarketResearch(finalAnalysis),
+    }));
+    setAiAnalysis(finalAnalysis);
+  };
+
+  const generateFinalListing = async (
+    userAnswers: Record<string, AssistantAnswerValue> = {},
+    evidenceOverride?: any
+  ) => {
+    const evidence = evidenceOverride || initialEvidence;
+
+    if (!evidence || photoUrls.length === 0) {
+      throw new Error('Missing image evidence for final listing generation');
+    }
+
+    setAiAnalyzing(true);
+    const { apiPost } = await import('@/lib/api-client');
+    const response = await apiPost('/api/ai/analyze-product', {
+      imageUrls: photoUrls,
+      phase: 'final',
+      userAnswers,
+      initialEvidence: evidence,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🤖 Phase 2 API error:', errorText);
+      throw new Error(`Failed to generate final listing: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success || !result.analysis) {
+      console.error('🤖 Invalid Phase 2 response:', result);
+      throw new Error('Invalid response from Phase 2');
+    }
+
+    applyFinalAnalysis(result.analysis);
+    setShowAIAssistant(false);
+    setAiAssistantComplete(true);
+    setCurrentStep(4);
+    addToast('success', 'Listing Ready!', 'Your listing has been generated with the uploaded photos and seller details.');
+
+    return result.analysis;
+  };
 
   const performAIAnalysis = async () => {
     console.log('🔥 PERFORM AI ANALYSIS FUNCTION CALLED!');
@@ -231,39 +306,31 @@ export default function SellPage() {
       const result = await response.json();
       console.log('🤖 API response result:', result);
       const analysis = result.analysis;
-      
-      // Store initial evidence for Phase 2 - use the full evidence object if available
-      setInitialEvidence(analysis._evidence || {
+      const evidence = analysis._evidence || {
         brand: analysis.brand,
         model: analysis.model,
         product_type: analysis.category,
         visible_features: analysis.features,
         model_exact: analysis.model,
         model_range: analysis.model
-      });
-      
+      };
+
+      // Store initial evidence for Phase 2 - use the full evidence object if available
+      setInitialEvidence(evidence);
+
       // Store the analysis for the AI assistant
       setAiAnalysis(analysis);
       
       // Check if there's missing information that needs user input
-      if (analysis.missingInfo && analysis.missingInfo.length > 0) {
-        console.log('🤖 Missing information detected:', analysis.missingInfo);
+      const followUpQuestions = analysis.questions || analysis.missingInfo || [];
+      if (followUpQuestions.length > 0) {
+        console.log('🤖 Missing information detected:', followUpQuestions);
         setShowAIAssistant(true);
         setCurrentStep(3); // Go to AI assistant step
         addToast('info', 'Additional Info Needed', 'Please answer a few questions to complete your listing.');
       } else {
-        // No missing info, use initial analysis
-        const aiData = {
-          title: analysis.title,
-          description: analysis.description,
-          category: analysis.category,
-          price: analysis.suggestedPrice ? analysis.suggestedPrice.toString() : '',
-          condition: analysis.condition,
-          marketResearch: analysis.marketResearch,
-        };
-        setFormData(prev => ({ ...prev, ...aiData }));
-        setCurrentStep(3); // Go to review step
-        addToast('success', 'AI Analysis Complete', 'Product details have been generated successfully!');
+        // No follow-up questions, still run the final generation pass before filling review fields.
+        await generateFinalListing({}, evidence);
       }
       
     } catch (error) {
@@ -311,54 +378,15 @@ export default function SellPage() {
     }));
   };
 
-  const handleAIAssistantComplete = async (userAnswers?: Record<string, string>) => {
+  const handleAIAssistantComplete = async (userAnswers?: Record<string, AssistantAnswerValue>) => {
     console.log('🤖 AI Assistant completed with answers:', userAnswers);
     console.log('🤖 Initial evidence:', initialEvidence);
     console.log('🤖 Photo URLs count:', photoUrls.length);
     
     // If we have user answers and initial evidence, generate final listing
-    if (userAnswers && Object.keys(userAnswers).length > 0 && initialEvidence && photoUrls.length > 0) {
+    if (initialEvidence && photoUrls.length > 0) {
       try {
-        setAiAnalyzing(true);
-        const { apiPost } = await import('@/lib/api-client');
-        const response = await apiPost('/api/ai/analyze-product', {
-          imageUrls: photoUrls,
-          phase: 'final',
-          userAnswers,
-          initialEvidence
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('🤖 Phase 2 API error:', errorText);
-          throw new Error(`Failed to generate final listing: ${response.status}`);
-        }
-
-        const result = await response.json();
-        
-        if (!result.success || !result.analysis) {
-          console.error('🤖 Invalid Phase 2 response:', result);
-          throw new Error('Invalid response from Phase 2');
-        }
-        
-        const finalAnalysis = result.analysis;
-        console.log('🤖 Final analysis received:', finalAnalysis);
-
-        // Update form with final, polished listing
-        setFormData(prev => ({
-          ...prev,
-          title: finalAnalysis.title,
-          description: finalAnalysis.description,
-          category: finalAnalysis.category,
-          price: finalAnalysis.suggestedPrice ? finalAnalysis.suggestedPrice.toString() : '',
-          condition: finalAnalysis.condition,
-          marketResearch: finalAnalysis.marketResearch,
-        }));
-        setAiAnalysis(finalAnalysis);
-        setShowAIAssistant(false);
-        setAiAssistantComplete(true);
-        setCurrentStep(4);
-        addToast('success', 'Listing Ready!', 'Your listing has been generated with all the details.');
+        await generateFinalListing(userAnswers || {}, initialEvidence);
       } catch (error) {
         console.error('❌ Error generating final listing:', error);
         addToast('error', 'Generation Failed', error instanceof Error ? error.message : 'Could not generate final listing. Using initial analysis.');
@@ -461,6 +489,7 @@ export default function SellPage() {
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Price must be greater than 0';
     if (!formData.category) newErrors.category = 'Category is required';
+    if (!formData.condition) newErrors.condition = 'Condition is required';
     if (!photoUrls.length) newErrors.photos = 'At least one photo is required';
     
     if (Object.keys(newErrors).length > 0) {
@@ -478,7 +507,7 @@ export default function SellPage() {
         price: parseFloat(formData.price),
         category: formData.category,
         images: photoUrls, // Use cloud URLs directly
-        condition: formData.condition || 'good',
+        condition: formData.condition,
         inventory: 1,
         isActive: true,
         sellerId: currentUser?.uid || '',
@@ -641,9 +670,10 @@ export default function SellPage() {
                   title: formData.title,
                   description: formData.description,
                   category: formData.category,
-                  condition: formData.condition || 'good',
-                  suggestedPrice: parseFloat(formData.price),
-                  missingInfo: aiAnalysis.missingInfo || []
+                  condition: formData.condition || '',
+                  suggestedPrice: parseFloat(formData.price) || 0,
+                  missingInfo: aiAnalysis.missingInfo || [],
+                  questions: aiAnalysis.questions || []
                 }}
                 onUpdate={handleAIAssistantUpdate}
                 onComplete={handleAIAssistantComplete}
