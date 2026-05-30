@@ -16,6 +16,10 @@ export type MarketPricingResult = {
   competitorCount: number;
   comparables: MarketComparable[];
   notes: string;
+  conditionAdjustment?: {
+    condition: string;
+    multiplier: number;
+  };
 };
 
 function cleanPart(value: unknown): string {
@@ -75,6 +79,38 @@ function trimOutliers(prices: number[]): number[] {
   return prices.filter((price) => price >= mid * 0.35 && price <= mid * 2.75);
 }
 
+function normalizeCondition(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value.trim().toLowerCase().replace(/[\s_]+/g, "-");
+}
+
+function getConditionMultiplier(condition: unknown): { condition: string; multiplier: number } | null {
+  const normalized = normalizeCondition(condition);
+  if (!normalized) return null;
+
+  if (normalized === "new" || normalized === "brand-new") {
+    return { condition: "new", multiplier: 1.1 };
+  }
+  if (normalized === "like-new" || normalized === "excellent") {
+    return { condition: normalized, multiplier: 1 };
+  }
+  if (normalized === "good") {
+    return { condition: "good", multiplier: 0.85 };
+  }
+  if (normalized === "fair") {
+    return { condition: "fair", multiplier: 0.65 };
+  }
+  if (normalized === "poor" || normalized === "for-parts" || normalized === "damaged") {
+    return { condition: "poor", multiplier: 0.45 };
+  }
+
+  return null;
+}
+
+function applyConditionMultiplier(price: number, multiplier: number): number {
+  return Math.max(1, Math.round(price * multiplier));
+}
+
 function toComparable(result: { title: string; price: number; source?: string }): MarketComparable | null {
   const price = Number(result.price);
   if (!result.title?.trim() || !Number.isFinite(price) || price <= 0) return null;
@@ -114,6 +150,7 @@ export async function getMarketPricing(args: {
 
   const limit = Math.min(Math.max(args.limit ?? 12, 3), 20);
   const traceId = args.traceId || crypto.randomUUID();
+  const conditionAdjustment = getConditionMultiplier(args.condition);
 
   const [externalResults, internalSearch] = await Promise.all([
     serpapiShoppingSearch({
@@ -156,12 +193,17 @@ export async function getMarketPricing(args: {
       competitorCount: comparables.length,
       comparables,
       notes: "No usable comparable prices were found.",
+      ...(conditionAdjustment ? { conditionAdjustment } : {}),
     };
   }
 
-  const suggestedPrice = Math.max(1, Math.round(median(prices)));
-  const rangeMin = Math.max(1, Math.round(percentile(prices, 0.2)));
-  const rangeMax = Math.max(rangeMin, Math.round(percentile(prices, 0.8)));
+  const rawSuggestedPrice = Math.max(1, Math.round(median(prices)));
+  const rawRangeMin = Math.max(1, Math.round(percentile(prices, 0.2)));
+  const rawRangeMax = Math.max(rawRangeMin, Math.round(percentile(prices, 0.8)));
+  const multiplier = conditionAdjustment?.multiplier ?? 1;
+  const suggestedPrice = applyConditionMultiplier(rawSuggestedPrice, multiplier);
+  const rangeMin = applyConditionMultiplier(rawRangeMin, multiplier);
+  const rangeMax = Math.max(rangeMin, applyConditionMultiplier(rawRangeMax, multiplier));
   const externalCount = comparables.filter((item) => item.source !== "AllVerse").length;
   const confidence = Math.min(
     0.92,
@@ -176,10 +218,17 @@ export async function getMarketPricing(args: {
     marketDemand: prices.length >= 8 ? "high" : prices.length >= 3 ? "medium" : "low",
     competitorCount: comparables.length,
     comparables,
-    notes:
+    notes: [
       prices.length >= 3
         ? "Pricing is based on current comparable marketplace results."
         : "Pricing is based on limited comparable data and should be reviewed by the seller.",
+      conditionAdjustment
+        ? `Price adjusted for ${conditionAdjustment.condition} condition.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    ...(conditionAdjustment ? { conditionAdjustment } : {}),
   };
 }
 
@@ -198,6 +247,9 @@ export function formatMarketPricingForPrompt(market: MarketPricingResult): strin
     }`,
     `Confidence: ${market.confidence.toFixed(2)}`,
     `Comparable count: ${market.competitorCount}`,
+    market.conditionAdjustment
+      ? `Condition adjustment: ${market.conditionAdjustment.condition} x ${market.conditionAdjustment.multiplier}`
+      : "Condition adjustment: none",
     `Notes: ${market.notes}`,
     lines.length ? `Comparable listings:\n${lines.join("\n")}` : "Comparable listings: none",
   ].join("\n");

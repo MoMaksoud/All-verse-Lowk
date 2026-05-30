@@ -15,16 +15,49 @@ if (!apiKey) {
 
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
+function buildMarketPricingResponse(marketPricing: Awaited<ReturnType<typeof getMarketPricing>>) {
+  const suggestedPrice = marketPricing.suggestedPrice ?? 0;
+  const priceRange = marketPricing.priceRange ?? {
+    min: suggestedPrice,
+    max: suggestedPrice,
+  };
+
+  return {
+    marketAnalysis: {
+      suggestedPrice,
+      priceRange,
+      confidence: marketPricing.confidence,
+      marketDemand: marketPricing.marketDemand,
+      competitorCount: marketPricing.competitorCount,
+      priceFactors: [
+        marketPricing.notes,
+        marketPricing.conditionAdjustment
+          ? `Adjusted for ${marketPricing.conditionAdjustment.condition} condition`
+          : 'No condition adjustment applied',
+      ],
+      regionalAdjustment: 0,
+      conditionImpact: marketPricing.conditionAdjustment?.multiplier ?? 1,
+    },
+    reasoning: {
+      priceJustification: marketPricing.notes,
+      marketTrends:
+        marketPricing.competitorCount > 0
+          ? `Based on ${marketPricing.competitorCount} comparable listing${marketPricing.competitorCount === 1 ? '' : 's'}.`
+          : 'No comparable listings were available.',
+      regionalInsights: 'US marketplace pricing only.',
+      conditionNotes: marketPricing.conditionAdjustment
+        ? `Applied a ${marketPricing.conditionAdjustment.multiplier}x adjustment for ${marketPricing.conditionAdjustment.condition} condition.`
+        : 'No condition adjustment was applied.',
+    },
+    recommendations: [
+      'Review comparable listings before publishing.',
+      'Re-run AI Price after changing condition or major listing details.',
+    ],
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Check if API key is configured
-    if (!apiKey || !genAI) {
-      return NextResponse.json({ 
-        error: 'AI service is not configured',
-        details: 'GEMINI_API_KEY is missing. Please configure it in your environment variables.'
-      }, { status: 500 });
-    }
-
     // Basic rate limit (30/min per IP)
     const ip = getIp(req as unknown as Request);
     checkRateLimit(ip, 30);
@@ -46,6 +79,14 @@ export async function POST(req: NextRequest) {
       limit: 12,
       traceId: crypto.randomUUID(),
     });
+
+    if (!apiKey || !genAI) {
+      return NextResponse.json({
+        success: true,
+        data: buildMarketPricingResponse(marketPricing),
+        source: 'market-pricing'
+      });
+    }
 
     const liveMarketBlock = `\n\nLIVE MARKET DATA (current search results for this product):\n${formatMarketPricingForPrompt(marketPricing)}\n\nUse this data to inform suggestedPrice, priceRange, confidence, and reasoning. If comparable count is low or confidence is below 0.40, say the seller should verify pricing.`;
 
@@ -162,6 +203,28 @@ export async function POST(req: NextRequest) {
     // Validate the analysis structure
     if (!analysis.marketAnalysis || typeof analysis.marketAnalysis.suggestedPrice !== 'number') {
       throw new Error('Invalid market analysis structure received from AI');
+    }
+
+    if (marketPricing.suggestedPrice && marketPricing.priceRange && marketPricing.confidence >= 0.3) {
+      analysis.marketAnalysis = {
+        ...analysis.marketAnalysis,
+        suggestedPrice: marketPricing.suggestedPrice,
+        priceRange: marketPricing.priceRange,
+        confidence: Math.max(Number(analysis.marketAnalysis.confidence) || 0, marketPricing.confidence),
+        marketDemand: marketPricing.marketDemand,
+        competitorCount: marketPricing.competitorCount,
+        conditionImpact:
+          marketPricing.conditionAdjustment?.multiplier ??
+          analysis.marketAnalysis.conditionImpact ??
+          1,
+      };
+      analysis.reasoning = {
+        ...(analysis.reasoning || {}),
+        conditionNotes:
+          marketPricing.conditionAdjustment
+            ? `Price recalculated with a ${marketPricing.conditionAdjustment.multiplier}x adjustment for ${marketPricing.conditionAdjustment.condition} condition.`
+            : analysis.reasoning?.conditionNotes,
+      };
     }
 
     return NextResponse.json({

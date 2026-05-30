@@ -140,8 +140,16 @@ export default function SellPage() {
         newData.size = '';
       }
 
+      if (field === 'condition') {
+        newData.marketResearch = undefined;
+      }
+
       return newData;
     });
+
+    if (field === 'condition') {
+      setLastPriceSuggestionTime(0);
+    }
     
     if (errors[field as string]) {
       setErrors((prev: Record<string, string>) => ({ ...prev, [field]: '' }));
@@ -411,8 +419,8 @@ export default function SellPage() {
   };
 
   const suggestAIPrice = async () => {
-    if (!formData.title || !formData.category) {
-      addToast('error', 'Missing Information', 'Please fill in title and category before getting AI price suggestions');
+    if (!formData.title || !formData.category || !formData.condition) {
+      addToast('error', 'Missing Information', 'Please fill in title, category, and condition before getting AI price suggestions');
       return;
     }
 
@@ -448,21 +456,27 @@ export default function SellPage() {
       
       if (result.success && result.data?.marketAnalysis) {
         const marketData = result.data.marketAnalysis;
+        const suggestedPrice = Number(marketData.suggestedPrice);
+
+        if (!Number.isFinite(suggestedPrice) || suggestedPrice <= 0) {
+          throw new Error('AI did not return a valid price');
+        }
         
         // Update form data with market research
         setFormData(prev => ({
           ...prev,
-          price: marketData.suggestedPrice.toString(),
+          price: suggestedPrice.toString(),
           marketResearch: {
-            averagePrice: marketData.suggestedPrice,
+            averagePrice: suggestedPrice,
             priceRange: marketData.priceRange,
             marketDemand: marketData.marketDemand,
-            competitorCount: marketData.competitorCount
+            competitorCount: marketData.competitorCount,
+            priceConfidence: marketData.confidence
           }
         }));
         
         addToast('success', 'AI Price Analysis Complete!', 
-          `Price updated to ${formatPrice(marketData.suggestedPrice)} (${marketData.marketDemand} demand, range: ${formatPrice(marketData.priceRange.min)}-${formatPrice(marketData.priceRange.max)})`);
+          `Price updated to ${formatPrice(suggestedPrice)} for ${formData.condition} condition (${marketData.marketDemand} demand, range: ${formatPrice(marketData.priceRange.min)}-${formatPrice(marketData.priceRange.max)})`);
       } else {
         throw new Error('Invalid market analysis response');
       }
@@ -1515,7 +1529,7 @@ export default function SellPage() {
                   <button
                     type="button"
                     onClick={suggestAIPrice}
-                    disabled={priceSuggesting || !formData.title || !formData.category}
+                    disabled={priceSuggesting || !formData.title || !formData.category || !formData.condition}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
                   >
                     {priceSuggesting ? (

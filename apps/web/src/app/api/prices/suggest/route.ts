@@ -37,6 +37,8 @@ function generateFallbackPriceSuggestion(title: string, description: string, cat
 
   const conditionMultipliers: Record<string, number> = {
     'new': 1.0,
+    'like-new': 0.9,
+    'like new': 0.9,
     'excellent': 0.9,
     'good': 0.75,
     'fair': 0.6,
