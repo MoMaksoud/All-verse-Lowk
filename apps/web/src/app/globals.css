@@ -44,6 +44,31 @@
   }
 }
 
+/* Global scrollbar color */
+@layer base {
+  * {
+    scrollbar-color: #00418f transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #00418f;
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #003066;
+  }
+}
+
 /* Custom scrollbar styles */
 @layer utilities {
   .scrollbar-thin {
