@@ -204,7 +204,7 @@ const Navigation = memo(function Navigation() {
 
   return (
     <>
-    <nav className="backdrop-blur-xl bg-dark-900/80 border-b border-dark-700/50 sticky top-0 z-50 safe-area-top h-[64px] flex items-center justify-between px-6 py-2 w-full">
+    <nav className="backdrop-blur-xl bg-dark-900/80 border-b border-dark-700/50  h-[64px] flex items-center justify-between px-6 py-2 w-full">
       {/* Logo */}
       <Link href="/" className="flex items-center shrink-0">
         <Logo size="md" />
@@ -229,7 +229,7 @@ const Navigation = memo(function Navigation() {
                     }
                   }}
                   prefetch={true}
-                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 whitespace-nowrap shrink-0 ${
+                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-150 rounded-xl px-3 py-2 whitespace-nowrap shrink-0 ${
                     resolvedPathname === item.href
                       ? 'text-accent-400 bg-dark-700/50'
                       : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
@@ -250,7 +250,7 @@ const Navigation = memo(function Navigation() {
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center shrink-0 min-w-0">
             {currentUser ? (
-              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
+              <div className="flex items-center px-3 py-2 rounded-full gap-3 shrink-0">
                 {/* Favorites Heart */}
                 <button 
                   onClick={() => router.push('/favorites')}
@@ -387,7 +387,7 @@ const Navigation = memo(function Navigation() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
+              <div className="flex items-center px-3 py-2 gap-3">
                 <Link
                   href="/signin"
                   className="btn-ghost px-4 py-2 rounded-xl hover:bg-dark-700/50"

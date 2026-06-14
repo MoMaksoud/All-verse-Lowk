@@ -26,7 +26,7 @@ export function Logo({ size = 'md', className = '' }: LogoProps) {
         unoptimized={true}
         className="object-contain rounded-lg"
       />
-      {showText && <span className="font-bold text-white leading-tight">ALL VERSE GPT</span>}
+      {showText && <span className="font-bold text-white leading-tight">ALL VERSE</span>}
     </div>
   );
 }

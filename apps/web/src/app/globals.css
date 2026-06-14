@@ -453,7 +453,7 @@ body.home-page,
     background-color: #0063e1;
     color: white;
     border: 1px solid #0063e1;
-    transition: all 0.2s ease;
+    transition: all 0.1s ease;
   }
   
   .btn-primary:hover {
@@ -490,7 +490,7 @@ body.home-page,
     background-color: transparent;
     color: #e2e8f0;
     border: 1px solid transparent;
-    transition: all 0.2s ease;
+    transition: all 0.1s ease;
   }
   
   .btn-ghost:hover {
