@@ -107,7 +107,7 @@ export default function HomePage() {
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">
                 Featured Listings
               </h2>
-              <p className="text-base sm:text-lg text-gray-400">
+              <p className="text-base sm:text-lg text-gray-400 hidden">
                 AI-recommended items for you
               </p>
             </div>
