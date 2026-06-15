@@ -145,6 +145,7 @@
 @layer base {
   html {
     font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+    scrollbar-gutter: stable;
   }
   
   

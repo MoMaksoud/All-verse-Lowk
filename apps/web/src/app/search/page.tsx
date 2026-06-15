@@ -1,4 +1,3 @@
-import { Navigation } from "@/components/Navigation";
 import { DynamicBackground } from "@/components/DynamicBackground";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { serverSearch } from "@/lib/search/serverSearch";
@@ -48,7 +47,6 @@ export default async function SearchPage({
     return (
       <div className="min-h-screen bg-dark-950">
         <DynamicBackground intensity="low" showParticles={false} />
-        <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <LoadingSpinner
             size="lg"
@@ -87,7 +85,6 @@ export default async function SearchPage({
   return (
     <div className="min-h-screen bg-dark-950">
       <DynamicBackground intensity="low" showParticles={false} />
-      <Navigation />
 
       <SearchClientShell
         initialQuery={payload.query}

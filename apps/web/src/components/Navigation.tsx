@@ -204,14 +204,14 @@ const Navigation = memo(function Navigation() {
 
   return (
     <>
-    <nav className="backdrop-blur-xl bg-dark-900/80 border-b border-dark-700/50  h-[64px] flex items-center justify-between px-6 py-2 w-full">
+    <nav className="relative z-50 backdrop-blur-xl bg-dark-900/80 border-b border-dark-700/50  h-[64px] flex items-center justify-between px-6 py-2 w-full">
       {/* Logo */}
       <Link href="/" className="flex items-center shrink-0">
         <Logo size="md" />
       </Link>
 
-      {/* Desktop Navigation - Centered */}
-      <div className="hidden md:flex items-center gap-6 flex-1 justify-center min-w-0 px-2">
+      {/* Desktop Navigation - Centered on screen */}
+      <div className="hidden md:flex items-center gap-6 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isMessages = item.name === 'Messages';

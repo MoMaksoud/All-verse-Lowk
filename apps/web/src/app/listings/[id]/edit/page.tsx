@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, X } from 'lucide-react';
-import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import ListingGalleryEditor from '@/components/ListingGalleryEditor';
 import Select from '@/components/Select';
@@ -162,7 +161,6 @@ export default function EditListingPage() {
   if (!listing) {
     return (
       <div className="min-h-screen bg-dark-900">
-        <Navigation />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-white">Loading...</div>
@@ -174,7 +172,6 @@ export default function EditListingPage() {
 
   return (
     <div className="min-h-screen bg-dark-900">
-      <Navigation />
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">

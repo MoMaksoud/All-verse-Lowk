@@ -3,13 +3,11 @@
 import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart } from 'lucide-react';
+import { Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart, Loader2 } from 'lucide-react';
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
 import ListingCard from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
-import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 import Select from '@/components/Select';
 import ListingCollection from '@/components/ListingCollection';
 import { useAuth } from '@/contexts/AuthContext';
@@ -171,18 +169,8 @@ function ListingsContent() {
     }
   }, [currentUser, showSuccess, showError]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-dark-950">
-        <Navigation />
-        <LoadingSpinner size="lg" text="Loading listings..." />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-dark-950">
-      <Navigation />
       
       <div className="mx-auto max-w-[1600px] px-4 sm:px-6 py-10">
         {/* Header */}
@@ -213,7 +201,7 @@ function ListingsContent() {
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="text-xs sm:text-sm text-gray-400">
-                {listings.length} listings found
+                {loading ? 'Loading…' : `${listings.length} listings found`}
               </div>
               
               <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -259,7 +247,11 @@ function ListingsContent() {
             </div>
 
             {/* Listings Grid */}
-            {listings.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-24">
+                <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
+              </div>
+            ) : listings.length > 0 ? (
               <>
                 {viewMode === 'grid' ? (
                   <ListingCollection 

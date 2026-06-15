@@ -4,7 +4,6 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle } from 'lucide-react';
-import { Navigation } from '@/components/Navigation';
 import { DynamicBackground } from '@/components/DynamicBackground';
 
 const formatCurrency = (amount: number) =>
@@ -49,7 +48,6 @@ function SuccessContent() {
   return (
     <div className="min-h-screen relative overflow-hidden">
       <DynamicBackground intensity="low" showParticles={true} />
-      <Navigation />
       <div className="relative z-10 min-h-screen pt-24 flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
           <div className="inline-block bg-green-500/20 rounded-full p-4 mb-6">

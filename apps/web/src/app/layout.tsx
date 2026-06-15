@@ -11,6 +11,7 @@ import { ChatProvider } from '@/contexts/ChatContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteTransitionMonitor } from '@/lib/performance';
 import { WebVitalsReporter } from '@/components/WebVitalsReporter';
+import { ConditionalNavigation } from '@/components/ConditionalNavigation';
 
 const GA_MEASUREMENT_ID = 'G-1KVRME8D19';
 
@@ -100,6 +101,7 @@ export default function RootLayout({
                 <ChatProvider>
                   <RouteTransitionMonitor />
                   <WebVitalsReporter />
+                  <ConditionalNavigation />
                   {children}
                   <AnalyticsDeferred />
                 </ChatProvider>

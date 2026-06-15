@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, TrendingUp, Star, Clock, MessageCircle, ShoppingBag, Zap, Brain, Bot, Sparkles, ArrowRight } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
-// Import Navigation directly - it's used on every page so lazy loading doesn't help
-import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { SkeletonCard, SkeletonSearchBar, SkeletonAIWidget } from '@/components/SkeletonLoader';
@@ -67,7 +65,6 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen home-page">
-        <Navigation />
         <div className="py-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
@@ -94,7 +91,6 @@ export default function HomePage() {
         </Suspense>
       )}
       
-      <Navigation />
       
       {/* Universal Search Hero Section */}
       <UniversalSearchHero />
