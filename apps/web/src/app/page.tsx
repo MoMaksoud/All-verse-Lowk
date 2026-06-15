@@ -192,10 +192,10 @@ export default function HomePage() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4" style={{textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'}}>
+            <h2 className="text-3xl font-bold text-white mb-4">
               AI Command Center
             </h2>
-            <p className="text-lg text-white" style={{textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'}}>
+            <p className="text-lg text-white">
               Access powerful AI tools and analytics
             </p>
           </div>
