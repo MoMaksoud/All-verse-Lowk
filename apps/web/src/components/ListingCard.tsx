@@ -258,17 +258,17 @@ function ListingCard({
 
   return (
     <>
-      <Link href={`/listings/${id}`} className="block h-full">
+      <Link href={`/listings/${id}`} className="block h-full w-30">
         <article
         className={clsx(
-          "rounded-3xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
+          "rounded-xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
           variant === "grid" ? "h-full overflow-hidden" : "p-4 md:p-5"
         )}
       >
         {variant === "grid" ? (
           <div className="flex flex-col h-full">
             {/* Image */}
-            <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
+            <div className="aspect-square w-full overflow-hidden rounded-xl bg-[#0E1526] relative">
               <Image
                 src={listingImageSrc}
                 alt={title}
@@ -325,7 +325,7 @@ function ListingCard({
                 ) : null}
                 </div>
 
-              <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 text-xl min-h-[1.5rem] overflow-hidden">
+              <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 text-lg min-h-[1.5rem] overflow-hidden">
                 <span className="text-blue-400 font-semibold shrink-0">
                   {formatPriceDisplay(price)}
                 </span>

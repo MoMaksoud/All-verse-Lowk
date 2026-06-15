@@ -140,8 +140,8 @@ export default function MessagesPage() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 text-center">
-          <div className="flex justify-center mb-3 sm:mb-4">
+        <div className="my-8 text-center">
+          <div className="hidden flex justify-center mb-3 sm:mb-4">
             <Logo size="md" />
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">Messages</h1>

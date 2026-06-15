@@ -184,10 +184,10 @@ function ListingsContent() {
     <div className="min-h-screen bg-dark-950">
       <Navigation />
       
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-6 py-10">
         {/* Header */}
         <div className="mb-6 sm:mb-8 text-center">
-          <div className="flex justify-center mb-3 sm:mb-4">
+          <div className="hidden flex justify-center mb-3 sm:mb-4">
             <Logo size="md" />
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">

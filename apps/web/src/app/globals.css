@@ -361,6 +361,13 @@ body.home-page,
   background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%) !important;
 }
 
+/* Reveal the sitewide body gradient (and glow) on every page, matching home */
+.min-h-screen.bg-dark-950,
+.min-h-screen.bg-dark-900,
+.min-h-screen.bg-zinc-950 {
+  background: transparent !important;
+}
+
   /* Test background - more visible blue glow */
   body::after {
     content: '';
