@@ -67,7 +67,9 @@ export function parseSearchRequest(
     }
 
     const limitRaw = sp.get("limit");
-    const limit = Math.min(Math.max(Number(limitRaw ?? 12) || 12, 1), 50);
+    const defaultLimit = Number(process.env.SEARCH_DEFAULT_LIMIT || 24);
+    const normalizedDefaultLimit = Number.isFinite(defaultLimit) ? defaultLimit : 24;
+    const limit = Math.min(Math.max(Number(limitRaw ?? normalizedDefaultLimit) || normalizedDefaultLimit, 1), 50);
 
     const source = parseSource(sp.get("source"));
     const provider = parseProvider(sp.get("provider"));

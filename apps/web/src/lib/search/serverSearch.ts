@@ -140,7 +140,7 @@ export async function serverSearch(args: {
             traceId: searchId,
             debug: debugSearch,
             source: "both",
-            limit: 12,
+            limit: 24,
             searchState: state,
             refinementField: args.refinementField,
             refinementValue: args.refinementValue,

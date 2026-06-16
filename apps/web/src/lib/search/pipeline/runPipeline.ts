@@ -12,6 +12,7 @@ import type {
 
 import { debugLog, startTimer } from "./debug";
 import { simpleInternalSearch } from "../internal/simpleInternalSearch";
+import { getAmazonAffiliateResults, insertAmazonAffiliateResults } from "../external/amazonAffiliate";
 import { serpapiShoppingSearch } from "../external/serpapiShopping";
 import { serpapiOrganicSearch } from "../external/serpapiOrgnaic";
 import {
@@ -19,6 +20,7 @@ import {
     inferVertical,
     runRefinementEngine,
 } from "./refinementEngine";
+import { rankExternalResults } from "./rankExternalResults";
 import { buildDeterministicRewrite } from "./refinementEngine/rewriteQuery";
 
 import { updateSearchState } from "./refinements";
@@ -56,6 +58,36 @@ function chooseProviderAuto(query: string, state?: SearchState): ExternalProvide
 
     // default to shopping for marketplace UX
     return "shopping";
+}
+
+async function includeAmazonAffiliateSearch(args: {
+    query: string;
+    req: SearchRequest;
+    externalResults: ExternalResult[];
+    timings: Record<string, number>;
+}): Promise<ExternalResult[]> {
+    if (args.req.source === "internal") return args.externalResults;
+
+    const t = startTimer();
+    const amazonResults = await getAmazonAffiliateResults({
+        query: args.query,
+        traceId: args.req.traceId,
+        debug: args.req.debug,
+    });
+    args.timings.amazonAffiliateSearch = t();
+
+    if (amazonResults.length === 0) return args.externalResults;
+
+    debugLog(args.req.debug, args.req.traceId, "pipeline.amazon_affiliate.appended", {
+        query: args.query,
+        count: amazonResults.length,
+        ms: args.timings.amazonAffiliateSearch,
+    });
+
+    return insertAmazonAffiliateResults({
+        externalResults: args.externalResults,
+        amazonResults,
+    });
 }
 
 async function runSearchSources(args: {
@@ -308,6 +340,14 @@ export async function runPipeline(req: SearchRequest): Promise<SearchResponse> {
         confidenceScore = quality.score;
         confidenceReasons = quality.reasons;
     }
+
+    externalResults = await includeAmazonAffiliateSearch({
+        query: effectiveQuery,
+        req,
+        externalResults,
+        timings,
+    });
+    externalResults = rankExternalResults(externalResults, effectiveQuery);
 
     timings.total = tAll();
     debugLog(req.debug, req.traceId, "pipeline.done", { totalMs: timings.total });

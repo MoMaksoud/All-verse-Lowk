@@ -600,7 +600,7 @@ export default function SearchClientShell({
                         <div>
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
                                 <h2 className="text-2xl font-bold text-white mb-2">From Other Marketplaces</h2>
-                                <p className="text-gray-400">Showing results from Amazon, eBay, Walmart, and more</p>
+                                <p className="text-gray-400">External marketplace results</p>
                             </div>
                             <ExternalResultsSection results={externalResults} />
                         </div>

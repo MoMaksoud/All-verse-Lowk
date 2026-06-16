@@ -13,7 +13,7 @@ export async function serpapiShoppingSearch(args: {
         engine: "google_shopping",
         q: args.query,
         api_key: apiKey,
-        num: String(Math.min(Math.max(args.limit, 1), 20)),
+        num: String(Math.min(Math.max(args.limit, 1), 40)),
         gl: "us",
         hl: "en",
     });

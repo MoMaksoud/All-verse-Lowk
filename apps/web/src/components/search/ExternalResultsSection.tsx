@@ -57,7 +57,7 @@ function ProductCard({ result, hasPrice }: { result: ExternalResult; hasPrice: b
       href={result.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group bg-white/5 backdrop-blur-lg border border-white/10 hover:border-accent-500/50 rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-accent-500/10"
+      className="group bg-white/5 backdrop-blur-lg border border-white/10 rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:border-accent-500/50 hover:shadow-xl hover:shadow-accent-500/10"
     >
       <div className="aspect-square sm:aspect-square bg-dark-900/50 overflow-hidden relative">
         <img
@@ -99,11 +99,12 @@ function ProductCard({ result, hasPrice }: { result: ExternalResult; hasPrice: b
               ) : null}
             </div>
           ) : (
-            <div className="text-[10px] sm:text-xs text-gray-500">No rating</div>
+            <div className="text-[10px] sm:text-xs text-gray-500">
+              No rating
+            </div>
           )}
         </div>
       </div>
     </a>
   );
 }
-

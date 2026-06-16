@@ -24,6 +24,15 @@ Our development process is iterative, student-driven, and focused on innovation.
 
 We’re keeping the technical documentation light here — the focus is on building a solid foundation and improving the platform as we grow.
 
+## Amazon Affiliate Search
+AllVerse search prioritizes internal marketplace listings first, then shows external marketplace results together. Amazon product cards are included automatically as one of the external marketplace sources using the existing SerpAPI Amazon feed for V1 demos.
+
+V1 uses the existing search configuration:
+
+- `SERPAPI_API_KEY`
+
+Amazon Associate tagging and the official Amazon Product Advertising API can be added later when the referral setup is ready.
+
 ## 📬 Get In Touch  
 We’d love to connect with collaborators, mentors, and anyone excited about the future of AI-powered commerce.
 
