@@ -192,7 +192,7 @@ export default function CartPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your cart</h1>
             <button
-              onClick={() => router.push('/signin')}
+              onClick={() => router.push('/signin?redirect=/cart&reason=cart')}
               className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
               Sign In
@@ -330,26 +330,40 @@ export default function CartPage() {
                 <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700 sticky top-24">
                   <h2 className="text-xl font-semibold text-white mb-6">Order Summary</h2>
                   
-                  <div className="space-y-3 mb-6">
-                    <div className="flex justify-between text-gray-300">
-                      <span>Subtotal ({cartItems.length} items)</span>
-                      <span>{formatCurrency(calculateTotal())}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-300">
-                      <span>Tax (8%)</span>
-                      <span>{formatCurrency(calculateTotal() * 0.08)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-300">
-                      <span>Processing Fee</span>
-                      <span>{formatCurrency(calculateTotal() * 0.029 + 0.30)}</span>
-                    </div>
-                    <div className="border-t border-dark-600 pt-3">
-                      <div className="flex justify-between text-white font-semibold text-lg">
-                        <span>Total</span>
-                        <span>{formatCurrency(calculateTotal() * 1.08 + calculateTotal() * 0.029 + 0.30)}</span>
+                  {(() => {
+                    const subtotal = calculateTotal();
+                    const tax = subtotal * 0.08;
+                    // Server applies fees to (subtotal + tax + shipping).
+                    // Shipping is unknown here; use (subtotal + tax) as the fee base.
+                    const fees = (subtotal + tax) * 0.029 + 0.30;
+                    const estimatedTotal = subtotal + tax + fees;
+                    return (
+                      <div className="space-y-3 mb-6">
+                        <div className="flex justify-between text-gray-300">
+                          <span>Subtotal ({cartItems.length} items)</span>
+                          <span>{formatCurrency(subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-300">
+                          <span>Tax (8%)</span>
+                          <span>{formatCurrency(tax)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-300">
+                          <span>Processing Fee</span>
+                          <span>{formatCurrency(fees)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-400 text-sm">
+                          <span>Shipping</span>
+                          <span>Calculated at checkout</span>
+                        </div>
+                        <div className="border-t border-dark-600 pt-3">
+                          <div className="flex justify-between text-white font-semibold text-lg">
+                            <span>Estimated Total</span>
+                            <span>{formatCurrency(estimatedTotal)}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   <button
                     onClick={handleCheckout}

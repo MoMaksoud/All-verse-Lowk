@@ -316,9 +316,12 @@ export async function requoteShippingForPaidOrder(
 }
 
 export function getCheckoutBaseUrl(): string {
-  return (
+  // Strip inline comments from env values (e.g. "https://x.com  # note in .env.local")
+  // dotenv does not strip inline comments, so "VALUE # comment" is the literal value.
+  const raw =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.NEXTAUTH_URL ||
-    'http://localhost:3000'
-  ).replace(/\/$/, '');
+    'https://allversegpt.com';
+
+  return raw.split(/\s/)[0].replace(/\/$/, '');
 }

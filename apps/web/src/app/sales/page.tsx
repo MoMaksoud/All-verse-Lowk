@@ -141,7 +141,7 @@ export default function SalesPage() {
   const [loadingShipping, setLoadingShipping] = useState(false);
   const [generatingLabel, setGeneratingLabel] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -202,12 +202,14 @@ export default function SalesPage() {
               item.sellerId === currentUser.uid
             );
             
-            // Calculate totals for seller's items only
-            const sellerSubtotal = sellerItems.reduce((sum: number, item: OrderItem) => 
+            // Prorate fees/tax from the actual order amounts by seller's share of subtotal
+            const sellerSubtotal = sellerItems.reduce((sum: number, item: OrderItem) =>
               sum + (item.unitPrice * item.qty), 0
             );
-            const sellerTax = sellerSubtotal * 0.08; // 8% tax
-            const sellerFees = sellerSubtotal * 0.029 + 0.30; // Stripe fees
+            const orderSubtotal = ((order as any).subtotal as number) || sellerSubtotal;
+            const ratio = orderSubtotal > 0 ? sellerSubtotal / orderSubtotal : 1;
+            const sellerTax = ((order as any).tax as number || 0) * ratio;
+            const sellerFees = ((order as any).fees as number || 0) * ratio;
             const sellerTotal = sellerSubtotal + sellerTax + sellerFees;
             
             return {
@@ -365,6 +367,18 @@ export default function SalesPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen relative overflow-hidden">
+        <DynamicBackground intensity="low" showParticles={true} />
+        <Navigation />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return (
       <div className="min-h-screen relative overflow-hidden">
@@ -374,7 +388,7 @@ export default function SalesPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your sales</h1>
             <Link
-              href="/signin"
+              href="/signin?redirect=/sales&reason=sales"
               className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
               Sign In

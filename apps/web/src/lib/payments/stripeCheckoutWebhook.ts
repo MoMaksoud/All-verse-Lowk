@@ -5,7 +5,7 @@ import { verifyWebhookSignature, transferToSeller, calculateSellerPayout, PLATFO
 import { sendOrderConfirmationEmail, sendSellerNotificationEmail } from '@/lib/email';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { logEmail } from '@/lib/emailLog';
-import { assertStripeAndSendGridConfig } from '@/lib/config';
+import { assertStripeWebhookConfig, getMissingSendGridVars } from '@/lib/config';
 import { canTransitionOrderStatus } from '@/lib/authz';
 import { getOrderAdmin, updateOrderAdmin } from '@/lib/server/adminOrders';
 import {
@@ -22,14 +22,9 @@ import { serverLogger } from '@/lib/server/logger';
 const WEBHOOK_LOCK_TTL_MS = 5 * 60 * 1000;
 
 function getAppBaseUrl(): string {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/$/, '');
-  }
-
-  return process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : 'https://allversegpt.com';
+  // Strip inline comments (e.g. "https://x.com  # note") from env values
+  const raw = process.env.NEXT_PUBLIC_APP_URL || 'https://allversegpt.com';
+  return raw.split(/\s/)[0].replace(/\/$/, '');
 }
 
 function getPaymentIntentId(session: Stripe.Checkout.Session): string | undefined {
@@ -264,6 +259,15 @@ async function processOrderEmails(params: {
     return;
   }
 
+  const missingSendGrid = getMissingSendGridVars();
+  if (missingSendGrid.length > 0) {
+    serverLogger.warn('stripe_webhook_emails_skipped', {
+      orderId: params.orderId,
+      missing: missingSendGrid,
+    });
+    return;
+  }
+
   const auth = getAdminAuth();
   const buyerProfile = await getProfileDocumentAdmin(order.buyerId);
   const buyerUser = auth ? await auth.getUser(order.buyerId) : null;
@@ -367,6 +371,8 @@ type PayoutTransferWrite = Omit<PayoutTransferRecord, 'at'> & { at: unknown };
 type PayoutTransferAttempt = {
   failures: PayoutFailureRecord[];
   successes: PayoutTransferWrite[];
+  /** Sellers skipped because they have no Stripe Connect account yet. */
+  pendingConnect: string[];
 };
 
 /**
@@ -376,6 +382,7 @@ type PayoutTransferAttempt = {
 async function transferToSellersForOrder(order: FirestoreOrder & { id: string }): Promise<PayoutTransferAttempt> {
   const failures: PayoutFailureRecord[] = [];
   const successes: PayoutTransferWrite[] = [];
+  const pendingConnect: string[] = [];
   const alreadyTransferredKeys = new Set((order.payoutTransferIds || []).map((t) => t.lineKey));
 
   for (const [lineIndex, item] of order.items.entries()) {
@@ -389,6 +396,14 @@ async function transferToSellersForOrder(order: FirestoreOrder & { id: string })
     const sellerProfile = await getProfileDocumentAdmin(item.sellerId);
 
     if (!sellerProfile?.stripeConnectAccountId || !sellerProfile?.stripeConnectOnboardingComplete) {
+      // Seller has not set up Stripe Connect — track for retry once they onboard.
+      pendingConnect.push(item.sellerId);
+      serverLogger.warn('stripe_webhook_payout_no_connect', {
+        orderId: order.id,
+        sellerId: item.sellerId,
+        listingId: item.listingId,
+        amount: sellerPayout,
+      });
       continue;
     }
 
@@ -419,15 +434,25 @@ async function transferToSellersForOrder(order: FirestoreOrder & { id: string })
     }
   }
 
-  return { failures, successes };
+  return { failures, successes, pendingConnect };
 }
 
 export async function POST(req: NextRequest) {
+  // Only Stripe webhook vars are required to process payments.
+  // SendGrid is optional — missing vars skip email but don't block fulfillment.
   try {
-    assertStripeAndSendGridConfig();
+    assertStripeWebhookConfig();
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Config validation failed';
     return NextResponse.json({ error: msg }, { status: 500 });
+  }
+
+  const missingSendGrid = getMissingSendGridVars();
+  if (missingSendGrid.length > 0) {
+    serverLogger.warn('stripe_webhook_sendgrid_missing', {
+      missing: missingSendGrid,
+      note: 'Emails will be skipped; payment processing continues.',
+    });
   }
 
   let eventRef: FirebaseFirestore.DocumentReference | null = null;
@@ -566,7 +591,7 @@ export async function POST(req: NextRequest) {
       const payoutResult = await transferToSellersForOrder(order);
       const mergedTransfers = [...(order.payoutTransferIds || []), ...payoutResult.successes];
 
-      if (payoutResult.failures.length === 0) {
+      if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length === 0) {
         await updateOrderAdmin(orderId, {
           payoutsProcessed: true,
           payoutsProcessedAt: FieldValue.serverTimestamp(),
@@ -582,6 +607,24 @@ export async function POST(req: NextRequest) {
           sessionId: fullSession.id,
         });
         order.payoutsProcessed = true;
+      } else if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length > 0) {
+        // All sellers skipped — no Connect account yet. Mark retryable so ops can trigger
+        // /api/internal/payouts/retry once sellers complete onboarding.
+        await updateOrderAdmin(orderId, {
+          payoutsProcessed: false,
+          payoutStatus: 'pending_connect',
+          payoutRetryable: true,
+          payoutFailures: [],
+          payoutPendingConnectSellerIds: payoutResult.pendingConnect,
+          payoutTransferIds: mergedTransfers,
+        });
+        serverLogger.warn('stripe_webhook_payout_pending_connect', {
+          route: 'api/stripe/webhook',
+          eventId: event.id,
+          orderId,
+          sessionId: fullSession.id,
+          pendingConnectCount: payoutResult.pendingConnect.length,
+        });
       } else {
         const stamped = payoutResult.failures.map((f) => ({
           sellerId: f.sellerId,

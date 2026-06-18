@@ -126,7 +126,7 @@ interface ShippingInfo {
   updatedAt?: any;
 }
 
-const SUCCESSFUL_ORDER_STATUSES = new Set(['paid', 'shipped', 'delivered']);
+const ALL_ORDER_STATUSES = new Set(['pending', 'paid', 'shipped', 'delivered', 'cancelled']);
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -187,7 +187,7 @@ export default function OrdersPage() {
               updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
             };
           })
-          .filter((order: any) => SUCCESSFUL_ORDER_STATUSES.has(order.status)) as Order[];
+          .filter((order: any) => ALL_ORDER_STATUSES.has(order.status)) as Order[];
 
         setOrders(ordersList);
         setLoading(false);
@@ -278,7 +278,7 @@ export default function OrdersPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your orders</h1>
             <Link
-              href="/signin"
+              href="/signin?redirect=/orders&reason=orders"
               className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
               Sign In
@@ -556,8 +556,8 @@ export default function OrdersPage() {
                       )}
                       <div>
                         <span className="text-zinc-400 text-sm">Delivery Status:</span>
-                        <p className="text-white">In Transit</p>
-                        <p className="text-zinc-400 text-xs mt-1">Tracking updates will appear here</p>
+                        <p className="text-white capitalize">{selectedOrder?.status === 'delivered' ? 'Delivered' : selectedOrder?.status === 'shipped' ? 'Shipped' : 'Label created'}</p>
+                        <p className="text-zinc-400 text-xs mt-1">Check carrier site for live tracking updates</p>
                       </div>
                     </div>
                   ) : (

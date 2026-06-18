@@ -196,7 +196,7 @@ export interface FirestoreOrder {
   payoutsProcessed?: boolean;
   payoutsProcessedAt?: Timestamp;
   /** When any Connect transfer fails, set so ops can inspect and retry out-of-band. */
-  payoutStatus?: 'pending' | 'complete' | 'partial_failed';
+  payoutStatus?: 'pending' | 'complete' | 'partial_failed' | 'pending_connect';
   payoutFailures?: Array<{ sellerId: string; error: string; listingId?: string; at: Timestamp }>;
   /** True when a payout failed but core payment + fulfillment state is safe to leave committed. */
   payoutRetryable?: boolean;
@@ -235,7 +235,7 @@ export interface UpdateOrderInput {
   inventoryAdjustedAt?: Timestamp;
   payoutsProcessed?: boolean;
   payoutsProcessedAt?: Timestamp;
-  payoutStatus?: 'pending' | 'complete' | 'partial_failed';
+  payoutStatus?: 'pending' | 'complete' | 'partial_failed' | 'pending_connect';
   payoutFailures?: Array<{ sellerId: string; error: string; listingId?: string; at: Timestamp }>;
   payoutRetryable?: boolean;
   payoutTransferIds?: PayoutTransferRecord[];

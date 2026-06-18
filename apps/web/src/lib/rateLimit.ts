@@ -1,6 +1,9 @@
 import { rateLimited } from "@marketplace/shared-logic";
 
-// Simple token bucket: N requests per minute per IP
+// In-memory token bucket — effective for long-lived Node.js processes.
+// WARNING: On serverless (Vercel edge/lambda), each cold-start is a new process with empty
+// buckets, so this only rate-limits within a single instance. Upgrade to Redis/Upstash
+// KV for cross-instance limiting if abuse becomes a concern.
 const BUCKETS = new Map<string, { tokens: number; last: number }>();
 
 export function checkRateLimit(ip: string, limitPerMin = 60) {

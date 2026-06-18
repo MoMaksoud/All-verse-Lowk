@@ -35,6 +35,7 @@ export const GET = withApi(async (
       sellerId: listing.sellerId,
       sold: isSold,
       soldThroughAllVerse: isSold ? (listing as any).soldThroughAllVerse === true : undefined,
+      shipping: (listing as any).shipping ?? null,
     };
 
     return success(simpleListing);

@@ -35,7 +35,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (!order.payoutRetryable && order.payoutStatus !== 'partial_failed') {
+    const retryableStatuses = new Set(['partial_failed', 'pending_connect']);
+    if (!order.payoutRetryable && !retryableStatuses.has(order.payoutStatus ?? '')) {
       return NextResponse.json(
         { error: 'Order is not in a retryable payout state' },
         { status: 409 }

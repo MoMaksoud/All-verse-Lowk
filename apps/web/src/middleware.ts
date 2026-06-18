@@ -20,6 +20,8 @@ function getAllowedOrigins(): Set<string> {
   if (process.env.NODE_ENV !== 'production') {
     allowed.add('http://localhost:3000');
     allowed.add('http://127.0.0.1:3000');
+    allowed.add('http://localhost:3001');
+    allowed.add('http://127.0.0.1:3001');
     allowed.add('http://localhost:8081');
     allowed.add('http://127.0.0.1:8081');
   }

@@ -319,6 +319,10 @@ export default function ListingDetailPage() {
       showError('Please sign in to add items to cart');
       return;
     }
+    if (currentUser.uid === listing.sellerId) {
+      showError("You can't add your own listing to cart");
+      return;
+    }
     if ((listing.sold ?? false) === true) {
       showError('This item has already been sold');
       return;

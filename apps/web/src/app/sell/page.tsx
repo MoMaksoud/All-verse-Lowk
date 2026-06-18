@@ -31,7 +31,7 @@ const steps = [
 
 export default function SellPage() {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const { toasts, addToast, removeToast } = useSellToasts();
 
   // Photo state management
@@ -103,14 +103,11 @@ export default function SellPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Redirect if not authenticated
   useEffect(() => {
-    console.log('Sell page auth check:', { currentUser: !!currentUser, uid: currentUser?.uid });
-    if (!currentUser) {
-      console.log('No user found, redirecting to signin');
-      router.push('/signin');
+    if (!authLoading && !currentUser) {
+      router.push('/signin?redirect=/sell&reason=sell');
     }
-  }, [currentUser, router]);
+  }, [authLoading, currentUser, router]);
 
   // Remove categories fetch since we'll use hardcoded categories
 

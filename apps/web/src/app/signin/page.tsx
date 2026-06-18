@@ -1,14 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
 import { DynamicBackground } from '@/components/DynamicBackground';
 
-export default function SignIn() {
+const REASON_MESSAGES: Record<string, string> = {
+  sell: 'Sign in to list an item for sale.',
+  messages: 'Sign in to view your messages.',
+  cart: 'Sign in to view your cart.',
+  orders: 'Sign in to view your orders.',
+  sales: 'Sign in to view your sales.',
+};
+
+function SignInInner() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +24,9 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const { login, signInWithGoogle, isConfigured } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/';
+  const reason = searchParams.get('reason') || '';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,8 +35,8 @@ export default function SignIn() {
       setError('');
       setLoading(true);
       await login(email, password);
-      router.push('/');
-    } catch (error: any) {
+      router.push(redirectTo);
+    } catch {
       setError('Failed to sign in. Please check your credentials.');
     }
 
@@ -37,10 +48,9 @@ export default function SignIn() {
       setError('');
       setLoading(true);
       await signInWithGoogle();
-      router.push('/');
-    } catch (error: any) {
-      setError(error?.message || 'Failed to sign in with Google. Please try again.');
-      console.error('Google sign-in error:', error);
+      router.push(redirectTo);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to sign in with Google. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -113,6 +123,12 @@ export default function SignIn() {
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent"></div>
             <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent"></div>
             
+            {reason && REASON_MESSAGES[reason] && (
+              <div className="relative z-10 bg-accent-500/10 border border-accent-500/20 text-accent-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                {REASON_MESSAGES[reason]}
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6">
                 {error}
@@ -222,5 +238,13 @@ export default function SignIn() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignIn() {
+  return (
+    <Suspense>
+      <SignInInner />
+    </Suspense>
   );
 }
