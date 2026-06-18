@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withApi } from "@/lib/withApi";
 import {
@@ -6,24 +6,15 @@ import {
   clearCartAdmin,
   getCartAdmin,
   removeFromCartAdmin,
-  updateCartItemAdmin,
 } from "@/lib/server/adminCarts";
 import { success, error } from "@/lib/response";
 import { badRequest } from "@marketplace/shared-logic";
-import type { AddToCartInput, UpdateCartItemInput } from "@/lib/types/firestore";
-
-const MAX_QTY_PER_ITEM = 10;
+import type { AddToCartInput } from "@/lib/types/firestore";
 
 const addToCartSchema = z.object({
   listingId: z.string().min(1, 'listingId is required'),
   sellerId: z.string().min(1, 'sellerId is required'),
-  qty: z.number().int().min(1).max(MAX_QTY_PER_ITEM, `qty cannot exceed ${MAX_QTY_PER_ITEM}`),
   priceAtAdd: z.number().positive('priceAtAdd must be positive'),
-});
-
-const updateCartSchema = z.object({
-  listingId: z.string().min(1, 'listingId is required'),
-  qty: z.number().int().min(1).max(MAX_QTY_PER_ITEM, `qty cannot exceed ${MAX_QTY_PER_ITEM}`),
 });
 
 export const runtime = "nodejs";
@@ -47,7 +38,9 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return error(badRequest(parsed.error.errors[0]?.message ?? 'Invalid request'));
     }
 
-    await addToCartAdmin(req.userId, parsed.data as AddToCartInput);
+    // qty is always 1 — each listing is a unique single-unit item.
+    const input: AddToCartInput = { listingId: parsed.data.listingId as string, sellerId: parsed.data.sellerId as string, priceAtAdd: parsed.data.priceAtAdd as number, qty: 1 };
+    await addToCartAdmin(req.userId, input);
     const updatedCart = await getCartAdmin(req.userId);
 
     return success(updatedCart, { status: 201 });
@@ -57,37 +50,22 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   }
 });
 
-export const PUT = withApi(async (req: NextRequest & { userId: string }) => {
-  try {
-    const raw = await req.json();
-    const parsed = updateCartSchema.safeParse(raw);
-    if (!parsed.success) {
-      return error(badRequest(parsed.error.errors[0]?.message ?? 'Invalid request'));
-    }
-
-    await updateCartItemAdmin(req.userId, parsed.data as UpdateCartItemInput);
-    const updatedCart = await getCartAdmin(req.userId);
-
-    return success(updatedCart);
-  } catch (err) {
-    console.error('Error updating cart item:', err);
-    return error(badRequest("Failed to update cart item"));
-  }
+// PUT is intentionally not supported — qty is always 1 per listing.
+export const PUT = withApi(async (_req: NextRequest & { userId: string }) => {
+  return NextResponse.json({ error: 'Quantity updates are not supported' }, { status: 405 });
 });
 
 export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
   try {
     const { searchParams } = new URL(req.url);
     const listingId = searchParams.get('listingId');
-    
+
     if (listingId) {
-      // Remove specific item
       await removeFromCartAdmin(req.userId, listingId);
     } else {
-      // Clear entire cart
       await clearCartAdmin(req.userId);
     }
-    
+
     const updatedCart = await getCartAdmin(req.userId);
     return success(updatedCart);
   } catch (err) {

@@ -37,17 +37,9 @@ export async function addToCartAdmin(uid: string, item: AddToCartInput): Promise
     throw new Error('Cart not found');
   }
 
-  const existingItemIndex = cart.items.findIndex((c) => c.listingId === item.listingId);
-  let updatedItems;
-  if (existingItemIndex >= 0) {
-    updatedItems = [...cart.items];
-    updatedItems[existingItemIndex] = {
-      ...updatedItems[existingItemIndex],
-      qty: updatedItems[existingItemIndex].qty + item.qty,
-    };
-  } else {
-    updatedItems = [...cart.items, item];
-  }
+  // Each listing is a unique 1-unit item — adding the same listing twice is a no-op.
+  if (cart.items.some((c) => c.listingId === item.listingId)) return;
+  const updatedItems = [...cart.items, { ...item, qty: 1 }];
 
   await getAdminFirestore().collection(COLLECTIONS.CARTS).doc(uid).update({
     items: updatedItems,
