@@ -42,7 +42,7 @@ export default function VerifyPage() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
+    <div className="min-h-screen relative overflow-hidden home-page">
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-dark-800 rounded-2xl p-8 border border-dark-700">
           {status === 'verifying' && (

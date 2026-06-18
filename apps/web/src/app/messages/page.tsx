@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { useChats } from '@/hooks/useChats';
 import { useChatMessages } from '@/hooks/useChatMessages';
@@ -12,7 +11,7 @@ import { ChatList } from '@/components/chat/ChatList';
 import { ChatView } from '@/components/chat/ChatView';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { UserSearchModal } from '@/components/UserSearchModal';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, MessageCircle } from 'lucide-react';
 import { firestoreServices } from '@/lib/services/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -107,11 +106,10 @@ export default function MessagesPage() {
   if (!authLoading && !currentUser) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col">
-        <Navigation />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <p className="text-gray-300 text-lg mb-6">
-              Sign up to start messaging other users.
+            Sign up to start messaging other users.
             </p>
             <Link
               href="/signup"
@@ -135,20 +133,18 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 text-center">
-          <div className="flex justify-center mb-3 sm:mb-4">
+        <div className="mb-4 sm:mb-6 text-center shrink-0">
+          <div className="hidden flex justify-center mb-3 sm:mb-4">
             <Logo size="md" />
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">Messages</h1>
           <p className="text-base sm:text-lg text-zinc-400 px-4">Connect with buyers and sellers</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 flex-1 min-h-0">
           {/* Chat List - Hidden on mobile when chat is open */}
           <div className={`lg:col-span-1 min-h-0 ${showMobileChat ? 'hidden lg:block' : 'block'}`}>
             <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 h-full flex flex-col min-h-0">
@@ -217,7 +213,7 @@ export default function MessagesPage() {
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    <div className="text-6xl mb-4">💬</div>
+                    <MessageCircle className="w-16 h-16 mx-auto mb-4 text-zinc-500" />
                     <h3 className="text-lg font-medium text-white mb-2">
                       Select a conversation
                     </h3>

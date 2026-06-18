@@ -258,17 +258,17 @@ function ListingCard({
 
   return (
     <>
-      <Link href={`/listings/${id}`} className="block">
+      <Link href={`/listings/${id}`} className="block h-full w-30">
         <article
         className={clsx(
-          "rounded-3xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
-          variant === "grid" ? "overflow-hidden" : "p-4 md:p-5"
+          "rounded-xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
+          variant === "grid" ? "h-full overflow-hidden" : "p-4 md:p-5"
         )}
       >
         {variant === "grid" ? (
           <div className="flex flex-col h-full">
             {/* Image */}
-            <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
+            <div className="aspect-square w-full overflow-hidden rounded-xl bg-[#0E1526] relative">
               <Image
                 src={listingImageSrc}
                 alt={title}
@@ -280,8 +280,8 @@ function ListingCard({
             </div>
 
             {/* Content */}
-            <div className="p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2 flex-1 flex flex-col">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-zinc-100" style={{
+            <div className="p-4 lg:p-5 space-y-1 sm:space-y-2 flex-1 flex flex-col">
+              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-zinc-100 min-h-[2.5rem] sm:min-h-[3rem] lg:min-h-[3.5rem]" style={{
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
@@ -289,18 +289,12 @@ function ListingCard({
               }}>
                 {title}
               </h3>
-              <p className="hidden sm:block text-xs sm:text-sm text-zinc-300/90" style={{
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
+              <p className="hidden text-xs sm:text-sm text-zinc-300/90">
                 {description}
               </p>
 
               {/* Seller Info Section - Fixed height */}
-              <div className="flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1 min-h-[3.5rem]">
+              <div className="hidden flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1 min-h-[3.5rem]">
                 {sellerId ? (
                   <>
                   <div className="shrink-0">
@@ -331,16 +325,16 @@ function ListingCard({
                 ) : null}
                 </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm min-h-[1.5rem]">
-                <span className="text-blue-400 font-semibold">
+              <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 text-lg min-h-[1.5rem] overflow-hidden">
+                <span className="text-blue-400 font-semibold shrink-0">
                   {formatPriceDisplay(price)}
                 </span>
-                <span className="hidden sm:inline text-zinc-400">•</span>
-                <span className="hidden sm:inline text-zinc-300/90 text-xs truncate">{category}</span>
+                <span className="invisible sm:inline text-zinc-400 shrink-0">•</span>
+                <span className="invisible sm:inline text-zinc-300/90 text-xs truncate min-w-0">{category}</span>
                 {condition ? (
                   <>
-                    <span className="hidden lg:inline text-zinc-400">•</span>
-                    <span className="hidden lg:inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-300 px-2 py-0.5 text-xs">
+                    <span className="hidden lg:inline text-zinc-400 shrink-0">•</span>
+                    <span className="hidden lg:inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-300 px-2 py-0.5 text-xs shrink-0">
                       {condition}
                     </span>
                   </>

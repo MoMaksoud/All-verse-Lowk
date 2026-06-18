@@ -44,6 +44,31 @@
   }
 }
 
+/* Global scrollbar color */
+@layer base {
+  * {
+    scrollbar-color: #00418f transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #00418f;
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #003066;
+  }
+}
+
 /* Custom scrollbar styles */
 @layer utilities {
   .scrollbar-thin {
@@ -120,6 +145,7 @@
 @layer base {
   html {
     font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+    scrollbar-gutter: stable;
   }
   
   
@@ -336,6 +362,13 @@ body.home-page,
   background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%) !important;
 }
 
+/* Reveal the sitewide body gradient (and glow) on every page, matching home */
+.min-h-screen.bg-dark-950,
+.min-h-screen.bg-dark-900,
+.min-h-screen.bg-zinc-950 {
+  background: transparent !important;
+}
+
   /* Test background - more visible blue glow */
   body::after {
     content: '';
@@ -428,7 +461,7 @@ body.home-page,
     background-color: #0063e1;
     color: white;
     border: 1px solid #0063e1;
-    transition: all 0.2s ease;
+    transition: all 0.1s ease;
   }
   
   .btn-primary:hover {
@@ -465,7 +498,7 @@ body.home-page,
     background-color: transparent;
     color: #e2e8f0;
     border: 1px solid transparent;
-    transition: all 0.2s ease;
+    transition: all 0.1s ease;
   }
   
   .btn-ghost:hover {

@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { Heart, Star, MessageCircle, X, ArrowLeft, Clock, Tag } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { Navigation } from '@/components/Navigation';
 import ListingCard from '@/components/ListingCard';
 import { SellerInfo } from '@/components/SellerInfo';
 import { ListingActions } from '@/components/ListingActions';
@@ -347,7 +346,6 @@ export default function ListingDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950">
-        <Navigation />
         <LoadingSpinner size="lg" text="Loading listing details..." />
       </div>
     );
@@ -356,7 +354,6 @@ export default function ListingDetailPage() {
   if (!listing) {
     return (
       <div className="min-h-screen bg-dark-950">
-        <Navigation />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
@@ -375,7 +372,6 @@ export default function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
-      <Navigation />
       
       {/* Header */}
       <div className="bg-dark-900 border-b border-dark-700">

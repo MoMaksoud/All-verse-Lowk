@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigation } from '@/components/Navigation';
 import { DynamicBackground } from '@/components/DynamicBackground';
 import { Card } from '@/components/ui/Card';
 import { 
@@ -343,7 +342,6 @@ export default function SalesPage() {
     return (
       <div className="min-h-screen relative overflow-hidden">
         <DynamicBackground intensity="low" showParticles={true} />
-        <Navigation />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your sales</h1>
@@ -367,7 +365,6 @@ export default function SalesPage() {
   return (
     <div className="min-h-screen relative overflow-hidden">
       <DynamicBackground intensity="low" showParticles={true} />
-      <Navigation />
       
       <div className="relative z-10 min-h-screen pt-20 px-4 py-8">
         <div className="max-w-6xl mx-auto">

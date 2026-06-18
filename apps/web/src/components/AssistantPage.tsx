@@ -305,7 +305,7 @@ export default function AssistantPage() {
   // Show sign-in notice if user is not authenticated
   if (!currentUser) {
     return (
-      <div className="h-[calc(100vh-64px)] overflow-hidden bg-zinc-950 flex items-center justify-center">
+      <div className="h-[calc(100vh-64px)] overflow-hidden flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-300 text-lg mb-6">
             Sign up to start chatting with your AI assistant.
@@ -322,26 +322,19 @@ export default function AssistantPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] overflow-hidden bg-zinc-950">
+    <div className="h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] overflow-hidden">
       <main className="flex flex-col h-full max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
         {/* Header */}
         <div className="mb-3 sm:mb-4">
-          <div className="flex items-center justify-between mb-2 gap-2">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
-                <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white truncate">AI Assistant</h1>
+          <div className="my-8">
+            <div className="text-center">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">
+                AI Assistant
+              </h1>
+              <p className="text-sm sm:text-lg text-gray-400 px-4">
+                Discover amazing items with AI-powered recommendations
+              </p>
             </div>
-            {messages.length > 0 && (
-              <button
-                onClick={handleClearChat}
-                className="p-1.5 sm:p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
-                title="Clear conversation"
-              >
-                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            )}
           </div>
 
           {/* Mode Toggle */}
@@ -370,10 +363,16 @@ export default function AssistantPage() {
         </div>
 
         {/* Chat Box Container */}
-        <div className="flex-1 flex flex-col min-h-0 mb-4 bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden">
+        <div className="flex-1 flex min-h-0 mb-4 gap-2 sm:gap-3">
+        <div className="flex items-end pb-3 sm:pb-4 shrink-0" aria-hidden="true">
+          <div className="px-3 sm:px-4 py-2 sm:py-3 invisible">
+            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col min-h-0 bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden">
           {/* Messages Area with Scrollbar */}
           <div className="flex-1 overflow-y-auto p-4 chat-scrollbar">
-            <div className="space-y-4">
+            <div className={messages.length === 0 ? "h-full" : "space-y-4"}>
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500">
                   <Bot className="w-12 h-12 mb-4" />
@@ -574,6 +573,17 @@ export default function AssistantPage() {
               </button>
             </form>
           </div>
+        </div>
+        <div className="flex items-end pb-3 sm:pb-4 shrink-0">
+          <button
+            onClick={handleClearChat}
+            disabled={messages.length === 0}
+            className={`px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors flex items-center justify-center shrink-0 ${messages.length === 0 ? 'invisible' : ''}`}
+            title="Clear conversation"
+          >
+            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        </div>
         </div>
       </main>
 

@@ -1,14 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Navigation } from '@/components/Navigation';
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen home-page">
-      <Navigation />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <Link 

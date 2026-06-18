@@ -10,7 +10,6 @@ import { ProfilePicture } from '@/components/ProfilePicture';
 import { Profile } from '@marketplace/types';
 import { User, Settings, Edit, Camera, Shield } from 'lucide-react';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
-import { Navigation } from '@/components/Navigation';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -184,7 +183,6 @@ export default function ProfilePage() {
       <DynamicBackground intensity="low" showParticles={true} />
       
       {/* Navigation */}
-      <Navigation />
       
       <div className="relative z-10 min-h-screen w-full px-4 sm:px-6 py-6 sm:py-8">
         <div className="w-full max-w-screen mx-auto">
