@@ -1,170 +1,108 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GeminiService } from '@/lib/gemini';
-
-// Simple in-memory rate limiting (in production, use Redis or database)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 5; // Max 5 requests per minute per IP
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const userLimit = rateLimitMap.get(ip);
-
-  if (!userLimit || now > userLimit.resetTime) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-
-  if (userLimit.count >= MAX_REQUESTS_PER_WINDOW) {
-    return false;
-  }
-
-  userLimit.count++;
-  return true;
-}
-
-function generateFallbackPriceSuggestion(title: string, description: string, category: string, condition: string = 'Good'): string {
-  // Simple fallback pricing logic based on category and condition
-  const categoryBasePrices: Record<string, number> = {
-    'electronics': 150,
-    'fashion': 25,
-    'home': 50,
-    'sports': 40,
-    'books': 10,
-    'automotive': 200,
-    'other': 30
-  };
-
-  const conditionMultipliers: Record<string, number> = {
-    'new': 1.0,
-    'excellent': 0.9,
-    'good': 0.75,
-    'fair': 0.6,
-    'poor': 0.4
-  };
-
-  const basePrice = categoryBasePrices[category.toLowerCase()] || categoryBasePrices['other'];
-  const conditionMultiplier = conditionMultipliers[condition.toLowerCase()] || conditionMultipliers['good'];
-  
-  // Add some randomness based on title length (proxy for complexity)
-  const complexityFactor = Math.min(1.5, Math.max(0.5, title.length / 20));
-  
-  const suggestedPrice = Math.round(basePrice * conditionMultiplier * complexityFactor);
-  const minPrice = Math.round(suggestedPrice * 0.8);
-  const maxPrice = Math.round(suggestedPrice * 1.2);
-
-  return `Great product!\n\nSuggested price: $${minPrice}-$${maxPrice}\nBased on ${category} market rates\n\nPro tip: Check competitor prices weekly\n\nReady to list?`;
-}
+import { searchListingsAdmin } from '@/lib/server/adminListings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
-  try {
-    // Get client IP for rate limiting
-    const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0] : request.ip || 'unknown';
-
-    // Check rate limit
-    if (!checkRateLimit(ip)) {
-      return NextResponse.json(
-        { 
-          error: 'Too many requests. Please wait a moment before trying again.',
-          fallback: true,
-          retryAfter: 60
-        },
-        { status: 429 }
-      );
-    }
-
-    const { title, description, category, condition, size } = await request.json();
-
-    if (!title || !description || !category) {
-      return NextResponse.json(
-        { error: 'Title, description, and category are required' },
-        { status: 400 }
-      );
-    }
-
-    // Fetch live external results for the same product to ground the suggestion
-    let liveMarketContext = '';
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      const searchQuery = title.split(/\s+/).slice(0, 6).join(' ');
-      const searchRes = await fetch(
-        `${baseUrl}/api/search?q=${encodeURIComponent(searchQuery)}&source=both&provider=auto`
-      );
-      if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        const external = searchData?.data?.externalResults || [];
-        const internal = searchData?.data?.internalResults || [];
-        if (external.length > 0 || internal.length > 0) {
-          const lines = [
-            ...external.slice(0, 6).map((r: { title: string; price: number; source: string }) => `${r.source}: $${r.price} - ${r.title}`),
-            ...internal.slice(0, 3).map((r: { title: string; price: number }) => `Our marketplace: $${r.price} - ${r.title}`),
-          ];
-          liveMarketContext = `\n\nLive market data (current search results for similar items):\n${lines.join('\n')}\n\nUse this data to inform your price suggestion.`;
-        }
-      }
-    } catch (e) {
-      console.warn('Could not fetch live market data for price suggest:', e);
-    }
-
-    // Try Gemini AI first
-    try {
-      const pricePrompt = `You are a pricing expert. Suggest a fair market price range for:
-Title: ${title}
-Description: ${description}
-Category: ${category}
-Condition: ${condition}
-${size ? `Size: ${size}` : ''}
-${liveMarketContext}
-
-Provide a concise price suggestion with a recommended price range and brief reasoning. Keep it under 100 words.${liveMarketContext ? ' Base your range on the live market data above when relevant.' : ''}`;
-
-      const priceResponse = await GeminiService.generateResponse(pricePrompt);
-
-      if (priceResponse.success) {
-        return NextResponse.json({
-          suggestion: priceResponse.message,
-          success: true,
-          source: 'ai'
-        });
-      }
-    } catch (aiError: any) {
-      console.error('AI service error:', aiError);
-      
-      // Check if it's a quota error
-      if (aiError.message?.includes('quota') || aiError.message?.includes('429')) {
-        console.log('🔄 AI quota exceeded, using fallback pricing');
-        
-        const fallbackSuggestion = generateFallbackPriceSuggestion(title, description, category, condition);
-        
-        return NextResponse.json({
-          suggestion: fallbackSuggestion,
-          success: true,
-          source: 'fallback',
-          warning: 'AI service temporarily unavailable. Using market-based pricing.'
-        });
-      }
-    }
-
-    // If AI fails for other reasons, use fallback
-    console.log('🔄 AI service failed, using fallback pricing');
-    const fallbackSuggestion = generateFallbackPriceSuggestion(title, description, category, condition);
-    
-    return NextResponse.json({
-      suggestion: fallbackSuggestion,
-      success: true,
-      source: 'fallback',
-      warning: 'AI service temporarily unavailable. Using market-based pricing.'
-    });
-
-  } catch (error) {
-    console.error('Price suggestion error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+// Simple in-memory rate limit — 5 requests/min per IP
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + 60_000 });
+    return true;
   }
+  if (entry.count >= 5) return false;
+  entry.count++;
+  return true;
+}
+
+function fallbackSuggestion(category: string, condition: string, currentPrice?: number): string {
+  const conditionMultipliers: Record<string, number> = {
+    new: 1.0, 'like new': 0.9, excellent: 0.85,
+    good: 0.72, fair: 0.55, poor: 0.38,
+  };
+  const categoryRanges: Record<string, [number, number]> = {
+    electronics: [40, 600], fashion: [8, 120], shoes: [10, 150],
+    furniture: [20, 400], home: [10, 200], sports: [10, 150],
+    books: [3, 25], automotive: [15, 500], toys: [5, 80],
+    collectibles: [10, 300], jewelry: [10, 400], other: [5, 100],
+  };
+  const [low, high] = categoryRanges[category.toLowerCase()] || categoryRanges.other;
+  const mult = conditionMultipliers[condition.toLowerCase()] ?? 0.72;
+  const midpoint = currentPrice ? currentPrice : (low + high) / 2;
+  const min = Math.round(midpoint * mult * 0.85);
+  const max = Math.round(midpoint * mult * 1.15);
+
+  return `Based on typical ${category} items in ${condition} condition, similar items on resale markets tend to sell in the $${min}–$${max} range.\n\nTips:\n- Price closer to $${max} if the item is barely used or includes original packaging.\n- Price closer to $${min} if you want a quick sale.\n- Search AllVerse for comparable listings before finalising.`;
+}
+
+export async function POST(request: NextRequest) {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0] : 'unknown';
+
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 });
+  }
+
+  const { title, description, category, condition = 'Good', currentPrice, size } = await request.json().catch(() => ({}));
+
+  if (!title || !category) {
+    return NextResponse.json({ error: 'title and category are required' }, { status: 400 });
+  }
+
+  // Pull similar active listings from our own marketplace to ground the suggestion.
+  let marketContext = '';
+  try {
+    const similar = await searchListingsAdmin(
+      { isActive: true, category },
+      { field: 'createdAt', direction: 'desc' },
+      20
+    );
+    const comps = similar.items
+      .filter((l) => l.id && l.price > 0)
+      .slice(0, 8)
+      .map((l) => `• ${l.title} — $${l.price} (${(l as any).condition || 'N/A'})`)
+      .join('\n');
+    if (comps) {
+      marketContext = `\n\nCurrent comparable listings on AllVerse:\n${comps}`;
+    }
+  } catch {
+    // Non-critical — continue without it
+  }
+
+  const prompt = `You are a pricing expert for a peer-to-peer resale marketplace called AllVerse.
+
+Item details:
+- Title: ${title}
+- Description: ${description || 'Not provided'}
+- Category: ${category}
+- Condition: ${condition}${size ? `\n- Size: ${size}` : ''}${currentPrice ? `\n- Seller's current asking price: $${currentPrice}` : ''}
+${marketContext}
+
+Give a concise, honest price recommendation. Include:
+1. A specific recommended price range (e.g. "$45–$65")
+2. 1–2 sentences explaining why, referencing the condition and any comparable listings above
+3. One actionable tip (e.g. when to go higher or lower)
+
+Be direct and specific. Do not use filler phrases. Keep the total response under 100 words.`;
+
+  try {
+    const result = await GeminiService.generateResponse(prompt);
+    if (result.success && result.message) {
+      return NextResponse.json({ suggestion: result.message, success: true, source: 'ai' });
+    }
+  } catch (err: any) {
+    const isQuota = err?.message?.includes('quota') || err?.message?.includes('429');
+    if (!isQuota) console.error('Price suggest AI error:', err?.message);
+  }
+
+  // Fallback: honest, category-aware estimate
+  return NextResponse.json({
+    suggestion: fallbackSuggestion(category, condition, currentPrice),
+    success: true,
+    source: 'fallback',
+  });
 }

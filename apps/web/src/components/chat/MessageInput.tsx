@@ -7,12 +7,36 @@ interface MessageInputProps {
   onSendMessage: (text: string) => Promise<void>;
   disabled?: boolean;
   placeholder?: string;
+  /** When set, populates the input with this text (e.g. from AI suggestion) */
+  suggestedText?: string;
+  onSuggestedTextConsumed?: () => void;
 }
 
-export function MessageInput({ onSendMessage, disabled = false, placeholder = 'Message…' }: MessageInputProps) {
+export function MessageInput({
+  onSendMessage,
+  disabled = false,
+  placeholder = 'Message…',
+  suggestedText,
+  onSuggestedTextConsumed,
+}: MessageInputProps) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // When a suggestion arrives, populate the input and focus it.
+  useEffect(() => {
+    if (suggestedText) {
+      setText(suggestedText);
+      onSuggestedTextConsumed?.();
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.focus();
+        el.style.height = 'auto';
+        el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+      });
+    }
+  }, [suggestedText, onSuggestedTextConsumed]);
 
   const adjustHeight = () => {
     const el = textareaRef.current;
@@ -30,7 +54,7 @@ export function MessageInput({ onSendMessage, disabled = false, placeholder = 'M
       setSending(true);
       await onSendMessage(msg);
     } catch {
-      setText(msg); // restore on failure
+      setText(msg);
     } finally {
       setSending(false);
       textareaRef.current?.focus();
@@ -71,15 +95,10 @@ export function MessageInput({ onSendMessage, disabled = false, placeholder = 'M
         disabled={!canSend}
         aria-label="Send"
         className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-          canSend
-            ? 'bg-blue-600 hover:bg-blue-700 text-white'
-            : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+          canSend ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
         }`}
       >
-        {sending
-          ? <Loader2 className="w-4 h-4 animate-spin" />
-          : <SendHorizonal className="w-4 h-4" />
-        }
+        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <SendHorizonal className="w-4 h-4" />}
       </button>
     </div>
   );

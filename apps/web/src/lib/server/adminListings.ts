@@ -125,9 +125,12 @@ export async function searchListingsAdmin(
     q = q.where('price', '<=', filters.maxPrice);
   }
   if (filters.keyword) {
-    const token = filters.keyword.toLowerCase().trim().split(/\s+/)[0];
-    if (token && token.length >= 2) {
-      q = q.where('searchKeywords', 'array-contains', token);
+    // Pick the most specific token (longest word ≥ 2 chars) for the Firestore array-contains.
+    // Client-side full-text filtering in the API route handles multi-word matching after this.
+    const tokens = filters.keyword.toLowerCase().trim().split(/\s+/).filter((t) => t.length >= 2);
+    const bestToken = tokens.sort((a, b) => b.length - a.length)[0];
+    if (bestToken) {
+      q = q.where('searchKeywords', 'array-contains', bestToken);
     }
   }
 

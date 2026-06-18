@@ -252,6 +252,8 @@ export default function ListingDetailPage() {
         title: listing.title,
         description: listing.description,
         category: listing.category,
+        condition: (listing as any).condition || 'Good',
+        currentPrice: listing.price,
       }, { requireAuth: false });
       
       if (response.ok) {
@@ -610,6 +612,7 @@ export default function ListingDetailPage() {
         onClose={() => setShowPriceSuggestionModal(false)}
         suggestion={priceSuggestion}
         loading={priceSuggestionLoading}
+        listingTitle={listing?.title}
       />
     </div>
   );

@@ -36,7 +36,7 @@ function ListingsContent() {
       
       // Build query parameters
       const params = new URLSearchParams();
-      if (appliedFilters.keyword) params.set('q', appliedFilters.keyword);
+      if (appliedFilters.keyword?.trim()) params.set('q', appliedFilters.keyword.trim());
       if (appliedFilters.category) params.set('category', appliedFilters.category);
       if (appliedFilters.condition) params.set('condition', appliedFilters.condition);
       if (appliedFilters.minPrice !== undefined) params.set('min', appliedFilters.minPrice.toString());
@@ -95,13 +95,15 @@ function ListingsContent() {
   useEffect(() => {
     // Parse URL params for filters
     const category = searchParams.get('category');
+    const condition = searchParams.get('condition');
     const keyword = searchParams.get('q');
     const minPrice = searchParams.get('min');
     const maxPrice = searchParams.get('max');
 
     const newFilters = {
-      keyword: keyword || '',
-      category: category || '',
+      keyword: keyword || undefined,
+      category: category || undefined,
+      condition: condition || undefined,
       minPrice: minPrice ? parseFloat(minPrice) : undefined,
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
     };
