@@ -18,8 +18,14 @@ export default function ProfilePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [stats, setStats] = useState({ listingsCount: 0, salesCount: 0, reviewsCount: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { currentUser, refreshProfile, userProfile, userProfilePic } = useAuth();
+  const { currentUser, loading: authLoading, refreshProfile, userProfile, userProfilePic } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
+      router.replace('/signin?redirect=/profile&reason=profile');
+    }
+  }, [authLoading, currentUser, router]);
 
   useEffect(() => {
     if (currentUser?.uid) {
@@ -168,12 +174,12 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen relative overflow-hidden">
         <DynamicBackground intensity="low" showParticles={true} />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-white text-xl">Loading profile...</div>
+          <div className="w-8 h-8 border-2 border-accent-500 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );

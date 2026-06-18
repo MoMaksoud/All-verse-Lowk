@@ -9,7 +9,6 @@ import ListingCard from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
 import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 import Select from '@/components/Select';
 import ListingCollection from '@/components/ListingCollection';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,10 +59,14 @@ function ListingsContent() {
       }
 
       const { apiGet } = await import('@/lib/api-client');
-      const response = await apiGet(`/api/listings?${params.toString()}`, { requireAuth: false });
+
+      // Fetch listings and categories in parallel
+      const [response, categoriesResponse] = await Promise.all([
+        apiGet(`/api/listings?${params.toString()}`, { requireAuth: false }),
+        apiGet('/api/categories', { requireAuth: false }),
+      ]);
+
       const data = await response.json();
-
-
       if (response.ok) {
         setListings(data.data || []);
         setTotalPages(Math.ceil((data.pagination?.total || 0) / 9));
@@ -71,9 +74,7 @@ function ListingsContent() {
         setListings([]);
         setTotalPages(1);
       }
-      
-      // Fetch categories
-      const categoriesResponse = await apiGet('/api/categories', { requireAuth: false });
+
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json();
         setCategories(categoriesData);
@@ -171,19 +172,21 @@ function ListingsContent() {
     }
   }, [currentUser, showSuccess, showError]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-dark-950">
-        <Navigation />
-        <LoadingSpinner size="lg" text="Loading listings..." />
+  const SkeletonCard = () => (
+    <div className="bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden animate-pulse">
+      <div className="h-48 bg-dark-700" />
+      <div className="p-4 space-y-3">
+        <div className="h-4 bg-dark-700 rounded w-3/4" />
+        <div className="h-3 bg-dark-700 rounded w-1/2" />
+        <div className="h-5 bg-dark-700 rounded w-1/3" />
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-dark-950">
       <Navigation />
-      
+
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8 text-center">
@@ -259,7 +262,11 @@ function ListingsContent() {
             </div>
 
             {/* Listings Grid */}
-            {listings.length > 0 ? (
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                {Array.from({ length: 9 }).map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            ) : listings.length > 0 ? (
               <>
                 {viewMode === 'grid' ? (
                   <ListingCollection 

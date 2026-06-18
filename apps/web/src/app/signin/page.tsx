@@ -14,6 +14,7 @@ const REASON_MESSAGES: Record<string, string> = {
   cart: 'Sign in to view your cart.',
   orders: 'Sign in to view your orders.',
   sales: 'Sign in to view your sales.',
+  profile: 'Sign in to view your profile.',
 };
 
 function SignInInner() {
