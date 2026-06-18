@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { SendHorizonal, Loader2 } from 'lucide-react';
 
 interface MessageInputProps {
   onSendMessage: (text: string) => Promise<void>;
@@ -9,82 +9,78 @@ interface MessageInputProps {
   placeholder?: string;
 }
 
-export function MessageInput({ onSendMessage, disabled = false, placeholder = "Type a message..." }: MessageInputProps) {
-  const [message, setMessage] = useState('');
+export function MessageInput({ onSendMessage, disabled = false, placeholder = 'Message…' }: MessageInputProps) {
+  const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!message.trim() || sending || disabled) return;
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  };
 
+  const submit = useCallback(async () => {
+    if (!text.trim() || sending || disabled) return;
+    const msg = text.trim();
+    setText('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
     try {
       setSending(true);
-      await onSendMessage(message.trim());
-      setMessage('');
-      
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
+      await onSendMessage(msg);
+    } catch {
+      setText(msg); // restore on failure
     } finally {
       setSending(false);
+      textareaRef.current?.focus();
     }
-  };
+  }, [text, sending, disabled, onSendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      submit();
     }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
-    
-    // Auto-resize textarea
-    const textarea = e.target;
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
   };
 
   useEffect(() => {
-    // Focus textarea when component mounts
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
+    textareaRef.current?.focus();
   }, []);
 
+  const canSend = !!text.trim() && !sending && !disabled;
+
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-2 sm:gap-3 p-3 sm:p-4 border-t border-zinc-800 safe-area-bottom">
-      <div className="flex-1 min-w-0">
+    <div className="flex items-end gap-2 px-4 py-3 border-t border-zinc-800 bg-zinc-950">
+      <div className="flex-1 min-w-0 bg-zinc-800 rounded-2xl px-4 py-2.5">
         <textarea
           ref={textareaRef}
-          value={message}
-          onChange={handleInputChange}
+          value={text}
+          onChange={(e) => { setText(e.target.value); adjustHeight(); }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || sending}
           rows={1}
-          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-zinc-700 rounded-xl bg-zinc-900/80 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 resize-none disabled:opacity-50 disabled:cursor-not-allowed scrollbar-thin text-sm sm:text-base"
-          style={{ minHeight: '44px', maxHeight: '120px' }}
+          className="w-full bg-transparent text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none text-sm leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ minHeight: '22px', maxHeight: '120px' }}
         />
       </div>
-      
+
       <button
-        type="submit"
-        disabled={!message.trim() || sending || disabled}
-        className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        onClick={submit}
+        disabled={!canSend}
+        aria-label="Send"
+        className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+          canSend
+            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+            : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+        }`}
       >
-        {sending ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <Send className="w-5 h-5" />
-        )}
+        {sending
+          ? <Loader2 className="w-4 h-4 animate-spin" />
+          : <SendHorizonal className="w-4 h-4" />
+        }
       </button>
-    </form>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { firestoreServices } from '@/lib/services/firestore';
 import { FirestoreMessage } from '@/lib/types/firestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,116 +22,82 @@ export function useChatMessages(chatId: string | null) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
-  const loadMessages = useCallback(async () => {
-    if (!chatId || !currentUser?.uid) return;
+  // Persistent sender cache — avoids re-fetching on every subscription update.
+  const senderCache = useRef(new Map<string, any>());
 
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const chatMessages = await firestoreServices.chats.getChatMessages(chatId);
+  const enrichMessages = useCallback(async (raw: FirestoreMessage[]): Promise<MessageWithUser[]> => {
+    const uncached = [...new Set(raw.map((m) => m.senderId))].filter(
+      (id) => !senderCache.current.has(id)
+    );
 
-      // Batch-fetch unique senders once, then enrich all messages from the map
-      const uniqueSenderIds = [...new Set(chatMessages.map(m => m.senderId))];
-      const senderMap = new Map<string, any>();
-      await Promise.all(uniqueSenderIds.map(async (id) => {
-        try {
-          senderMap.set(id, await firestoreServices.users.getUser(id));
-        } catch {
-          senderMap.set(id, null);
-        }
-      }));
-
-      const enrichedMessages: MessageWithUser[] = chatMessages.map(message => {
-        const sender = senderMap.get(message.senderId);
-        return {
-          ...(message as any),
-          chatId: (message as any).chatId ?? chatId!,
-          timestamp: (message as any).timestamp ?? (message as any).createdAt,
-          sender: {
-            id: message.senderId,
-            name: sender?.displayName || sender?.email || `User ${message.senderId.substring(0, 8)}`,
-            username: sender?.username,
-            email: sender?.email || '',
-            photoURL: sender?.photoURL,
-          },
-        };
-      });
-
-      setMessages(enrichedMessages);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      setError('Failed to load messages');
-    } finally {
-      setLoading(false);
+    if (uncached.length > 0) {
+      await Promise.all(
+        uncached.map(async (id) => {
+          try {
+            senderCache.current.set(id, await firestoreServices.users.getUser(id));
+          } catch {
+            senderCache.current.set(id, null);
+          }
+        })
+      );
     }
-  }, [chatId, currentUser?.uid]);
 
-  const subscribeToMessages = useCallback(() => {
-    if (!chatId || !currentUser?.uid) return () => {};
-
-    return firestoreServices.chats.subscribeToChatMessages(chatId, async (chatMessages) => {
-      // Batch-fetch unique senders once, then enrich all messages from the map
-      const uniqueSenderIds = [...new Set(chatMessages.map(m => m.senderId))];
-      const senderMap = new Map<string, any>();
-      await Promise.all(uniqueSenderIds.map(async (id) => {
-        try {
-          senderMap.set(id, await firestoreServices.users.getUser(id));
-        } catch {
-          senderMap.set(id, null);
-        }
-      }));
-
-      const enrichedMessages: MessageWithUser[] = chatMessages.map(message => {
-        const sender = senderMap.get(message.senderId);
-        return {
-          ...(message as any),
-          chatId: (message as any).chatId ?? chatId!,
-          timestamp: (message as any).timestamp ?? (message as any).createdAt,
-          sender: {
-            id: message.senderId,
-            name: sender?.displayName || sender?.email || `User ${message.senderId.substring(0, 8)}`,
-            username: sender?.username,
-            email: sender?.email || '',
-            photoURL: sender?.photoURL,
-          },
-        };
-      });
-
-      setMessages(enrichedMessages);
-      setLoading(false);
+    return raw.map((msg) => {
+      const sender = senderCache.current.get(msg.senderId);
+      return {
+        ...(msg as any),
+        chatId: (msg as any).chatId ?? chatId,
+        timestamp: (msg as any).timestamp ?? (msg as any).createdAt,
+        sender: {
+          id: msg.senderId,
+          name: sender?.displayName || sender?.email || `User ${msg.senderId.slice(0, 8)}`,
+          username: sender?.username,
+          email: sender?.email || '',
+          photoURL: sender?.photoURL,
+        },
+      };
     });
-  }, [chatId, currentUser?.uid]);
+  }, [chatId]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToMessages();
+    if (!chatId || !currentUser?.uid) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const unsubscribe = firestoreServices.chats.subscribeToChatMessages(
+      chatId,
+      async (raw) => {
+        try {
+          const enriched = await enrichMessages(raw);
+          setMessages(enriched);
+        } catch {
+          setError('Failed to load messages');
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
+
     return unsubscribe;
-  }, [subscribeToMessages]);
+  }, [chatId, currentUser?.uid, enrichMessages]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!chatId || !currentUser?.uid || !text.trim()) return;
-
     try {
       setSending(true);
-      setError(null);
-      
-      // Send user input text directly without alteration (no trim beyond whitespace)
       await firestoreServices.chats.sendMessage(chatId, currentUser.uid, text.trim());
-    } catch (error) {
-      console.error('Error sending message:', error);
+    } catch (err) {
       setError('Failed to send message');
-      throw error;
+      throw err;
     } finally {
       setSending(false);
     }
   }, [chatId, currentUser?.uid]);
 
-  return {
-    messages,
-    loading,
-    error,
-    sending,
-    sendMessage,
-    refreshMessages: loadMessages,
-  };
+  return { messages, loading, error, sending, sendMessage };
 }

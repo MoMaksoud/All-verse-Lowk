@@ -4,8 +4,6 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { MessageWithUser } from '@/hooks/useChatMessages';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { ListingPreviewCard } from '@/components/chat/ListingPreviewCard';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { ProfilePicture } from '@/components/ProfilePicture';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ChatViewProps {
@@ -24,169 +22,220 @@ interface ChatViewProps {
   };
 }
 
-export function ChatView({ 
-  chatId, 
-  messages, 
-  loading, 
-  error, 
-  sending, 
-  onSendMessage, 
-  otherUser 
-}: ChatViewProps) {
+function Initials({ name }: { name: string }) {
+  const parts = name.trim().split(/\s+/);
+  const letters = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+  return (
+    <div className="w-full h-full bg-blue-600/30 flex items-center justify-center text-blue-300 text-xs font-semibold select-none">
+      {letters}
+    </div>
+  );
+}
+
+function toMs(timestamp: any): number {
+  if (!timestamp) return 0;
+  if (timestamp.toDate) return timestamp.toDate().getTime();
+  if (typeof timestamp === 'number') return timestamp;
+  return new Date(timestamp).getTime();
+}
+
+function formatTime(timestamp: any): string {
+  const ms = toMs(timestamp);
+  if (!ms) return '';
+  return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDateLabel(timestamp: any): string {
+  const ms = toMs(timestamp);
+  if (!ms) return '';
+  const d = new Date(ms);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  if (msgDay.getTime() === today.getTime()) return 'Today';
+  if (msgDay.getTime() === yesterday.getTime()) return 'Yesterday';
+  if (now.getTime() - ms < 7 * 86400000) return d.toLocaleDateString([], { weekday: 'long' });
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function isSameDay(a: any, b: any): boolean {
+  const da = new Date(toMs(a));
+  const db = new Date(toMs(b));
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+}
+
+export function ChatView({ chatId, messages, loading, error, sending, onSendMessage, otherUser }: ChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { currentUser } = useAuth();
-  const [listingIdFromMessages, setListingIdFromMessages] = useState<string | null>(null);
-  const [listingLoadError, setListingLoadError] = useState(false);
 
-  // Extract listingId from first message that has it (for seller context)
-  // Only show listing card if current user is the seller (otherUser is the buyer)
-  const isSeller = useMemo(() => {
-    return currentUser?.uid && otherUser?.id && messages.some(msg => 
-      msg.sender?.id === otherUser.id && msg.listingId
-    );
-  }, [currentUser?.uid, otherUser?.id, messages]);
-
-  useEffect(() => {
-    // Find first message with listingId from buyer (otherUser)
-    const buyerMessageWithListing = messages.find(msg => 
-      msg.sender?.id === otherUser?.id && 
-      msg.listingId && 
-      typeof msg.listingId === 'string' && 
-      msg.listingId.trim() !== ''
-    );
-    
-    if (buyerMessageWithListing?.listingId) {
-      const listingId = buyerMessageWithListing.listingId.trim();
-      if (listingId !== listingIdFromMessages) {
-        setListingIdFromMessages(listingId);
-        setListingLoadError(false); // Reset error when listingId changes
+  // Find the first listingId mentioned in the chat (either party).
+  const contextListingId = useMemo(() => {
+    for (const msg of messages) {
+      if (msg.listingId && typeof msg.listingId === 'string' && msg.listingId.trim()) {
+        return msg.listingId.trim();
       }
-    } else {
-      setListingIdFromMessages(null);
     }
-  }, [messages, otherUser?.id, listingIdFromMessages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
+    return null;
   }, [messages]);
 
-  const formatMessageTime = (timestamp: any) => {
-    if (!timestamp) return '';
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <LoadingSpinner />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="space-y-3 w-full px-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className={`flex gap-2 animate-pulse ${i % 2 === 0 ? '' : 'flex-row-reverse'}`}>
+              <div className="w-7 h-7 rounded-full bg-zinc-800 shrink-0" />
+              <div className={`h-9 rounded-2xl bg-zinc-800 ${i % 2 === 0 ? 'w-48' : 'w-36'}`} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full text-red-400">
-        <p>{error}</p>
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-zinc-500 text-sm">{error}</p>
       </div>
     );
   }
 
+  const name = otherUser?.name || 'Unknown';
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Chat Header - Hidden on mobile (shown in Messages page) */}
-      <div className="hidden lg:flex items-center space-x-3 p-4 border-b border-zinc-800 bg-zinc-900/50">
-        <ProfilePicture
-          src={otherUser?.photoURL}
-          alt={otherUser?.name || 'Unknown User'}
-          name={otherUser?.name}
-          size="sm"
-        />
-        <div>
-          <h2 className="text-lg font-medium text-white">
-            {otherUser?.name || 'Unknown User'}
-          </h2>
-          {otherUser?.username && (
-            <p className="text-sm text-zinc-400">
-              @{otherUser.username}
-            </p>
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header */}
+      <div className="hidden lg:flex items-center gap-3 px-4 py-3 border-b border-zinc-800 shrink-0">
+        <div className="w-9 h-9 rounded-full overflow-hidden shrink-0">
+          {otherUser?.photoURL ? (
+            <img src={otherUser.photoURL} alt={name} className="w-full h-full object-cover" />
+          ) : (
+            <Initials name={name} />
           )}
-          <p className="text-sm text-zinc-400">
-            {otherUser?.email}
-          </p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-white leading-tight">{name}</p>
+          {otherUser?.username && (
+            <p className="text-xs text-zinc-500">@{otherUser.username}</p>
+          )}
         </div>
       </div>
 
-      {/* Listing Context Card - Show above conversation for seller when buyer sends message with listingId */}
-      {isSeller && listingIdFromMessages && !listingLoadError && (
-        <div className="px-4 pt-4 pb-2 border-b border-zinc-800">
-          <div className="text-xs text-zinc-400 mb-2">Item in conversation:</div>
-          <ListingPreviewCard 
-            listingId={listingIdFromMessages}
-            onError={() => {
-              // Log error once and set flag to prevent repeated logs
-              if (!listingLoadError) {
-                console.warn('Failed to load listing for chat context:', listingIdFromMessages);
-                setListingLoadError(true);
-              }
-            }}
-          />
+      {/* Listing context card — visible to both parties */}
+      {contextListingId && (
+        <div className="px-4 py-2 border-b border-zinc-800 shrink-0">
+          <p className="text-xs text-zinc-500 mb-1.5">Item in conversation</p>
+          <ListingPreviewCard listingId={contextListingId} />
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+      {/* Messages scroll area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 min-h-0">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-zinc-400">
+          <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <p className="text-lg font-medium">No messages yet</p>
-              <p className="text-sm">Start the conversation!</p>
+              <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-3">
+                {otherUser?.photoURL ? (
+                  <img src={otherUser.photoURL} alt={name} className="w-full h-full object-cover" />
+                ) : (
+                  <Initials name={name} />
+                )}
+              </div>
+              <p className="text-white font-medium text-sm">{name}</p>
+              {otherUser?.username && <p className="text-zinc-500 text-xs">@{otherUser.username}</p>}
+              <p className="text-zinc-500 text-sm mt-3">Send a message to start the conversation</p>
             </div>
           </div>
         ) : (
-          messages.map((message) => {
+          messages.map((msg, idx) => {
+            const isMine = msg.sender?.id === currentUser?.uid;
+            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const nextMsg = idx < messages.length - 1 ? messages[idx + 1] : null;
+
+            // Group logic: same sender + within 2 minutes of prev
+            const isGroupedWithPrev =
+              prevMsg &&
+              prevMsg.sender?.id === msg.sender?.id &&
+              toMs(msg.timestamp) - toMs(prevMsg.timestamp) < 2 * 60 * 1000;
+
+            const isGroupedWithNext =
+              nextMsg &&
+              nextMsg.sender?.id === msg.sender?.id &&
+              toMs(nextMsg.timestamp) - toMs(msg.timestamp) < 2 * 60 * 1000;
+
+            // Date separator
+            const showDateSeparator = !prevMsg || !isSameDay(prevMsg.timestamp, msg.timestamp);
+
+            // Bubble shape
+            const rounded = isMine
+              ? `rounded-2xl rounded-br-sm ${isGroupedWithPrev ? 'rounded-tr-lg' : ''} ${isGroupedWithNext ? 'rounded-br-lg' : 'rounded-br-sm'}`
+              : `rounded-2xl rounded-bl-sm ${isGroupedWithPrev ? 'rounded-tl-lg' : ''} ${isGroupedWithNext ? 'rounded-bl-lg' : 'rounded-bl-sm'}`;
+
             return (
-              <div
-                key={message.id}
-                className={`flex flex-col gap-2 ${message.sender?.id === otherUser?.id ? 'items-start' : 'items-end'}`}
-              >
-                {/* Message Bubble - send text directly without alteration */}
-                <div
-                  className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-sm break-words ${
-                    message.sender?.id === otherUser?.id
-                      ? 'bg-zinc-800/80 border border-zinc-700 text-zinc-100'
-                      : 'bg-blue-600 text-white'
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      message.sender?.id === otherUser?.id
-                        ? 'text-zinc-400'
-                        : 'text-blue-100'
-                    }`}
-                  >
-                    {formatMessageTime(message.timestamp)}
-                  </p>
+              <React.Fragment key={msg.id}>
+                {showDateSeparator && (
+                  <div className="flex items-center gap-3 py-3">
+                    <div className="flex-1 h-px bg-zinc-800" />
+                    <span className="text-xs text-zinc-500 shrink-0">{formatDateLabel(msg.timestamp)}</span>
+                    <div className="flex-1 h-px bg-zinc-800" />
+                  </div>
+                )}
+
+                <div className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'} ${isGroupedWithPrev ? 'mt-0.5' : 'mt-3'}`}>
+                  {/* Avatar — only shown for last message in a group from other person */}
+                  <div className="w-7 shrink-0">
+                    {!isMine && !isGroupedWithNext && (
+                      <div className="w-7 h-7 rounded-full overflow-hidden">
+                        {otherUser?.photoURL ? (
+                          <img src={otherUser.photoURL} alt={name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Initials name={name} />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`max-w-[70%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                    <div
+                      className={`px-3.5 py-2 text-sm break-words leading-relaxed ${rounded} ${
+                        isMine
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-zinc-800 text-zinc-100'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                    </div>
+
+                    {/* Timestamp — only on last message of a group */}
+                    {!isGroupedWithNext && (
+                      <span className="text-[10px] text-zinc-600 mt-1 px-1">
+                        {formatTime(msg.timestamp)}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </React.Fragment>
             );
           })
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+      {/* Input */}
       <div className="shrink-0">
         <MessageInput
           onSendMessage={onSendMessage}
           disabled={sending}
-          placeholder={`Message ${otherUser?.name || 'user'}...`}
+          placeholder={`Message ${name}…`}
         />
       </div>
     </div>

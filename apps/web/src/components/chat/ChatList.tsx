@@ -1,12 +1,10 @@
 'use client';
 
 import React from 'react';
-import { MessageCircle, Clock, User } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { ChatWithUser } from '@/hooks/useChats';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChatContext } from '@/contexts/ChatContext';
-import { firestoreServices } from '@/lib/services/firestore';
 
 interface ChatListProps {
   chats: ChatWithUser[];
@@ -16,161 +14,131 @@ interface ChatListProps {
   selectedChatId?: string;
 }
 
+function formatTimestamp(timestamp: any): string {
+  if (!timestamp) return '';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  if (diffHours < 1) {
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    return diffMins <= 1 ? 'now' : `${diffMins}m`;
+  }
+  if (diffHours < 24) return `${Math.floor(diffHours)}h`;
+  if (diffHours < 168) return date.toLocaleDateString([], { weekday: 'short' });
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function Initials({ name }: { name: string }) {
+  const parts = name.trim().split(/\s+/);
+  const letters = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+  return (
+    <div className="w-full h-full bg-blue-600/30 flex items-center justify-center text-blue-300 text-sm font-semibold select-none">
+      {letters}
+    </div>
+  );
+}
+
 export function ChatList({ chats, loading, error, onChatSelect, selectedChatId }: ChatListProps) {
   const { currentUser } = useAuth();
-  const { currentChatId, setCurrentChatId } = useChatContext();
-  
-  const formatTimestamp = (timestamp: any) => {
-    if (!timestamp) return '';
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 168) { // 7 days
-      return date.toLocaleDateString([], { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-  };
+  const { currentChatId } = useChatContext();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64 text-red-400">
-        <p>{error}</p>
+      <div className="p-3 space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-3 animate-pulse">
+            <div className="w-11 h-11 rounded-full bg-zinc-800 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 bg-zinc-800 rounded w-2/5" />
+              <div className="h-3 bg-zinc-800 rounded w-3/5" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (chats.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-zinc-400">
-        <MessageCircle className="w-12 h-12 mb-4" />
-        <p className="text-lg font-medium">No conversations yet</p>
-        <p className="text-sm">Start a conversation with someone!</p>
+      <div className="flex flex-col items-center justify-center h-48 text-zinc-500 px-6 text-center">
+        <MessageSquare className="w-8 h-8 mb-3 opacity-50" />
+        <p className="text-sm font-medium text-zinc-400">No conversations yet</p>
+        <p className="text-xs mt-1">Press the compose button to start one</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-2">
+    <div className="py-1">
       {chats.map((chat) => {
-        // Calculate unread based on timestamps (WhatsApp-like)
+        const isSelected = selectedChatId === chat.id;
+        const isViewing = currentChatId === chat.id;
+
         const hasUnread = (() => {
           if (!currentUser?.uid || !chat.lastMessage?.timestamp) return false;
-          
-          // Get when Messages page was last opened
-          const lastOpenedMessagesPageAt = localStorage.getItem(`lastOpenedMessagesPageAt_${currentUser.uid}`);
-          const lastOpenedTimestamp = lastOpenedMessagesPageAt ? parseInt(lastOpenedMessagesPageAt, 10) : 0;
-          
-          // Convert Firestore Timestamp to milliseconds
-          const lastMessageTime = chat.lastMessage.timestamp.toDate ? 
-            chat.lastMessage.timestamp.toDate().getTime() : 
-            (chat.lastMessage.timestamp as any).seconds * 1000;
-          
-          // Get when this chat was last opened
-          const chatLastOpenedAt = chat.lastOpenedAt?.[currentUser.uid];
-          const chatLastOpenedTime = chatLastOpenedAt ? 
-            (chatLastOpenedAt.toDate ? chatLastOpenedAt.toDate().getTime() : (chatLastOpenedAt as any).seconds * 1000) : 
-            0;
-          
-          // Chat is unread if last message is newer than when it was last opened
-          return lastMessageTime > Math.max(lastOpenedTimestamp, chatLastOpenedTime);
+          const lastOpenedRaw = localStorage.getItem(`lastOpenedMessagesPageAt_${currentUser.uid}`);
+          const lastOpened = lastOpenedRaw ? parseInt(lastOpenedRaw, 10) : 0;
+          const lastMsgMs = chat.lastMessage.timestamp.toDate
+            ? chat.lastMessage.timestamp.toDate().getTime()
+            : (chat.lastMessage.timestamp as any).seconds * 1000;
+          const chatOpenedAt = chat.lastOpenedAt?.[currentUser.uid];
+          const chatOpenedMs = chatOpenedAt
+            ? (chatOpenedAt.toDate ? chatOpenedAt.toDate().getTime() : (chatOpenedAt as any).seconds * 1000)
+            : 0;
+          return !isViewing && lastMsgMs > Math.max(lastOpened, chatOpenedMs);
         })();
-        
-        // Keep unreadCount for display (legacy support, but we use hasUnread for logic)
-        const unreadCount = currentUser?.uid ? (chat.unreadCount?.[currentUser.uid] || 0) : 0;
-        
+
+        const name = chat.otherUser?.name || 'Unknown';
+
         return (
-          <div
+          <button
             key={chat.id}
-            onClick={async () => {
-              // Set currentChatId when clicking a chat (marks as inside that chat)
-              if (chat.id) {
-                setCurrentChatId(chat.id);
-                // Mark chat as opened when clicked (updates lastOpenedAt, removes badge from chat)
-                if (currentUser?.uid) {
-                  await firestoreServices.chats.markChatAsOpened(chat.id, currentUser.uid);
-                }
-              }
-              onChatSelect(chat.id!);
-            }}
-            className={`p-4 rounded-xl cursor-pointer transition-all relative ${
-              selectedChatId === chat.id
-                ? 'bg-blue-600/20 border border-blue-500/30'
-                : hasUnread
-                ? 'bg-blue-950/40 border border-blue-500/30 hover:bg-blue-950/60'
-                : 'bg-zinc-800/50 hover:bg-zinc-800/80 border border-zinc-700'
+            onClick={() => onChatSelect(chat.id!)}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+              isSelected
+                ? 'bg-zinc-800'
+                : 'hover:bg-zinc-900'
             }`}
           >
-            <div className="flex items-start space-x-3">
-              {/* Avatar */}
-              <div className="w-10 h-10 overflow-hidden rounded-full shrink-0">
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <div className="w-11 h-11 rounded-full overflow-hidden">
                 {chat.otherUser?.photoURL ? (
-                  <img
-                    src={chat.otherUser.photoURL}
-                    alt={chat.otherUser.name}
-                    className="w-full h-full object-cover"
-                    style={{ width: "auto", height: "auto" }}
-                  />
+                  <img src={chat.otherUser.photoURL} alt={name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-blue-600/20 flex items-center justify-center">
-                    <User className="w-5 h-5 text-blue-400" />
-                  </div>
-                )}
-                {/* Show badge only if chat is unread AND not currently viewing this chat */}
-                {hasUnread && currentChatId !== chat.id && (
-                  <div className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </div>
+                  <Initials name={name} />
                 )}
               </div>
-
-              {/* Chat Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`text-sm truncate ${
-                      hasUnread ? 'text-white font-bold' : 'text-white font-medium'
-                    }`}>
-                      {chat.otherUser?.name || 'Unknown User'}
-                    </h3>
-                    {chat.otherUser?.username && (
-                      <p className="text-xs text-zinc-400 truncate">
-                        @{chat.otherUser.username}
-                      </p>
-                    )}
-                  </div>
-                  {chat.lastMessage?.timestamp && (
-                    <div className="flex items-center text-xs text-zinc-400 ml-2">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {formatTimestamp(chat.lastMessage.timestamp)}
-                    </div>
-                  )}
-                </div>
-                
-                {chat.lastMessage ? (
-                  <p className={`text-sm truncate ${
-                    hasUnread ? 'text-zinc-200 font-medium' : 'text-zinc-300'
-                  }`}>
-                    {chat.lastMessage.text}
-                  </p>
-                ) : (
-                  <p className="text-sm text-zinc-500 italic">No messages yet</p>
-                )}
-              </div>
+              {hasUnread && (
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-blue-500 rounded-full border-2 border-zinc-950" />
+              )}
             </div>
-          </div>
+
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className={`text-sm truncate ${hasUnread ? 'font-semibold text-white' : 'font-medium text-zinc-200'}`}>
+                  {name}
+                </span>
+                {chat.lastMessage?.timestamp && (
+                  <span className="text-xs text-zinc-500 shrink-0">
+                    {formatTimestamp(chat.lastMessage.timestamp)}
+                  </span>
+                )}
+              </div>
+              {chat.lastMessage ? (
+                <p className={`text-xs truncate mt-0.5 ${hasUnread ? 'text-zinc-300 font-medium' : 'text-zinc-500'}`}>
+                  {chat.lastMessage.text}
+                </p>
+              ) : (
+                <p className="text-xs text-zinc-600 mt-0.5 italic">No messages yet</p>
+              )}
+            </div>
+          </button>
         );
       })}
     </div>
