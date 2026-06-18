@@ -239,21 +239,45 @@ export async function prepareTrustedCheckout(params: {
   if (!primarySellerId) {
     throw new Error('Unable to determine seller for checkout');
   }
-  const uniqueSellerIds = new Set(orderItems.map((item) => item.sellerId));
-  if (uniqueSellerIds.size > 1) {
-    throw new Error('Checkout currently supports one seller per order. Split your cart by seller and try again.');
+
+  // Group loaded listings by seller for per-seller shipping quotes.
+  const sellerListingsMap = new Map<string, Array<{ shipping?: ListingShippingShape | null }>>();
+  for (let i = 0; i < orderItems.length; i++) {
+    const sid = orderItems[i].sellerId;
+    if (!sellerListingsMap.has(sid)) sellerListingsMap.set(sid, []);
+    sellerListingsMap.get(sid)!.push(loadedListings[i]);
   }
 
-  const trustedShipping = await quoteTrustedShipping({
-    sellerId: primarySellerId,
-    buyerAddress: trustedShippingAddress,
-    selectedShipping: params.selectedShipping,
-    listings: loadedListings,
-  });
+  const uniqueSellerIds = [...sellerListingsMap.keys()];
+
+  // Quote shipping for each seller in parallel.
+  const sellerRates = await Promise.all(
+    uniqueSellerIds.map(async (sid) => {
+      const rate = await quoteTrustedShipping({
+        sellerId: sid,
+        buyerAddress: trustedShippingAddress,
+        selectedShipping: params.selectedShipping,
+        listings: sellerListingsMap.get(sid)!,
+      });
+      return { sellerId: sid, ...rate };
+    })
+  );
+
+  const totalShippingPrice = sellerRates.reduce((sum, r) => sum + r.price, 0);
+
+  // shippingRate holds the combined total; individual rates stored in sellerShippingRates.
+  const combinedShippingRate = sellerRates.length === 1
+    ? sellerRates[0]
+    : {
+        ...sellerRates[0],
+        price: totalShippingPrice,
+        carrier: 'Multiple',
+        serviceName: 'Multi-seller shipping',
+      };
 
   const totals = calculateCheckoutTotals(
     subtotal,
-    trustedShipping.price,
+    totalShippingPrice,
     typeof params.taxRate === 'number' ? params.taxRate : DEFAULT_TAX_RATE
   );
 
@@ -261,7 +285,8 @@ export async function prepareTrustedCheckout(params: {
     ...totals,
     orderItems,
     shippingAddress: trustedShippingAddress,
-    shippingRate: trustedShipping,
+    shippingRate: combinedShippingRate,
+    sellerShippingRates: sellerRates.length > 1 ? sellerRates : undefined,
   };
 }
 

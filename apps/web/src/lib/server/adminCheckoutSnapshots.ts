@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebase-admin';
-import type { CheckoutSnapshot, CheckoutSnapshotItem } from '@/lib/types/firestore';
+import type { CheckoutSnapshot, CheckoutSnapshotItem, SellerShippingRate } from '@/lib/types/firestore';
 import { COLLECTIONS } from '@/lib/types/firestore';
 
 const COL = COLLECTIONS.CHECKOUT_SNAPSHOTS;
@@ -19,6 +19,7 @@ export async function createCheckoutSnapshotAdmin(
     total: number;
     shippingAddress: CheckoutSnapshot['shippingAddress'];
     shippingRate: CheckoutSnapshot['shippingRate'];
+    sellerShippingRates?: SellerShippingRate[];
     currency: string;
   }
 ): Promise<void> {

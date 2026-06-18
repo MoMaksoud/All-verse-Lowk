@@ -75,6 +75,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       total: checkout.total,
       shippingAddress: checkout.shippingAddress,
       shippingRate: checkout.shippingRate,
+      sellerShippingRates: checkout.sellerShippingRates,
       currency: 'USD',
     });
 

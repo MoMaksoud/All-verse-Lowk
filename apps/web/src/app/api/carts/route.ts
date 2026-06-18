@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { withApi } from "@/lib/withApi";
 import {
   addToCartAdmin,
@@ -8,8 +9,22 @@ import {
   updateCartItemAdmin,
 } from "@/lib/server/adminCarts";
 import { success, error } from "@/lib/response";
-import { badRequest, unauthorized } from "@marketplace/shared-logic";
-import { AddToCartInput } from "@/lib/types/firestore";
+import { badRequest } from "@marketplace/shared-logic";
+import type { AddToCartInput, UpdateCartItemInput } from "@/lib/types/firestore";
+
+const MAX_QTY_PER_ITEM = 10;
+
+const addToCartSchema = z.object({
+  listingId: z.string().min(1, 'listingId is required'),
+  sellerId: z.string().min(1, 'sellerId is required'),
+  qty: z.number().int().min(1).max(MAX_QTY_PER_ITEM, `qty cannot exceed ${MAX_QTY_PER_ITEM}`),
+  priceAtAdd: z.number().positive('priceAtAdd must be positive'),
+});
+
+const updateCartSchema = z.object({
+  listingId: z.string().min(1, 'listingId is required'),
+  qty: z.number().int().min(1).max(MAX_QTY_PER_ITEM, `qty cannot exceed ${MAX_QTY_PER_ITEM}`),
+});
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,16 +41,15 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const body = await req.json() as AddToCartInput;
-    
-    // Validate required fields
-    if (!body.listingId || !body.sellerId || !body.qty || !body.priceAtAdd) {
-      return error(badRequest("Missing required fields: listingId, sellerId, qty, priceAtAdd"));
+    const raw = await req.json();
+    const parsed = addToCartSchema.safeParse(raw);
+    if (!parsed.success) {
+      return error(badRequest(parsed.error.errors[0]?.message ?? 'Invalid request'));
     }
 
-    await addToCartAdmin(req.userId, body);
+    await addToCartAdmin(req.userId, parsed.data as AddToCartInput);
     const updatedCart = await getCartAdmin(req.userId);
-    
+
     return success(updatedCart, { status: 201 });
   } catch (err) {
     console.error('Error adding to cart:', err);
@@ -45,15 +59,15 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
 export const PUT = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const body = await req.json() as { listingId: string; qty: number };
-    
-    if (!body.listingId || body.qty === undefined) {
-      return error(badRequest("Missing required fields: listingId, qty"));
+    const raw = await req.json();
+    const parsed = updateCartSchema.safeParse(raw);
+    if (!parsed.success) {
+      return error(badRequest(parsed.error.errors[0]?.message ?? 'Invalid request'));
     }
 
-    await updateCartItemAdmin(req.userId, body);
+    await updateCartItemAdmin(req.userId, parsed.data as UpdateCartItemInput);
     const updatedCart = await getCartAdmin(req.userId);
-    
+
     return success(updatedCart);
   } catch (err) {
     console.error('Error updating cart item:', err);

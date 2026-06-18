@@ -403,6 +403,15 @@ export interface CheckoutSnapshotItem {
   unitPrice: number;
 }
 
+export interface SellerShippingRate {
+  sellerId: string;
+  carrier: string;
+  serviceName: string;
+  price: number;
+  rateId: string;
+  shipmentId: string;
+}
+
 export interface CheckoutSnapshot {
   buyerId: string;
   sessionId: string;
@@ -419,6 +428,7 @@ export interface CheckoutSnapshot {
     zip: string;
     country: string;
   };
+  /** Combined shipping total across all sellers. Primary rate for single-seller carts. */
   shippingRate: {
     carrier: string;
     serviceName: string;
@@ -426,6 +436,8 @@ export interface CheckoutSnapshot {
     rateId: string;
     shipmentId: string;
   };
+  /** Per-seller shipping quotes (populated for multi-seller carts). */
+  sellerShippingRates?: SellerShippingRate[];
   currency: string;
   createdAt: Timestamp;
   expiresAt: Timestamp;
