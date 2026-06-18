@@ -87,7 +87,8 @@ Give a concise, honest price recommendation. Include:
 2. 1–2 sentences explaining why, referencing the condition and any comparable listings above
 3. One actionable tip (e.g. when to go higher or lower)
 
-Be direct and specific. Do not use filler phrases. Keep the total response under 100 words.`;
+Be direct and specific. Do not use filler phrases. Keep the total response under 100 words.
+Use plain text only — no markdown, no asterisks, no bold, no bullet points.`;
 
   try {
     const result = await GeminiService.generateResponse(prompt);

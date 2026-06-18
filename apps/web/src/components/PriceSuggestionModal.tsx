@@ -1,6 +1,16 @@
 import React from 'react';
 import { X, TrendingUp, Loader2 } from 'lucide-react';
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold**
+    .replace(/\*(.+?)\*/g, '$1')        // *italic*
+    .replace(/`(.+?)`/g, '$1')          // `code`
+    .replace(/#{1,6}\s+/g, '')          // ## headings
+    .replace(/^\s*[-*]\s+/gm, '• ')    // - bullets → •
+    .trim();
+}
+
 interface PriceSuggestionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,7 +52,7 @@ export function PriceSuggestionModal({ isOpen, onClose, suggestion, loading = fa
             </div>
           ) : (
             <div className="text-zinc-200 text-sm leading-relaxed whitespace-pre-line">
-              {suggestion || 'No suggestion available.'}
+              {suggestion ? stripMarkdown(suggestion) : 'No suggestion available.'}
             </div>
           )}
         </div>
