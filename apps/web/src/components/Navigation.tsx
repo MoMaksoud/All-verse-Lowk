@@ -12,6 +12,7 @@ import {
   MessageCircle, 
   ShoppingBag, 
   Heart, 
+  Bot, 
   LogOut, 
   ChevronDown, 
   UserCircle, 
@@ -30,6 +31,7 @@ import { useChats } from '@/hooks/useChats';
 const navigation = [
   { name: 'Home', href: '/', icon: ShoppingBag },
   { name: 'Marketplace', href: '/listings', icon: ShoppingBag },
+  { name: 'AI Assistant', href: '/ai', icon: Bot },
   { name: 'Messages', href: '/messages', icon: MessageCircle },
 ];
 
@@ -227,7 +229,7 @@ const Navigation = memo(function Navigation() {
                   }}
                   prefetch={true}
                   className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 whitespace-nowrap shrink-0 ${
-                    resolvedPathname === item.href
+                    (item.href === '/' ? resolvedPathname === '/' : resolvedPathname.startsWith(item.href))
                       ? 'text-accent-400 bg-dark-700/50'
                       : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
                   }`}

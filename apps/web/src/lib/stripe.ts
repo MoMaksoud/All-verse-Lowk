@@ -8,22 +8,23 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 /**
  * Create a Stripe Checkout Session (mode: payment).
- * Call this after creating the order in Firestore; pass orderId in metadata.
+ * Does NOT create a Firestore order — the order is created atomically in the
+ * payment webhook after the buyer pays. Pass buyerId so the webhook can look
+ * up the checkout snapshot by session.id.
  */
 export async function createCheckoutSession(params: {
   amountTotalCents: number;
-  orderId: string;
+  buyerId: string;
   successUrl: string;
   cancelUrl: string;
   description?: string;
 }) {
   try {
-    // Auto-expire unpaid checkout sessions faster to reduce stale pending orders.
     const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      client_reference_id: params.orderId,
+      client_reference_id: params.buyerId,
       line_items: [
         {
           quantity: 1,
@@ -41,11 +42,11 @@ export async function createCheckoutSession(params: {
       cancel_url: params.cancelUrl,
       expires_at: expiresAt,
       metadata: {
-        orderId: params.orderId,
+        buyerId: params.buyerId,
       },
       payment_intent_data: {
         metadata: {
-          orderId: params.orderId,
+          buyerId: params.buyerId,
         },
       },
     });

@@ -2,13 +2,11 @@ import { NextRequest } from 'next/server';
 import { createCheckoutSession } from '@/lib/stripe';
 import { withApi } from '@/lib/withApi';
 import { getCartAdmin } from '@/lib/server/adminCarts';
-import { createOrderAdmin, updateOrderAdmin } from '@/lib/server/adminOrders';
-import { createPaymentAdmin } from '@/lib/server/adminPayments';
-import { assertStripeAndSendGridConfig } from '@/lib/config';
+import { createCheckoutSnapshotAdmin } from '@/lib/server/adminCheckoutSnapshots';
+import { assertStripeConfig } from '@/lib/config';
 import { prepareTrustedCheckout, getCheckoutBaseUrl } from '@/lib/payments/checkout';
 import { DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
 import { fail, ok } from '@/lib/api/responses';
-import type { CreateOrderInput } from '@/lib/types/firestore';
 import { serverLogger } from '@/lib/server/logger';
 
 export const runtime = 'nodejs';
@@ -16,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    assertStripeAndSendGridConfig();
+    assertStripeConfig();
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Config validation failed';
     return fail({ status: 500, code: 'ENV_CONFIG_MISSING', message: msg });
@@ -26,7 +24,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     const body = await req.json();
     const { shippingAddress, selectedShipping } = body;
 
-    // Source of truth: user's server-side cart, not client-submitted cart payload.
+    // Source of truth: server-side cart, not client payload.
     const userCart = await getCartAdmin(req.userId);
     const cartItems = userCart?.items ?? [];
     if (cartItems.length === 0) {
@@ -37,6 +35,8 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       });
     }
 
+    // Validate listings + lock pricing + get shipping quote.
+    // No order is written to Firestore yet — that happens after payment succeeds.
     const checkout = await prepareTrustedCheckout({
       cartItems,
       shippingAddress,
@@ -44,33 +44,19 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       taxRate: DEFAULT_TAX_RATE,
     });
 
-    const orderData: CreateOrderInput = {
-      buyerId: req.userId,
-      items: checkout.orderItems,
-      subtotal: checkout.subtotal,
-      fees: checkout.fees,
-      tax: checkout.tax,
-      total: checkout.total,
-      currency: 'USD',
-      shippingAddress: checkout.shippingAddress,
-      shipping: checkout.shippingRate,
-    };
-
-    const orderId = await createOrderAdmin(orderData);
-
     const baseUrl = getCheckoutBaseUrl();
     const successUrl = `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${baseUrl}/cart`;
-    
+
     const result = await createCheckoutSession({
       amountTotalCents: Math.round(checkout.total * 100),
-      orderId,
+      buyerId: req.userId,
       successUrl,
       cancelUrl,
-      description: `Order #${orderId.slice(0, 8)}`,
+      description: 'Marketplace order',
     });
 
-    if (!result.success || !result.url) {
+    if (!result.success || !result.url || !result.sessionId) {
       return fail({
         status: 500,
         code: 'CHECKOUT_SESSION_CREATE_FAILED',
@@ -78,29 +64,30 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       });
     }
 
-    await updateOrderAdmin(orderId, {
-      checkoutSessionId: result.sessionId,
+    // Persist the validated cart snapshot keyed by Stripe session ID.
+    // The webhook reads this snapshot and creates the order atomically after payment.
+    await createCheckoutSnapshotAdmin(result.sessionId, {
+      buyerId: req.userId,
+      items: checkout.orderItems,
+      subtotal: checkout.subtotal,
+      tax: checkout.tax,
+      fees: checkout.fees,
+      total: checkout.total,
+      shippingAddress: checkout.shippingAddress,
+      shippingRate: checkout.shippingRate,
+      currency: 'USD',
     });
 
-    await createPaymentAdmin({
-      orderId,
-      userId: req.userId,
-      amount: checkout.total,
-      currency: 'USD',
-      stripeEventId: result.sessionId!,
-      status: 'pending',
-    });
     serverLogger.info('checkout_session_created', {
       route: 'api/payments/create-checkout-session',
-      orderId,
       userId: req.userId,
       sessionId: result.sessionId,
+      total: checkout.total,
     });
 
     return ok({
       url: result.url,
       sessionId: result.sessionId,
-      orderId,
       total: checkout.total,
       subtotal: checkout.subtotal,
       tax: checkout.tax,

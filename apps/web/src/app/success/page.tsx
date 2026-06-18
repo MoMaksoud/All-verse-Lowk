@@ -23,12 +23,24 @@ function SuccessContent() {
     }
 
     let cancelled = false;
-    (async () => {
+    let attempts = 0;
+    const MAX_ATTEMPTS = 8;
+    const RETRY_MS = 2000;
+
+    const poll = async () => {
       try {
         const { apiGet } = await import('@/lib/api-client');
         const res = await apiGet(`/api/payments/confirm?session_id=${encodeURIComponent(sessionId.trim())}`);
         const data = await res.json();
         if (cancelled) return;
+
+        // 202 = webhook hasn't fired yet — retry after a short delay.
+        if (res.status === 202 && attempts < MAX_ATTEMPTS) {
+          attempts++;
+          setTimeout(poll, RETRY_MS);
+          return;
+        }
+
         if (!res.ok) {
           setError(data.error || 'Could not confirm order');
           return;
@@ -43,7 +55,9 @@ function SuccessContent() {
       } catch {
         if (!cancelled) setError('Could not confirm order');
       }
-    })();
+    };
+
+    poll();
     return () => { cancelled = true; };
   }, [sessionId]);
 

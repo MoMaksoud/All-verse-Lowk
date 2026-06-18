@@ -391,6 +391,51 @@ export interface ListingPhotoUpload {
 }
 
 // ============================================================================
+// CHECKOUT SNAPSHOTS COLLECTION
+// Stores validated cart + pricing locked at Stripe session creation time.
+// Order is NOT created until after payment succeeds (in webhook transaction).
+// ============================================================================
+export interface CheckoutSnapshotItem {
+  listingId: string;
+  title: string;
+  sellerId: string;
+  qty: number;
+  unitPrice: number;
+}
+
+export interface CheckoutSnapshot {
+  buyerId: string;
+  sessionId: string;
+  items: CheckoutSnapshotItem[];
+  subtotal: number;
+  tax: number;
+  fees: number;
+  total: number;
+  shippingAddress: {
+    name: string;
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  shippingRate: {
+    carrier: string;
+    serviceName: string;
+    price: number;
+    rateId: string;
+    shipmentId: string;
+  };
+  currency: string;
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+  /** pending → processed (order created) | expired (session expired) | cancelled */
+  status: 'pending' | 'processed' | 'expired' | 'cancelled';
+  orderId?: string;
+  processedAt?: Timestamp;
+}
+
+// ============================================================================
 // COLLECTION NAMES
 // ============================================================================
 export const COLLECTIONS = {
@@ -403,6 +448,7 @@ export const COLLECTIONS = {
   CHATS: 'chats',
   PROFILE_PHOTOS: 'profile_photos',
   LISTING_PHOTOS: 'listing_photos',
+  CHECKOUT_SNAPSHOTS: 'checkout_snapshots',
 } as const;
 
 export type CollectionName = typeof COLLECTIONS[keyof typeof COLLECTIONS];

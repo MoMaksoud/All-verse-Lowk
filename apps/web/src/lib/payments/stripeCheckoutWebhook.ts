@@ -1,41 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { verifyWebhookSignature, transferToSeller, calculateSellerPayout, PLATFORM_SERVICE_FEE_PERCENT, stripe } from '@/lib/stripe';
+import {
+  verifyWebhookSignature,
+  transferToSeller,
+  calculateSellerPayout,
+  PLATFORM_SERVICE_FEE_PERCENT,
+  stripe,
+} from '@/lib/stripe';
 import { sendOrderConfirmationEmail, sendSellerNotificationEmail } from '@/lib/email';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { logEmail } from '@/lib/emailLog';
 import { assertStripeWebhookConfig, getMissingSendGridVars } from '@/lib/config';
-import { canTransitionOrderStatus } from '@/lib/authz';
-import { getOrderAdmin, updateOrderAdmin } from '@/lib/server/adminOrders';
-import {
-  createPaymentAdmin,
-  getPaymentsByOrderAdmin,
-  updatePaymentAdmin,
-} from '@/lib/server/adminPayments';
-import { clearCartAdmin } from '@/lib/server/adminCarts';
-import { updateInventoryAdmin } from '@/lib/server/adminListings';
+import { getOrderAdmin, updateOrderAdmin, createOrderFromSnapshotAdmin } from '@/lib/server/adminOrders';
+import { createPaymentAdmin, getPaymentsByOrderAdmin, updatePaymentAdmin } from '@/lib/server/adminPayments';
 import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
+import {
+  getCheckoutSnapshotAdmin,
+  markSnapshotExpiredAdmin,
+} from '@/lib/server/adminCheckoutSnapshots';
 import type { FirestoreOrder, PayoutTransferRecord } from '@/lib/types/firestore';
 import { serverLogger } from '@/lib/server/logger';
 
 const WEBHOOK_LOCK_TTL_MS = 5 * 60 * 1000;
 
 function getAppBaseUrl(): string {
-  // Strip inline comments (e.g. "https://x.com  # note") from env values
   const raw = process.env.NEXT_PUBLIC_APP_URL || 'https://allversegpt.com';
   return raw.split(/\s/)[0].replace(/\/$/, '');
 }
 
 function getPaymentIntentId(session: Stripe.Checkout.Session): string | undefined {
-  if (typeof session.payment_intent === 'string') {
-    return session.payment_intent;
-  }
-
-  if (session.payment_intent && typeof session.payment_intent === 'object') {
-    return session.payment_intent.id;
-  }
-
+  if (typeof session.payment_intent === 'string') return session.payment_intent;
+  if (session.payment_intent && typeof session.payment_intent === 'object') return session.payment_intent.id;
   return undefined;
 }
 
@@ -46,24 +42,15 @@ async function acquireEventLock(eventId: string, eventType: string) {
   const result = await adminDb.runTransaction(async (tx) => {
     const snap = await tx.get(eventRef);
     const existing = snap.data() as
-      | {
-          processed?: boolean;
-          processing?: boolean;
-          processingStartedAt?: number;
-        }
+      | { processed?: boolean; processing?: boolean; processingStartedAt?: number }
       | undefined;
 
     const now = Date.now();
     const processingStartedAt = existing?.processingStartedAt ?? 0;
     const processingIsFresh = now - processingStartedAt < WEBHOOK_LOCK_TTL_MS;
 
-    if (existing?.processed === true) {
-      return 'processed' as const;
-    }
-
-    if (existing?.processing === true && processingIsFresh) {
-      return 'processing' as const;
-    }
+    if (existing?.processed === true) return 'processed' as const;
+    if (existing?.processing === true && processingIsFresh) return 'processing' as const;
 
     tx.set(
       eventRef,
@@ -74,18 +61,22 @@ async function acquireEventLock(eventId: string, eventType: string) {
         processing: true,
         processingStartedAt: now,
         updatedAt: FieldValue.serverTimestamp(),
-        createdAt: snap.exists ? snap.get('createdAt') ?? FieldValue.serverTimestamp() : FieldValue.serverTimestamp(),
+        createdAt: snap.exists
+          ? snap.get('createdAt') ?? FieldValue.serverTimestamp()
+          : FieldValue.serverTimestamp(),
       },
       { merge: true }
     );
-
     return 'acquired' as const;
   });
 
   return { eventRef, result };
 }
 
-async function markEventCompleted(eventRef: FirebaseFirestore.DocumentReference, orderId: string) {
+async function markEventCompleted(
+  eventRef: FirebaseFirestore.DocumentReference,
+  orderId: string
+) {
   await eventRef.set(
     {
       processed: true,
@@ -99,7 +90,10 @@ async function markEventCompleted(eventRef: FirebaseFirestore.DocumentReference,
   );
 }
 
-async function markEventFailed(eventRef: FirebaseFirestore.DocumentReference, error: unknown) {
+async function markEventFailed(
+  eventRef: FirebaseFirestore.DocumentReference,
+  error: unknown
+) {
   await eventRef.set(
     {
       processed: false,
@@ -110,112 +104,6 @@ async function markEventFailed(eventRef: FirebaseFirestore.DocumentReference, er
     },
     { merge: true }
   );
-}
-
-async function markOrderPaid(orderId: string, paymentIntentId: string | undefined, checkoutSessionId: string) {
-  const current = await getOrderAdmin(orderId);
-  if (!current) {
-    throw new Error(`Order ${orderId} not found before paid transition`);
-  }
-  if (current.status === 'cancelled') {
-    throw new Error(`Cannot mark cancelled order ${orderId} as paid`);
-  }
-
-  const alreadySettled = current.status === 'paid' || current.status === 'shipped' || current.status === 'delivered';
-  if (!alreadySettled) {
-    const canSystemMarkPaid = canTransitionOrderStatus(current.status, 'paid', 'system');
-    if (!canSystemMarkPaid) {
-      throw new Error(`Invalid system transition ${current.status} -> paid for ${orderId}`);
-    }
-  }
-
-  const updates: Record<string, unknown> = {
-    checkoutSessionId,
-  };
-  if (!alreadySettled) {
-    updates.status = 'paid';
-    updates.paidAt = FieldValue.serverTimestamp();
-  }
-
-  if (paymentIntentId) {
-    updates.paymentIntentId = paymentIntentId;
-  }
-
-  await updateOrderAdmin(orderId, updates);
-
-  const payments = await getPaymentsByOrderAdmin(orderId);
-  if (payments.length === 0) {
-    return;
-  }
-
-  await Promise.all(
-    payments
-      .filter((payment) => payment.status !== 'succeeded')
-      .map((payment) => updatePaymentAdmin(payment.id, { status: 'succeeded' }))
-  );
-}
-
-async function markOrderCancelled(orderId: string, checkoutSessionId: string) {
-  const order = await getOrderAdmin(orderId);
-  if (!order) {
-    return;
-  }
-  if (order.status === 'cancelled') {
-    return;
-  }
-  const canSystemCancel = canTransitionOrderStatus(order.status, 'cancelled', 'system');
-  if (!canSystemCancel) {
-    return;
-  }
-
-  await updateOrderAdmin(orderId, {
-    status: 'cancelled',
-    checkoutSessionId,
-  });
-
-  const payments = await getPaymentsByOrderAdmin(orderId);
-  if (payments.length === 0) {
-    return;
-  }
-
-  await Promise.all(
-    payments
-      .filter((payment) => payment.status === 'pending')
-      .map((payment) => updatePaymentAdmin(payment.id, { status: 'failed' }))
-  );
-}
-
-function assertSessionMatchesOrder(session: Stripe.Checkout.Session, order: (FirestoreOrder & { id: string }) | null) {
-  if (!order) {
-    throw new Error('Order missing for reconciliation');
-  }
-
-  if (session.payment_status !== 'paid') {
-    throw new Error(`Checkout session ${session.id} is not paid (status: ${session.payment_status})`);
-  }
-
-  if (typeof session.client_reference_id === 'string' && session.client_reference_id.trim()) {
-    if (order.id && session.client_reference_id.trim() !== order.id) {
-      throw new Error(
-        `Checkout reference mismatch for ${session.id}: expected ${order.id}, got ${session.client_reference_id}`
-      );
-    }
-  }
-
-  if (typeof session.amount_total === 'number') {
-    const expectedAmountCents = Math.round(order.total * 100);
-    if (session.amount_total !== expectedAmountCents) {
-      throw new Error(
-        `Checkout amount mismatch for ${session.id}: expected ${expectedAmountCents}, got ${session.amount_total}`
-      );
-    }
-  }
-
-  if (typeof session.currency === 'string' && session.currency.toLowerCase() !== order.currency.toLowerCase()) {
-    throw new Error(
-      `Checkout currency mismatch for ${session.id}: expected ${order.currency}, got ${session.currency}`
-    );
-  }
 }
 
 async function ensurePaymentRecord(params: {
@@ -229,12 +117,11 @@ async function ensurePaymentRecord(params: {
   if (existingPayments.length > 0) {
     await Promise.all(
       existingPayments
-        .filter((payment) => payment.status !== 'succeeded')
-        .map((payment) => updatePaymentAdmin(payment.id, { status: 'succeeded' }))
+        .filter((p) => p.status !== 'succeeded')
+        .map((p) => updatePaymentAdmin(p.id, { status: 'succeeded' }))
     );
     return;
   }
-
   await createPaymentAdmin({
     orderId: params.orderId,
     userId: params.userId,
@@ -250,14 +137,7 @@ async function processOrderEmails(params: {
   sessionId: string;
   order: FirestoreOrder | null;
 }) {
-  const order = params.order;
-  if (!order) {
-    return;
-  }
-
-  if (order.emailSent === true) {
-    return;
-  }
+  if (!params.order || params.order.emailSent === true) return;
 
   const missingSendGrid = getMissingSendGridVars();
   if (missingSendGrid.length > 0) {
@@ -269,8 +149,8 @@ async function processOrderEmails(params: {
   }
 
   const auth = getAdminAuth();
-  const buyerProfile = await getProfileDocumentAdmin(order.buyerId);
-  const buyerUser = auth ? await auth.getUser(order.buyerId) : null;
+  const buyerProfile = await getProfileDocumentAdmin(params.order.buyerId);
+  const buyerUser = auth ? await auth.getUser(params.order.buyerId) : null;
   const buyerEmail = buyerUser?.email;
   let allEmailsOk = true;
 
@@ -280,29 +160,25 @@ async function processOrderEmails(params: {
         orderId: params.orderId,
         buyerName: buyerProfile.displayName || 'Customer',
         buyerEmail,
-        items: order.items.map((item) => ({
+        items: params.order.items.map((item) => ({
           title: item.title,
           qty: item.qty,
           unitPrice: item.unitPrice,
         })),
-        subtotal: order.subtotal,
-        tax: order.tax,
-        fees: order.fees,
-        total: order.total,
-        shippingAddress: order.shippingAddress,
+        subtotal: params.order.subtotal,
+        tax: params.order.tax,
+        fees: params.order.fees,
+        total: params.order.total,
+        shippingAddress: params.order.shippingAddress,
         stripeReference: params.sessionId,
       });
-
       await logEmail(
         'order_confirmation',
         buyerEmail,
         buyerResult.success ? 'success' : 'failed',
         { orderId: params.orderId, error: buyerResult.error }
       );
-
-      if (!buyerResult.success) {
-        allEmailsOk = false;
-      }
+      if (!buyerResult.success) allEmailsOk = false;
     } catch (error) {
       allEmailsOk = false;
       await logEmail('order_confirmation', buyerEmail, 'failed', {
@@ -312,17 +188,11 @@ async function processOrderEmails(params: {
     }
   }
 
-  for (const item of order.items) {
+  for (const item of params.order.items) {
     const sellerProfile = await getProfileDocumentAdmin(item.sellerId);
-    if (!sellerProfile) {
-      continue;
-    }
-
     const sellerUser = auth ? await auth.getUser(item.sellerId) : null;
     const sellerEmail = sellerUser?.email;
-    if (!sellerEmail) {
-      continue;
-    }
+    if (!sellerProfile || !sellerEmail) continue;
 
     try {
       const itemTotal = item.unitPrice * item.qty;
@@ -338,17 +208,13 @@ async function processOrderEmails(params: {
         stripeReference: params.sessionId,
         sellerOrdersUrl: `${getAppBaseUrl()}/sales`,
       });
-
       await logEmail(
         'seller_notification',
         sellerEmail,
         sellerResult.success ? 'success' : 'failed',
         { orderId: params.orderId, error: sellerResult.error }
       );
-
-      if (!sellerResult.success) {
-        allEmailsOk = false;
-      }
+      if (!sellerResult.success) allEmailsOk = false;
     } catch (error) {
       allEmailsOk = false;
       await logEmail('seller_notification', sellerEmail, 'failed', {
@@ -371,32 +237,28 @@ type PayoutTransferWrite = Omit<PayoutTransferRecord, 'at'> & { at: unknown };
 type PayoutTransferAttempt = {
   failures: PayoutFailureRecord[];
   successes: PayoutTransferWrite[];
-  /** Sellers skipped because they have no Stripe Connect account yet. */
   pendingConnect: string[];
 };
 
-/**
- * Attempts Stripe Connect transfers per line item. Does not throw on transfer failure;
- * returns structured failures for persistence on the order document.
- */
-async function transferToSellersForOrder(order: FirestoreOrder & { id: string }): Promise<PayoutTransferAttempt> {
+async function transferToSellersForOrder(
+  order: FirestoreOrder & { id: string }
+): Promise<PayoutTransferAttempt> {
   const failures: PayoutFailureRecord[] = [];
   const successes: PayoutTransferWrite[] = [];
   const pendingConnect: string[] = [];
-  const alreadyTransferredKeys = new Set((order.payoutTransferIds || []).map((t) => t.lineKey));
+  const alreadyTransferredKeys = new Set(
+    (order.payoutTransferIds || []).map((t) => t.lineKey)
+  );
 
   for (const [lineIndex, item] of order.items.entries()) {
     const lineKey = `${order.id}:${lineIndex}:${item.listingId}:${item.sellerId}`;
-    if (alreadyTransferredKeys.has(lineKey)) {
-      continue;
-    }
+    if (alreadyTransferredKeys.has(lineKey)) continue;
 
     const itemTotal = item.unitPrice * item.qty;
     const { sellerPayout } = calculateSellerPayout(itemTotal, PLATFORM_SERVICE_FEE_PERCENT);
     const sellerProfile = await getProfileDocumentAdmin(item.sellerId);
 
-    if (!sellerProfile?.stripeConnectAccountId || !sellerProfile?.stripeConnectOnboardingComplete) {
-      // Seller has not set up Stripe Connect — track for retry once they onboard.
+    if (!sellerProfile?.stripeConnectAccountId || !sellerProfile.stripeConnectOnboardingComplete) {
       pendingConnect.push(item.sellerId);
       serverLogger.warn('stripe_webhook_payout_no_connect', {
         orderId: order.id,
@@ -410,18 +272,16 @@ async function transferToSellersForOrder(order: FirestoreOrder & { id: string })
     const transferIdempotencyKey = `payout_${order.id}_${lineIndex}_${item.listingId}_${item.sellerId}`
       .replace(/[^a-zA-Z0-9_]/g, '')
       .slice(0, 200);
+
     const transferResult = await transferToSeller(
       sellerProfile.stripeConnectAccountId,
       sellerPayout,
       order.id,
       transferIdempotencyKey
     );
+
     if (!transferResult.success) {
-      failures.push({
-        sellerId: item.sellerId,
-        listingId: item.listingId,
-        error: transferResult.error || 'unknown error',
-      });
+      failures.push({ sellerId: item.sellerId, listingId: item.listingId, error: transferResult.error || 'unknown error' });
     } else if (transferResult.transferId) {
       successes.push({
         lineKey,
@@ -438,8 +298,6 @@ async function transferToSellersForOrder(order: FirestoreOrder & { id: string })
 }
 
 export async function POST(req: NextRequest) {
-  // Only Stripe webhook vars are required to process payments.
-  // SendGrid is optional — missing vars skip email but don't block fulfillment.
   try {
     assertStripeWebhookConfig();
   } catch (err) {
@@ -460,15 +318,10 @@ export async function POST(req: NextRequest) {
   try {
     const payload = await req.text();
     const signature = req.headers.get('stripe-signature');
-
-    if (!signature) {
-      return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
-    }
+    if (!signature) return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
 
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
-    }
+    if (!webhookSecret) return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
 
     const verification = verifyWebhookSignature(payload, signature, webhookSecret);
     if (!verification.success || !verification.event) {
@@ -481,25 +334,22 @@ export async function POST(req: NextRequest) {
       eventId: event.id,
       eventType: event.type,
     });
-    if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') {
+
+    // ── Expired / failed sessions ──────────────────────────────────────────
+    if (
+      event.type === 'checkout.session.expired' ||
+      event.type === 'checkout.session.async_payment_failed'
+    ) {
       const lock = await acquireEventLock(event.id, event.type);
       eventRef = lock.eventRef;
-
-      if (lock.result === 'processed') {
-        return NextResponse.json({ received: true, idempotent: true }, { status: 200 });
-      }
-
-      if (lock.result === 'processing') {
-        return NextResponse.json({ received: true, processing: true }, { status: 200 });
-      }
+      if (lock.result === 'processed') return NextResponse.json({ received: true, idempotent: true }, { status: 200 });
+      if (lock.result === 'processing') return NextResponse.json({ received: true, processing: true }, { status: 200 });
 
       const session = event.data.object as Stripe.Checkout.Session;
-      const orderId = typeof session.metadata?.orderId === 'string' ? session.metadata.orderId.trim() : '';
-      if (orderId) {
-        await markOrderCancelled(orderId, session.id);
-      }
+      // Mark snapshot expired so ops can see it; no order to cancel.
+      await markSnapshotExpiredAdmin(session.id);
 
-      await markEventCompleted(eventRef, orderId || 'n/a');
+      await markEventCompleted(eventRef, 'n/a');
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
@@ -510,6 +360,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
+    // ── Payment succeeded ──────────────────────────────────────────────────
     const lock = await acquireEventLock(event.id, event.type);
     eventRef = lock.eventRef;
     serverLogger.info('stripe_webhook_lock_status', {
@@ -519,162 +370,141 @@ export async function POST(req: NextRequest) {
       lockResult: lock.result,
     });
 
-    if (lock.result === 'processed') {
-      return NextResponse.json({ received: true, idempotent: true }, { status: 200 });
-    }
-
-    if (lock.result === 'processing') {
-      return NextResponse.json({ received: true, processing: true }, { status: 200 });
-    }
+    if (lock.result === 'processed') return NextResponse.json({ received: true, idempotent: true }, { status: 200 });
+    if (lock.result === 'processing') return NextResponse.json({ received: true, processing: true }, { status: 200 });
 
     const session = event.data.object as Stripe.Checkout.Session;
     const fullSession = await stripe.checkout.sessions.retrieve(session.id, { expand: [] });
-    const orderId = typeof fullSession.metadata?.orderId === 'string' ? fullSession.metadata.orderId.trim() : '';
 
-    if (!orderId) {
-      throw new Error('Missing session.metadata.orderId');
+    if (fullSession.payment_status !== 'paid') {
+      throw new Error(`Session ${fullSession.id} payment_status is not 'paid': ${fullSession.payment_status}`);
     }
 
-    let order = await getOrderAdmin(orderId);
-    if (!order) {
-      throw new Error(`Order not found for orderId ${orderId}`);
+    // ── Load snapshot ──────────────────────────────────────────────────────
+    const snapshot = await getCheckoutSnapshotAdmin(fullSession.id);
+
+    if (!snapshot) {
+      // No snapshot means this session was created under the old flow (pre-deploy).
+      // Fall back: look for orderId in metadata and run the legacy path.
+      const legacyOrderId =
+        typeof fullSession.metadata?.orderId === 'string'
+          ? fullSession.metadata.orderId.trim()
+          : '';
+      if (!legacyOrderId) {
+        throw new Error(`No snapshot and no legacy orderId for session ${fullSession.id}`);
+      }
+      serverLogger.warn('stripe_webhook_legacy_order_path', {
+        sessionId: fullSession.id,
+        orderId: legacyOrderId,
+      });
+      await runLegacyOrderPath(fullSession, legacyOrderId, eventRef);
+      return NextResponse.json({ received: true, orderId: legacyOrderId }, { status: 200 });
     }
-    assertSessionMatchesOrder(fullSession, order);
-    if (
-      order.lastStripeCheckoutSessionId === fullSession.id &&
-      order.checkoutWebhookSettledAt
-    ) {
-      await markEventCompleted(eventRef, orderId);
-      return NextResponse.json({ received: true, idempotent: true, orderId }, { status: 200 });
+
+    // Idempotency: snapshot already processed means order exists.
+    if (snapshot.status === 'processed' && snapshot.orderId) {
+      await markEventCompleted(eventRef, snapshot.orderId);
+      serverLogger.info('stripe_webhook_idempotent_snapshot', {
+        sessionId: fullSession.id,
+        orderId: snapshot.orderId,
+      });
+      return NextResponse.json({ received: true, idempotent: true, orderId: snapshot.orderId }, { status: 200 });
+    }
+
+    // Validate amount before creating anything.
+    const expectedCents = Math.round(snapshot.total * 100);
+    if (typeof fullSession.amount_total === 'number' && fullSession.amount_total !== expectedCents) {
+      throw new Error(
+        `Amount mismatch for session ${fullSession.id}: expected ${expectedCents}, got ${fullSession.amount_total}`
+      );
     }
 
     const paymentIntentId = getPaymentIntentId(fullSession);
-    serverLogger.info('stripe_webhook_processing_paid', {
+    serverLogger.info('stripe_webhook_creating_order', {
+      route: 'api/stripe/webhook',
+      eventId: event.id,
+      sessionId: fullSession.id,
+      buyerId: snapshot.buyerId,
+      paymentIntentId,
+    });
+
+    // ── Atomic: create order + decrement inventory + clear cart ───────────
+    const orderId = await createOrderFromSnapshotAdmin(snapshot, {
+      paymentIntentId,
+      checkoutSessionId: fullSession.id,
+    });
+
+    serverLogger.info('stripe_webhook_order_created', {
       route: 'api/stripe/webhook',
       eventId: event.id,
       orderId,
       sessionId: fullSession.id,
-      paymentIntentId,
     });
-    await markOrderPaid(orderId, paymentIntentId, fullSession.id);
+
+    // ── Payment record ─────────────────────────────────────────────────────
     await ensurePaymentRecord({
       orderId,
-      userId: order.buyerId,
-      amount: order.total,
-      currency: order.currency,
+      userId: snapshot.buyerId,
+      amount: snapshot.total,
+      currency: snapshot.currency,
       stripeReference: paymentIntentId || fullSession.id,
     });
 
-    order = await getOrderAdmin(orderId);
-    if (!order) {
-      throw new Error(`Order not found after payment update for ${orderId}`);
-    }
+    // ── Seller payouts ─────────────────────────────────────────────────────
+    let order = await getOrderAdmin(orderId);
+    if (!order) throw new Error(`Order ${orderId} not found after creation`);
 
-    if (order.inventoryAdjusted !== true) {
-      for (const item of order.items) {
-        await updateInventoryAdmin(item.listingId, item.qty);
-      }
+    const payoutResult = await transferToSellersForOrder(order);
+    const mergedTransfers = [...(order.payoutTransferIds || []), ...payoutResult.successes];
 
+    if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length === 0) {
       await updateOrderAdmin(orderId, {
-        inventoryAdjusted: true,
-        inventoryAdjustedAt: FieldValue.serverTimestamp(),
+        payoutsProcessed: true,
+        payoutsProcessedAt: FieldValue.serverTimestamp(),
+        payoutStatus: 'complete',
+        payoutRetryable: false,
+        payoutFailures: [],
+        payoutTransferIds: mergedTransfers,
       });
-      serverLogger.info('stripe_webhook_inventory_adjusted', {
-        route: 'api/stripe/webhook',
-        eventId: event.id,
+      serverLogger.info('stripe_webhook_payout_complete', { orderId, sessionId: fullSession.id });
+    } else if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length > 0) {
+      await updateOrderAdmin(orderId, {
+        payoutsProcessed: false,
+        payoutStatus: 'pending_connect',
+        payoutRetryable: true,
+        payoutFailures: [],
+        payoutPendingConnectSellerIds: payoutResult.pendingConnect,
+        payoutTransferIds: mergedTransfers,
+      });
+      serverLogger.warn('stripe_webhook_payout_pending_connect', {
         orderId,
+        pendingConnectCount: payoutResult.pendingConnect.length,
       });
-      order.inventoryAdjusted = true;
+    } else {
+      const stamped = payoutResult.failures.map((f) => ({
+        sellerId: f.sellerId,
+        listingId: f.listingId,
+        error: f.error,
+        at: Timestamp.fromDate(new Date()),
+      }));
+      await updateOrderAdmin(orderId, {
+        payoutsProcessed: false,
+        payoutStatus: 'partial_failed',
+        payoutFailures: stamped,
+        payoutRetryable: true,
+        payoutTransferIds: mergedTransfers,
+      });
+      serverLogger.warn('stripe_webhook_payout_partial_failed', {
+        orderId,
+        failureCount: stamped.length,
+      });
     }
 
-    if (order.payoutsProcessed !== true) {
-      const payoutResult = await transferToSellersForOrder(order);
-      const mergedTransfers = [...(order.payoutTransferIds || []), ...payoutResult.successes];
-
-      if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length === 0) {
-        await updateOrderAdmin(orderId, {
-          payoutsProcessed: true,
-          payoutsProcessedAt: FieldValue.serverTimestamp(),
-          payoutStatus: 'complete',
-          payoutRetryable: false,
-          payoutFailures: [],
-          payoutTransferIds: mergedTransfers,
-        });
-        serverLogger.info('stripe_webhook_payout_complete', {
-          route: 'api/stripe/webhook',
-          eventId: event.id,
-          orderId,
-          sessionId: fullSession.id,
-        });
-        order.payoutsProcessed = true;
-      } else if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length > 0) {
-        // All sellers skipped — no Connect account yet. Mark retryable so ops can trigger
-        // /api/internal/payouts/retry once sellers complete onboarding.
-        await updateOrderAdmin(orderId, {
-          payoutsProcessed: false,
-          payoutStatus: 'pending_connect',
-          payoutRetryable: true,
-          payoutFailures: [],
-          payoutPendingConnectSellerIds: payoutResult.pendingConnect,
-          payoutTransferIds: mergedTransfers,
-        });
-        serverLogger.warn('stripe_webhook_payout_pending_connect', {
-          route: 'api/stripe/webhook',
-          eventId: event.id,
-          orderId,
-          sessionId: fullSession.id,
-          pendingConnectCount: payoutResult.pendingConnect.length,
-        });
-      } else {
-        const stamped = payoutResult.failures.map((f) => ({
-          sellerId: f.sellerId,
-          listingId: f.listingId,
-          error: f.error,
-          at: Timestamp.fromDate(new Date()),
-        }));
-        await updateOrderAdmin(orderId, {
-          payoutsProcessed: false,
-          payoutStatus: 'partial_failed',
-          payoutFailures: stamped,
-          payoutRetryable: true,
-          payoutTransferIds: mergedTransfers,
-        });
-        serverLogger.warn('stripe_webhook_payout_partial_failed', {
-          route: 'api/stripe/webhook',
-          eventId: event.id,
-          orderId,
-          sessionId: fullSession.id,
-          failureCount: stamped.length,
-        });
-      }
-    }
-
+    // ── Emails ─────────────────────────────────────────────────────────────
     order = (await getOrderAdmin(orderId)) ?? order;
+    await processOrderEmails({ orderId, sessionId: fullSession.id, order });
 
-    if (order.cartCleared !== true) {
-      await clearCartAdmin(order.buyerId);
-      await updateOrderAdmin(orderId, {
-        cartCleared: true,
-        cartClearedAt: FieldValue.serverTimestamp(),
-      });
-      serverLogger.info('stripe_webhook_cart_cleared', {
-        route: 'api/stripe/webhook',
-        eventId: event.id,
-        orderId,
-        userId: order.buyerId,
-      });
-      order.cartCleared = true;
-    }
-
-    await processOrderEmails({
-      orderId,
-      sessionId: fullSession.id,
-      order,
-    });
-    await updateOrderAdmin(orderId, {
-      lastStripeCheckoutSessionId: fullSession.id,
-      checkoutWebhookSettledAt: FieldValue.serverTimestamp(),
-    });
+    await markEventCompleted(eventRef, orderId);
     serverLogger.info('stripe_webhook_settled', {
       route: 'api/stripe/webhook',
       eventId: event.id,
@@ -683,16 +513,122 @@ export async function POST(req: NextRequest) {
       paymentIntentId,
     });
 
-    await markEventCompleted(eventRef, orderId);
     return NextResponse.json({ received: true, orderId }, { status: 200 });
   } catch (error) {
-    if (eventRef) {
-      await markEventFailed(eventRef, error);
-    }
-
+    if (eventRef) await markEventFailed(eventRef, error);
     serverLogger.error('stripe_webhook_fatal', {
       error: error instanceof Error ? error.message : String(error),
     });
     return new Response('Webhook error', { status: 500 });
   }
+}
+
+// ============================================================================
+// LEGACY PATH — for Stripe sessions created before the snapshot-based deploy.
+// Handles the old flow where orderId was in session.metadata.
+// ============================================================================
+async function runLegacyOrderPath(
+  fullSession: Stripe.Checkout.Session,
+  orderId: string,
+  eventRef: FirebaseFirestore.DocumentReference
+) {
+  const order = await getOrderAdmin(orderId);
+  if (!order) throw new Error(`Legacy order ${orderId} not found`);
+
+  if (
+    order.lastStripeCheckoutSessionId === fullSession.id &&
+    order.checkoutWebhookSettledAt
+  ) {
+    await markEventCompleted(eventRef, orderId);
+    return;
+  }
+
+  const paymentIntentId = getPaymentIntentId(fullSession);
+
+  // Mark order paid if not already.
+  if (order.status !== 'paid' && order.status !== 'shipped' && order.status !== 'delivered') {
+    await updateOrderAdmin(orderId, {
+      status: 'paid',
+      paidAt: FieldValue.serverTimestamp(),
+      checkoutSessionId: fullSession.id,
+      ...(paymentIntentId ? { paymentIntentId } : {}),
+    });
+  }
+
+  await ensurePaymentRecord({
+    orderId,
+    userId: order.buyerId,
+    amount: order.total,
+    currency: order.currency,
+    stripeReference: paymentIntentId || fullSession.id,
+  });
+
+  // Inventory + cart (idempotent guards already on order doc).
+  const refreshed = await getOrderAdmin(orderId);
+  if (!refreshed) throw new Error(`Order ${orderId} not found after legacy pay update`);
+
+  if (!refreshed.inventoryAdjusted) {
+    for (const item of refreshed.items) {
+      const { updateInventoryAdmin } = await import('@/lib/server/adminListings');
+      await updateInventoryAdmin(item.listingId, item.qty);
+    }
+    await updateOrderAdmin(orderId, {
+      inventoryAdjusted: true,
+      inventoryAdjustedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  if (!refreshed.cartCleared) {
+    const { clearCartAdmin } = await import('@/lib/server/adminCarts');
+    await clearCartAdmin(refreshed.buyerId);
+    await updateOrderAdmin(orderId, {
+      cartCleared: true,
+      cartClearedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  const finalOrder = (await getOrderAdmin(orderId)) ?? refreshed;
+  const payoutResult = await transferToSellersForOrder(finalOrder);
+  const mergedTransfers = [...(finalOrder.payoutTransferIds || []), ...payoutResult.successes];
+
+  if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length === 0) {
+    await updateOrderAdmin(orderId, {
+      payoutsProcessed: true,
+      payoutsProcessedAt: FieldValue.serverTimestamp(),
+      payoutStatus: 'complete',
+      payoutRetryable: false,
+      payoutFailures: [],
+      payoutTransferIds: mergedTransfers,
+    });
+  } else if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length > 0) {
+    await updateOrderAdmin(orderId, {
+      payoutsProcessed: false,
+      payoutStatus: 'pending_connect',
+      payoutRetryable: true,
+      payoutFailures: [],
+      payoutPendingConnectSellerIds: payoutResult.pendingConnect,
+      payoutTransferIds: mergedTransfers,
+    });
+  } else {
+    const stamped = payoutResult.failures.map((f) => ({
+      sellerId: f.sellerId,
+      listingId: f.listingId,
+      error: f.error,
+      at: Timestamp.fromDate(new Date()),
+    }));
+    await updateOrderAdmin(orderId, {
+      payoutsProcessed: false,
+      payoutStatus: 'partial_failed',
+      payoutFailures: stamped,
+      payoutRetryable: true,
+      payoutTransferIds: mergedTransfers,
+    });
+  }
+
+  await processOrderEmails({ orderId, sessionId: fullSession.id, order: finalOrder });
+  await updateOrderAdmin(orderId, {
+    lastStripeCheckoutSessionId: fullSession.id,
+    checkoutWebhookSettledAt: FieldValue.serverTimestamp(),
+  });
+  await markEventCompleted(eventRef, orderId);
 }
