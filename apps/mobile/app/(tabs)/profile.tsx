@@ -411,6 +411,14 @@ export default function ProfileScreen() {
           <View style={styles.menuList}>
             <TouchableOpacity
               style={styles.menuItem}
+              onPress={() => router.push('/orders' as any)}
+            >
+              <Ionicons name="receipt-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>My Orders</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => router.push('/(tabs)/cart' as any)}
             >
               <Ionicons name="cart-outline" size={24} color={colors.brand.DEFAULT} />

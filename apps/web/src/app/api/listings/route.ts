@@ -304,7 +304,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     const listing = await getListingAdmin(listingId);
 
     // Fire-and-forget: notify users interested in this category
-    if (listing?.category && listing.title && listing.price) {
+    if (listing?.category && listing.title && listing.title !== 'AI Analyzing...' && listing.price) {
       notifyUsersInterestedInCategory({
         category: listing.category,
         excludeUserId: req.userId,

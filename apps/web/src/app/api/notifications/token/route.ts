@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { mergeProfileAdmin } from '@/lib/server/adminProfiles';
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +19,9 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 });
 
 export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
-  await mergeProfileAdmin(req.userId, { expoPushToken: null });
+  await getAdminFirestore()
+    .collection('profiles')
+    .doc(req.userId)
+    .update({ expoPushToken: FieldValue.delete() });
   return NextResponse.json({ success: true });
 });

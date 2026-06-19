@@ -120,6 +120,19 @@ export async function createOrderFromSnapshotAdmin(
 /**
  * Patch top-level order fields using Admin SDK.
  */
+export async function getOrdersByBuyerAdmin(
+  buyerId: string,
+  limit = 20
+): Promise<(FirestoreOrder & { id: string })[]> {
+  const snap = await getAdminFirestore()
+    .collection(COLLECTIONS.ORDERS)
+    .where('buyerId', '==', buyerId)
+    .orderBy('createdAt', 'desc')
+    .limit(limit)
+    .get();
+  return snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as FirestoreOrder) }));
+}
+
 export async function updateOrderAdmin(orderId: string, updates: Record<string, unknown>): Promise<void> {
   await getAdminFirestore()
     .collection(COLLECTIONS.ORDERS)

@@ -19,7 +19,6 @@ import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../../lib/api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -72,21 +71,14 @@ export default function ListingDetailScreen() {
   }, [id]);
 
   const loadFavoriteState = async () => {
-    if (!id) return;
+    if (!id || !currentUser) return;
     try {
-      const favorites = await AsyncStorage.getItem('favorites');
-      if (favorites) {
-        try {
-          const parsed = JSON.parse(favorites);
-          const favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
-          setIsFavorited(favArray.includes(id));
-        } catch {
-          setIsFavorited(false);
-        }
+      const res = await apiClient.get('/api/favorites', true);
+      if (res.ok) {
+        const data = await res.json();
+        setIsFavorited((data.data as string[])?.includes(id) ?? false);
       }
-    } catch (error) {
-      console.error('Error loading favorite state:', error);
-    }
+    } catch {}
   };
 
   const fetchListing = async () => {
@@ -243,6 +235,10 @@ export default function ListingDetailScreen() {
       return;
     }
     if (!listing?.sellerId) return;
+    if (currentUser.uid === listing.sellerId) {
+      Alert.alert('Not Allowed', 'You cannot make an offer on your own listing');
+      return;
+    }
 
     const amount = parseFloat(offerAmount.replace(/[^0-9.]/g, ''));
     if (!amount || amount <= 0) {
@@ -289,34 +285,18 @@ export default function ListingDetailScreen() {
       router.push('/auth/signin');
       return;
     }
-
     if (!id) return;
 
+    const next = !isFavorited;
+    setIsFavorited(next);
     try {
-      const favorites = await AsyncStorage.getItem('favorites');
-      let favArray: string[] = [];
-      if (favorites) {
-        try {
-          const parsed = JSON.parse(favorites);
-          favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
-        } catch {
-          favArray = [];
-        }
-      }
-
-      if (isFavorited) {
-        const updated = favArray.filter((fav: string) => fav !== id);
-        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
-        setIsFavorited(false);
-        Alert.alert('Removed from favorites');
+      if (next) {
+        await apiClient.post('/api/favorites', { listingId: id }, true);
       } else {
-        const updated = [...favArray, id];
-        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
-        setIsFavorited(true);
-        Alert.alert('Added to favorites');
+        await apiClient.delete(`/api/favorites/${id}`, true);
       }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
+    } catch {
+      setIsFavorited(!next);
       Alert.alert('Error', 'Failed to update favorites');
     }
   };

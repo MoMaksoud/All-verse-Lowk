@@ -51,7 +51,9 @@ function NotificationSetup() {
         router.push(`/chat/${data.chatId}` as any);
       } else if (data?.type === 'new_listing' && data?.listingId) {
         router.push(`/listing/${data.listingId}` as any);
-      } else if (data?.type === 'order' || data?.type === 'sale' || data?.type === 'shipped') {
+      } else if (data?.type === 'order' || data?.type === 'shipped') {
+        router.push('/orders' as any);
+      } else if (data?.type === 'sale') {
         router.push('/(tabs)/profile' as any);
       }
     });
@@ -131,12 +133,26 @@ export default function RootLayout() {
             gestureEnabled: false,
           }}
         />
-        <Stack.Screen 
-          name="legal/faq" 
-          options={{ 
+        <Stack.Screen
+          name="profile/[userId]"
+          options={{
+            headerShown: false,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="orders"
+          options={{
+            headerShown: false,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="legal/faq"
+          options={{
             title: 'FAQ',
             headerShown: false,
-          }} 
+          }}
         />
         <Stack.Screen 
           name="legal/privacy" 
