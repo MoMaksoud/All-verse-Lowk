@@ -8,17 +8,24 @@ import {
   PLATFORM_SERVICE_FEE_PERCENT,
   stripe,
 } from '@/lib/stripe';
-import { sendOrderConfirmationEmail, sendSellerNotificationEmail } from '@/lib/email';
+import { sendOrderConfirmationEmail, sendSellerNotificationEmail, sendBuyerTrackingEmail } from '@/lib/email';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { logEmail } from '@/lib/emailLog';
 import { assertStripeWebhookConfig, getMissingSendGridVars } from '@/lib/config';
 import { getOrderAdmin, updateOrderAdmin, createOrderFromSnapshotAdmin } from '@/lib/server/adminOrders';
 import { createPaymentAdmin, getPaymentsByOrderAdmin, updatePaymentAdmin } from '@/lib/server/adminPayments';
 import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
+import { sendPushNotification } from '@/lib/server/push-notifications';
 import {
   getCheckoutSnapshotAdmin,
   markSnapshotExpiredAdmin,
 } from '@/lib/server/adminCheckoutSnapshots';
+import {
+  acquireShippingLabelLock,
+  createAndResolveShippoLabel,
+  markShippingLabelSuccess,
+  markShippingLabelFailed,
+} from '@/lib/payments/shippingLabel';
 import type { FirestoreOrder, PayoutTransferRecord } from '@/lib/types/firestore';
 import { serverLogger } from '@/lib/server/logger';
 
@@ -229,6 +236,132 @@ async function processOrderEmails(params: {
       emailSent: true,
       emailSentAt: FieldValue.serverTimestamp(),
     });
+  }
+}
+
+async function processOrderPushNotifications(params: {
+  orderId: string;
+  order: FirestoreOrder | null;
+}): Promise<void> {
+  if (!params.order) return;
+
+  // Notify buyer: order confirmed
+  const buyerProfile = await getProfileDocumentAdmin(params.order.buyerId);
+  const buyerToken = (buyerProfile as any)?.expoPushToken;
+  if (buyerToken) {
+    await sendPushNotification({
+      to: buyerToken,
+      title: '✅ Order confirmed!',
+      body: `Your ${params.order.items.length} item${params.order.items.length > 1 ? 's are' : ' is'} on the way. Total: $${params.order.total.toFixed(2)}.`,
+      data: { type: 'order', orderId: params.orderId },
+    }).catch(() => {});
+  }
+
+  // Notify each seller: item sold
+  const uniqueSellerIds = [...new Set(params.order.items.map((i) => i.sellerId))];
+  for (const sellerId of uniqueSellerIds) {
+    const sellerProfile = await getProfileDocumentAdmin(sellerId);
+    const sellerToken = (sellerProfile as any)?.expoPushToken;
+    if (!sellerToken) continue;
+
+    const sellerItems = params.order.items.filter((i) => i.sellerId === sellerId);
+    const itemTitle = sellerItems[0]?.title || 'Your item';
+    const saleTotal = sellerItems.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+
+    await sendPushNotification({
+      to: sellerToken,
+      title: '🎉 You made a sale!',
+      body: `"${itemTitle}" sold for $${saleTotal.toFixed(2)}. Check your sales dashboard.`,
+      data: { type: 'sale', orderId: params.orderId },
+    }).catch(() => {});
+  }
+}
+
+async function attemptAutoShippingLabel(orderId: string, order: FirestoreOrder): Promise<void> {
+  if (!process.env.SHIPPO_API_KEY?.trim()) return;
+  if (!order.shipping?.rateId || !order.shipping?.shipmentId) return;
+  if (order.status === 'shipped' || order.status === 'delivered') return;
+
+  const adminDb = getAdminFirestore();
+  const { rateId, shipmentId } = order.shipping;
+
+  const lockResult = await acquireShippingLabelLock({ adminDb, orderId, rateId, shipmentId });
+  if (lockResult.action === 'already_exists') {
+    // Label already created — ensure order is marked shipped
+    await updateOrderAdmin(orderId, {
+      status: 'shipped',
+      shippedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return;
+  }
+  if (lockResult.action === 'processing') return;
+
+  try {
+    const shippoResult = await createAndResolveShippoLabel(rateId);
+    await markShippingLabelSuccess({
+      adminDb,
+      orderId,
+      trackingNumber: shippoResult.trackingNumber,
+      labelUrl: shippoResult.labelUrl,
+      carrier: shippoResult.carrier,
+      service: shippoResult.service,
+      rateId,
+      shipmentId,
+    });
+    serverLogger.info('webhook_auto_label_created', { orderId });
+
+    await updateOrderAdmin(orderId, {
+      status: 'shipped',
+      shippedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    // Send tracking email + push notification to buyer
+    const auth = getAdminAuth();
+    if (auth) {
+      const buyerUser = await auth.getUser(order.buyerId).catch(() => null);
+      const buyerProfile = await getProfileDocumentAdmin(order.buyerId);
+      if (buyerUser?.email && buyerProfile) {
+        const trackingResult = await sendBuyerTrackingEmail({
+          orderId,
+          buyerName: buyerProfile.displayName || 'Customer',
+          buyerEmail: buyerUser.email,
+          trackingNumber: shippoResult.trackingNumber,
+          carrier: shippoResult.carrier,
+          service: shippoResult.service,
+          labelUrl: shippoResult.labelUrl,
+          items: order.items.map((i) => ({ title: i.title, qty: i.qty })),
+        });
+        await logEmail(
+          'buyer_tracking',
+          buyerUser.email,
+          trackingResult.success ? 'success' : 'failed',
+          { orderId, error: trackingResult.error }
+        );
+
+        // Push notification for shipping
+        const buyerToken = (buyerProfile as any)?.expoPushToken;
+        if (buyerToken) {
+          sendPushNotification({
+            to: buyerToken,
+            title: '🚚 Your order is on its way!',
+            body: `Tracking: ${shippoResult.trackingNumber} via ${shippoResult.carrier}.`,
+            data: { type: 'shipped', orderId, trackingNumber: shippoResult.trackingNumber },
+          }).catch(() => {});
+        }
+      }
+    }
+  } catch (labelErr) {
+    serverLogger.warn('webhook_auto_label_failed', {
+      orderId,
+      error: labelErr instanceof Error ? labelErr.message : String(labelErr),
+    });
+    try {
+      await markShippingLabelFailed({ adminDb, orderId, error: labelErr });
+    } catch {
+      // ignore cleanup failure
+    }
   }
 }
 
@@ -503,6 +636,19 @@ export async function POST(req: NextRequest) {
     // ── Emails ─────────────────────────────────────────────────────────────
     order = (await getOrderAdmin(orderId)) ?? order;
     await processOrderEmails({ orderId, sessionId: fullSession.id, order });
+
+    // ── Push notifications (best-effort) ───────────────────────────────────
+    processOrderPushNotifications({ orderId, order }).catch(() => {});
+
+    // ── Auto shipping label (best-effort) ──────────────────────────────────
+    try {
+      await attemptAutoShippingLabel(orderId, order);
+    } catch (labelErr) {
+      serverLogger.warn('webhook_auto_label_unhandled', {
+        orderId,
+        error: labelErr instanceof Error ? labelErr.message : String(labelErr),
+      });
+    }
 
     await markEventCompleted(eventRef, orderId);
     serverLogger.info('stripe_webhook_settled', {

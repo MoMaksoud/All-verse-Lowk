@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { colors, palette } from '../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -228,6 +228,7 @@ export default function CheckoutScreen() {
             serviceName: selectedShipping.serviceName,
             price: selectedShipping.price,
           },
+          platform: 'mobile',
         },
         true
       );
@@ -242,7 +243,20 @@ export default function CheckoutScreen() {
         throw new Error('No checkout URL returned');
       }
 
-      await Linking.openURL(data.url);
+      // Open Stripe Checkout in in-app browser; auto-closes when app scheme is detected
+      const result = await WebBrowser.openAuthSessionAsync(data.url, 'allversegpt://');
+
+      if (result.type === 'success' && result.url) {
+        // Parse session_id from the redirect URL
+        const redirectUrl = new URL(result.url);
+        const sessionId = redirectUrl.searchParams.get('session_id');
+        router.replace(
+          `/checkout-success${sessionId ? `?session_id=${sessionId}` : ''}` as any
+        );
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        // User closed the browser without completing payment — stay on checkout
+        Alert.alert('Payment Cancelled', 'Your payment was not completed.');
+      }
     } catch (error: any) {
       console.error('Checkout error:', error);
       Alert.alert('Checkout Failed', error?.message || 'Failed to process checkout');

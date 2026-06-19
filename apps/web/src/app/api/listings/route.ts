@@ -3,6 +3,7 @@ import { CreateListingInput } from "@/lib/types/firestore";
 import { withApi } from "@/lib/withApi";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { createListingAdmin, getListingAdmin, searchListingsAdmin } from "@/lib/server/adminListings";
+import { notifyUsersInterestedInCategory } from "@/lib/server/push-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -301,7 +302,18 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     
     const listingId = await createListingAdmin(listingData);
     const listing = await getListingAdmin(listingId);
-    
+
+    // Fire-and-forget: notify users interested in this category
+    if (listing?.category && listing.title && listing.price) {
+      notifyUsersInterestedInCategory({
+        category: listing.category,
+        excludeUserId: req.userId,
+        title: `🆕 New drop in ${listing.category}`,
+        body: `"${listing.title}" — $${listing.price.toLocaleString()}. Check it out before it's gone.`,
+        data: { type: 'new_listing', listingId },
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ id: listingId, ...listing }, { status: 201 });
   } catch (error) {
     console.error('Error creating listing:', error);

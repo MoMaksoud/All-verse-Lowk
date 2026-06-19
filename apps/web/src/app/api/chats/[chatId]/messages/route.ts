@@ -3,6 +3,7 @@ import { withApi } from '@/lib/withApi';
 import { getChatDocumentAdmin, getChatMessagesAdmin, sendMessageAdmin } from '@/lib/server/adminChats';
 import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
 import { getUserAdmin } from '@/lib/server/adminUsers';
+import { sendPushNotification } from '@/lib/server/push-notifications';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,6 +64,48 @@ export const POST = withApi(async (req: NextRequest & { userId: string }, { para
       text.trim(),
       listingId
     );
+
+    // Fire-and-forget push notification to the recipient
+    const recipientId = chatDoc.participants?.find((p: string) => p !== userId);
+    if (recipientId) {
+      (async () => {
+        try {
+          const [recipientProfile, senderProfile] = await Promise.all([
+            getProfileDocumentAdmin(recipientId),
+            getProfileDocumentAdmin(userId),
+          ]);
+
+          const pushToken = (recipientProfile as any)?.expoPushToken;
+          if (!pushToken) return;
+
+          const senderName = senderProfile?.username || senderProfile?.displayName || 'Someone';
+          const isOffer = text.trim().startsWith('💰 Offer:');
+
+          let notifTitle: string;
+          let notifBody: string;
+
+          if (isOffer) {
+            // Extract offer amount from the message text
+            const amountMatch = text.match(/\$([0-9,.]+)/);
+            const amount = amountMatch ? `$${amountMatch[1]}` : 'an amount';
+            notifTitle = `💰 New offer from ${senderName}`;
+            notifBody = `They offered ${amount}${listingId ? ' on your listing' : ''}. Tap to respond.`;
+          } else {
+            notifTitle = senderName;
+            notifBody = text.trim().substring(0, 120);
+          }
+
+          await sendPushNotification({
+            to: pushToken,
+            title: notifTitle,
+            body: notifBody,
+            data: { chatId, type: isOffer ? 'offer' : 'message', listingId },
+          });
+        } catch {
+          // Ignore
+        }
+      })();
+    }
 
     return NextResponse.json({
       success: true,

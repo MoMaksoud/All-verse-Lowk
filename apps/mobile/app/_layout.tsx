@@ -1,10 +1,12 @@
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {colors} from '../constants/theme';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { registerForPushNotifications, Notifications } from '../lib/notifications';
+import { apiClient } from '../lib/api/client';
 
 function AuthGate() {
   const { currentUser, loading, hasProfile, profileLoading } = useAuth();
@@ -24,6 +26,45 @@ function AuthGate() {
   return null;
 }
 
+function NotificationSetup() {
+  const { currentUser } = useAuth();
+  const notificationListener = useRef<any>(null);
+  const responseListener = useRef<any>(null);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Register push token and store it
+    registerForPushNotifications().then((token) => {
+      if (token) {
+        apiClient.post('/api/notifications/token', { token }, true).catch(() => {});
+      }
+    });
+
+    // Foreground notification listener
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
+
+    // Tap notification → navigate to the right screen
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, any>;
+      if ((data?.type === 'message' || data?.type === 'offer') && data?.chatId) {
+        router.push(`/chat/${data.chatId}` as any);
+      } else if (data?.type === 'new_listing' && data?.listingId) {
+        router.push(`/listing/${data.listingId}` as any);
+      } else if (data?.type === 'order' || data?.type === 'sale' || data?.type === 'shipped') {
+        router.push('/(tabs)/profile' as any);
+      }
+    });
+
+    return () => {
+      notificationListener.current?.remove();
+      responseListener.current?.remove();
+    };
+  }, [currentUser?.uid]);
+
+  return null;
+}
+
 export default function RootLayout() {
   return (
     <ErrorBoundary>
@@ -31,6 +72,7 @@ export default function RootLayout() {
         <View style={styles.container}>
           <StatusBar style="light" />
           <AuthGate />
+          <NotificationSetup />
         <Stack
         screenOptions={{
           headerStyle: {
@@ -74,12 +116,20 @@ export default function RootLayout() {
             headerBackTitleVisible: true,
           }} 
         />
-        <Stack.Screen 
-          name="checkout" 
-          options={{ 
+        <Stack.Screen
+          name="checkout"
+          options={{
             title: 'Checkout',
             headerShown: false,
-          }} 
+          }}
+        />
+        <Stack.Screen
+          name="checkout-success"
+          options={{
+            title: 'Order Confirmed',
+            headerShown: false,
+            gestureEnabled: false,
+          }}
         />
         <Stack.Screen 
           name="legal/faq" 

@@ -9,6 +9,11 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  Share,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -54,6 +59,9 @@ export default function ListingDetailScreen() {
   const [isFavorited, setIsFavorited] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
+  const [offerModalVisible, setOfferModalVisible] = useState(false);
+  const [offerAmount, setOfferAmount] = useState('');
+  const [offerLoading, setOfferLoading] = useState(false);
   const imageScrollViewRef = useRef<any>(null);
 
   useEffect(() => {
@@ -218,6 +226,63 @@ export default function ListingDetailScreen() {
     }
   };
 
+  const handleShare = async () => {
+    if (!listing) return;
+    try {
+      await Share.share({
+        title: listing.title,
+        message: `Check out "${listing.title}" for $${listing.price.toLocaleString()} on AllVerse!\nhttps://allversegpt.com/listings/${id}`,
+      });
+    } catch {}
+  };
+
+  const handleMakeOffer = async () => {
+    if (!currentUser) {
+      Alert.alert('Sign In Required', 'Please sign in to make an offer');
+      router.push('/auth/signin');
+      return;
+    }
+    if (!listing?.sellerId) return;
+
+    const amount = parseFloat(offerAmount.replace(/[^0-9.]/g, ''));
+    if (!amount || amount <= 0) {
+      Alert.alert('Invalid Offer', 'Please enter a valid offer amount');
+      return;
+    }
+    if (amount >= listing.price) {
+      Alert.alert('Low Offer', 'Your offer must be less than the listed price');
+      return;
+    }
+
+    try {
+      setOfferLoading(true);
+      // Create or get existing chat with seller
+      const chatResponse = await apiClient.post('/api/chats', { otherUserId: listing.sellerId }, true);
+      if (!chatResponse.ok) throw new Error('Could not start conversation');
+
+      const chatData = await chatResponse.json();
+      const chatId = chatData.chatId || chatData.id;
+      if (!chatId) throw new Error('Chat ID missing');
+
+      // Send offer as a structured message
+      const offerText = `💰 Offer: $${amount.toFixed(2)}\n\nI'd like to offer $${amount.toFixed(2)} for "${listing.title}" (listed at $${listing.price.toLocaleString()}).`;
+      const msgResponse = await apiClient.post(
+        `/api/chats/${chatId}/messages`,
+        { text: offerText, listingId: listing.id },
+        true
+      );
+      if (!msgResponse.ok) throw new Error('Failed to send offer');
+
+      setOfferModalVisible(false);
+      setOfferAmount('');
+      router.push(`/chat/${chatId}` as any);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to send offer');
+    } finally {
+      setOfferLoading(false);
+    }
+  };
+
   const handleFavorite = async () => {
     if (!currentUser) {
       Alert.alert('Sign In Required', 'Please sign in to favorite items');
@@ -277,11 +342,11 @@ export default function ListingDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        {/* Favorite Button - Floating */}
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={handleFavorite}
-        >
+        {/* Floating action buttons over image */}
+        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+          <Ionicons name="share-outline" size={22} color={colors.text.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.favoriteButton} onPress={handleFavorite}>
           <Ionicons
             name={isFavorited ? 'heart' : 'heart-outline'}
             size={24}
@@ -443,30 +508,41 @@ export default function ListingDetailScreen() {
       {/* Action Buttons */}
       {!listing.sold && (
         <View style={styles.actionBar}>
+          {/* Top row: Make an Offer (prominent) */}
           <TouchableOpacity
-            style={[styles.button, styles.contactButton]}
-            onPress={handleContact}
-            disabled={contactLoading}
+            style={styles.offerButton}
+            onPress={() => setOfferModalVisible(true)}
           >
-            {contactLoading ? (
-              <ActivityIndicator size="small" color={colors.text.primary} />
-            ) : (
-              <>
-                <Ionicons name="chatbubble-outline" size={22} color={colors.text.primary} />
-                <Text style={styles.buttonText}>Message</Text>
-              </>
-            )}
+            <Ionicons name="pricetag-outline" size={20} color={colors.brand.DEFAULT} />
+            <Text style={styles.offerButtonText}>Make an Offer</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.cartButton]}
-            onPress={handleAddToCart}
-            disabled={addingToCart}
-          >
-            <Ionicons name="cart-outline" size={22} color={colors.text.primary} />
-            <Text style={styles.buttonText}>
-              {addingToCart ? 'Adding...' : 'Add to Cart'}
-            </Text>
-          </TouchableOpacity>
+          {/* Bottom row: Message + Cart */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.button, styles.contactButton]}
+              onPress={handleContact}
+              disabled={contactLoading}
+            >
+              {contactLoading ? (
+                <ActivityIndicator size="small" color={colors.text.primary} />
+              ) : (
+                <>
+                  <Ionicons name="chatbubble-outline" size={20} color={colors.text.primary} />
+                  <Text style={styles.buttonText}>Message</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.cartButton]}
+              onPress={handleAddToCart}
+              disabled={addingToCart}
+            >
+              <Ionicons name="cart-outline" size={20} color={colors.text.primary} />
+              <Text style={styles.buttonText}>
+                {addingToCart ? 'Adding...' : 'Add to Cart'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
       {((listing.sold ?? false) || listing.inventory === 0) && (
@@ -487,6 +563,66 @@ export default function ListingDetailScreen() {
           onClose={() => setViewerVisible(false)}
         />
       )}
+
+      {/* Make an Offer Modal */}
+      <Modal
+        visible={offerModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setOfferModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setOfferModalVisible(false)}
+          />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Make an Offer</Text>
+            <Text style={styles.modalSubtitle}>
+              Listed at{' '}
+              <Text style={styles.modalListedPrice}>${listing?.price?.toLocaleString()}</Text>
+            </Text>
+
+            <View style={styles.offerInputWrap}>
+              <Text style={styles.currencySymbol}>$</Text>
+              <TextInput
+                style={styles.offerInput}
+                placeholder="0.00"
+                placeholderTextColor={colors.text.muted}
+                keyboardType="decimal-pad"
+                value={offerAmount}
+                onChangeText={setOfferAmount}
+                autoFocus
+                returnKeyType="done"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitOfferButton, offerLoading && { opacity: 0.6 }]}
+              onPress={handleMakeOffer}
+              disabled={offerLoading}
+            >
+              {offerLoading ? (
+                <ActivityIndicator size="small" color={colors.text.primary} />
+              ) : (
+                <Text style={styles.submitOfferText}>Send Offer</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelOfferButton}
+              onPress={() => { setOfferModalVisible(false); setOfferAmount(''); }}
+            >
+              <Text style={styles.cancelOfferText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -498,6 +634,18 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  shareButton: {
+    position: 'absolute',
+    top: 40,
+    right: 76,
+    zIndex: 100,
+    backgroundColor: colors.bg.overlay,
+    borderRadius: 24,
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   favoriteButton: {
     position: 'absolute',
@@ -647,6 +795,9 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     lineHeight: 24,
   },
+  section: {
+    marginBottom: 24,
+  },
   sellerCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -675,9 +826,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 28,
+    gap: 10,
     backgroundColor: colors.bg.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border.subtle,
@@ -687,14 +839,34 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  offerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.brand.DEFAULT,
+    backgroundColor: colors.brand.softer,
+  },
+  offerButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.brand.DEFAULT,
+  },
   button: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 12,
-    gap: 10,
+    gap: 8,
   },
   contactButton: {
     backgroundColor: palette.gray[700],
@@ -703,9 +875,92 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.DEFAULT,
   },
   buttonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  // Make an Offer modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  modalSheet: {
+    backgroundColor: colors.bg.raised,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border.default,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: colors.text.muted,
+    marginBottom: 24,
+  },
+  modalListedPrice: {
+    color: colors.text.primary,
+    fontWeight: '600',
+  },
+  offerInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg.surface,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.brand.DEFAULT,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  currencySymbol: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginRight: 4,
+  },
+  offerInput: {
+    flex: 1,
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.text.primary,
+    paddingVertical: 14,
+  },
+  submitOfferButton: {
+    backgroundColor: colors.brand.DEFAULT,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  submitOfferText: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.text.primary,
+  },
+  cancelOfferButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelOfferText: {
+    fontSize: 15,
+    color: colors.text.muted,
+    fontWeight: '500',
   },
   soldButton: {
     flex: 1,

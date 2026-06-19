@@ -22,7 +22,8 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
   try {
     const body = await req.json();
-    const { shippingAddress, selectedShipping } = body;
+    const { shippingAddress, selectedShipping, platform } = body;
+    const isMobile = platform === 'mobile';
 
     // Source of truth: server-side cart, not client payload.
     const userCart = await getCartAdmin(req.userId);
@@ -45,8 +46,10 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     });
 
     const baseUrl = getCheckoutBaseUrl();
-    const successUrl = `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${baseUrl}/cart`;
+    const successUrl = isMobile
+      ? `allversegpt://checkout-success?session_id={CHECKOUT_SESSION_ID}`
+      : `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = isMobile ? `allversegpt://cart` : `${baseUrl}/cart`;
 
     const result = await createCheckoutSession({
       amountTotalCents: Math.round(checkout.total * 100),
