@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../../lib/api/client';
+import { getCache, setCache } from '../../lib/cache';
 import ListingCard from '../../components/ListingCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -96,11 +97,18 @@ export default function SearchScreen() {
     }
   }, [params.q]);
 
-  // Refresh listings when screen comes into focus (if no search query)
+  // On focus: show cache instantly, background-refresh if stale
   useFocusEffect(
     useCallback(() => {
       if (!params.q && !searchQuery.trim()) {
-        fetchListings();
+        const cached = getCache<any[]>('search_listings', 60_000);
+        if (cached) {
+          setListings(cached);
+          setListingsLoading(false);
+          fetchListings(true);
+        } else {
+          fetchListings(false);
+        }
       }
     }, [params.q, searchQuery])
   );
@@ -164,23 +172,28 @@ export default function SearchScreen() {
     }
   };
 
-  const fetchListings = async () => {
+  const fetchListings = async (silent = false) => {
     try {
-      setListingsLoading(true);
+      if (!silent) setListingsLoading(true);
       const response = await apiClient.get('/api/listings?limit=50');
       const data = await response.json();
 
+      let items: any[] | null = null;
       if (response.ok && data.data && Array.isArray(data.data)) {
-        setListings(data.data.slice(0, 50));
+        items = data.data.slice(0, 50);
       } else if (response.ok && data.data?.items) {
-        setListings(data.data.items.slice(0, 50));
+        items = data.data.items.slice(0, 50);
       } else if (response.ok && Array.isArray(data)) {
-        setListings(data.slice(0, 50));
+        items = data.slice(0, 50);
       }
-    } catch (error) {
-      console.error('Error fetching listings:', error);
+      if (items) {
+        setListings(items);
+        setCache('search_listings', items);
+      }
+    } catch {
+      // silently fail on background refresh
     } finally {
-      setListingsLoading(false);
+      if (!silent) setListingsLoading(false);
     }
   };
 

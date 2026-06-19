@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { apiClient } from '../../lib/api/client';
+import { getCache, setCache } from '../../lib/cache';
 import ListingCard from '../../components/ListingCard';
 import SkeletonCard from '../../components/SkeletonCard';
 import ImageSearchModal from '../../components/ImageSearchModal';
@@ -55,36 +56,45 @@ export default function HomeScreen() {
     fetchListings();
   }, []);
 
-  // Refresh listings when screen comes into focus
+  // On focus: show cache instantly, refresh silently in background if stale
   useFocusEffect(
     useCallback(() => {
-      fetchListings();
+      const cached = getCache<Listing[]>('home_listings', 60_000);
+      if (cached) {
+        setListings(cached);
+        setLoading(false);
+        // Background refresh without showing spinner
+        fetchListings(true);
+      } else {
+        fetchListings(false);
+      }
     }, [])
   );
 
-  const fetchListings = async () => {
+  const fetchListings = async (silent = false) => {
     try {
-      setLoading(true);
-      setError(null);
-      // Match web hero: only ask for the 4 items we render in the grid.
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const response = await apiClient.get('/api/listings?limit=4');
       const data = await response.json();
-      
+
       if (response.ok && data.data && Array.isArray(data.data)) {
-        // Production API structure: { data: [...], pagination: {...} }
         setListings(data.data);
+        setCache('home_listings', data.data);
         setError(null);
       } else if (response.ok && Array.isArray(data.data?.items)) {
-        // Alternative structure: { data: { items: [...] } }
         setListings(data.data.items);
+        setCache('home_listings', data.data.items);
         setError(null);
-      } else {
+      } else if (!silent) {
         setError(`No listings found. Status: ${response.status}`);
       }
     } catch (err: any) {
-      setError(`Error: ${err?.message || err}`);
+      if (!silent) setError(`Error: ${err?.message || err}`);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
