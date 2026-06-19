@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  ScrollView,
+  Modal,
   Linking,
   Alert,
   Image,
+  Pressable,
 } from 'react-native';
 import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -64,6 +67,30 @@ interface Listing {
 const RECENT_SEARCHES_KEY = 'recent_searches';
 const MAX_RECENT_SEARCHES = 5;
 
+const CATEGORIES = [
+  { label: 'All', value: '' },
+  { label: 'Fashion', value: 'fashion' },
+  { label: 'Electronics', value: 'electronics' },
+  { label: 'Home', value: 'home' },
+  { label: 'Sports', value: 'sports' },
+  { label: 'Automotive', value: 'automotive' },
+  { label: 'Other', value: 'other' },
+];
+
+const SORT_OPTIONS = [
+  { label: 'Newest', value: 'newest' },
+  { label: 'Price ↑', value: 'low-to-high' },
+  { label: 'Price ↓', value: 'high-to-low' },
+];
+
+const CONDITIONS = [
+  { label: 'Any', value: '' },
+  { label: 'New', value: 'new' },
+  { label: 'Like New', value: 'like-new' },
+  { label: 'Good', value: 'good' },
+  { label: 'Fair', value: 'fair' },
+];
+
 // Flat item types for virtualized search results and browse grid.
 // Pairing listings into rows avoids allocating all handles in one GC scope.
 type SearchFlatItem =
@@ -88,33 +115,51 @@ export default function SearchScreen() {
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
+  // Filters
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSort, setSelectedSort] = useState('newest');
+  const [selectedCondition, setSelectedCondition] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+  // Ref so useFocusEffect always reads latest filter values without stale closure
+  const filtersRef = useRef({ category: '', sort: 'newest', condition: '', min: '', max: '' });
+  filtersRef.current = { category: selectedCategory, sort: selectedSort, condition: selectedCondition, min: minPrice, max: maxPrice };
+
+  const getCacheKey = (f = filtersRef.current) =>
+    `listings_${f.category}_${f.sort}_${f.condition}_${f.min}_${f.max}`;
+
+  const activeFilterCount = [selectedCondition, minPrice, maxPrice].filter(Boolean).length;
+
   useEffect(() => {
     loadRecentSearches();
-    if (params.q) {
-      performSearch(params.q);
-    } else {
-      fetchListings();
-    }
+    if (params.q) performSearch(params.q);
   }, [params.q]);
 
-  // On focus: show cache instantly, background-refresh if stale
+  // Re-fetch whenever filters change
+  useEffect(() => {
+    if (!params.q && !searchQuery.trim()) {
+      fetchListingsWithFilters(selectedCategory, selectedSort, selectedCondition, minPrice, maxPrice, false);
+    }
+  }, [selectedCategory, selectedSort, selectedCondition, minPrice, maxPrice]);
+
+  // On focus: serve cache instantly, then background-refresh
   useFocusEffect(
     useCallback(() => {
       if (!params.q && !searchQuery.trim()) {
-        const cached = getCache<any[]>('search_listings', 60_000);
+        const f = filtersRef.current;
+        const cached = getCache<Listing[]>(getCacheKey(f), 60_000);
         if (cached) {
           setListings(cached);
           setListingsLoading(false);
-          fetchListings(true);
-        } else {
-          fetchListings(false);
+          fetchListingsWithFilters(f.category, f.sort, f.condition, f.min, f.max, true);
         }
       }
     }, [params.q, searchQuery])
   );
 
   useEffect(() => {
-    // Only show recent searches when the bar is actively focused and empty
     setShowRecentSearches(searchFocused && searchQuery.length === 0);
   }, [searchQuery, searchFocused]);
 
@@ -172,13 +217,23 @@ export default function SearchScreen() {
     }
   };
 
-  const fetchListings = async (silent = false) => {
+  const fetchListingsWithFilters = async (
+    category: string, sort: string, condition: string,
+    min: string, max: string, silent: boolean
+  ) => {
     try {
       if (!silent) setListingsLoading(true);
-      const response = await apiClient.get('/api/listings?limit=50');
+      const qs = new URLSearchParams({ limit: '50', sort });
+      if (category) qs.set('category', category);
+      if (condition) qs.set('condition', condition);
+      if (min) qs.set('min', min);
+      if (max) qs.set('max', max);
+      const cacheKey = `listings_${category}_${sort}_${condition}_${min}_${max}`;
+
+      const response = await apiClient.get(`/api/listings?${qs.toString()}`);
       const data = await response.json();
 
-      let items: any[] | null = null;
+      let items: Listing[] | null = null;
       if (response.ok && data.data && Array.isArray(data.data)) {
         items = data.data.slice(0, 50);
       } else if (response.ok && data.data?.items) {
@@ -188,10 +243,10 @@ export default function SearchScreen() {
       }
       if (items) {
         setListings(items);
-        setCache('search_listings', items);
+        setCache(cacheKey, items);
       }
     } catch {
-      // silently fail on background refresh
+      // silently fail
     } finally {
       if (!silent) setListingsLoading(false);
     }
@@ -473,6 +528,55 @@ export default function SearchScreen() {
         )}
       </View>
 
+      {/* Category chips + sort/filter — only in browse mode */}
+      {!results && !loading && (
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryRow}
+            style={styles.categoryScroll}
+          >
+            {CATEGORIES.map((cat) => (
+              <TouchableOpacity
+                key={cat.value}
+                style={[styles.chip, selectedCategory === cat.value && styles.chipActive]}
+                onPress={() => setSelectedCategory(cat.value)}
+              >
+                <Text style={[styles.chipText, selectedCategory === cat.value && styles.chipTextActive]}>
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <View style={styles.sortFilterRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortRow}>
+              {SORT_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.sortChip, selectedSort === opt.value && styles.sortChipActive]}
+                  onPress={() => setSelectedSort(opt.value)}
+                >
+                  <Text style={[styles.sortChipText, selectedSort === opt.value && styles.sortChipTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={[styles.filterButton, activeFilterCount > 0 && styles.filterButtonActive]}
+              onPress={() => setFilterModalVisible(true)}
+            >
+              <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? colors.text.primary : colors.text.muted} />
+              <Text style={[styles.filterButtonText, activeFilterCount > 0 && styles.filterButtonTextActive]}>
+                Filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
       {loading ? (
         <LoadingSpinner message="Searching..." />
       ) : results ? (
@@ -508,6 +612,76 @@ export default function SearchScreen() {
           </Text>
         </View>
       )}
+      {/* Filter bottom sheet modal */}
+      <Modal
+        visible={filterModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setFilterModalVisible(false)}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Filter</Text>
+
+            <Text style={styles.filterLabel}>Condition</Text>
+            <View style={styles.filterChips}>
+              {CONDITIONS.map((c) => (
+                <TouchableOpacity
+                  key={c.value}
+                  style={[styles.chip, selectedCondition === c.value && styles.chipActive]}
+                  onPress={() => setSelectedCondition(c.value)}
+                >
+                  <Text style={[styles.chipText, selectedCondition === c.value && styles.chipTextActive]}>
+                    {c.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.filterLabel}>Price Range</Text>
+            <View style={styles.priceRow}>
+              <TextInput
+                style={styles.priceInput}
+                placeholder="Min $"
+                placeholderTextColor={colors.text.muted}
+                keyboardType="numeric"
+                value={minPrice}
+                onChangeText={setMinPrice}
+              />
+              <Text style={styles.priceSep}>—</Text>
+              <TextInput
+                style={styles.priceInput}
+                placeholder="Max $"
+                placeholderTextColor={colors.text.muted}
+                keyboardType="numeric"
+                value={maxPrice}
+                onChangeText={setMaxPrice}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.clearFiltersBtn}
+                onPress={() => {
+                  setSelectedCondition('');
+                  setMinPrice('');
+                  setMaxPrice('');
+                  setFilterModalVisible(false);
+                }}
+              >
+                <Text style={styles.clearFiltersBtnText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyFiltersBtn}
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={styles.applyFiltersBtnText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -752,4 +926,143 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+
+  // Category chips
+  categoryScroll: { borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  categoryRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  chipActive: {
+    backgroundColor: colors.brand.DEFAULT,
+    borderColor: colors.brand.DEFAULT,
+  },
+  chipText: { fontSize: 13, fontWeight: '500', color: colors.text.muted },
+  chipTextActive: { color: colors.text.primary, fontWeight: '700' },
+
+  // Sort + filter row
+  sortFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+    paddingRight: 16,
+  },
+  sortRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexGrow: 1 },
+  sortChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  sortChipActive: {
+    backgroundColor: colors.bg.raised,
+    borderColor: colors.border.focused,
+  },
+  sortChipText: { fontSize: 13, color: colors.text.muted, fontWeight: '500' },
+  sortChipTextActive: { color: colors.brand.DEFAULT, fontWeight: '700' },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.bg.surface,
+  },
+  filterButtonActive: {
+    borderColor: colors.brand.DEFAULT,
+    backgroundColor: colors.brand.soft,
+  },
+  filterButtonText: { fontSize: 13, color: colors.text.muted, fontWeight: '500' },
+  filterButtonTextActive: { color: colors.brand.DEFAULT, fontWeight: '700' },
+
+  // Filter modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: colors.bg.raised,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 12,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border.strong,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 20,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text.muted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  filterChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  priceInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: colors.bg.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+  priceSep: { color: colors.text.muted, fontSize: 16 },
+  modalActions: { flexDirection: 'row', gap: 12 },
+  clearFiltersBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    alignItems: 'center',
+  },
+  clearFiltersBtnText: { color: colors.text.secondary, fontWeight: '600', fontSize: 15 },
+  applyFiltersBtn: {
+    flex: 2,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: colors.brand.DEFAULT,
+    alignItems: 'center',
+  },
+  applyFiltersBtnText: { color: colors.text.primary, fontWeight: '700', fontSize: 15 },
 });
