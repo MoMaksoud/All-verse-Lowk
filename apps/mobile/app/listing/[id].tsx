@@ -19,6 +19,7 @@ import { apiClient } from '../../lib/api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ProfilePicture from '../../components/ProfilePicture';
+import ImageViewerModal from '../../components/ImageViewerModal';
 
 const { width } = Dimensions.get('window');
 
@@ -52,6 +53,7 @@ export default function ListingDetailScreen() {
   const [contactLoading, setContactLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
   const imageScrollViewRef = useRef<any>(null);
 
   useEffect(() => {
@@ -303,12 +305,21 @@ export default function ListingDetailScreen() {
             >
               {(listing.photos && listing.photos.length > 0 ? listing.photos : [null]).map(
                 (photo, index) => (
-                  <Image
+                  <TouchableOpacity
                     key={index}
-                    source={{ uri: normalizeImageUrl(photo) }}
-                    style={styles.image}
-                    resizeMode="cover"
-                  />
+                    activeOpacity={0.95}
+                    onPress={() => {
+                      if (listing.photos && listing.photos.length > 0) {
+                        setViewerVisible(true);
+                      }
+                    }}
+                  >
+                    <Image
+                      source={{ uri: normalizeImageUrl(photo) }}
+                      style={styles.image}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
                 )
               )}
             </ScrollView>
@@ -465,6 +476,16 @@ export default function ListingDetailScreen() {
             <Text style={styles.soldButtonText}>Item Sold</Text>
           </View>
         </View>
+      )}
+
+      {/* Full-screen image viewer */}
+      {listing.photos && listing.photos.length > 0 && (
+        <ImageViewerModal
+          images={listing.photos.map(normalizeImageUrl)}
+          initialIndex={currentImageIndex}
+          visible={viewerVisible}
+          onClose={() => setViewerVisible(false)}
+        />
       )}
     </View>
   );

@@ -85,6 +85,7 @@ export default function SearchScreen() {
   const [listingsLoading, setListingsLoading] = useState(true);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
     loadRecentSearches();
@@ -105,12 +106,9 @@ export default function SearchScreen() {
   );
 
   useEffect(() => {
-    if (searchQuery.length === 0) {
-      setShowRecentSearches(true);
-    } else {
-      setShowRecentSearches(false);
-    }
-  }, [searchQuery]);
+    // Only show recent searches when the bar is actively focused and empty
+    setShowRecentSearches(searchFocused && searchQuery.length === 0);
+  }, [searchQuery, searchFocused]);
 
   const loadRecentSearches = async () => {
     try {
@@ -399,10 +397,15 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Search Bar at top */}
+      {/* Page header */}
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>Marketplace</Text>
+      </View>
+
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={colors.text.muted} />
+        <View style={[styles.searchBar, searchFocused && styles.searchBarFocused]}>
+          <Ionicons name="search" size={18} color={searchFocused ? colors.brand.DEFAULT : colors.text.muted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search across all marketplaces..."
@@ -411,15 +414,15 @@ export default function SearchScreen() {
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
-            autoFocus
-            onFocus={() => setShowRecentSearches(true)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => {
               setSearchQuery('');
-              setShowRecentSearches(true);
+              setResults(null);
             }}>
-              <Ionicons name="close-circle" size={20} color={colors.text.muted} />
+              <Ionicons name="close-circle" size={18} color={colors.text.muted} />
             </TouchableOpacity>
           )}
         </View>
@@ -501,9 +504,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg.base,
   },
+  pageHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 12,
+  },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text.primary,
+    letterSpacing: -0.3,
+  },
   searchContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.subtle,
     position: 'relative',
@@ -556,10 +570,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     borderWidth: 1,
     borderColor: colors.border.subtle,
+  },
+  searchBarFocused: {
+    borderColor: colors.border.focused,
   },
   searchInput: {
     flex: 1,

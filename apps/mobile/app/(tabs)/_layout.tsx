@@ -82,7 +82,7 @@ export default function TabsLayout() {
         options={{
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search" size={size} color={color} />
+            <Ionicons name="storefront" size={size} color={color} />
           ),
           tabBarLabel: '',
         }}

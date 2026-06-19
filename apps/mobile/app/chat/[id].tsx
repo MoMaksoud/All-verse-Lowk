@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../../lib/api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import ProfilePicture from '../../components/ProfilePicture';
 
 interface Message {
   id: string;
@@ -270,15 +271,9 @@ export default function ChatDetailScreen() {
     const isMyMessage = item.senderId === currentUser?.uid;
     // Use otherUser.username from chatInfo if available (more reliable)
     const otherUser = chatInfo?.otherUser;
-    const username = !isMyMessage && otherUser?.username 
-      ? otherUser.username 
-      : item.sender?.username;
-    const hasUsername = username && typeof username === 'string' && username.trim().length > 0;
-    const displayName = hasUsername
-      ? `@${username.trim()}`
-      : (!isMyMessage && otherUser?.name 
-          ? otherUser.name 
-          : (item.sender?.name || 'Unknown User'));
+    const displayName = (!isMyMessage && otherUser?.name)
+      ? otherUser.name
+      : (item.sender?.name || 'Unknown User');
     const photoURL = (!isMyMessage && otherUser?.photoURL) || item.sender?.photoURL;
 
     return (
@@ -290,13 +285,7 @@ export default function ChatDetailScreen() {
       >
         {!isMyMessage && (
           <View style={styles.avatarContainer}>
-            {photoURL ? (
-              <Image source={{ uri: photoURL }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={16} color={colors.text.tertiary} />
-              </View>
-            )}
+            <ProfilePicture src={photoURL} name={displayName} size="sm" />
           </View>
         )}
         <View
@@ -305,9 +294,6 @@ export default function ChatDetailScreen() {
             isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble,
           ]}
         >
-          {!isMyMessage && (
-            <Text style={styles.senderName}>{displayName}</Text>
-          )}
           <Text style={[styles.messageText, isMyMessage && styles.myMessageText]}>
             {item.text}
           </Text>
@@ -330,23 +316,22 @@ export default function ChatDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.brand.DEFAULT} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          {otherUser?.photoURL ? (
-            <Image source={{ uri: otherUser.photoURL }} style={styles.headerAvatar} />
-          ) : (
-            <View style={styles.headerAvatarPlaceholder}>
-              <Ionicons name="person" size={20} color={colors.text.tertiary} />
-            </View>
-          )}
+          <ProfilePicture
+            src={otherUser?.photoURL}
+            name={otherUser?.name}
+            customSize={40}
+            style={styles.headerAvatar}
+          />
           <View style={styles.headerText}>
             <Text style={styles.headerName} numberOfLines={1}>
-              {otherUser?.username ? `@${otherUser.username}` : otherUser?.name || 'Unknown User'}
+              {otherUser?.name || 'Unknown User'}
             </Text>
-            {otherUser?.username && otherUser?.name && otherUser.name !== otherUser.username && (
+            {otherUser?.username && (
               <Text style={styles.headerUsername} numberOfLines={1}>
-                {otherUser.name}
+                @{otherUser.username}
               </Text>
             )}
           </View>
@@ -434,15 +419,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.subtle,
-    backgroundColor: colors.bg.surface,
+    backgroundColor: colors.bg.base,
   },
   backButton: {
-    marginRight: 12,
-    padding: 4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.bg.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
   headerInfo: {
     flexDirection: 'row',
@@ -450,33 +440,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     marginRight: 12,
-    backgroundColor: colors.bg.glassHover,
-  },
-  headerAvatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-    backgroundColor: colors.bg.glassHover,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerText: {
     flex: 1,
   },
   headerName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text.primary,
+    letterSpacing: -0.1,
   },
   headerUsername: {
     fontSize: 12,
-    color: colors.text.tertiary,
-    marginTop: 2,
+    color: colors.text.muted,
+    marginTop: 1,
   },
   messagesList: {
     padding: 16,
@@ -497,69 +475,54 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 4,
   },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.bg.glassHover,
-  },
-  avatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.bg.glassHover,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   messageBubble: {
-    maxWidth: '75%',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    maxWidth: '78%',
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 18,
   },
   myMessageBubble: {
     backgroundColor: colors.brand.DEFAULT,
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 5,
   },
   otherMessageBubble: {
     backgroundColor: colors.bg.surface,
-    borderBottomLeftRadius: 4,
-  },
-  senderName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text.tertiary,
-    marginBottom: 4,
+    borderBottomLeftRadius: 5,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   messageText: {
     fontSize: 15,
     color: colors.text.secondary,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   myMessageText: {
-    color: colors.text.primary,
+    color: '#ffffff',
   },
   timestamp: {
     fontSize: 11,
     color: colors.text.muted,
-    marginTop: 4,
+    marginTop: 3,
+    opacity: 0.7,
   },
   myTimestamp: {
-    color: colors.text.secondary,
+    color: 'rgba(255,255,255,0.6)',
+    opacity: 1,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingBottom: 14,
     borderTopWidth: 1,
     borderTopColor: colors.border.subtle,
-    backgroundColor: colors.bg.surface,
+    backgroundColor: colors.bg.base,
   },
   input: {
     flex: 1,
-    backgroundColor: colors.bg.raised,
-    borderRadius: 20,
+    backgroundColor: colors.bg.surface,
+    borderRadius: 22,
     paddingHorizontal: 16,
     paddingVertical: 10,
     color: colors.text.primary,
@@ -567,18 +530,20 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: colors.border.default,
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.brand.DEFAULT,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: colors.brand.ring,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   emptyState: {
     flex: 1,

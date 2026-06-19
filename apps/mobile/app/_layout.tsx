@@ -1,9 +1,28 @@
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
 import {colors} from '../constants/theme';
-import { AuthProvider } from '../contexts/AuthContext';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+
+function AuthGate() {
+  const { currentUser, loading, hasProfile, profileLoading } = useAuth();
+
+  useEffect(() => {
+    if (loading || profileLoading) return;
+    if (!currentUser) return;
+    if (!currentUser.emailVerified) {
+      router.replace('/auth/verify-email' as any);
+      return;
+    }
+    if (!hasProfile) {
+      router.replace('/auth/setup-profile' as any);
+    }
+  }, [currentUser?.uid, currentUser?.emailVerified, loading, hasProfile, profileLoading]);
+
+  return null;
+}
 
 export default function RootLayout() {
   return (
@@ -11,6 +30,7 @@ export default function RootLayout() {
       <AuthProvider>
         <View style={styles.container}>
           <StatusBar style="light" />
+          <AuthGate />
         <Stack
         screenOptions={{
           headerStyle: {
@@ -34,6 +54,8 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/verify-email" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="auth/setup-profile" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen 
           name="listing/[id]" 
           options={{ 
