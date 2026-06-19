@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Heart, Star, MessageCircle, X, ArrowLeft, Clock, Tag } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
-import { Navigation } from '@/components/Navigation';
+
 import ListingCard from '@/components/ListingCard';
 import { SellerInfo } from '@/components/SellerInfo';
 import { ListingActions } from '@/components/ListingActions';
@@ -340,7 +340,7 @@ export default function ListingDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950">
-        <Navigation />
+
         {/* Header bar skeleton */}
         <div className="bg-dark-900 border-b border-dark-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -379,7 +379,7 @@ export default function ListingDetailPage() {
   if (!listing) {
     return (
       <div className="min-h-screen bg-dark-950">
-        <Navigation />
+
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
@@ -400,7 +400,7 @@ export default function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
-      <Navigation />
+
       
       {/* Header */}
       <div className="bg-dark-900 border-b border-dark-700">

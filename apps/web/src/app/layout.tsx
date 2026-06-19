@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { AnalyticsDeferred } from '@/components/AnalyticsDeferred';
-import { Inter } from 'next/font/google';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import './performance.css';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -11,14 +11,23 @@ import { ChatProvider } from '@/contexts/ChatContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteTransitionMonitor } from '@/lib/performance';
 import { WebVitalsReporter } from '@/components/WebVitalsReporter';
+import { ConditionalNavigation } from '@/components/ConditionalNavigation';
+import { RouteProgress } from '@/components/RouteProgress';
 
 const GA_MEASUREMENT_ID = 'G-1KVRME8D19';
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   display: 'swap',
-  variable: '--font-inter'
+  variable: '--font-inter',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  display: 'swap',
+  variable: '--font-display',
 });
 
 export const metadata: Metadata = {
@@ -32,7 +41,6 @@ export const metadata: Metadata = {
     shortcut: '/logo.png',
     apple: '/logo.png',
   },
-  // No themeColor - let status bar be transparent by default
   appleWebApp: {
     title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
   },
@@ -65,7 +73,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
-  colorScheme: 'dark', // Tell browser it's a dark site, but no specific color
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({
@@ -76,9 +84,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        {/* Explicitly set transparent theme-color for mobile browsers */}
         <meta name="color-scheme" content="dark" />
-        {/* Google Analytics (GA4) */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
           strategy="afterInteractive"
@@ -92,16 +98,20 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.variable} font-sans h-full overflow-x-hidden`} suppressHydrationWarning>
-        <div className="min-h-screen w-full max-w-screen overflow-x-hidden">
+      <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans h-full overflow-x-hidden`} suppressHydrationWarning>
+        <div className="flex flex-col min-h-screen w-full max-w-screen">
           <ErrorBoundary>
             <AuthProvider>
               <ToastProvider>
                 <ChatProvider>
+                  <RouteProgress />
                   <RouteTransitionMonitor />
                   <WebVitalsReporter />
-                  {children}
-                  <AnalyticsDeferred />
+                  <ConditionalNavigation />
+                  <div className="flex flex-col flex-1 min-h-0">
+                    {children}
+                    <AnalyticsDeferred />
+                  </div>
                 </ChatProvider>
               </ToastProvider>
             </AuthProvider>

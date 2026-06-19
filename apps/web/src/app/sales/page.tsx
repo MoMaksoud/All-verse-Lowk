@@ -1,9 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigation } from '@/components/Navigation';
-import { DynamicBackground } from '@/components/DynamicBackground';
 import { Card } from '@/components/ui/Card';
 import { 
   Package, 
@@ -369,31 +367,23 @@ export default function SalesPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <Navigation />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
-        </div>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
       </div>
     );
   }
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <Navigation />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your sales</h1>
-            <Link
-              href="/signin?redirect=/sales&reason=sales"
-              className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-            >
-              Sign In
-            </Link>
-          </div>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your sales</h1>
+          <Link
+            href="/signin?redirect=/sales&reason=sales"
+            className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          >
+            Sign In
+          </Link>
         </div>
       </div>
     );
@@ -405,11 +395,8 @@ export default function SalesPage() {
     .reduce((sum, sale) => sum + sale.total, 0);
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <DynamicBackground intensity="low" showParticles={true} />
-      <Navigation />
-      
-      <div className="relative z-10 min-h-screen pt-20 px-4 py-8">
+    <div className="min-h-screen bg-[#020617]">
+      <div className="px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
@@ -549,21 +536,30 @@ export default function SalesPage() {
                     </div>
                   </div>
 
-                  {/* Sale Summary */}
-                  <div className="mt-6 pt-6 border-t border-dark-600">
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-gray-400">
+                  {/* Sale Summary + Actions */}
+                  <div className="mt-6 pt-6 border-t border-white/[0.08]">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="text-sm text-[#94a3b8]">
                         <p>Subtotal: {formatCurrency(sale.subtotal)}</p>
                         <p>Tax: {formatCurrency(sale.tax)}</p>
                         <p>Fees: {formatCurrency(sale.fees)}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex flex-col items-end gap-2">
                         <p className="text-white font-semibold text-lg">
                           Total: {formatCurrency(sale.total)}
                         </p>
+                        {sale.status === 'paid' && (sale as any).shipping?.rateId && (
+                          <button
+                            onClick={() => { setSelectedSale(sale); }}
+                            className="inline-flex items-center gap-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white text-sm font-medium py-1.5 px-3 rounded-lg transition-colors"
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            Generate Label
+                          </button>
+                        )}
                         <button
                           onClick={() => setSelectedSale(sale)}
-                          className="mt-2 text-accent-400 hover:text-accent-300 text-sm flex items-center gap-1"
+                          className="text-[#3b82f6] hover:text-[#60a5fa] text-sm flex items-center gap-1"
                         >
                           <Eye className="w-4 h-4" />
                           View Details
@@ -580,8 +576,8 @@ export default function SalesPage() {
 
       {/* Sale Details Modal */}
       {selectedSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0f172a] rounded-2xl border border-white/[0.08] p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-white">
                 Sale Details #{selectedSale.id.slice(-8).toUpperCase()}
@@ -609,7 +605,7 @@ export default function SalesPage() {
                 <h4 className="text-white font-medium mb-3">Items Sold</h4>
                 <div className="space-y-3">
                   {selectedSale.items.map((item, index) => (
-                    <div key={index} className="bg-zinc-800 rounded-xl p-4">
+                    <div key={index} className="bg-[#1e293b] rounded-xl p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h5 className="text-white font-medium">{item.title}</h5>
@@ -635,7 +631,7 @@ export default function SalesPage() {
                   <MapPin className="w-4 h-4" />
                   Shipping Address
                 </h4>
-                <div className="bg-zinc-800 rounded-xl p-4">
+                <div className="bg-[#1e293b] rounded-xl p-4">
                   <div className="text-zinc-300">
                     <p className="font-medium">{selectedSale.shippingAddress.name}</p>
                     <p>{selectedSale.shippingAddress.street}</p>
@@ -663,7 +659,7 @@ export default function SalesPage() {
                     <span className="text-zinc-400">Fees:</span>
                     <span className="text-white">{formatCurrency(selectedSale.fees)}</span>
                   </div>
-                  <div className="border-t border-zinc-700 pt-2">
+                  <div className="border-t border-white/[0.08] pt-2">
                     <div className="flex justify-between">
                       <span className="text-white font-semibold">Total:</span>
                       <span className="text-accent-500 font-semibold text-lg">
@@ -680,7 +676,7 @@ export default function SalesPage() {
                   <Truck className="w-4 h-4" />
                   Shipping Information
                 </h4>
-                <div className="bg-zinc-800 rounded-xl p-4">
+                <div className="bg-[#1e293b] rounded-xl p-4">
                   {loadingShipping ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-5 h-5 animate-spin text-accent-500 mr-2" />

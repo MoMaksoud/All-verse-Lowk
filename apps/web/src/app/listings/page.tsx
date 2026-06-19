@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -7,7 +7,6 @@ import { Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCa
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
 import ListingCard from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
-import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import Select from '@/components/Select';
 import ListingCollection from '@/components/ListingCollection';
@@ -187,7 +186,6 @@ function ListingsContent() {
 
   return (
     <div className="min-h-screen bg-dark-950">
-      <Navigation />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}

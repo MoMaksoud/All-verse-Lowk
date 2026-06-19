@@ -1,7 +1,6 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Navigation } from '@/components/Navigation';
 import { ArrowLeft, Users } from 'lucide-react';
 import Link from 'next/link';
 import { TeamMemberCard } from '@/components/TeamMemberCard';
@@ -14,7 +13,6 @@ export default function TeamPage() {
   if (!mounted) {
     return (
       <div className="min-h-screen home-page">
-        <Navigation />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="h-10 w-48 bg-white/10 rounded animate-pulse mb-6" />
           <div className="text-center mb-12">
@@ -37,7 +35,6 @@ export default function TeamPage() {
 
   return (
     <div className="min-h-screen home-page">
-      <Navigation />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <Link

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Sparkles, TrendingUp, Camera } from 'lucide-react';
 import { ImageSearchModal } from '@/components/search/ImageSearchModal';
@@ -13,6 +13,18 @@ export function UniversalSearchHero() {
   const [showImageModal, setShowImageModal] = useState(false);
   const router = useRouter();
   const popularSearches = useMemo(() => getPopularSearches(POPULAR_LIMIT).map((q) => q.query), []);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).isContentEditable)) return;
+      if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+      inputRef.current?.focus();
+    };
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +62,7 @@ export function UniversalSearchHero() {
                   <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <input
+                  ref={inputRef}
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}

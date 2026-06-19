@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, X } from 'lucide-react';
-import { Navigation } from '@/components/Navigation';
+
 import { Logo } from '@/components/Logo';
 import ListingGalleryEditor from '@/components/ListingGalleryEditor';
 import Select from '@/components/Select';
@@ -18,6 +18,7 @@ export default function EditListingPage() {
 
   // All state declarations
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [listing, setListing] = useState<any>(null);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -30,18 +31,6 @@ export default function EditListingPage() {
     category: '',
     condition: 'good' as const,
   });
-
-  // All hooks must be declared before any conditional returns
-  useEffect(() => {
-    console.log("[EditPage] mounted");
-    return () => console.log("[EditPage] unmounted");
-  }, []);
-
-  useEffect(() => {
-    const onVis = () => console.log("[EditPage] visibilitychange:", document.visibilityState);
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, []);
 
   const handlePhotoChange = useCallback((newPhotoUrls: string[]) => {
     setPhotoUrls(newPhotoUrls);
@@ -94,7 +83,7 @@ export default function EditListingPage() {
         setPhotoUrls(listingData.photos || listingData.images || []);
       } catch (error) {
         console.error('Error loading listing:', error);
-        addToast('error', 'Error', 'Failed to load listing data.');
+        setFetchError('Failed to load listing. It may have been removed or you may not have access.');
       }
     };
 
@@ -159,13 +148,29 @@ export default function EditListingPage() {
   };
 
   // Early return after all hooks are declared
+  if (fetchError) {
+    return (
+      <div className="min-h-screen bg-dark-900">
+
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center h-64 gap-4">
+            <p className="text-red-400 text-center">{fetchError}</p>
+            <button onClick={() => router.push('/my-listings')} className="text-accent-500 hover:text-accent-400 text-sm">
+              ← Back to my listings
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!listing) {
     return (
       <div className="min-h-screen bg-dark-900">
-        <Navigation />
+
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="text-white">Loading...</div>
+            <div className="text-white">Loading…</div>
           </div>
         </div>
       </div>
@@ -174,7 +179,7 @@ export default function EditListingPage() {
 
   return (
     <div className="min-h-screen bg-dark-900">
-      <Navigation />
+
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">

@@ -1,11 +1,10 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { Navigation } from '@/components/Navigation';
-import { DynamicBackground } from '@/components/DynamicBackground';
+
 import { Card } from '@/components/ui/Card';
 import { 
   Package, 
@@ -215,10 +214,9 @@ export default function MyListingsPage() {
   // Wait for auth to finish loading before showing sign-in prompt
   if (authLoading) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <Navigation />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#020617]">
+        
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
             <p className="text-zinc-400 text-lg">Loading your listings...</p>
@@ -231,10 +229,9 @@ export default function MyListingsPage() {
   // Show sign-in prompt if not authenticated
   if (!currentUser) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <Navigation />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#020617]">
+        
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your listings</h1>
             <Link
@@ -250,11 +247,10 @@ export default function MyListingsPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <DynamicBackground intensity="low" showParticles={true} />
-      <Navigation />
+    <div className="min-h-screen bg-[#020617]">
       
-      <div className="relative z-10 min-h-screen pt-20 px-4 py-8">
+      
+      <div className="px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-10">

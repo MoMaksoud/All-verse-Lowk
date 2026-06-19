@@ -1,12 +1,11 @@
-'use client';
+﻿'use client';
 
-import Navigation from '@/components/Navigation';
+
 import { Mail, ShoppingBag, Package, Shield, CreditCard, Clock, MessageCircle, Search, Edit, DollarSign } from 'lucide-react';
 
 export default function HelpPage() {
   return (
     <div className="min-h-screen home-page">
-      <Navigation />
       
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         {/* Header */}

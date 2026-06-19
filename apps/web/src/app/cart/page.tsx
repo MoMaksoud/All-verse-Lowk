@@ -1,10 +1,9 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigation } from '@/components/Navigation';
-import { DynamicBackground } from '@/components/DynamicBackground';
+
 import dynamic from 'next/dynamic';
 const CheckoutPage = dynamic(() => import('@/components/CheckoutForm'), {
   ssr: false,
@@ -140,10 +139,9 @@ export default function CartPage() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <Navigation />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#020617]">
+        
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Sign in to view your bag</h1>
             <button
@@ -160,10 +158,9 @@ export default function CartPage() {
 
   if (showCheckout) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <Navigation />
-        <div className="relative z-10 min-h-screen pt-20">
+      <div className="min-h-screen bg-[#020617]">
+        
+        <div className="min-h-0">
           <CheckoutPage cartItems={cartItems} onBack={handleBackFromCheckout} />
         </div>
       </div>
@@ -171,11 +168,10 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <DynamicBackground intensity="low" showParticles={true} />
-      <Navigation />
+    <div className="min-h-screen bg-[#020617]">
+      
 
-      <div className="relative z-10 min-h-screen pt-20 px-4 py-8">
+      <div className="px-4 py-8">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-3xl font-bold text-white mb-1">Your Bag</h1>
           {cartItems.length > 0 && (

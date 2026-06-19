@@ -261,14 +261,14 @@ function ListingCard({
       <Link href={`/listings/${id}`} className="block">
         <article
         className={clsx(
-          "rounded-3xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
+          "rounded-2xl border bg-dark-900 shadow-[0_8px_24px_rgba(0,0,0,0.35)]",
           variant === "grid" ? "overflow-hidden" : "p-4 md:p-5"
         )}
       >
         {variant === "grid" ? (
           <div className="flex flex-col h-full">
             {/* Image */}
-            <div className="aspect-square w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
+            <div className="aspect-square w-full overflow-hidden rounded-t-2xl bg-dark-800 relative">
               <Image
                 src={listingImageSrc}
                 alt={title}
@@ -312,7 +312,7 @@ function ListingCard({
                         size="sm"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
                         <span className="text-white text-xs font-semibold">
                           {sellerProfile?.username?.slice(0, 2).toUpperCase() || 'U'}
                         </span>
@@ -332,7 +332,7 @@ function ListingCard({
                 </div>
 
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm min-h-[1.5rem]">
-                <span className="text-blue-400 font-semibold">
+                <span className="text-accent-400 font-semibold">
                   {formatPriceDisplay(price)}
                 </span>
                 <span className="hidden sm:inline text-zinc-400">•</span>
@@ -364,7 +364,7 @@ function ListingCard({
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-[#0E1526] px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                  <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/[0.08] bg-dark-800 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
                     <button 
                       onClick={handleAddToCart}
                       disabled={addingToCart}
@@ -400,7 +400,7 @@ function ListingCard({
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-5">
             {/* Image */}
             <div className="w-full sm:w-32 md:w-44 lg:w-56 shrink-0">
-              <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
+              <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-dark-800 relative">
                 <Image
                   src={listingImageSrc}
                   alt={title}
@@ -444,7 +444,7 @@ function ListingCard({
               )}
 
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-                <span className="text-blue-400 font-semibold">
+                <span className="text-accent-400 font-semibold">
                   {formatPriceDisplay(price)}
                 </span>
                 <span className="text-zinc-400">•</span>
@@ -461,7 +461,7 @@ function ListingCard({
 
               {/* Actions */}
               <div className="mt-4">
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0E1526] px-4 py-3">
+                <div className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-dark-800 px-4 py-3">
                   <button 
                     onClick={handleAddToCart}
                     disabled={addingToCart}

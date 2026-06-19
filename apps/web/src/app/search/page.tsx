@@ -1,5 +1,4 @@
-import { Navigation } from "@/components/Navigation";
-import { DynamicBackground } from "@/components/DynamicBackground";
+﻿
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { serverSearch } from "@/lib/search/serverSearch";
 import SearchClientShell from "@/components/search/SearchClientShell";
@@ -46,9 +45,7 @@ export default async function SearchPage({
 
   if (!query) {
     return (
-      <div className="min-h-screen bg-dark-950">
-        <DynamicBackground intensity="low" showParticles={false} />
-        <Navigation />
+      <div className="min-h-screen" style={{ background: '#020617' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <LoadingSpinner
             size="lg"
@@ -85,10 +82,7 @@ export default async function SearchPage({
   }
 
   return (
-    <div className="min-h-screen bg-dark-950">
-      <DynamicBackground intensity="low" showParticles={false} />
-      <Navigation />
-
+    <div className="min-h-screen" style={{ background: '#020617' }}>
       <SearchClientShell
         initialQuery={payload.query}
         imageSearch={payload.imageSearch}

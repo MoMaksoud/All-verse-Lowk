@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 
@@ -7,7 +7,6 @@ export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap, Edit, Send } from 'lucide-react';
 import { SimpleListingCreate } from '@marketplace/types';
-import { Navigation } from '@/components/Navigation';
 import { Logo } from '@/components/Logo';
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { AIListingAssistant } from '@/components/AIListingAssistant';
@@ -1551,7 +1550,6 @@ export default function SellPage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
-      <Navigation />
             <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
         {/* Header Hero */}
         <header className="text-center space-y-4 sm:space-y-3 mb-8 sm:mb-10">

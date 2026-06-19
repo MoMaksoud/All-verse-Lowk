@@ -1,9 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigation } from '@/components/Navigation';
-import { DynamicBackground } from '@/components/DynamicBackground';
 import { Card } from '@/components/ui/Card';
 import { 
   Package, 
@@ -75,16 +73,6 @@ const formatDate = (dateString: string) => {
   });
 };
 
-function getApiErrorMessage(payload: unknown, fallback: string): string {
-  if (payload && typeof payload === 'object') {
-    const p = payload as Record<string, unknown>;
-    if (typeof p.message === 'string' && p.message.trim()) return p.message;
-    if (typeof p.error === 'string' && p.error.trim()) return p.error;
-    if (typeof p.code === 'string' && p.code.trim()) return `${fallback} (${p.code})`;
-  }
-  return fallback;
-}
-
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'paid':
@@ -134,7 +122,6 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(null);
   const [loadingShipping, setLoadingShipping] = useState(false);
-  const [generatingLabel, setGeneratingLabel] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { currentUser } = useAuth();
 
@@ -232,69 +219,25 @@ export default function OrdersPage() {
     }
   };
 
-  const handleGenerateLabel = async () => {
-    if (!selectedOrder || generatingLabel) return;
-
-    // Check if order has shipping metadata from payment intent
-    const orderShipping = (selectedOrder as any).shipping;
-    if (!orderShipping?.rateId || !orderShipping?.shipmentId) {
-      setError('Shipping rate information was not found for this order.');
-      return;
-    }
-
-    setGeneratingLabel(true);
-    setError(null);
-    try {
-      const { apiPost } = await import('@/lib/api-client');
-      const response = await apiPost('/api/shipping/create-label', {
-        rateId: orderShipping.rateId,
-        shipmentId: orderShipping.shipmentId,
-        orderId: selectedOrder.id,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(getApiErrorMessage(errorData, 'Failed to generate shipping label'));
-      }
-      
-      // Refresh shipping info
-      await fetchShippingInfo(selectedOrder.id);
-      
-      setError(null);
-    } catch (error) {
-      console.error('Error generating label:', error);
-      setError(error instanceof Error ? error.message : 'Failed to generate shipping label');
-    } finally {
-      setGeneratingLabel(false);
-    }
-  };
-
   if (!currentUser) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <Navigation />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your orders</h1>
-            <Link
-              href="/signin?redirect=/orders&reason=orders"
-              className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-            >
-              Sign In
-            </Link>
-          </div>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your orders</h1>
+          <Link
+            href="/signin?redirect=/orders&reason=orders"
+            className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          >
+            Sign In
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <DynamicBackground intensity="low" showParticles={true} />
-      <Navigation />
-      
-      <div className="relative z-10 min-h-screen pt-20 px-4 py-8">
+    <div className="min-h-screen bg-[#020617]">
+      <div className="px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
@@ -385,10 +328,24 @@ export default function OrdersPage() {
                     </div>
                   </div>
 
+                  {/* Shipped status inline tracking */}
+                  {(order.status === 'shipped' || order.status === 'delivered') && (
+                    <div className="mt-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e3a5f]/40 border border-[#3b82f6]/20 text-sm">
+                      <Truck className="w-4 h-4 text-[#3b82f6] shrink-0" />
+                      <span className="text-[#94a3b8]">Your item is on the way —</span>
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className="text-[#3b82f6] hover:text-[#60a5fa] font-medium"
+                      >
+                        Track package
+                      </button>
+                    </div>
+                  )}
+
                   {/* Order Summary */}
-                  <div className="mt-6 pt-6 border-t border-dark-600">
+                  <div className="mt-6 pt-6 border-t border-white/[0.08]">
                     <div className="flex justify-between items-center">
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm text-[#94a3b8]">
                         <p>Subtotal: {formatCurrency(order.subtotal)}</p>
                         <p>Tax: {formatCurrency(order.tax)}</p>
                         <p>Fees: {formatCurrency(order.fees)}</p>
@@ -399,7 +356,7 @@ export default function OrdersPage() {
                         </p>
                         <button
                           onClick={() => setSelectedOrder(order)}
-                          className="mt-2 text-accent-400 hover:text-accent-300 text-sm flex items-center gap-1"
+                          className="mt-2 text-[#3b82f6] hover:text-[#60a5fa] text-sm flex items-center gap-1"
                         >
                           <Eye className="w-4 h-4" />
                           View Details
@@ -416,8 +373,8 @@ export default function OrdersPage() {
 
       {/* Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0f172a] rounded-2xl border border-white/[0.08] p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-white">
                 Order Details #{selectedOrder.id.slice(-8).toUpperCase()}
@@ -445,7 +402,7 @@ export default function OrdersPage() {
                 <h4 className="text-white font-medium mb-3">Items</h4>
                 <div className="space-y-3">
                   {selectedOrder.items.map((item, index) => (
-                    <div key={index} className="bg-zinc-800 rounded-xl p-4">
+                    <div key={index} className="bg-[#1e293b] rounded-xl p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h5 className="text-white font-medium">{item.title}</h5>
@@ -471,7 +428,7 @@ export default function OrdersPage() {
                   <MapPin className="w-4 h-4" />
                   Shipping Address
                 </h4>
-                <div className="bg-zinc-800 rounded-xl p-4">
+                <div className="bg-[#1e293b] rounded-xl p-4">
                   <div className="text-zinc-300">
                     <p className="font-medium">{selectedOrder.shippingAddress.name}</p>
                     <p>{selectedOrder.shippingAddress.street}</p>
@@ -499,7 +456,7 @@ export default function OrdersPage() {
                     <span className="text-zinc-400">Fees:</span>
                     <span className="text-white">{formatCurrency(selectedOrder.fees)}</span>
                   </div>
-                  <div className="border-t border-zinc-700 pt-2">
+                  <div className="border-t border-white/[0.08] pt-2">
                     <div className="flex justify-between">
                       <span className="text-white font-semibold">Total:</span>
                       <span className="text-accent-500 font-semibold text-lg">
@@ -516,7 +473,7 @@ export default function OrdersPage() {
                   <Truck className="w-4 h-4" />
                   Shipping Information
                 </h4>
-                <div className="bg-zinc-800 rounded-xl p-4">
+                <div className="bg-[#1e293b] rounded-xl p-4">
                   {loadingShipping ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-5 h-5 animate-spin text-accent-500 mr-2" />
@@ -561,29 +518,12 @@ export default function OrdersPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      <p className="text-zinc-400 text-sm">No shipping label has been generated yet.</p>
-                      {(selectedOrder as any).shipping?.rateId && (selectedOrder as any).shipping?.shipmentId ? (
-                        <button
-                          onClick={handleGenerateLabel}
-                          disabled={generatingLabel}
-                          className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:bg-zinc-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                        >
-                          {generatingLabel ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Truck className="w-4 h-4" />
-                              Generate Shipping Label
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <p className="text-zinc-500 text-xs">Shipping rate information not available. Please contact support.</p>
-                      )}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[#94a3b8] text-sm">
+                        <Clock className="w-4 h-4 text-yellow-400 shrink-0" />
+                        <span>Your order is confirmed — the seller is preparing your shipment.</span>
+                      </div>
+                      <p className="text-[#64748b] text-xs">You'll receive a tracking number by email once your package ships.</p>
                     </div>
                   )}
                 </div>

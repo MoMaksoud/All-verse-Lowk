@@ -1,11 +1,10 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { Heart, Search, Filter } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import ListingCard from '@/components/ListingCard';
-import { Navigation } from '@/components/Navigation';
 
 export default function FavoritesPage() {
   const [favorites, setFavorites] = useState<SimpleListing[]>([]);
@@ -105,7 +104,6 @@ export default function FavoritesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950">
-        <Navigation />
         <LoadingSpinner size="lg" text="Loading your favorites..." />
       </div>
     );
@@ -113,7 +111,6 @@ export default function FavoritesPage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
-      <Navigation />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8 text-center">

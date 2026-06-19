@@ -42,9 +42,8 @@ export default function VerifyPage() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-dark-800 rounded-2xl p-8 border border-dark-700">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#020617' }}>
+        <div className="max-w-md w-full rounded-2xl p-8" style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)' }}>
           {status === 'verifying' && (
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mb-4"></div>
@@ -83,7 +82,6 @@ export default function VerifyPage() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

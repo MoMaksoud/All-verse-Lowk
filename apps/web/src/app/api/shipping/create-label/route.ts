@@ -1,12 +1,16 @@
 import { NextRequest } from 'next/server';
+import { FieldValue } from 'firebase-admin/firestore';
 import { withApi } from '@/lib/withApi';
 import { checkRateLimit, getIp } from '@/lib/rateLimit';
-import { getAdminFirestore } from '@/lib/firebase-admin';
+import { getAdminFirestore, getAdminAuth } from '@/lib/firebase-admin';
 import { getOrderAdmin, updateOrderAdmin } from '@/lib/server/adminOrders';
+import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
 import { canCreateShippingLabel } from '@/lib/authz';
 import { fail, ok } from '@/lib/api/responses';
 import { serverLogger } from '@/lib/server/logger';
 import { requoteShippingForPaidOrder } from '@/lib/payments/checkout';
+import { logEmail } from '@/lib/emailLog';
+import { sendBuyerTrackingEmail } from '@/lib/email';
 import {
   acquireShippingLabelLock,
   createAndResolveShippoLabel,
@@ -171,6 +175,45 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       shipmentId: effectiveShipmentId,
     });
     serverLogger.info('shippo_create_label_ok', { orderId });
+
+    // Auto-update order status to shipped and notify buyer
+    try {
+      await updateOrderAdmin(orderId, {
+        status: 'shipped',
+        shippedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      const freshOrder = await getOrderAdmin(orderId);
+      const auth = getAdminAuth();
+      if (freshOrder && auth) {
+        const buyerUser = await auth.getUser(freshOrder.buyerId).catch(() => null);
+        const buyerProfile = await getProfileDocumentAdmin(freshOrder.buyerId);
+        if (buyerUser?.email && buyerProfile) {
+          const trackingResult = await sendBuyerTrackingEmail({
+            orderId,
+            buyerName: buyerProfile.displayName || 'Customer',
+            buyerEmail: buyerUser.email,
+            trackingNumber: shippoResult.trackingNumber,
+            carrier: shippoResult.carrier,
+            service: shippoResult.service,
+            labelUrl: shippoResult.labelUrl,
+            items: freshOrder.items.map((i) => ({ title: i.title, qty: i.qty })),
+          });
+          await logEmail(
+            'buyer_tracking',
+            buyerUser.email,
+            trackingResult.success ? 'success' : 'failed',
+            { orderId, error: trackingResult.error }
+          );
+        }
+      }
+    } catch (postErr) {
+      serverLogger.warn('shippo_post_label_update_failed', {
+        orderId,
+        error: postErr instanceof Error ? postErr.message : String(postErr),
+      });
+    }
 
     return ok(
       {

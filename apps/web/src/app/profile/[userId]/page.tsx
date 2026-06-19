@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Calendar } from 'lucide-react';
-import { Navigation } from '@/components/Navigation';
+
 import ListingCard from '@/components/ListingCard';
 import { ProfilePicture } from '@/components/ProfilePicture';
 import { normalizeImageSrc } from '@marketplace/shared-logic';
@@ -121,7 +121,7 @@ export default function UserProfilePage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
-      <Navigation />
+
       
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}

@@ -82,6 +82,8 @@ const Navigation = memo(function Navigation() {
     // Count chats with messages newer than last time Messages page was last opened
     return chats.reduce((total, chat) => {
       if (!chat.lastMessage?.timestamp) return total;
+      // Never count a message the current user sent as unread
+      if (chat.lastMessage.senderId === currentUser.uid) return total;
       
       // Convert Firestore Timestamp to milliseconds
       const lastMessageTime = chat.lastMessage.timestamp.toDate ? 
@@ -201,43 +203,248 @@ const Navigation = memo(function Navigation() {
     fetchProfile();
   }, [currentUser, showProfileDropdown, profile, userProfile]);
 
+  // Shared active/inactive classes for nav links
+  const navLinkClass = (href: string) => {
+    const isActive = href === '/' ? resolvedPathname === '/' : resolvedPathname.startsWith(href);
+    return `relative flex items-center gap-1.5 text-sm font-medium transition-colors duration-150 whitespace-nowrap shrink-0 py-1 ${
+      isActive
+        ? 'text-[#60a5fa]'
+        : 'text-[#94a3b8] hover:text-white'
+    }`;
+  };
+
   return (
     <>
-    <nav className="backdrop-blur-xl bg-dark-900/80 border-b border-dark-700/50 sticky top-0 z-50 safe-area-top h-[64px] flex items-center justify-between px-6 py-2 w-full">
+    <nav className="backdrop-blur-md bg-[#020617]/92 border-b border-white/[0.07] sticky top-0 z-50 safe-area-top h-[56px] flex items-center justify-between px-5 lg:px-8 w-full">
       {/* Logo */}
-      <Link href="/" className="flex items-center shrink-0">
-        <Logo size="md" />
+      <Link href="/" className="flex items-center shrink-0 gap-2.5 mr-6">
+        <img src="/logo.png" alt="AllVerse" width={28} height={28} className="rounded-lg object-contain" />
+        <span className="font-bold text-[#f1f5f9] text-sm tracking-tight hidden sm:block" style={{ fontFamily: 'var(--font-display, var(--font-inter))' }}>
+          AllVerse
+        </span>
       </Link>
 
-      {/* Desktop Navigation - Centered */}
-      <div className="hidden md:flex items-center gap-6 flex-1 justify-center min-w-0 px-2">
+      {/* Desktop Navigation */}
+      <div className="hidden md:flex items-center gap-5 flex-1 min-w-0">
+        {navigation.map((item) => {
+          const isMessages = item.name === 'Messages';
+          const showBadge = isMessages && unreadMessageCount > 0 && currentChatId === null;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={() => { if (isMessages) setCurrentChatId(null); }}
+              prefetch={true}
+              className={navLinkClass(item.href)}
+            >
+              {item.name}
+              {isMounted && showBadge && (
+                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-[#3b82f6] text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                  {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Desktop Actions */}
+      <div className="hidden lg:flex items-center gap-2 shrink-0">
+        {currentUser ? (
+          <>
+            <button
+              onClick={() => router.push('/favorites')}
+              className="p-2 rounded-lg text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.06] transition-colors"
+              title="Favorites"
+            >
+              <Heart className="w-[18px] h-[18px]" />
+            </button>
+
+            <Link
+              href="/cart"
+              className="relative p-2 rounded-lg text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.06] transition-colors"
+            >
+              <ShoppingCart className="w-[18px] h-[18px]" />
+              {isMounted && cartItemCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-[18px] h-[18px] bg-[#3b82f6] text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                  {cartItemCount > 9 ? '9+' : cartItemCount}
+                </span>
+              )}
+            </Link>
+
+            <Link
+              href="/sell"
+              className="ml-1 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150"
+              style={{ background: '#3b82f6', color: '#ffffff' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#3b82f6')}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Sell
+            </Link>
+
+            <div className="relative shrink-0 ml-1" ref={dropdownRef}>
+              <button
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className="flex items-center gap-1.5 p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
+              >
+                <ProfilePicture
+                  src={(profile?.profilePicture || currentUser?.photoURL) as string | null}
+                  alt={currentUser?.displayName || 'Avatar'}
+                  name={currentUser?.displayName || undefined}
+                  email={currentUser?.email || undefined}
+                  size="sm"
+                  currentUser={currentUser}
+                  userProfilePic={userProfilePic}
+                />
+                <ChevronDown className="w-3.5 h-3.5 text-[#94a3b8]" />
+              </button>
+
+              {showProfileDropdown && (
+                <div className="fixed w-60 bg-[#0f172a] rounded-xl shadow-2xl border border-white/[0.10] overflow-hidden z-[200]" style={{ top: '60px', right: '20px' }}>
+                  <div className="px-4 py-3 border-b border-white/[0.07]">
+                    <div className="flex items-center gap-3">
+                      <ProfilePicture
+                        src={profile?.profilePicture || userProfile?.profilePicture}
+                        alt={currentUser?.displayName || 'Avatar'}
+                        name={currentUser?.displayName || undefined}
+                        email={currentUser?.email || undefined}
+                        size="md"
+                        currentUser={currentUser}
+                        userProfilePic={userProfilePic}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[#f1f5f9] truncate">{currentUser.displayName || "User"}</p>
+                        <p className="text-xs text-[#94a3b8] truncate">{currentUser.email}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="py-1">
+                    {[
+                      { href: '/profile',     Icon: UserCircle, label: 'View Profile'  },
+                      { href: '/my-listings', Icon: List,       label: 'My Listings'   },
+                      { href: '/orders',      Icon: Package,    label: 'My Orders'     },
+                      { href: '/sales',       Icon: TrendingUp, label: 'My Sales'      },
+                      { href: '/settings',    Icon: UserCircle, label: 'Settings'      },
+                    ].map(({ href, Icon, label }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.05] transition-colors"
+                        onClick={() => setShowProfileDropdown(false)}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="border-t border-white/[0.07]">
+                    <button
+                      onClick={() => { handleLogout(); setShowProfileDropdown(false); }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 shrink-0" />
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Link href="/signin" className="px-4 py-1.5 rounded-lg text-sm text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.06] transition-colors font-medium">
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150"
+              style={{ background: '#3b82f6', color: '#ffffff' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#3b82f6')}
+            >
+              Sign up
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Tablet Actions */}
+      <div className="hidden md:flex lg:hidden items-center gap-2 shrink-0">
+        {currentUser ? (
+          <>
+            <Link href="/cart" className="relative p-2 rounded-lg text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.06] transition-colors">
+              <ShoppingCart className="w-[18px] h-[18px]" />
+              {isMounted && cartItemCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-[18px] h-[18px] bg-[#3b82f6] text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                  {cartItemCount > 9 ? '9+' : cartItemCount}
+                </span>
+              )}
+            </Link>
+            <Link
+              href="/sell"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold"
+              style={{ background: '#3b82f6', color: '#ffffff' }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Sell
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link href="/signin" className="px-3 py-1.5 rounded-lg text-sm text-[#94a3b8] hover:text-[#f1f5f9] font-medium transition-colors">Sign in</Link>
+            <Link href="/signup" className="px-3 py-1.5 rounded-lg text-sm font-semibold" style={{ background: '#3b82f6', color: '#ffffff' }}>Sign up</Link>
+          </>
+        )}
+      </div>
+
+      {/* Mobile menu button */}
+      <div className="md:hidden shrink-0 ml-auto">
+        <button
+          type="button"
+          className="p-2 rounded-lg text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.06] transition-colors"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+    </nav>
+
+    {/* Mobile Navigation Overlay */}
+    {mobileMenuOpen && (
+      <div className="md:hidden fixed inset-0 bg-[#020617] z-[60] overflow-y-auto">
+        <div className="px-5 pt-5 pb-8">
+          <div className="flex items-center justify-between mb-6">
+            <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileMenuOpen(false)}>
+              <img src="/logo.png" alt="AllVerse" width={28} height={28} className="rounded-lg object-contain" />
+              <span className="font-bold text-[#f1f5f9] text-sm">AllVerse</span>
+            </Link>
+            <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-lg text-[#94a3b8] hover:text-[#f1f5f9]" aria-label="Close">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="space-y-1 mb-6">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isMessages = item.name === 'Messages';
-              // Show badge only if has unread messages AND not currently inside a chat
               const showBadge = isMessages && unreadMessageCount > 0 && currentChatId === null;
-              
+              const isActive = item.href === '/' ? resolvedPathname === '/' : resolvedPathname.startsWith(item.href);
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  onClick={() => {
-                    // When clicking Messages tab, set currentChatId to null (not inside a chat)
-                    if (isMessages) {
-                      setCurrentChatId(null);
-                    }
-                  }}
                   prefetch={true}
-                  className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-200 rounded-xl px-3 py-2 whitespace-nowrap shrink-0 ${
-                    (item.href === '/' ? resolvedPathname === '/' : resolvedPathname.startsWith(item.href))
-                      ? 'text-accent-400 bg-dark-700/50'
-                      : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
+                  className={`relative flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] font-medium transition-colors ${
+                    isActive ? 'text-[#60a5fa] bg-[#3b82f6]/[0.10]' : 'text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.05]'
                   }`}
+                  onClick={() => { setMobileMenuOpen(false); if (isMessages) setCurrentChatId(null); }}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-5 h-5 shrink-0" />
                   {item.name}
-                  {isMounted && showBadge && (
-                    <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                  {showBadge && (
+                    <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-[#3b82f6] text-white text-[10px] rounded-full flex items-center justify-center font-bold">
                       {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
                     </span>
                   )}
@@ -246,397 +453,75 @@ const Navigation = memo(function Navigation() {
             })}
           </div>
 
-          {/* Desktop Actions */}
-          <div className="hidden lg:flex items-center shrink-0 min-w-0">
+          <div className="border-t border-white/[0.07] pt-6 space-y-1">
             {currentUser ? (
-              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
-                {/* Favorites Heart */}
-                <button 
-                  onClick={() => router.push('/favorites')}
-                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
-                  title="Favorites"
-                >
-                  <Heart className="w-5 h-5" />
+              <>
+                <button onClick={() => { router.push('/favorites'); setMobileMenuOpen(false); }}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] font-medium text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.05] w-full text-left">
+                  <Heart className="w-5 h-5 shrink-0" /> Favorites
                 </button>
-
-                {/* Shopping Cart */}
-                <Link
-                  href="/cart"
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  {isMounted && cartItemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-                      {cartItemCount > 99 ? '99+' : cartItemCount}
-                    </span>
-                  )}
+                <button onClick={() => { router.push('/cart'); setMobileMenuOpen(false); }}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] font-medium text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.05] w-full text-left">
+                  <ShoppingCart className="w-5 h-5 shrink-0" />
+                  Cart {isMounted && cartItemCount > 0 && `(${cartItemCount})`}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/signin" className="flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] font-medium text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.05]" onClick={() => setMobileMenuOpen(false)}>
+                  <User className="w-5 h-5 shrink-0" /> Sign in
                 </Link>
-                
-                <Link
-                  href="/sell"
-                  className="btn btn-primary flex items-center gap-2 px-5 py-2.5 text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Sell
+                <Link href="/signup" className="flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] font-semibold text-[#0c0c0b] bg-[#c8f135]" onClick={() => setMobileMenuOpen(false)}>
+                  <Plus className="w-5 h-5 shrink-0" /> Sign up
                 </Link>
-                <div className="relative shrink-0" ref={dropdownRef}>
-                    <button
-                    onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                    className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 flex items-center gap-2 shrink-0"
-                  >
-                    <ProfilePicture
-                      src={(profile?.profilePicture || currentUser?.photoURL) as string | null}
-                      alt={currentUser?.displayName || 'Avatar'}
-                      name={currentUser?.displayName || undefined}
-                      email={currentUser?.email || undefined}
-                      size="sm"
-                      currentUser={currentUser}
-                      userProfilePic={userProfilePic}
-                    />
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  </button>
+              </>
+            )}
+          </div>
 
-                  {/* Profile Dropdown Menu */}
-                  {showProfileDropdown && (
-                    <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-dark-800 rounded-xl shadow-xl border border-dark-600 overflow-hidden z-[100]">
-                      {/* Profile Header */}
-                      <div className="px-4 py-3 border-b border-dark-600 bg-dark-800">
-                        <div className="flex items-center space-x-3">
-                          <div className="shrink-0">
-                            <ProfilePicture
-                              src={profile?.profilePicture || userProfile?.profilePicture}
-                              alt={currentUser?.displayName || 'Avatar'}
-                              name={currentUser?.displayName || undefined}
-                              email={currentUser?.email || undefined}
-                              size="md"
-                              currentUser={currentUser}
-                              userProfilePic={userProfilePic}
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">
-                              {currentUser.displayName || "User"}
-                            </p>
-                            <p className="text-sm text-gray-400 truncate">
-                              {currentUser.email}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Menu Items */}
-                      <div className="py-1">
-                        <Link
-                          href="/profile"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <UserCircle className="w-4 h-4 mr-3 shrink-0" />
-                          View Profile
-                        </Link>
-                        <Link
-                          href="/my-listings"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <List className="w-4 h-4 mr-3 shrink-0" />
-                          My Listings
-                        </Link>
-                        <Link
-                          href="/orders"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <Package className="w-4 h-4 mr-3 shrink-0" />
-                          My Orders
-                        </Link>
-                        <Link
-                          href="/sales"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
-                          onClick={() => setShowProfileDropdown(false)}
-                        >
-                          <TrendingUp className="w-4 h-4 mr-3 shrink-0" />
-                          My Sales
-                        </Link>
-                      </div>
-
-                      {/* Logout */}
-                      <div className="border-t border-dark-600">
-                        <button
-                          onClick={() => {
-                            handleLogout();
-                            setShowProfileDropdown(false);
-                          }}
-                          className="flex items-center w-full px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-                        >
-                          <LogOut className="w-4 h-4 mr-3 shrink-0" />
-                          Logout
-                        </button>
-                      </div>
-                    </div>
-                  )}
+          {currentUser && (
+            <div className="border-t border-white/[0.07] mt-6 pt-6">
+              <div className="flex items-center gap-3 px-3 mb-4">
+                <ProfilePicture
+                  src={profile?.profilePicture || userProfile?.profilePicture}
+                  alt={currentUser?.displayName || 'Avatar'}
+                  name={currentUser?.displayName || undefined}
+                  email={currentUser?.email || undefined}
+                  size="sm"
+                  currentUser={currentUser}
+                  userProfilePic={userProfilePic}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-[#f1f5f9]">{currentUser.displayName || "User"}</p>
+                  <p className="text-xs text-[#94a3b8]">{currentUser.email}</p>
                 </div>
               </div>
-            ) : (
-              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
-                <Link
-                  href="/signin"
-                  className="btn-ghost px-4 py-2 rounded-xl hover:bg-dark-700/50"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/signup"
-                  className="btn btn-primary px-4 py-2 rounded-xl"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Tablet Actions - Show fewer items */}
-          <div className="hidden md:flex lg:hidden items-center shrink-0 min-w-0">
-            {currentUser ? (
-              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
-                <button 
-                  onClick={() => router.push('/favorites')}
-                  className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
-                  title="Favorites"
-                >
-                  <Heart className="w-5 h-5" />
-                </button>
-
-                <Link
-                  href="/cart"
-                  className="relative btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  {isMounted && cartItemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-                      {cartItemCount > 99 ? '99+' : cartItemCount}
-                    </span>
-                  )}
-                </Link>
-                
-                <Link
-                  href="/sell"
-                  className="btn btn-primary flex items-center gap-1 px-5 py-2.5 text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Sell</span>
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
-                <Link
-                  href="/signin"
-                  className="btn-ghost px-3 py-2 text-sm rounded-xl hover:bg-dark-700/50"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/signup"
-                  className="btn btn-primary px-3 py-2 text-sm rounded-xl"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile menu button */}
-          <div className="md:hidden shrink-0 ml-2">
-            <button
-              type="button"
-              className="btn-ghost p-2 rounded-xl shrink-0"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-          </div>
-    </nav>
-
-      {/* Mobile Navigation - Full Screen Overlay */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 bg-dark-900/95 backdrop-blur-lg z-[60] overflow-y-auto">
-          <div className="px-4 pt-6 pb-3 space-y-2">
-            {/* Header with Logo and Close Button */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <Logo size="md" />
-              </div>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="btn-ghost p-2 rounded-xl"
-                aria-label="Close menu"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isMessages = item.name === 'Messages';
-                // Show badge only if has unread messages AND not currently inside a chat
-                const showBadge = isMessages && unreadMessageCount > 0 && currentChatId === null;
-                
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    prefetch={true}
-                    className={`relative flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                      resolvedPathname === item.href
-                        ? 'text-accent-400 bg-dark-700/50'
-                        : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
-                    }`}
-                    suppressHydrationWarning
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      // When clicking Messages tab, set currentChatId to null (not inside a chat)
-                      if (isMessages) {
-                        setCurrentChatId(null);
-                      }
-                    }}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {item.name}
-                    {showBadge && (
-                      <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-                        {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
-                      </span>
-                    )}
+              <div className="space-y-1">
+                {[
+                  { href: '/profile',     label: 'View Profile' },
+                  { href: '/my-listings', label: 'My Listings'  },
+                  { href: '/orders',      label: 'My Orders'    },
+                  { href: '/sales',       label: 'My Sales'     },
+                  { href: '/sell',        label: 'Sell an Item' },
+                  { href: '/settings',    label: 'Settings'     },
+                ].map(({ href, label }) => (
+                  <Link key={href} href={href}
+                    className="block px-3 py-2.5 rounded-xl text-[15px] font-medium text-[#94a3b8] hover:text-[#f1f5f9] hover:bg-white/[0.05]"
+                    onClick={() => setMobileMenuOpen(false)}>
+                    {label}
                   </Link>
-                );
-              })}
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-dark-600">
-                <div className="space-y-1">
-                  {currentUser ? (
-                    <>
-                      <button 
-                        onClick={() => {
-                          router.push('/favorites');
-                          setMobileMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
-                      >
-                        <Heart className="w-5 h-5" />
-                        Favorites
-                      </button>
-
-                      <button 
-                        onClick={() => {
-                          router.push('/cart');
-                          setMobileMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
-                      >
-                        <ShoppingCart className="w-5 h-5" />
-                        Cart {isMounted && cartItemCount > 0 && `(${cartItemCount})`}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link
-                        href="/signin"
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <User className="w-5 h-5" />
-                        Sign In
-                      </Link>
-                      <Link
-                        href="/signup"
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-white bg-accent-500 hover:bg-accent-600 w-full text-left"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <Plus className="w-5 h-5" />
-                        Sign Up
-                      </Link>
-                    </>
-                  )}
-                </div>
+                ))}
+                <button
+                  onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2.5 rounded-xl text-[15px] font-medium text-red-400 hover:bg-red-500/[0.08]">
+                  Sign out
+                </button>
               </div>
-
-              {/* Profile Section */}
-              {currentUser && (
-                <div className="pt-4 border-t border-dark-600">
-                  <div className="flex items-center px-3 py-3">
-                    <ProfilePicture
-                      src={profile?.profilePicture || userProfile?.profilePicture}
-                      alt={currentUser?.displayName || 'Avatar'}
-                      name={currentUser?.displayName || undefined}
-                      email={currentUser?.email || undefined}
-                      size="sm"
-                      currentUser={currentUser}
-                      userProfilePic={userProfilePic}
-                    />
-                    <div className="ml-3">
-                      <div className="text-base font-medium text-white">
-                        {currentUser.displayName || "User"}
-                      </div>
-                      <div className="text-sm font-medium text-gray-400">
-                        {currentUser.email}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 space-y-1">
-                    <Link
-                      href="/profile"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Profile
-                    </Link>
-                    <Link
-                      href="/my-listings"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      My Listings
-                    </Link>
-                    <Link
-                      href="/orders"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      My Orders
-                    </Link>
-                    <Link
-                      href="/sales"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      My Sales
-                    </Link>
-                    <Link
-                      href="/sell"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Sell Item
-                    </Link>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-3 py-2 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
+    )}
+
     </>
   );
 });

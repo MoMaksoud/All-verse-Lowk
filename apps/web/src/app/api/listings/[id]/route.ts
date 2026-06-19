@@ -24,12 +24,17 @@ export const GET = withApi(async (
     // Treat items with inventory === 0 as sold even if sold field is not set
     const isSold = (listing.sold ?? false) === true || listing.inventory === 0;
     const simpleListing = {
-      id: (listing as any).id, // FirestoreListing & { id: string }
+      id: (listing as any).id,
       title: listing.title,
       description: listing.description,
       price: listing.price,
       category: listing.category,
+      condition: listing.condition,
+      brand: listing.brand,
+      model: listing.model,
+      size: (listing as any).size,
       photos: listing.images || [],
+      images: listing.images || [],
       createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: listing.sellerId,

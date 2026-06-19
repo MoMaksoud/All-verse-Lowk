@@ -1,10 +1,9 @@
+import { Loader2 } from 'lucide-react';
+
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-dark-950 flex items-center justify-center">
-      <div className="text-center">
-        <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-accent-500 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-        <p className="mt-4 text-gray-400">Loading...</p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#020617' }}>
+      <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#3b82f6' }} />
     </div>
   );
 }
