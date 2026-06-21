@@ -12,8 +12,10 @@ import { PhotoUpload } from '@/components/PhotoUpload';
 import { AIListingAssistant } from '@/components/AIListingAssistant';
 import Select from '@/components/Select';
 import { useAuth } from '@/contexts/AuthContext';
-import { firestoreServices } from '@/lib/services/firestore';
-import { Toast, ToastType } from '@/components/Toast';
+import { Toast } from '@/components/Toast';
+import { SellListingStepper } from '@/app/sell/components/SellListingStepper';
+import { useSellToasts } from '@/app/sell/hooks/useSellToasts';
+import { buildSellListingPayload } from '@/app/sell/mapListingSubmit';
 import { isCloudUrl } from '@/types/photos';
 import { uploadListingPhotoFile } from '@/lib/storage';
 import { formatPrice } from '@/lib/format';
@@ -26,30 +28,16 @@ const steps = [
   { id: 5, title: 'Publish', description: 'Final review and publish', icon: Send },
 ];
 
-type AssistantAnswerValue = {
-  question: string;
-  answer: string;
-};
-
 export default function SellPage() {
   const router = useRouter();
-  const { currentUser } = useAuth();
-
-  // Toast helper functions
-  const addToast = (type: ToastType, title: string, message?: string) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, type, title, message }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
+  const { currentUser, loading: authLoading } = useAuth();
+  const { toasts, addToast, removeToast } = useSellToasts();
 
   // Photo state management
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [listingId, setListingId] = useState<string | undefined>(undefined);
-  
+
   // Photo change handler - memoized to prevent infinite re-renders
   const handlePhotoChange = useCallback((urls: string[]) => {
     setPhotoUrls(urls);
@@ -65,19 +53,18 @@ export default function SellPage() {
       setListingId(tempId);
     }
   }, [currentUser, listingId]);
-  
+
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [uploadingLabel, setUploadingLabel] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [priceSuggesting, setPriceSuggesting] = useState(false);
   const [lastPriceSuggestionTime, setLastPriceSuggestionTime] = useState(0);
-  const [toasts, setToasts] = useState<Array<{ id: string; type: ToastType; title: string; message?: string }>>([]);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [aiAssistantComplete, setAiAssistantComplete] = useState(false);
   const [initialEvidence, setInitialEvidence] = useState<any>(null);
-  
+
   const [formData, setFormData] = useState<Omit<SimpleListingCreate, 'price'> & {
     price: string;
     marketResearch?: {
@@ -85,9 +72,6 @@ export default function SellPage() {
       priceRange: { min: number; max: number };
       marketDemand: 'high' | 'medium' | 'low';
       competitorCount: number;
-      priceConfidence?: number;
-      comparableCount?: number;
-      notes?: string;
     };
     condition?: string;
     size?: string;
@@ -118,14 +102,11 @@ export default function SellPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Redirect if not authenticated
   useEffect(() => {
-    console.log('Sell page auth check:', { currentUser: !!currentUser, uid: currentUser?.uid });
-    if (!currentUser) {
-      console.log('No user found, redirecting to signin');
-      router.push('/signin');
+    if (!authLoading && !currentUser) {
+      router.push('/signin?redirect=/sell&reason=sell');
     }
-  }, [currentUser, router]);
+  }, [authLoading, currentUser, router]);
 
   // Remove categories fetch since we'll use hardcoded categories
 
@@ -139,17 +120,9 @@ export default function SellPage() {
         newData.size = '';
       }
 
-      if (field === 'condition') {
-        newData.marketResearch = undefined;
-      }
-
       return newData;
     });
 
-    if (field === 'condition') {
-      setLastPriceSuggestionTime(0);
-    }
-    
     if (errors[field as string]) {
       setErrors((prev: Record<string, string>) => ({ ...prev, [field]: '' }));
     }
@@ -186,7 +159,6 @@ export default function SellPage() {
         if (!formData.title?.trim()) stepErrors.title = 'Title is required';
         if (!formData.description?.trim()) stepErrors.description = 'Description is required';
         if (!formData.category) stepErrors.category = 'Category is required';
-        if (!formData.condition) stepErrors.condition = 'Condition is required';
         if (!formData.price || parseFloat(formData.price) <= 0) stepErrors.price = 'Valid price is required';
         break;
     }
@@ -210,77 +182,11 @@ export default function SellPage() {
 
   // Removed legacy fallback analysis tester (no corresponding API route)
 
-  const getUsableMarketResearch = (analysis: any) => {
-    const research = analysis?.marketResearch;
-    if (!research || !Number.isFinite(Number(research.averagePrice)) || Number(research.averagePrice) <= 0) {
-      return undefined;
-    }
-    if (typeof research.priceConfidence === 'number' && research.priceConfidence < 0.4) {
-      return undefined;
-    }
-    return research;
-  };
-
-  const applyFinalAnalysis = (finalAnalysis: any) => {
-    const price = Number(finalAnalysis?.suggestedPrice);
-    setFormData(prev => ({
-      ...prev,
-      title: finalAnalysis.title || prev.title,
-      description: finalAnalysis.description || prev.description,
-      category: finalAnalysis.category || prev.category,
-      price: Number.isFinite(price) && price > 0 ? price.toString() : '',
-      condition: finalAnalysis.condition || '',
-      marketResearch: getUsableMarketResearch(finalAnalysis),
-    }));
-    setAiAnalysis(finalAnalysis);
-  };
-
-  const generateFinalListing = async (
-    userAnswers: Record<string, AssistantAnswerValue> = {},
-    evidenceOverride?: any
-  ) => {
-    const evidence = evidenceOverride || initialEvidence;
-
-    if (!evidence || photoUrls.length === 0) {
-      throw new Error('Missing image evidence for final listing generation');
-    }
-
-    setAiAnalyzing(true);
-    const { apiPost } = await import('@/lib/api-client');
-    const response = await apiPost('/api/ai/analyze-product', {
-      imageUrls: photoUrls,
-      phase: 'final',
-      userAnswers,
-      initialEvidence: evidence,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('🤖 Phase 2 API error:', errorText);
-      throw new Error(`Failed to generate final listing: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    if (!result.success || !result.analysis) {
-      console.error('🤖 Invalid Phase 2 response:', result);
-      throw new Error('Invalid response from Phase 2');
-    }
-
-    applyFinalAnalysis(result.analysis);
-    setShowAIAssistant(false);
-    setAiAssistantComplete(true);
-    setCurrentStep(4);
-    addToast('success', 'Listing Ready!', 'Your listing has been generated with the uploaded photos and seller details.');
-
-    return result.analysis;
-  };
-
   const performAIAnalysis = async () => {
     console.log('🔥 PERFORM AI ANALYSIS FUNCTION CALLED!');
     console.log('🔥 Current user:', currentUser);
     console.log('🔥 Photo URLs:', photoUrls);
-    
+
     if (!currentUser || !photoUrls.length) {
       console.error('❌ AI Analysis aborted: missing user or photos');
       return;
@@ -296,57 +202,65 @@ export default function SellPage() {
       console.log('🤖 Starting AI analysis for uploaded photos');
       console.log('🤖 Current user:', currentUser.uid);
       console.log('🤖 Photos to analyze:', photoUrls);
-      
+
       console.log('🤖 Valid photos for AI analysis:', photoUrls);
-      
+
       const { apiPost } = await import('@/lib/api-client');
       const response = await apiPost('/api/ai/analyze-product', {
         imageUrls: photoUrls, // Use only cloud URLs
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('🤖 API error response:', errorText);
         throw new Error(`AI analysis failed: ${response.status} - ${errorText}`);
       }
-      
+
       const result = await response.json();
       console.log('🤖 API response result:', result);
       const analysis = result.analysis;
-      const evidence = analysis._evidence || {
+
+      // Store initial evidence for Phase 2 - use the full evidence object if available
+      setInitialEvidence(analysis._evidence || {
         brand: analysis.brand,
         model: analysis.model,
         product_type: analysis.category,
         visible_features: analysis.features,
         model_exact: analysis.model,
         model_range: analysis.model
-      };
-
-      // Store initial evidence for Phase 2 - use the full evidence object if available
-      setInitialEvidence(evidence);
+      });
 
       // Store the analysis for the AI assistant
       setAiAnalysis(analysis);
-      
+
       // Check if there's missing information that needs user input
-      const followUpQuestions = analysis.questions || analysis.missingInfo || [];
-      if (followUpQuestions.length > 0) {
-        console.log('🤖 Missing information detected:', followUpQuestions);
+      if (analysis.missingInfo && analysis.missingInfo.length > 0) {
+        console.log('🤖 Missing information detected:', analysis.missingInfo);
         setShowAIAssistant(true);
         setCurrentStep(3); // Go to AI assistant step
         addToast('info', 'Additional Info Needed', 'Please answer a few questions to complete your listing.');
       } else {
-        // No follow-up questions, still run the final generation pass before filling review fields.
-        await generateFinalListing({}, evidence);
+        // No missing info, use initial analysis
+        const aiData = {
+          title: analysis.title,
+          description: analysis.description,
+          category: analysis.category,
+          price: analysis.suggestedPrice ? analysis.suggestedPrice.toString() : '',
+          condition: analysis.condition,
+          marketResearch: analysis.marketResearch,
+        };
+        setFormData(prev => ({ ...prev, ...aiData }));
+        setCurrentStep(3); // Go to review step
+        addToast('success', 'AI Analysis Complete', 'Product details have been generated successfully!');
       }
-      
+
     } catch (error) {
       console.error('❌ Error in AI analysis:', error);
-      
+
       // Provide more specific error messages
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('❌ AI Analysis error details:', errorMessage);
-      
+
       if (errorMessage.includes('cloud storage')) {
         // Photo upload issue
         addToast('error', 'Photo Upload Issue', 'Photos need to be properly uploaded before AI analysis. Please try uploading again.');
@@ -385,15 +299,56 @@ export default function SellPage() {
     }));
   };
 
-  const handleAIAssistantComplete = async (userAnswers?: Record<string, AssistantAnswerValue>) => {
+  const handleAIAssistantComplete = async (
+    userAnswers?: Record<string, { question: string; answer: string }>
+  ) => {
     console.log('🤖 AI Assistant completed with answers:', userAnswers);
     console.log('🤖 Initial evidence:', initialEvidence);
     console.log('🤖 Photo URLs count:', photoUrls.length);
-    
+
     // If we have user answers and initial evidence, generate final listing
-    if (initialEvidence && photoUrls.length > 0) {
+    if (userAnswers && Object.keys(userAnswers).length > 0 && initialEvidence && photoUrls.length > 0) {
       try {
-        await generateFinalListing(userAnswers || {}, initialEvidence);
+        setAiAnalyzing(true);
+        const { apiPost } = await import('@/lib/api-client');
+        const response = await apiPost('/api/ai/analyze-product', {
+          imageUrls: photoUrls,
+          phase: 'final',
+          userAnswers,
+          initialEvidence
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('🤖 Phase 2 API error:', errorText);
+          throw new Error(`Failed to generate final listing: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !result.analysis) {
+          console.error('🤖 Invalid Phase 2 response:', result);
+          throw new Error('Invalid response from Phase 2');
+        }
+
+        const finalAnalysis = result.analysis;
+        console.log('🤖 Final analysis received:', finalAnalysis);
+
+        // Update form with final, polished listing
+        setFormData(prev => ({
+          ...prev,
+          title: finalAnalysis.title,
+          description: finalAnalysis.description,
+          category: finalAnalysis.category,
+          price: finalAnalysis.suggestedPrice ? finalAnalysis.suggestedPrice.toString() : '',
+          condition: finalAnalysis.condition,
+          marketResearch: finalAnalysis.marketResearch,
+        }));
+        setAiAnalysis(finalAnalysis);
+        setShowAIAssistant(false);
+        setAiAssistantComplete(true);
+        setCurrentStep(4);
+        addToast('success', 'Listing Ready!', 'Your listing has been generated with all the details.');
       } catch (error) {
         console.error('❌ Error generating final listing:', error);
         addToast('error', 'Generation Failed', error instanceof Error ? error.message : 'Could not generate final listing. Using initial analysis.');
@@ -404,11 +359,11 @@ export default function SellPage() {
         setAiAnalyzing(false);
       }
     } else {
-      console.warn('⚠️ Missing data for Phase 2:', { 
-        hasUserAnswers: !!userAnswers, 
+      console.warn('⚠️ Missing data for Phase 2:', {
+        hasUserAnswers: !!userAnswers,
         userAnswersCount: userAnswers ? Object.keys(userAnswers).length : 0,
         hasInitialEvidence: !!initialEvidence,
-        photoUrlsCount: photoUrls.length 
+        photoUrlsCount: photoUrls.length
       });
       setShowAIAssistant(false);
       setAiAssistantComplete(true);
@@ -418,8 +373,8 @@ export default function SellPage() {
   };
 
   const suggestAIPrice = async () => {
-    if (!formData.title || !formData.category || !formData.condition) {
-      addToast('error', 'Missing Information', 'Please fill in title, category, and condition before getting AI price suggestions');
+    if (!formData.title || !formData.category) {
+      addToast('error', 'Missing Information', 'Please fill in title and category before getting AI price suggestions');
       return;
     }
 
@@ -433,9 +388,9 @@ export default function SellPage() {
     try {
       setPriceSuggesting(true);
       setLastPriceSuggestionTime(now);
-      
+
       console.log('💰 Starting AI market analysis for pricing...');
-      
+
       const { apiPost } = await import('@/lib/api-client');
       const response = await apiPost('/api/ai/market-analysis', {
         title: formData.title,
@@ -445,41 +400,35 @@ export default function SellPage() {
         brand: aiAnalysis?.brand || 'Unknown',
         model: aiAnalysis?.model || 'Unknown'
       }, { requireAuth: false });
-      
+
       if (!response.ok) {
         throw new Error('Market analysis failed');
       }
-      
+
       const result = await response.json();
       console.log('💰 AI market analysis result:', result);
-      
+
       if (result.success && result.data?.marketAnalysis) {
         const marketData = result.data.marketAnalysis;
-        const suggestedPrice = Number(marketData.suggestedPrice);
 
-        if (!Number.isFinite(suggestedPrice) || suggestedPrice <= 0) {
-          throw new Error('AI did not return a valid price');
-        }
-        
         // Update form data with market research
         setFormData(prev => ({
           ...prev,
-          price: suggestedPrice.toString(),
+          price: marketData.suggestedPrice.toString(),
           marketResearch: {
-            averagePrice: suggestedPrice,
+            averagePrice: marketData.suggestedPrice,
             priceRange: marketData.priceRange,
             marketDemand: marketData.marketDemand,
-            competitorCount: marketData.competitorCount,
-            priceConfidence: marketData.confidence
+            competitorCount: marketData.competitorCount
           }
         }));
-        
-        addToast('success', 'AI Price Analysis Complete!', 
-          `Price updated to ${formatPrice(suggestedPrice)} for ${formData.condition} condition (${marketData.marketDemand} demand, range: ${formatPrice(marketData.priceRange.min)}-${formatPrice(marketData.priceRange.max)})`);
+
+        addToast('success', 'AI Price Analysis Complete!',
+          `Price updated to ${formatPrice(marketData.suggestedPrice)} (${marketData.marketDemand} demand, range: ${formatPrice(marketData.priceRange.min)}-${formatPrice(marketData.priceRange.max)})`);
       } else {
         throw new Error('Invalid market analysis response');
       }
-      
+
     } catch (error) {
       console.error('💰 Error in AI price suggestion:', error);
       addToast('error', 'Price Analysis Failed', 'Unable to get AI price suggestions. Please try again.');
@@ -490,83 +439,54 @@ export default function SellPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    
+
     if (!currentUser) {
       setErrors({ submit: 'User not authenticated' });
       return;
     }
-    
+
     // Validation
     const newErrors: Record<string, string> = {};
     if (!formData.title.trim()) newErrors.title = 'Title is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Price must be greater than 0';
     if (!formData.category) newErrors.category = 'Category is required';
-    if (!formData.condition) newErrors.condition = 'Condition is required';
     if (!photoUrls.length) newErrors.photos = 'At least one photo is required';
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    
+
     try {
       setLoading(true);
-      
-      // First, create the listing without photos
-      const listingData: any = {
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        category: formData.category,
-        images: photoUrls, // Use cloud URLs directly
-        condition: formData.condition,
-        inventory: 1,
-        isActive: true,
-        sellerId: currentUser?.uid || '',
-      };
-      // Populate optional product identifiers from AI analysis for search and exact-item matching
-      const brand = initialEvidence?.brand ?? aiAnalysis?.brand;
-      const model = initialEvidence?.model_exact ?? initialEvidence?.model_range ?? aiAnalysis?.model;
-      if (brand) listingData.brand = brand;
-      if (model) listingData.model = model;
-      if (initialEvidence?.gtin) listingData.gtin = initialEvidence.gtin;
 
-      // Add shipping information if provided
-      if (formData.shipping && (
-        formData.shipping.weight || 
-        formData.shipping.length || 
-        formData.shipping.width || 
-        formData.shipping.height || 
-        formData.shipping.labelScanUrl
-      )) {
-        listingData.shipping = {
-          weight: formData.shipping.weight ? parseFloat(formData.shipping.weight) : undefined,
-          length: formData.shipping.length ? parseFloat(formData.shipping.length) : undefined,
-          width: formData.shipping.width ? parseFloat(formData.shipping.width) : undefined,
-          height: formData.shipping.height ? parseFloat(formData.shipping.height) : undefined,
-          labelScanUrl: formData.shipping.labelScanUrl || undefined,
-        };
-      }
-      
+      const listingData = buildSellListingPayload({
+        formData,
+        photoUrls,
+        sellerId: currentUser.uid,
+        aiAnalysis,
+        initialEvidence,
+      });
+
       const { apiPost: apiPostListing } = await import('@/lib/api-client');
       const response = await apiPostListing('/api/listings', listingData);
-      
+
       if (!response.ok) {
         const errorData = await response.text();
         throw new Error(`Failed to create listing: ${response.status} - ${errorData}`);
       }
-      
+
       const result = await response.json();
       const listingId = result.id;
-      
+
       // Photos are already uploaded via PhotoUpload component
       console.log('📸 Listing created with photos:', photoUrls.length);
-      
+
       // Show success message
       addToast('success', 'Listing Published!', 'Your listing has been successfully created and published.');
       router.push(`/listings/${listingId}`);
-      
+
     } catch (error) {
       console.error('Error creating listing:', error);
       setErrors({ submit: 'Failed to publish listing. Please try again.' });
@@ -610,7 +530,7 @@ export default function SellPage() {
               <Brain className="mx-auto h-16 w-16 text-blue-400 mb-4" />
               <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-2">AI Analysis</h2>
               <p className="text-sm sm:text-base text-zinc-300 leading-7 mb-6">Let our AI analyze your photos and generate product details</p>
-              
+
               {photoUrls.length === 0 ? (
                 <div className="p-6 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
                   <p className="text-yellow-400">Please upload photos first to enable AI analysis</p>
@@ -642,7 +562,7 @@ export default function SellPage() {
                         <p className="text-zinc-400 text-sm mb-2">Photos uploaded: {photoUrls.length}</p>
                         <p className="text-zinc-100 text-sm">Ready for AI analysis</p>
                       </div>
-                      
+
                       <div className="flex flex-col sm:flex-row gap-3">
                         <button
                           onClick={() => {
@@ -651,14 +571,14 @@ export default function SellPage() {
                           disabled={aiAnalyzing || isUploadingPhotos || !photoUrls.every(url => isCloudUrl(url))}
                           className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex-1"
                         >
-                          {aiAnalyzing ? 'Analyzing...' : 
+                          {aiAnalyzing ? 'Analyzing...' :
                            isUploadingPhotos ? 'Uploading Photos...' :
                            !photoUrls.every(url => isCloudUrl(url)) ? 'Photos Must Be Uploaded' :
                            'Analyze with AI'}
                         </button>
-                        
+
                         {/* Removed legacy Test Fallback Analysis button */}
-                        
+
                         <button
                           onClick={() => setCurrentStep(3)}
                           className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors"
@@ -683,10 +603,9 @@ export default function SellPage() {
                   title: formData.title,
                   description: formData.description,
                   category: formData.category,
-                  condition: formData.condition || '',
-                  suggestedPrice: parseFloat(formData.price) || 0,
-                  missingInfo: aiAnalysis.missingInfo || [],
-                  questions: aiAnalysis.questions || []
+                  condition: formData.condition || 'good',
+                  suggestedPrice: parseFloat(formData.price),
+                  missingInfo: aiAnalysis.missingInfo || []
                 }}
                 onUpdate={handleAIAssistantUpdate}
                 onComplete={handleAIAssistantComplete}
@@ -786,7 +705,7 @@ export default function SellPage() {
                 <label className="block text-sm font-medium text-white mb-2">
                   Size <span className="text-gray-400 text-sm">(Optional)</span>
                 </label>
-                
+
                 {formData.category === 'fashion' ? (
                   // Fashion items - show size category selector
                   <div className="space-y-4">
@@ -980,7 +899,7 @@ export default function SellPage() {
                       addToast('warning', 'Sign In Required', 'Please sign in to get price suggestions');
                       return;
                     }
-                    
+
                     if (formData.photos.length === 0) {
                       addToast('warning', 'Photos Required', 'Please upload photos first to get accurate price suggestions');
                       return;
@@ -993,10 +912,10 @@ export default function SellPage() {
                       addToast('warning', 'Please Wait', `Please wait ${remainingTime} seconds before requesting another price suggestion.`);
                       return;
                     }
-                    
+
                     setPriceSuggesting(true);
                     setLastPriceSuggestionTime(now);
-                    
+
                     try {
                       console.log('💰 Getting price suggestion with parameters:', {
                         title: formData.title,
@@ -1005,7 +924,7 @@ export default function SellPage() {
                         condition: formData.condition,
                         size: formData.size
                       });
-                      
+
                       const { apiPost: apiPostPrice } = await import('@/lib/api-client');
                       const response = await apiPostPrice('/api/prices/suggest', {
                         title: formData.title,
@@ -1014,17 +933,17 @@ export default function SellPage() {
                         condition: formData.condition,
                         size: formData.size || null
                       }, { requireAuth: false });
-                      
+
                       const result = await response.json();
                       console.log('💰 Price suggestion result:', result);
-                      
+
                       if (result.success && result.suggestion) {
                         // Extract price from suggestion text
                         const priceMatch = result.suggestion.match(/\$(\d+(?:\.\d{2})?)/);
                         if (priceMatch) {
                           const suggestedPrice = parseFloat(priceMatch[1]);
                           handleInputChange('price', suggestedPrice);
-                          
+
                           // Show warning if using fallback
                           if (result.source === 'fallback' && result.warning) {
                             console.log('⚠️ Using fallback pricing:', result.warning);
@@ -1076,7 +995,7 @@ export default function SellPage() {
                 const minPrice = aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0;
                 const maxPrice = aiAnalysis?.priceRange?.max || formData.marketResearch?.priceRange?.max || 0;
                 const currentPrice = parseFloat(formData.price);
-                
+
                 if (currentPrice < minPrice || currentPrice > maxPrice) {
                   return (
                     <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
@@ -1118,7 +1037,7 @@ export default function SellPage() {
             {(formData.marketResearch || aiAnalysis) && (
               <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
                 <h4 className="text-sm font-medium text-zinc-100 mb-4">🤖 AI Market Analysis</h4>
-                
+
                 {/* Basic Market Data */}
                 <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                   <div>
@@ -1130,7 +1049,7 @@ export default function SellPage() {
                   <div>
                     <span className="text-zinc-400">Price Range:</span>
                     <span className="ml-2 text-zinc-100">
-                      {formatPrice(aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0)} - 
+                      {formatPrice(aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0)} -
                       {formatPrice(aiAnalysis?.priceRange?.max || formData.marketResearch?.priceRange?.max || 0)}
                     </span>
                   </div>
@@ -1210,7 +1129,7 @@ export default function SellPage() {
             {/* Shipping Information Section */}
             <div className="mt-8 pt-6 border-t border-zinc-800">
               <h3 className="text-lg font-semibold text-zinc-100 mb-4">Shipping Information</h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-zinc-100 mb-2">
@@ -1310,7 +1229,7 @@ export default function SellPage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file || !currentUser || !listingId) return;
-                      
+
                       try {
                         setUploadingLabel(true);
                         const result = await uploadListingPhotoFile({
@@ -1389,7 +1308,7 @@ export default function SellPage() {
             {/* Product Preview */}
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 mb-6">
               <h4 className="text-md font-semibold text-zinc-100 mb-4">Product Preview</h4>
-              
+
               <div className="flex gap-6">
                 {photoUrls && photoUrls.length > 0 && (
                   <div className="shrink-0">
@@ -1400,13 +1319,13 @@ export default function SellPage() {
                     />
                   </div>
                 )}
-                
+
                 <div className="flex-1 space-y-3">
                   <div>
                     <h5 className="font-medium text-zinc-100 text-lg">{formData.title}</h5>
                     <p className="text-zinc-400 text-sm mt-1">{formData.description}</p>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-zinc-400">Category:</span>
@@ -1528,7 +1447,7 @@ export default function SellPage() {
                   <button
                     type="button"
                     onClick={suggestAIPrice}
-                    disabled={priceSuggesting || !formData.title || !formData.category || !formData.condition}
+                    disabled={priceSuggesting || !formData.title || !formData.category}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
                   >
                     {priceSuggesting ? (
@@ -1588,7 +1507,7 @@ export default function SellPage() {
           <div className="space-y-6">
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6">
               <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-4">Final Review & Publish</h2>
-              
+
               <div className="space-y-4">
                 {photoUrls && photoUrls.length > 0 && (
                   <div className="flex justify-center mb-4">
@@ -1599,12 +1518,12 @@ export default function SellPage() {
                     />
                   </div>
                 )}
-                
+
                 <div>
                   <h4 className="font-medium text-zinc-100">{formData.title}</h4>
                   <p className="text-zinc-400 text-sm">{formData.description}</p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-zinc-400">Category:</span>
@@ -1617,7 +1536,7 @@ export default function SellPage() {
                 </div>
               </div>
             </div>
-            
+
             {errors.submit && (
               <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4">
                 <p className="text-red-400 text-sm">{errors.submit}</p>
@@ -1645,102 +1564,18 @@ export default function SellPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Desktop: Small Logo Badge */}
           <div className="hidden lg:inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300">
             <Logo size="sm" />
-            <span>ALL VERSE GPT</span>
+            <span>ALL VERSE</span>
           </div>
-          
+
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-100 px-4">Sell Your Item</h1>
           <p className="text-base sm:text-sm lg:text-base text-zinc-300 leading-7 px-4">Upload a photo and let AI do the work for you</p>
         </header>
 
-        {/* Stepper */}
-        <div className="mb-8 sm:mb-10">
-          {/* Mobile: Show only first 3 steps prominently */}
-          <div className="lg:hidden space-y-3 max-w-sm mx-auto">
-            {steps.slice(0, 3).map((step) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.id;
-              const isCompleted = currentStep > step.id;
-              
-              return (
-                <div 
-                  key={step.id} 
-                  className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
-                    isActive 
-                      ? 'bg-blue-600/20 border-2 border-blue-500' 
-                      : isCompleted 
-                        ? 'bg-zinc-800/40 border border-blue-500/30' 
-                        : 'bg-zinc-800/20 border border-zinc-700'
-                  }`}
-                >
-                  <div 
-                    className={`flex items-center justify-center w-12 h-12 rounded-full shrink-0 ${
-                      isActive 
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50' 
-                        : isCompleted 
-                          ? 'bg-blue-500 text-white' 
-                          : 'bg-zinc-700 text-zinc-400'
-                    }`}
-                  >
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-base font-semibold ${
-                      isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-400'
-                    }`}>
-                      {step.title}
-                    </div>
-                    <div className="text-sm text-zinc-400">{step.description}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Desktop: Horizontal stepper */}
-          <div className="hidden lg:flex items-center justify-center gap-2">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = currentStep === step.id;
-              const isCompleted = currentStep > step.id;
-              
-              return (
-                <div key={step.id} className="flex items-center">
-                  <div className="flex flex-row items-center gap-3">
-                    <div 
-                      className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-200 ${
-                        isActive 
-                          ? 'bg-blue-600 text-white' 
-                          : isCompleted 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-zinc-800 text-zinc-300'
-                      }`}
-                      aria-current={isActive ? "step" : undefined}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <div className={`text-sm font-medium ${
-                        isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-500'
-                      }`}>
-                        {step.title}
-                      </div>
-                      <div className="text-xs text-zinc-500">{step.description}</div>
-                    </div>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className={`w-12 h-0.5 mx-4 transition-all duration-200 ${
-                      isCompleted ? 'bg-blue-500' : 'bg-zinc-800'
-                    }`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <SellListingStepper steps={steps} currentStep={currentStep} />
 
         {/* Form Content */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
@@ -1763,10 +1598,10 @@ export default function SellPage() {
                 disabled={loading || aiAnalyzing}
                 className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
               >
-                {loading ? 'Creating...' : aiAnalyzing ? 'AI Scanning Photos...' : 
-                 currentStep === 1 ? 'Analyze with AI' : 
-                 currentStep === 2 ? 'Complete Info' : 
-                 currentStep === 3 ? 'Review & Edit' : 
+                {loading ? 'Creating...' : aiAnalyzing ? 'AI Scanning Photos...' :
+                 currentStep === 1 ? 'Analyze with AI' :
+                 currentStep === 2 ? 'Complete Info' :
+                 currentStep === 3 ? 'Review & Edit' :
                  currentStep === 4 ? 'Publish' : 'Continue'}
                 <ChevronRight className="w-4 h-4" />
               </button>

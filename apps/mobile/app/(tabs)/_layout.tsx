@@ -1,190 +1,107 @@
-import { Tabs } from 'expo-router';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
+import { withLayoutContext } from 'expo-router';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
-import { colors, spacing, radii, typography } from '../../constants/theme';
+import { colors, radii } from '../../constants/theme';
 
-const logoSource = require('../../assets/icon.png');
+// expo-router file-based routing on top of React Navigation's material top tabs,
+// which is swipeable. We position the tab bar at the bottom so it still looks
+// like a normal bottom tab bar, but screens can be swiped left/right.
+const { Navigator } = createMaterialTopTabNavigator();
+const MaterialTopTabs = withLayoutContext(Navigator);
 
-// Custom header component with Logo/Title
-function CustomHeader({ title, showBackButton }: { title?: string; showBackButton?: boolean }) {
-  const isHomePage = !title;
-
-  return (
-    <View style={styles.navbar}>
-      {/* Center: Logo + Text (Home) or Title (Other pages) */}
-      {isHomePage ? (
-        <TouchableOpacity 
-          style={styles.centerContainer}
-          onPress={() => router.push('/(tabs)/index' as any)}
-          activeOpacity={0.7}
-        >
-          <Image 
-            source={logoSource} 
-            style={styles.navbarLogo}
-            contentFit="contain"
-          />
-          <Text style={styles.navbarTitle}>ALL VERSE GPT</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.centerTitleContainer}>
-          <Text style={styles.centerTitle}>{title}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
+const ICON_SIZE = 24;
 
 export default function TabsLayout() {
   const unreadCount = useUnreadMessages();
+  const insets = useSafeAreaInsets();
 
   return (
-    <Tabs
+    <MaterialTopTabs
+      tabBarPosition="bottom"
       screenOptions={{
+        swipeEnabled: true,
+        lazy: true,
         tabBarActiveTintColor: colors.tab.active,
         tabBarInactiveTintColor: colors.tab.inactive,
+        tabBarShowIcon: true,
+        tabBarShowLabel: true,
+        tabBarPressColor: 'transparent',
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          textTransform: 'none',
+          marginTop: 2,
+          marginHorizontal: 0,
+        },
+        tabBarItemStyle: { paddingVertical: 6 },
         tabBarStyle: {
           backgroundColor: colors.tab.background,
           borderTopColor: colors.tab.border,
           borderTopWidth: 1,
-          height: 70,
-          paddingBottom: 20,
-          paddingTop: 10,
-        },
-        tabBarLabelStyle: {
-          fontSize: typography.size.sm,
-          fontWeight: typography.weight.semibold,
-        },
-        headerStyle: {
-          backgroundColor: colors.bg.base,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom,
           elevation: 0,
           shadowOpacity: 0,
-          borderBottomWidth: 0,
-          height: 100,
         },
-        headerTintColor: colors.text.primary,
+        // Hide the sliding indicator so it reads as a flat bottom bar.
+        tabBarIndicatorStyle: { height: 0 },
       }}
     >
-      <Tabs.Screen
+      <MaterialTopTabs.Screen
         name="index"
         options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-          tabBarLabel: '',
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color }: { color: string }) => <Ionicons name="home" size={ICON_SIZE} color={color} />,
         }}
       />
-      <Tabs.Screen
+      <MaterialTopTabs.Screen
         name="search"
         options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search" size={size} color={color} />
-          ),
-          tabBarLabel: '',
+          tabBarLabel: 'Search',
+          tabBarIcon: ({ color }: { color: string }) => <Ionicons name="search" size={ICON_SIZE} color={color} />,
         }}
       />
-      <Tabs.Screen
+      <MaterialTopTabs.Screen
+        name="assistant"
+        options={{
+          tabBarLabel: 'AI',
+          tabBarIcon: ({ color }: { color: string }) => <Ionicons name="sparkles" size={ICON_SIZE} color={color} />,
+        }}
+      />
+      <MaterialTopTabs.Screen
         name="sell"
         options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size} color={color} />
-          ),
-          tabBarLabel: '',
+          tabBarLabel: 'Sell',
+          tabBarIcon: ({ color }: { color: string }) => <Ionicons name="add-circle" size={ICON_SIZE} color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="cart"
-        options={{
-          href: null, // Hide from tab bar but keep route accessible
-          headerShown: false,
-        }}
-      />
-      <Tabs.Screen
-        name="favorites"
-        options={{
-          href: null, // Hide from tab bar but keep route accessible
-          headerShown: false,
-        }}
-      />
-      <Tabs.Screen
+      <MaterialTopTabs.Screen
         name="messages"
         options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
+          tabBarLabel: 'Inbox',
+          tabBarIcon: ({ color }: { color: string }) => (
             <View style={styles.iconContainer}>
-              <Ionicons name="chatbubbles" size={size} color={color} />
-              {unreadCount > 0 && (
-                <View style={styles.badge} />
-              )}
+              <Ionicons name="chatbubbles" size={ICON_SIZE} color={color} />
+              {unreadCount > 0 && <View style={styles.badge} />}
             </View>
           ),
-          tabBarLabel: '',
         }}
       />
-      <Tabs.Screen
+      <MaterialTopTabs.Screen
         name="profile"
         options={{
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-          tabBarLabel: '',
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ color }: { color: string }) => <Ionicons name="person" size={ICON_SIZE} color={color} />,
         }}
       />
-    </Tabs>
+    </MaterialTopTabs>
   );
 }
 
 const styles = StyleSheet.create({
-  navbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: 44,
-    paddingTop: spacing.md,
-  },
-  centerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  centerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navbarLogo: {
-    width: 28,
-    height: 28,
-  },
-  navbarTitle: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-    letterSpacing: typography.letterSpacing.wide,
-  },
-  centerTitle: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold,
-    color: colors.text.primary,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: spacing.lg,
-    gap: spacing.xs,
-  },
-  backButtonText: {
-    fontSize: 17,
-    color: colors.brand.DEFAULT,
-    fontWeight: typography.weight.semibold,
-  },
   iconContainer: {
     position: 'relative',
   },
@@ -200,4 +117,3 @@ const styles = StyleSheet.create({
     borderColor: colors.bg.base,
   },
 });
-

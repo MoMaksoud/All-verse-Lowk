@@ -1,5 +1,5 @@
 /**
- * AllVerse GPT — Mobile Design Tokens
+ * AllVerse — Mobile Design Tokens
  *
  * Single source of truth for colors, typography, spacing, radii, and shadows.
  * Mirrors `apps/web/tailwind.config.js` + `apps/web/src/app/globals.css` so
@@ -15,18 +15,18 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 export const palette = {
-  // Primary brand blue (web: tailwind `primary`)
+  // Primary brand blue — matches website globals.css --accent: #3b82f6 (Tailwind blue-500)
   primary: {
-    50: '#f0f4ff',
-    100: '#e0e7ff',
-    200: '#c7d2fe',
-    300: '#a5b4fc',
-    400: '#818cf8',
-    500: '#0063e1', // brand
-    600: '#0052b8',
-    700: '#00418f',
-    800: '#003066',
-    900: '#001f3d',
+    50: '#eff6ff',
+    100: '#dbeafe',
+    200: '#bfdbfe',
+    300: '#93c5fd',
+    400: '#60a5fa',
+    500: '#3b82f6', // brand — matches website --accent
+    600: '#2563eb',
+    700: '#1d4ed8',
+    800: '#1e40af',
+    900: '#1e3a8a',
   },
 
   // Dark slate scale (web: tailwind `dark`)
@@ -114,14 +114,14 @@ export const alpha = {
   black40: 'rgba(0, 0, 0, 0.40)',
   black60: 'rgba(0, 0, 0, 0.60)',
 
-  primary10: 'rgba(0, 99, 225, 0.10)',
-  primary15: 'rgba(0, 99, 225, 0.15)',
-  primary20: 'rgba(0, 99, 225, 0.20)',
-  primary30: 'rgba(0, 99, 225, 0.30)',
-  primary40: 'rgba(0, 99, 225, 0.40)',
-  primary50: 'rgba(0, 99, 225, 0.50)',
-  primary60: 'rgba(0, 99, 225, 0.60)',
-  primary80: 'rgba(0, 99, 225, 0.80)',
+  primary10: 'rgba(59, 130, 246, 0.10)',
+  primary15: 'rgba(59, 130, 246, 0.15)',
+  primary20: 'rgba(59, 130, 246, 0.20)',
+  primary30: 'rgba(59, 130, 246, 0.30)',
+  primary40: 'rgba(59, 130, 246, 0.40)',
+  primary50: 'rgba(59, 130, 246, 0.50)',
+  primary60: 'rgba(59, 130, 246, 0.60)',
+  primary80: 'rgba(59, 130, 246, 0.80)',
 
   red10: 'rgba(239, 68, 68, 0.10)',
   red15: 'rgba(239, 68, 68, 0.15)',

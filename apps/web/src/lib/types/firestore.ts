@@ -61,6 +61,14 @@ export interface FirestoreListing {
   soldCount: number;
 }
 
+export interface ListingShippingDimsInput {
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  labelScanUrl?: string;
+}
+
 export interface CreateListingInput {
   title: string;
   description: string;
@@ -75,6 +83,8 @@ export interface CreateListingInput {
   brand?: string;
   model?: string;
   gtin?: string;
+  /** Used at checkout time for Shippo quotes (sell flow). */
+  shipping?: ListingShippingDimsInput;
 }
 
 export interface UpdateListingInput {
@@ -150,6 +160,15 @@ export interface OrderShippingSelection {
   shipmentId: string;
 }
 
+export interface PayoutTransferRecord {
+  lineKey: string;
+  sellerId: string;
+  listingId: string;
+  transferId: string;
+  amount: number;
+  at: Timestamp;
+}
+
 export interface FirestoreOrder {
   buyerId: string;
   items: OrderItem[];
@@ -176,6 +195,16 @@ export interface FirestoreOrder {
   inventoryAdjustedAt?: Timestamp;
   payoutsProcessed?: boolean;
   payoutsProcessedAt?: Timestamp;
+  /** When any Connect transfer fails, set so ops can inspect and retry out-of-band. */
+  payoutStatus?: 'pending' | 'complete' | 'partial_failed' | 'pending_connect';
+  payoutFailures?: Array<{ sellerId: string; error: string; listingId?: string; at: Timestamp }>;
+  /** True when a payout failed but core payment + fulfillment state is safe to leave committed. */
+  payoutRetryable?: boolean;
+  /** Idempotency ledger for successful seller transfers per order line. */
+  payoutTransferIds?: PayoutTransferRecord[];
+  /** Session-level settlement guard for distinct Stripe event IDs on same Checkout Session. */
+  lastStripeCheckoutSessionId?: string;
+  checkoutWebhookSettledAt?: Timestamp;
   cartCleared?: boolean;
   cartClearedAt?: Timestamp;
 }
@@ -206,6 +235,12 @@ export interface UpdateOrderInput {
   inventoryAdjustedAt?: Timestamp;
   payoutsProcessed?: boolean;
   payoutsProcessedAt?: Timestamp;
+  payoutStatus?: 'pending' | 'complete' | 'partial_failed' | 'pending_connect';
+  payoutFailures?: Array<{ sellerId: string; error: string; listingId?: string; at: Timestamp }>;
+  payoutRetryable?: boolean;
+  payoutTransferIds?: PayoutTransferRecord[];
+  lastStripeCheckoutSessionId?: string;
+  checkoutWebhookSettledAt?: Timestamp;
   cartCleared?: boolean;
   cartClearedAt?: Timestamp;
 }
@@ -356,6 +391,63 @@ export interface ListingPhotoUpload {
 }
 
 // ============================================================================
+// CHECKOUT SNAPSHOTS COLLECTION
+// Stores validated cart + pricing locked at Stripe session creation time.
+// Order is NOT created until after payment succeeds (in webhook transaction).
+// ============================================================================
+export interface CheckoutSnapshotItem {
+  listingId: string;
+  title: string;
+  sellerId: string;
+  qty: number;
+  unitPrice: number;
+}
+
+export interface SellerShippingRate {
+  sellerId: string;
+  carrier: string;
+  serviceName: string;
+  price: number;
+  rateId: string;
+  shipmentId: string;
+}
+
+export interface CheckoutSnapshot {
+  buyerId: string;
+  sessionId: string;
+  items: CheckoutSnapshotItem[];
+  subtotal: number;
+  tax: number;
+  fees: number;
+  total: number;
+  shippingAddress: {
+    name: string;
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  /** Combined shipping total across all sellers. Primary rate for single-seller carts. */
+  shippingRate: {
+    carrier: string;
+    serviceName: string;
+    price: number;
+    rateId: string;
+    shipmentId: string;
+  };
+  /** Per-seller shipping quotes (populated for multi-seller carts). */
+  sellerShippingRates?: SellerShippingRate[];
+  currency: string;
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+  /** pending → processed (order created) | expired (session expired) | cancelled */
+  status: 'pending' | 'processed' | 'expired' | 'cancelled';
+  orderId?: string;
+  processedAt?: Timestamp;
+}
+
+// ============================================================================
 // COLLECTION NAMES
 // ============================================================================
 export const COLLECTIONS = {
@@ -368,6 +460,7 @@ export const COLLECTIONS = {
   CHATS: 'chats',
   PROFILE_PHOTOS: 'profile_photos',
   LISTING_PHOTOS: 'listing_photos',
+  CHECKOUT_SNAPSHOTS: 'checkout_snapshots',
 } as const;
 
 export type CollectionName = typeof COLLECTIONS[keyof typeof COLLECTIONS];

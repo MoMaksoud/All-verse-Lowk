@@ -124,6 +124,61 @@ export async function sendOrderConfirmationEmail(
 }
 
 // ============================================================================
+// BUYER TRACKING – template only (requires SENDGRID_TRACKING_TEMPLATE_ID)
+// ============================================================================
+
+export interface BuyerTrackingEmailData {
+  orderId: string;
+  buyerName: string;
+  buyerEmail: string;
+  trackingNumber: string;
+  carrier?: string;
+  service?: string;
+  labelUrl?: string;
+  items: Array<{ title: string; qty: number }>;
+}
+
+export async function sendBuyerTrackingEmail(
+  data: BuyerTrackingEmailData
+): Promise<{ success: boolean; error?: string }> {
+  if (!process.env.SENDGRID_API_KEY) {
+    return { success: false, error: 'Missing SENDGRID_API_KEY' };
+  }
+  const templateId = process.env.SENDGRID_TRACKING_TEMPLATE_ID;
+  if (!templateId) {
+    console.warn('[EMAIL] SENDGRID_TRACKING_TEMPLATE_ID not set, skipping tracking email');
+    return { success: true };
+  }
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  const fromEmail = process.env.SENDGRID_FROM_EMAIL;
+  if (!fromEmail) {
+    return { success: false, error: 'Missing SENDGRID_FROM_EMAIL' };
+  }
+  try {
+    await sgMail.send({
+      to: data.buyerEmail,
+      from: fromEmail,
+      templateId,
+      dynamicTemplateData: {
+        orderId: data.orderId,
+        orderIdShort: data.orderId.slice(0, 8),
+        buyerName: data.buyerName,
+        trackingNumber: data.trackingNumber,
+        carrier: data.carrier || '',
+        service: data.service || '',
+        labelUrl: data.labelUrl || '',
+        items: data.items,
+      },
+    });
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('[EMAIL ERROR FULL OBJECT]', error);
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
+  }
+}
+
+// ============================================================================
 // SELLER NOTIFICATION – template only
 // ============================================================================
 

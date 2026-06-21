@@ -589,7 +589,7 @@ export default function SearchClientShell({
                     {internalResults.length > 0 && (
                         <div>
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-                                <h2 className="text-2xl font-bold text-white mb-2">AllVerse GPT Marketplace</h2>
+                                <h2 className="text-2xl font-bold text-white mb-2">AllVerse Marketplace</h2>
                                 <p className="text-gray-400">From our community</p>
                             </div>
                             <InternalResultsSection results={internalResults} />

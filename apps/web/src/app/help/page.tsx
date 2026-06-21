@@ -1,4 +1,5 @@
-'use client';
+﻿'use client';
+
 
 import { Mail, ShoppingBag, Package, Shield, CreditCard, Clock, MessageCircle, Search, Edit, DollarSign } from 'lucide-react';
 
@@ -14,10 +15,10 @@ export default function HelpPage() {
             <span className="text-sm font-medium text-accent-400">Help Center</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            All Verse GPT – Help Center
+            All Verse – Help Center
           </h1>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            We're here to support you as you buy, sell, and manage listings across the All Verse GPT platform.
+            We're here to support you as you buy, sell, and manage listings across the All Verse platform.
           </p>
           <div className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-blue-600/10 border border-blue-500/20 rounded-xl">
             <Mail className="w-5 h-5 text-blue-400" />
@@ -210,7 +211,7 @@ export default function HelpPage() {
         <div className="mt-12 text-center">
           <div className="inline-block bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 px-8 py-6">
             <p className="text-lg font-semibold text-white mb-2">
-              Thank you for choosing All Verse GPT.
+              Thank you for choosing All Verse.
             </p>
             <p className="text-gray-400">
               Still need help? We're just an email away at{' '}

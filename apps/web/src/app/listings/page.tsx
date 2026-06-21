@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart, Loader2 } from 'lucide-react';
+import { Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart } from 'lucide-react';
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
 import ListingCard from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
@@ -35,7 +35,7 @@ function ListingsContent() {
       
       // Build query parameters
       const params = new URLSearchParams();
-      if (appliedFilters.keyword) params.set('q', appliedFilters.keyword);
+      if (appliedFilters.keyword?.trim()) params.set('q', appliedFilters.keyword.trim());
       if (appliedFilters.category) params.set('category', appliedFilters.category);
       if (appliedFilters.condition) params.set('condition', appliedFilters.condition);
       if (appliedFilters.minPrice !== undefined) params.set('min', appliedFilters.minPrice.toString());
@@ -58,10 +58,14 @@ function ListingsContent() {
       }
 
       const { apiGet } = await import('@/lib/api-client');
-      const response = await apiGet(`/api/listings?${params.toString()}`, { requireAuth: false });
+
+      // Fetch listings and categories in parallel
+      const [response, categoriesResponse] = await Promise.all([
+        apiGet(`/api/listings?${params.toString()}`, { requireAuth: false }),
+        apiGet('/api/categories', { requireAuth: false }),
+      ]);
+
       const data = await response.json();
-
-
       if (response.ok) {
         setListings(data.data || []);
         setTotalPages(Math.ceil((data.pagination?.total || 0) / 9));
@@ -69,9 +73,7 @@ function ListingsContent() {
         setListings([]);
         setTotalPages(1);
       }
-      
-      // Fetch categories
-      const categoriesResponse = await apiGet('/api/categories', { requireAuth: false });
+
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json();
         setCategories(categoriesData);
@@ -92,13 +94,15 @@ function ListingsContent() {
   useEffect(() => {
     // Parse URL params for filters
     const category = searchParams.get('category');
+    const condition = searchParams.get('condition');
     const keyword = searchParams.get('q');
     const minPrice = searchParams.get('min');
     const maxPrice = searchParams.get('max');
 
     const newFilters = {
-      keyword: keyword || '',
-      category: category || '',
+      keyword: keyword || undefined,
+      category: category || undefined,
+      condition: condition || undefined,
       minPrice: minPrice ? parseFloat(minPrice) : undefined,
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
     };
@@ -169,13 +173,24 @@ function ListingsContent() {
     }
   }, [currentUser, showSuccess, showError]);
 
+  const SkeletonCard = () => (
+    <div className="bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden animate-pulse">
+      <div className="h-48 bg-dark-700" />
+      <div className="p-4 space-y-3">
+        <div className="h-4 bg-dark-700 rounded w-3/4" />
+        <div className="h-3 bg-dark-700 rounded w-1/2" />
+        <div className="h-5 bg-dark-700 rounded w-1/3" />
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-dark-950">
-      
-      <div className="mx-auto max-w-[1600px] px-4 sm:px-6 py-10">
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8 text-center">
-          <div className="hidden flex justify-center mb-3 sm:mb-4">
+          <div className="flex justify-center mb-3 sm:mb-4">
             <Logo size="md" />
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">
@@ -201,7 +216,7 @@ function ListingsContent() {
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="text-xs sm:text-sm text-gray-400">
-                {loading ? 'Loading…' : `${listings.length} listings found`}
+                {listings.length} listings found
               </div>
               
               <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -248,8 +263,8 @@ function ListingsContent() {
 
             {/* Listings Grid */}
             {loading ? (
-              <div className="flex items-center justify-center py-24">
-                <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                {Array.from({ length: 9 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
             ) : listings.length > 0 ? (
               <>

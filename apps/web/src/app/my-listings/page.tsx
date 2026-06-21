@@ -4,13 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { DynamicBackground } from '@/components/DynamicBackground';
+
 import { Card } from '@/components/ui/Card';
-import { 
-  Package, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  Package,
+  Edit,
+  Trash2,
+  Eye,
   Plus,
   Loader2,
   Calendar,
@@ -100,26 +100,15 @@ export default function MyListingsPage() {
   const { isDeleting, deleteListing } = useFirebaseCleanup();
 
   useEffect(() => {
-    console.log('🔍 Auth state check:', {
-      authLoading,
-      currentUser: currentUser ? { uid: currentUser.uid, email: currentUser.email } : null,
-      hasUid: !!currentUser?.uid
-    });
-
-    // Wait for auth to finish loading
     if (authLoading) {
-      console.log('⏳ Auth still loading, waiting...');
       return;
     }
 
     if (!currentUser?.uid) {
-      console.warn('⚠️ No current user, cannot fetch listings');
-      console.warn('⚠️ Auth state:', { currentUser, authLoading });
       setError('Please sign in to view your listings');
       setLoading(false);
       return;
     }
-    console.log('✅ User authenticated, fetching listings for:', currentUser.uid);
     fetchMyListings();
   }, [currentUser, authLoading]);
 
@@ -127,12 +116,8 @@ export default function MyListingsPage() {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 Starting fetchMyListings...');
       const { apiGet } = await import('@/lib/api-client');
       const response = await apiGet('/api/my-listings');
-      
-      console.log('🔍 API response status:', response.status);
-      console.log('🔍 API response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.status === 401) {
         // User not authenticated - redirect to login or show message
@@ -204,9 +189,9 @@ export default function MyListingsPage() {
       const { apiPut } = await import('@/lib/api-client');
       const response = await apiPut(`/api/listings/${markSoldModal.listingId}`, { sold: true });
       if (response.ok) {
-        setListings(prev => prev.map(l => 
-          l.id === markSoldModal.listingId 
-            ? { ...l, sold: true, status: 'sold', soldThroughAllVerse: false } 
+        setListings(prev => prev.map(l =>
+          l.id === markSoldModal.listingId
+            ? { ...l, sold: true, status: 'sold', soldThroughAllVerse: false }
             : l
         ));
         showSuccess('Listing marked as sold. It will stay on your profile.');
@@ -229,12 +214,12 @@ export default function MyListingsPage() {
   // Wait for auth to finish loading before showing sign-in prompt
   if (authLoading) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#020617]">
+
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-            <p className="text-zinc-400 text-lg">Loading...</p>
+            <p className="text-zinc-400 text-lg">Loading your listings...</p>
           </div>
         </div>
       </div>
@@ -244,9 +229,9 @@ export default function MyListingsPage() {
   // Show sign-in prompt if not authenticated
   if (!currentUser) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-[#020617]">
+
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your listings</h1>
             <Link
@@ -262,10 +247,10 @@ export default function MyListingsPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <DynamicBackground intensity="low" showParticles={true} />
-      
-      <div className="relative z-10 min-h-screen pt-20 px-4 py-8">
+    <div className="min-h-screen bg-[#020617]">
+
+
+      <div className="px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-10">
@@ -367,7 +352,7 @@ export default function MyListingsPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Status Badge */}
                     <div className={`absolute top-3 left-3 px-3 py-1.5 rounded-full border backdrop-blur-sm text-xs font-semibold shadow-lg transition-all duration-300 group-hover:scale-105 ${getStatusColor(listing)}`}>
                       {getStatusLabel(listing)}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { ArrowLeft, Info, Mail } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function AboutPage() {
           <section className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">Who We Are</h2>
             <p className="text-gray-300 leading-relaxed text-base sm:text-lg">
-              AllVerse GPT is an AI-driven marketplace and interaction hub. The core idea is simple: technology should make trading smarter, safer, and easier for both buyers and sellers. We blend software and intelligent tools to remove the guesswork from pricing, communication, and product discovery. Instead of spending time bouncing between apps, you get a single streamlined place to browse, chat, and make decisions confidently.
+              AllVerse is an AI-driven marketplace and interaction hub. The core idea is simple: technology should make trading smarter, safer, and easier for both buyers and sellers. We blend software and intelligent tools to remove the guesswork from pricing, communication, and product discovery. Instead of spending time bouncing between apps, you get a single streamlined place to browse, chat, and make decisions confidently.
             </p>
           </section>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,24 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  ScrollView,
+  Modal,
   Linking,
-  Alert,
   Image,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../../lib/api/client';
+import { getCache, setCache } from '../../lib/cache';
+import { formatPrice } from '../../lib/format';
 import ListingCard from '../../components/ListingCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -63,6 +71,30 @@ interface Listing {
 const RECENT_SEARCHES_KEY = 'recent_searches';
 const MAX_RECENT_SEARCHES = 5;
 
+const CATEGORIES = [
+  { label: 'All', value: '' },
+  { label: 'Fashion', value: 'fashion' },
+  { label: 'Electronics', value: 'electronics' },
+  { label: 'Home', value: 'home' },
+  { label: 'Sports', value: 'sports' },
+  { label: 'Automotive', value: 'automotive' },
+  { label: 'Other', value: 'other' },
+];
+
+const SORT_OPTIONS = [
+  { label: 'Newest', value: 'newest' },
+  { label: 'Price ↑', value: 'low-to-high' },
+  { label: 'Price ↓', value: 'high-to-low' },
+];
+
+const CONDITIONS = [
+  { label: 'Any', value: '' },
+  { label: 'New', value: 'new' },
+  { label: 'Like New', value: 'like-new' },
+  { label: 'Good', value: 'good' },
+  { label: 'Fair', value: 'fair' },
+];
+
 // Flat item types for virtualized search results and browse grid.
 // Pairing listings into rows avoids allocating all handles in one GC scope.
 type SearchFlatItem =
@@ -85,32 +117,69 @@ export default function SearchScreen() {
   const [listingsLoading, setListingsLoading] = useState(true);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Filters
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSort, setSelectedSort] = useState('newest');
+  const [selectedCondition, setSelectedCondition] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+  // Ref so useFocusEffect always reads latest filter values without stale closure
+  const filtersRef = useRef({ category: '', sort: 'newest', condition: '', min: '', max: '' });
+  filtersRef.current = { category: selectedCategory, sort: selectedSort, condition: selectedCondition, min: minPrice, max: maxPrice };
+
+  const getCacheKey = (f = filtersRef.current) =>
+    `listings_${f.category}_${f.sort}_${f.condition}_${f.min}_${f.max}`;
+
+  const activeFilterCount = [
+    selectedCategory,
+    selectedSort !== 'newest' ? 'sort' : '',
+    selectedCondition,
+    minPrice,
+    maxPrice,
+  ].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setSelectedCategory('');
+    setSelectedSort('newest');
+    setSelectedCondition('');
+    setMinPrice('');
+    setMaxPrice('');
+  };
 
   useEffect(() => {
     loadRecentSearches();
-    if (params.q) {
-      performSearch(params.q);
-    } else {
-      fetchListings();
-    }
+    if (params.q) performSearch(params.q);
   }, [params.q]);
 
-  // Refresh listings when screen comes into focus (if no search query)
+  // Re-fetch whenever filters change
+  useEffect(() => {
+    if (!params.q && !searchQuery.trim()) {
+      fetchListingsWithFilters(selectedCategory, selectedSort, selectedCondition, minPrice, maxPrice, false);
+    }
+  }, [selectedCategory, selectedSort, selectedCondition, minPrice, maxPrice]);
+
+  // On focus: serve cache instantly, then background-refresh
   useFocusEffect(
     useCallback(() => {
       if (!params.q && !searchQuery.trim()) {
-        fetchListings();
+        const f = filtersRef.current;
+        const cached = getCache<Listing[]>(getCacheKey(f), 60_000);
+        if (cached) {
+          setListings(cached);
+          setListingsLoading(false);
+          fetchListingsWithFilters(f.category, f.sort, f.condition, f.min, f.max, true);
+        }
       }
     }, [params.q, searchQuery])
   );
 
   useEffect(() => {
-    if (searchQuery.length === 0) {
-      setShowRecentSearches(true);
-    } else {
-      setShowRecentSearches(false);
-    }
-  }, [searchQuery]);
+    setShowRecentSearches(searchFocused && searchQuery.length === 0);
+  }, [searchQuery, searchFocused]);
 
   const loadRecentSearches = async () => {
     try {
@@ -166,23 +235,38 @@ export default function SearchScreen() {
     }
   };
 
-  const fetchListings = async () => {
+  const fetchListingsWithFilters = async (
+    category: string, sort: string, condition: string,
+    min: string, max: string, silent: boolean
+  ) => {
     try {
-      setListingsLoading(true);
-      const response = await apiClient.get('/api/listings?limit=50');
+      if (!silent) setListingsLoading(true);
+      const qs = new URLSearchParams({ limit: '50', sort });
+      if (category) qs.set('category', category);
+      if (condition) qs.set('condition', condition);
+      if (min) qs.set('min', min);
+      if (max) qs.set('max', max);
+      const cacheKey = `listings_${category}_${sort}_${condition}_${min}_${max}`;
+
+      const response = await apiClient.get(`/api/listings?${qs.toString()}`);
       const data = await response.json();
 
+      let items: Listing[] | null = null;
       if (response.ok && data.data && Array.isArray(data.data)) {
-        setListings(data.data.slice(0, 50));
+        items = data.data.slice(0, 50);
       } else if (response.ok && data.data?.items) {
-        setListings(data.data.items.slice(0, 50));
+        items = data.data.items.slice(0, 50);
       } else if (response.ok && Array.isArray(data)) {
-        setListings(data.slice(0, 50));
+        items = data.slice(0, 50);
       }
-    } catch (error) {
-      console.error('Error fetching listings:', error);
+      if (items) {
+        setListings(items);
+        setCache(cacheKey, items);
+      }
+    } catch {
+      // silently fail
     } finally {
-      setListingsLoading(false);
+      if (!silent) setListingsLoading(false);
     }
   };
 
@@ -264,8 +348,8 @@ export default function SearchScreen() {
       return (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>AllVerse GPT Marketplace</Text>
-            <View style={styles.badge}><Text style={styles.badgeText}>AVGPT</Text></View>
+            <Text style={styles.sectionTitle}>AllVerse Marketplace</Text>
+            <View style={styles.badge}><Text style={styles.badgeText}>AV</Text></View>
           </View>
           <Text style={styles.sectionSubtitle}>{item.count} result{item.count !== 1 ? 's' : ''}</Text>
         </View>
@@ -327,7 +411,7 @@ export default function SearchScreen() {
             <View style={styles.externalContent}>
               <Text style={styles.externalTitle} numberOfLines={2}>{item.item.title}</Text>
               <View style={styles.externalMeta}>
-                <Text style={styles.externalPrice}>${item.item.price.toLocaleString()}</Text>
+                <Text style={styles.externalPrice}>{formatPrice(item.item.price)}</Text>
                 {item.item.rating && (
                   <View style={styles.ratingContainer}>
                     <Ionicons name="star" size={14} color={palette.amber[400]} />
@@ -361,12 +445,10 @@ export default function SearchScreen() {
   const renderBrowseItem = useCallback(({ item }: { item: BrowseFlatItem }) => {
     if (item.kind === 'browse-header') {
       return (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>AllVerse GPT Marketplace</Text>
-            <View style={styles.badge}><Text style={styles.badgeText}>AVGPT</Text></View>
-          </View>
-          <Text style={styles.sectionSubtitle}>{item.count} listing{item.count !== 1 ? 's' : ''} available</Text>
+        <View style={styles.listingsMeta}>
+          <Text style={styles.listingsMetaText}>
+            {item.count} listing{item.count !== 1 ? 's' : ''}
+          </Text>
         </View>
       );
     }
@@ -399,10 +481,30 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Search Bar at top */}
+      {/* Page header */}
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>Marketplace</Text>
+        <TouchableOpacity
+          style={[styles.filterIconBtn, activeFilterCount > 0 && styles.filterIconBtnActive]}
+          onPress={() => setFilterModalVisible(true)}
+        >
+          <Ionicons
+            name="options"
+            size={24}
+            color={activeFilterCount > 0 ? colors.brand.DEFAULT : colors.text.muted}
+          />
+          {activeFilterCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={colors.text.muted} />
+        <View style={[styles.searchBar, searchFocused && styles.searchBarFocused]}>
+          <Ionicons name="search" size={18} color={searchFocused ? colors.brand.DEFAULT : colors.text.muted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search across all marketplaces..."
@@ -411,19 +513,29 @@ export default function SearchScreen() {
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
-            autoFocus
-            onFocus={() => setShowRecentSearches(true)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => {
               setSearchQuery('');
-              setShowRecentSearches(true);
+              setResults(null);
             }}>
-              <Ionicons name="close-circle" size={20} color={colors.text.muted} />
+              <Ionicons name="close-circle" size={18} color={colors.text.muted} />
             </TouchableOpacity>
           )}
         </View>
-        
+
+        {/* Universal search value prop */}
+        {!results && !loading && !searchQuery.trim() && (
+          <View style={styles.webSearchHint}>
+            <Ionicons name="globe-outline" size={14} color={colors.brand.DEFAULT} />
+            <Text style={styles.webSearchHintText}>
+              One search — AllVerse plus other marketplaces across the web
+            </Text>
+          </View>
+        )}
+
         {/* Recent Searches */}
         {showRecentSearches && recentSearches.length > 0 && (
           <View style={styles.recentSearchesContainer}>
@@ -457,6 +569,23 @@ export default function SearchScreen() {
         )}
       </View>
 
+      {activeFilterCount > 0 && !results && !loading && (
+        <View style={styles.filterIndicator}>
+          <Ionicons name="funnel" size={11} color={colors.brand.DEFAULT} />
+          <Text style={styles.filterIndicatorText} numberOfLines={1}>
+            {[
+              selectedCategory && CATEGORIES.find(c => c.value === selectedCategory)?.label,
+              selectedSort !== 'newest' && SORT_OPTIONS.find(s => s.value === selectedSort)?.label,
+              selectedCondition && CONDITIONS.find(c => c.value === selectedCondition)?.label,
+              (minPrice || maxPrice) && `$${minPrice || '0'}–${maxPrice ? `$${maxPrice}` : '∞'}`,
+            ].filter(Boolean).join(' · ')}
+          </Text>
+          <TouchableOpacity onPress={clearAllFilters} hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}>
+            <Text style={styles.filterIndicatorClear}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {loading ? (
         <LoadingSpinner message="Searching..." />
       ) : results ? (
@@ -470,6 +599,57 @@ export default function SearchScreen() {
           removeClippedSubviews={true}
           initialNumToRender={10}
         />
+      ) : activeFilterCount === 0 && !searchQuery.trim() ? (
+        <ScrollView
+          style={styles.results}
+          contentContainerStyle={styles.discoveryContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {recentSearches.length > 0 && (
+            <View style={styles.discoverySection}>
+              <View style={styles.discoveryHeaderRow}>
+                <Text style={styles.discoveryHeading}>Recent searches</Text>
+                <TouchableOpacity onPress={clearRecentSearches}>
+                  <Text style={styles.discoveryClear}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.discoveryChips}>
+                {recentSearches.slice(0, 8).map((s, i) => (
+                  <TouchableOpacity key={i} style={styles.discoveryChip} onPress={() => handleRecentSearchPress(s)}>
+                    <Ionicons name="time-outline" size={14} color={colors.text.tertiary} />
+                    <Text style={styles.discoveryChipText}>{s}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          <View style={styles.discoverySection}>
+            <Text style={styles.discoveryHeading}>Browse categories</Text>
+            <View style={styles.discoveryChips}>
+              {CATEGORIES.filter((c) => c.value).map((c) => (
+                <TouchableOpacity
+                  key={c.value}
+                  style={styles.discoveryChip}
+                  onPress={() => setSelectedCategory(c.value)}
+                >
+                  <Text style={styles.discoveryChipText}>{c.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.discoveryTipCard}>
+            <Ionicons name="globe-outline" size={22} color={colors.brand.DEFAULT} />
+            <View style={styles.discoveryTipTextWrap}>
+              <Text style={styles.discoveryTipTitle}>Can&apos;t find it on AllVerse?</Text>
+              <Text style={styles.discoveryTipText}>
+                Type anything above — we also search Amazon, eBay and other marketplaces across the web.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
       ) : listingsLoading ? (
         <LoadingSpinner message="Loading listings..." />
       ) : listings.length > 0 ? (
@@ -485,13 +665,146 @@ export default function SearchScreen() {
         />
       ) : (
         <View style={styles.emptyState}>
-          <Ionicons name="search-outline" size={64} color={colors.text.muted} />
-          <Text style={styles.emptyText}>Search across all marketplaces</Text>
+          <Ionicons name="storefront-outline" size={52} color={colors.text.muted} />
+          <Text style={styles.emptyText}>
+            {activeFilterCount > 0 ? 'No listings match' : 'Nothing here yet'}
+          </Text>
           <Text style={styles.emptySubtext}>
-            One search. Every marketplace. AI-powered insights.
+            {activeFilterCount > 0
+              ? 'Try adjusting your filters or clear them'
+              : 'Check back soon — or search across all marketplaces above'}
           </Text>
         </View>
       )}
+      {/* Filter modal — full-screen, solid bg, no bleed-through */}
+      <Modal
+        visible={filterModalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => { Keyboard.dismiss(); setFilterModalVisible(false); }}
+      >
+        <View style={styles.modalRoot}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <SafeAreaView style={{ flex: 1 }}>
+
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <TouchableOpacity
+                  style={styles.modalCloseBtn}
+                  onPress={() => { Keyboard.dismiss(); setFilterModalVisible(false); }}
+                >
+                  <Ionicons name="close" size={20} color={colors.text.muted} />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Filters</Text>
+                {activeFilterCount > 0 ? (
+                  <TouchableOpacity onPress={clearAllFilters}>
+                    <Text style={styles.clearAllText}>Clear all</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ width: 56 }} />
+                )}
+              </View>
+
+              {/* Scrollable filter options */}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.modalScrollContent}
+              >
+                <Text style={styles.filterLabel}>Category</Text>
+                <View style={styles.filterChips}>
+                  {CATEGORIES.map((cat) => {
+                    const active = selectedCategory === cat.value;
+                    return (
+                      <TouchableOpacity
+                        key={cat.value}
+                        style={[styles.chip, active && styles.chipActive]}
+                        onPress={() => setSelectedCategory(cat.value)}
+                      >
+                        {active && <Ionicons name="checkmark" size={12} color="#fff" />}
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{cat.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.filterLabel}>Sort By</Text>
+                <View style={styles.filterChips}>
+                  {SORT_OPTIONS.map((opt) => {
+                    const active = selectedSort === opt.value;
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        style={[styles.chip, active && styles.chipActive]}
+                        onPress={() => setSelectedSort(opt.value)}
+                      >
+                        {active && <Ionicons name="checkmark" size={12} color="#fff" />}
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.filterLabel}>Condition</Text>
+                <View style={styles.filterChips}>
+                  {CONDITIONS.map((c) => {
+                    const active = selectedCondition === c.value;
+                    return (
+                      <TouchableOpacity
+                        key={c.value}
+                        style={[styles.chip, active && styles.chipActive]}
+                        onPress={() => setSelectedCondition(c.value)}
+                      >
+                        {active && <Ionicons name="checkmark" size={12} color="#fff" />}
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.filterLabel}>Price Range</Text>
+                <View style={styles.priceRow}>
+                  <TextInput
+                    style={styles.priceInput}
+                    placeholder="Min $"
+                    placeholderTextColor={colors.text.muted}
+                    keyboardType="numeric"
+                    returnKeyType="done"
+                    value={minPrice}
+                    onChangeText={setMinPrice}
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                  />
+                  <Text style={styles.priceSep}>—</Text>
+                  <TextInput
+                    style={styles.priceInput}
+                    placeholder="Max $"
+                    placeholderTextColor={colors.text.muted}
+                    keyboardType="numeric"
+                    returnKeyType="done"
+                    value={maxPrice}
+                    onChangeText={setMaxPrice}
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                  />
+                </View>
+              </ScrollView>
+
+              {/* Done bar — solid bg, always above keyboard */}
+              <View style={styles.doneBtnWrapper}>
+                <TouchableOpacity
+                  style={styles.doneBtn}
+                  onPress={() => { Keyboard.dismiss(); setFilterModalVisible(false); }}
+                >
+                  <Text style={styles.doneBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+
+            </SafeAreaView>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -501,13 +814,108 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg.base,
   },
-  searchContainer: {
+  pageHeader: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 20,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pageTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text.primary,
+    letterSpacing: -0.5,
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.subtle,
     position: 'relative',
     zIndex: 10,
+  },
+  webSearchHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 10,
+    paddingHorizontal: 4,
+  },
+  webSearchHintText: {
+    flex: 1,
+    fontSize: 12.5,
+    color: colors.text.tertiary,
+  },
+  discoveryContent: {
+    padding: 20,
+    gap: 24,
+  },
+  discoverySection: {
+    gap: 12,
+  },
+  discoveryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  discoveryHeading: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text.muted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  discoveryClear: {
+    fontSize: 13,
+    color: colors.brand.DEFAULT,
+    fontWeight: '600',
+  },
+  discoveryChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  discoveryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  discoveryChipText: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    fontWeight: '500',
+  },
+  discoveryTipCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: colors.brand.softer,
+    borderWidth: 1,
+    borderColor: colors.brand.soft,
+  },
+  discoveryTipTextWrap: {
+    flex: 1,
+  },
+  discoveryTipTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 2,
+  },
+  discoveryTipText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.text.tertiary,
   },
   recentSearchesContainer: {
     marginTop: 12,
@@ -556,10 +964,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     borderWidth: 1,
     borderColor: colors.border.subtle,
+  },
+  searchBarFocused: {
+    borderColor: colors.border.focused,
   },
   searchInput: {
     flex: 1,
@@ -571,37 +982,76 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: colors.bg.glass,
+    borderBottomColor: colors.border.subtle,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text.primary,
     marginRight: 8,
   },
   badge: {
     backgroundColor: colors.brand.DEFAULT,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   badgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.text.primary,
+    color: '#ffffff',
   },
   sectionSubtitle: {
-    fontSize: 13,
-    color: colors.text.tertiary,
-    marginBottom: 16,
+    fontSize: 12,
+    color: colors.text.muted,
+    marginBottom: 10,
   },
+
+  // Browse grid
+  listingsMeta: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
+  listingsMetaText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text.muted,
+    letterSpacing: 0.2,
+  },
+
+  // Active filter indicator bar
+  filterIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+    backgroundColor: colors.brand.soft,
+  },
+  filterIndicatorText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.brand.DEFAULT,
+    fontWeight: '500',
+  },
+  filterIndicatorClear: {
+    fontSize: 12,
+    color: colors.brand.DEFAULT,
+    fontWeight: '700',
+  },
+
   listingsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -611,7 +1061,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 4,
+    paddingVertical: 5,
   },
   gridPlaceholder: {
     flex: 1,
@@ -619,12 +1069,12 @@ const styles = StyleSheet.create({
   },
   externalItemWrapper: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   externalCard: {
     backgroundColor: colors.bg.surface,
     borderRadius: 12,
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.border.subtle,
     overflow: 'hidden',
@@ -722,4 +1172,142 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+
+  // Filter icon button (header, top-right)
+  filterIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.bg.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  filterIconBtnActive: {
+    backgroundColor: colors.brand.soft,
+    borderColor: colors.brand.ring,
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.brand.DEFAULT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  filterBadgeText: { fontSize: 10, fontWeight: '800', color: '#ffffff' },
+
+  // Filter modal chips
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  chipActive: {
+    backgroundColor: colors.brand.DEFAULT,
+    borderColor: colors.brand.DEFAULT,
+  },
+  chipText: { fontSize: 13, fontWeight: '500', color: colors.text.muted },
+  chipTextActive: { color: '#ffffff', fontWeight: '700' },
+
+  // Filter modal — full-screen, opaque
+  modalRoot: {
+    flex: 1,
+    backgroundColor: colors.bg.raised,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+    backgroundColor: colors.bg.raised,
+  },
+  modalCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.bg.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  clearAllText: {
+    fontSize: 14,
+    color: colors.brand.DEFAULT,
+    fontWeight: '600',
+    width: 56,
+    textAlign: 'right',
+  },
+  modalScrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 24,
+    backgroundColor: colors.bg.raised,
+  },
+  doneBtnWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: colors.bg.raised,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+  },
+  filterLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  filterChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  priceInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: colors.bg.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+  priceSep: { color: colors.text.muted, fontSize: 16 },
+  doneBtn: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: colors.brand.DEFAULT,
+    alignItems: 'center',
+  },
+  doneBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 15 },
 });

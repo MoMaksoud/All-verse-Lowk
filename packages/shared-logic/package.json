@@ -5,7 +5,10 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "lint": "echo \"@marketplace/shared-logic: no eslint config\"",
+    "test": "echo \"@marketplace/shared-logic: no unit tests yet\""
   },
   "dependencies": {
     "@marketplace/types": "workspace:*",

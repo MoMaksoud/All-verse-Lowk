@@ -10,11 +10,17 @@ import {
   initializeAuth,
   browserLocalPersistence,
   Auth,
+  Persistence,
 } from 'firebase/auth';
+import * as FirebaseAuth from 'firebase/auth';
 
-const { getReactNativePersistence } = require('firebase/auth') as {
-  getReactNativePersistence: (storage: typeof AsyncStorage) => any;
-};
+// Firebase's React Native conditional export exists at runtime but is omitted
+// from the browser-oriented TypeScript declaration selected by some pnpm setups.
+const getReactNativePersistence = (
+  FirebaseAuth as unknown as {
+    getReactNativePersistence: (storage: typeof AsyncStorage) => Persistence;
+  }
+).getReactNativePersistence;
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,

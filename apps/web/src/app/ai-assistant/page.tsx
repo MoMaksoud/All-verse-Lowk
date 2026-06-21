@@ -1,8 +1,6 @@
-import dynamic from "next/dynamic";
+import { redirect } from 'next/navigation';
 
-const AssistantPage = dynamic(() => import("@/components/AssistantPage"), { ssr: false });
-
-export default function Page() {
-  return <AssistantPage />;
+export default function AIAssistantAliasPage() {
+  redirect('/ai');
 }
 

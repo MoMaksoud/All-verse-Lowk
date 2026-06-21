@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
 
 export default function SignInScreen() {
   const { signIn } = useAuth();
@@ -21,6 +22,11 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const { promptAsync: googlePrompt, disabled: googleDisabled } = useGoogleSignIn(
+    () => router.replace('/(tabs)'),
+    (msg) => Alert.alert('Google Sign-In Failed', msg),
+  );
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -83,7 +89,7 @@ export default function SignInScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue to AllVerse GPT</Text>
+            <Text style={styles.subtitle}>Sign in to continue to AllVerse</Text>
           </View>
 
           {/* Form */}
@@ -130,6 +136,21 @@ export default function SignInScreen() {
               <Text style={styles.buttonText}>
                 {loading ? 'Signing In...' : 'Sign In'}
               </Text>
+            </TouchableOpacity>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.googleButton, googleDisabled && styles.buttonDisabled]}
+              onPress={() => googlePrompt()}
+              disabled={googleDisabled}
+            >
+              <Ionicons name="logo-google" size={18} color="#fff" style={{ marginRight: 10 }} />
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
 
             <View style={styles.footer}>
@@ -209,6 +230,36 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border.subtle,
+  },
+  dividerText: {
+    fontSize: 13,
+    color: colors.text.muted,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg.surface,
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  googleButtonText: {
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text.primary,
   },

@@ -1,7 +1,8 @@
 import { DistanceUnitEnum, WeightUnitEnum } from 'shippo';
-import { firestoreServices } from '@/lib/services/firestore';
 import { shippo } from '@/lib/shippo';
-import { ProfileService } from '@/lib/firestore';
+import { getListingAdmin } from '@/lib/server/adminListings';
+import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
+import type { FirestoreOrder, OrderShippingSelection } from '@/lib/types/firestore';
 import { calculateCheckoutTotals, DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
 import {
   findMatchingShippingRate,
@@ -105,7 +106,7 @@ function getPackageDimensions(
   };
 }
 
-async function quoteTrustedShipping(params: {
+export async function quoteTrustedShipping(params: {
   sellerId: string;
   buyerAddress: ReturnType<typeof sanitizeShippingAddress>;
   selectedShipping?: SelectedShippingInput | null;
@@ -115,7 +116,7 @@ async function quoteTrustedShipping(params: {
   let fromZip = '10001';
 
   try {
-    const sellerProfile = await ProfileService.getProfile(params.sellerId);
+    const sellerProfile = await getProfileDocumentAdmin(params.sellerId);
     const sellerZip = sellerProfile?.shippingAddress?.zip;
     if (sellerZip) {
       fromZip = normalizeZip(sellerZip);
@@ -209,12 +210,19 @@ export async function prepareTrustedCheckout(params: {
       throw new Error('Each cart item must include a valid quantity');
     }
 
-    const listing = await firestoreServices.listings.getListing(cartItem.listingId.trim());
+    const listing = await getListingAdmin(cartItem.listingId.trim());
     if (!listing) {
       throw new Error(`Listing ${cartItem.listingId} not found`);
     }
 
-    if (!listing.isActive || listing.inventory < cartItem.qty) {
+    // Availability check must match how the rest of the app reads a listing:
+    // isActive defaults to active unless explicitly false, inventory is treated
+    // as 1 unit when unset (legacy docs), and the `sold` flag is respected.
+    const listingActive = (listing as { isActive?: boolean }).isActive !== false;
+    const listingSold = ((listing as { sold?: boolean }).sold ?? false) === true;
+    const availableQty =
+      typeof listing.inventory === 'number' ? listing.inventory : 1;
+    if (!listingActive || listingSold || availableQty < cartItem.qty) {
       throw new Error(`Listing ${listing.title} is not available or has insufficient inventory`);
     }
 
@@ -239,16 +247,44 @@ export async function prepareTrustedCheckout(params: {
     throw new Error('Unable to determine seller for checkout');
   }
 
-  const trustedShipping = await quoteTrustedShipping({
-    sellerId: primarySellerId,
-    buyerAddress: trustedShippingAddress,
-    selectedShipping: params.selectedShipping,
-    listings: loadedListings,
-  });
+  // Group loaded listings by seller for per-seller shipping quotes.
+  const sellerListingsMap = new Map<string, Array<{ shipping?: ListingShippingShape | null }>>();
+  for (let i = 0; i < orderItems.length; i++) {
+    const sid = orderItems[i].sellerId;
+    if (!sellerListingsMap.has(sid)) sellerListingsMap.set(sid, []);
+    sellerListingsMap.get(sid)!.push(loadedListings[i]);
+  }
+
+  const uniqueSellerIds = [...sellerListingsMap.keys()];
+
+  // Quote shipping for each seller in parallel.
+  const sellerRates = await Promise.all(
+    uniqueSellerIds.map(async (sid) => {
+      const rate = await quoteTrustedShipping({
+        sellerId: sid,
+        buyerAddress: trustedShippingAddress,
+        selectedShipping: params.selectedShipping,
+        listings: sellerListingsMap.get(sid)!,
+      });
+      return { sellerId: sid, ...rate };
+    })
+  );
+
+  const totalShippingPrice = sellerRates.reduce((sum, r) => sum + r.price, 0);
+
+  // shippingRate holds the combined total; individual rates stored in sellerShippingRates.
+  const combinedShippingRate = sellerRates.length === 1
+    ? sellerRates[0]
+    : {
+        ...sellerRates[0],
+        price: totalShippingPrice,
+        carrier: 'Multiple',
+        serviceName: 'Multi-seller shipping',
+      };
 
   const totals = calculateCheckoutTotals(
     subtotal,
-    trustedShipping.price,
+    totalShippingPrice,
     typeof params.taxRate === 'number' ? params.taxRate : DEFAULT_TAX_RATE
   );
 
@@ -256,14 +292,68 @@ export async function prepareTrustedCheckout(params: {
     ...totals,
     orderItems,
     shippingAddress: trustedShippingAddress,
-    shippingRate: trustedShipping,
+    shippingRate: combinedShippingRate,
+    sellerShippingRates: sellerRates.length > 1 ? sellerRates : undefined,
+  };
+}
+
+/**
+ * Re-run Shippo quoting for a paid order (same inputs as checkout) when a stored rate may be stale.
+ */
+export async function requoteShippingForPaidOrder(
+  order: FirestoreOrder & { id: string }
+): Promise<OrderShippingSelection> {
+  const primarySellerId = order.items[0]?.sellerId;
+  if (!primarySellerId) {
+    throw new Error('Unable to determine seller for shipping re-quote');
+  }
+
+  const listingDocs = await Promise.all(order.items.map((i) => getListingAdmin(i.listingId)));
+  const loadedListings: Array<{ shipping?: ListingShippingShape | null }> = [];
+  for (let idx = 0; idx < listingDocs.length; idx++) {
+    const l = listingDocs[idx];
+    if (!l) {
+      throw new Error(`Listing ${order.items[idx].listingId} not found`);
+    }
+    loadedListings.push({ shipping: (l as { shipping?: ListingShippingShape | null }).shipping });
+  }
+
+  const trusted = await quoteTrustedShipping({
+    sellerId: primarySellerId,
+    buyerAddress: {
+      name: order.shippingAddress.name,
+      street: order.shippingAddress.street,
+      city: order.shippingAddress.city,
+      state: order.shippingAddress.state,
+      zip: order.shippingAddress.zip,
+      country: order.shippingAddress.country,
+    },
+    selectedShipping: order.shipping
+      ? {
+          rateId: order.shipping.rateId,
+          carrier: order.shipping.carrier,
+          serviceName: order.shipping.serviceName,
+        }
+      : null,
+    listings: loadedListings,
+  });
+
+  return {
+    carrier: trusted.carrier,
+    serviceName: trusted.serviceName,
+    price: trusted.price,
+    rateId: trusted.rateId,
+    shipmentId: trusted.shipmentId,
   };
 }
 
 export function getCheckoutBaseUrl(): string {
-  return (
+  // Strip inline comments from env values (e.g. "https://x.com  # note in .env.local")
+  // dotenv does not strip inline comments, so "VALUE # comment" is the literal value.
+  const raw =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.NEXTAUTH_URL ||
-    'http://localhost:3000'
-  ).replace(/\/$/, '');
+    'https://allversegpt.com';
+
+  return raw.split(/\s/)[0].replace(/\/$/, '');
 }

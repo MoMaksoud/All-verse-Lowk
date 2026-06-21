@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
-import { firestoreServices } from '@/lib/services/firestore';
+import { getOrCreateChatAdmin, getUserChatsAdmin } from '@/lib/server/adminChats';
+import { getUserAdmin } from '@/lib/server/adminUsers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     }
 
     // Create or get existing chat
-    const chatId = await firestoreServices.chats.getOrCreateChat(userId, otherUserId);
+    const chatId = await getOrCreateChatAdmin(userId, otherUserId);
 
     return NextResponse.json({
       success: true,
@@ -76,7 +77,7 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
     }
 
     // Fetch user's chats (same as web app)
-    const userChats = await firestoreServices.chats.getUserChats(userId);
+    const userChats = await getUserChatsAdmin(userId);
 
     // Enrich chats — prefer embedded participantProfiles, batch-fetch fallbacks
     const enrichedChats: any[] = [];
@@ -118,7 +119,7 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
       const userMap = new Map<string, any>();
       await Promise.all(uniqueIds.map(async (id) => {
         try {
-          userMap.set(id, await firestoreServices.users.getUser(id));
+          userMap.set(id, await getUserAdmin(id));
         } catch {
           userMap.set(id, null);
         }

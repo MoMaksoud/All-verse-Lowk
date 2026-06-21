@@ -6,27 +6,34 @@ interface LogoProps {
 }
 
 const sizeMap = {
-  sm: { width: 24, height: 24 },
-  md: { width: 32, height: 32 },
-  lg: { width: 48, height: 48 },
-  xl: { width: 96, height: 96 }
+  sm: { img: 20, text: 'text-sm'  },
+  md: { img: 28, text: 'text-sm'  },
+  lg: { img: 40, text: 'text-base' },
+  xl: { img: 80, text: ''          },
 };
 
 export function Logo({ size = 'md', className = '' }: LogoProps) {
-  const dimensions = sizeMap[size];
-  const showText = size !== 'xl'; // Don't show text for extra large logo
-  
+  const { img, text } = sizeMap[size];
+  const showText = size !== 'xl';
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <Image
         src="/logo.png"
-        alt="ALL VERSE GPT"
-        width={dimensions.width}
-        height={dimensions.height}
-        unoptimized={true}
+        alt="AllVerse"
+        width={img}
+        height={img}
+        unoptimized
         className="object-contain rounded-lg"
       />
-      {showText && <span className="font-bold text-white leading-tight">ALL VERSE</span>}
+      {showText && (
+        <span
+          className={`font-bold leading-tight text-white ${text}`}
+          style={{ fontFamily: 'var(--font-display, var(--font-inter))' }}
+        >
+          AllVerse
+        </span>
+      )}
     </div>
   );
 }

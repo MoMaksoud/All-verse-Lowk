@@ -7,14 +7,16 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
+import { sendFirebaseVerificationEmail } from '../../lib/firebase/auth';
 
 export default function SignUpScreen() {
   const { signUp } = useAuth();
@@ -24,6 +26,11 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const { promptAsync: googlePrompt, disabled: googleDisabled } = useGoogleSignIn(
+    () => router.replace('/(tabs)'),
+    (msg) => Alert.alert('Google Sign-In Failed', msg),
+  );
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
@@ -48,8 +55,9 @@ export default function SignUpScreen() {
       if (error) {
         Alert.alert('Sign Up Failed', error);
       } else if (user) {
-        Alert.alert('Success', 'Account created successfully!');
-        router.replace('/(tabs)');
+        // Send verification email then let AuthGate handle routing
+        await sendFirebaseVerificationEmail();
+        router.replace('/auth/verify-email' as any);
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred');
@@ -83,7 +91,7 @@ export default function SignUpScreen() {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Join AllVerse GPT today</Text>
+              <Text style={styles.subtitle}>Join AllVerse today</Text>
             </View>
 
             {/* Form */}
@@ -150,6 +158,21 @@ export default function SignUpScreen() {
                 <Text style={styles.buttonText}>
                   {loading ? 'Creating Account...' : 'Sign Up'}
                 </Text>
+              </TouchableOpacity>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.googleButton, googleDisabled && styles.buttonDisabled]}
+                onPress={() => googlePrompt()}
+                disabled={googleDisabled}
+              >
+                <Ionicons name="logo-google" size={18} color="#fff" style={{ marginRight: 10 }} />
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
               </TouchableOpacity>
 
               {/*
@@ -259,6 +282,36 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border.subtle,
+  },
+  dividerText: {
+    fontSize: 13,
+    color: colors.text.muted,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg.surface,
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  googleButtonText: {
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text.primary,
   },

@@ -6,10 +6,10 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -461,23 +461,28 @@ export default function SellScreen() {
 
       if (response.ok) {
         const listingData = await response.json();
-        Alert.alert('Success', 'Listing created successfully!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset form
-              setPhotos([]);
-              setTitle('');
-              setDescription('');
-              setPrice('');
-              setCategory('');
-              setCondition('');
-              setCurrentStep(1);
-              // Redirect to marketplace (home/search page)
-              router.replace('/(tabs)/search');
-            },
-          },
-        ]);
+        const newListingId = listingData?.id;
+
+        // Reset the form for the next listing.
+        setPhotos([]);
+        setTitle('');
+        setDescription('');
+        setPrice('');
+        setCategory('');
+        setCondition('');
+        setAiAnalysis(null);
+        setMissingInfoQuestions([]);
+        setCurrentQuestionIndex(0);
+        setUserAnswers({});
+        setCurrentStep(1);
+
+        // Land the seller on their live listing (which has a Share action),
+        // not a generic search page — the payoff moment.
+        if (newListingId) {
+          router.push(`/listing/${newListingId}` as any);
+        } else {
+          router.replace('/(tabs)/search');
+        }
       } else {
         const error = await response.json();
         Alert.alert('Error', error.message || 'Failed to create listing');
@@ -606,12 +611,9 @@ export default function SellScreen() {
                   <Ionicons name="sparkles" size={20} color={colors.text.primary} />
                   <Text style={styles.buttonText}>Analyze with AI</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={() => setCurrentStep(4)}
-                >
-                  <Text style={styles.secondaryButtonText}>Skip AI Analysis</Text>
-                </TouchableOpacity>
+                <Text style={styles.analyzeHint}>
+                  AI reads your photos and writes the title, description, category, and a suggested price. You can edit everything before posting.
+                </Text>
               </View>
             )}
           </View>
@@ -1051,6 +1053,13 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     gap: 12,
+  },
+  analyzeHint: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.text.muted,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
   primaryButton: {
     backgroundColor: colors.brand.DEFAULT,

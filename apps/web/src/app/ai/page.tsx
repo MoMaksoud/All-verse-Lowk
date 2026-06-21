@@ -1,7 +1,12 @@
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
 
 const AssistantPage = dynamic(() => import("@/components/AssistantPage"), { ssr: false });
 
 export default function Page() {
-  return <AssistantPage />;
+  return (
+    <Suspense>
+      <AssistantPage />
+    </Suspense>
+  );
 }

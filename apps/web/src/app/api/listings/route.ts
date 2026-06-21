@@ -2,17 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { CreateListingInput } from "@/lib/types/firestore";
 import { withApi } from "@/lib/withApi";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-
-// Import firestore services dynamically to avoid webpack issues
-async function getFirestoreServices() {
-  try {
-    const { firestoreServices } = await import("@/lib/services/firestore");
-    return firestoreServices;
-  } catch (err) {
-    console.error('Failed to import firestore services:', err);
-    throw new Error('Database services not available');
-  }
-}
+import { createListingAdmin, getListingAdmin, searchListingsAdmin } from "@/lib/server/adminListings";
+import { notifyUsersInterestedInCategory } from "@/lib/server/push-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,8 +11,6 @@ export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   try {
-    const firestoreServices = await getFirestoreServices();
-
     const url = new URL(req.url);
     const q = url.searchParams.get('q') || undefined;
     const category = url.searchParams.get('category') || undefined;
@@ -60,15 +49,14 @@ export async function GET(req: NextRequest) {
     }
 
     // When filtering by sellerId (profile page), show all listings including inactive ones
+    // Price range is intentionally excluded from the Firestore query: mixing a price inequality
+    // with orderBy('createdAt') requires a composite index that may not exist for both directions.
+    // We apply min/max client-side below instead, same pattern as keyword filtering.
     const filters = {
       keyword: q,
       category: category,
       condition: condition,
-      minPrice: min,
-      maxPrice: max,
       sellerId: sellerId,
-      // For profile pages, don't filter by isActive (show all listings)
-      // For general browsing, only show active listings
       isActive: sellerId ? undefined : true,
     };
 
@@ -82,17 +70,21 @@ export async function GET(req: NextRequest) {
       ? 100
       : Math.min(page * limit * 5, 200);
 
-    const result = await firestoreServices.listings.searchListings(filters, sortOptions, maxResults);
+    const result = await searchListingsAdmin(filters, sortOptions, maxResults);
       
     // Apply keyword search (client-side, as Firestore doesn't support full-text search)
     let filteredData = [...result.items];
     if (filters.keyword) {
       const keyword = filters.keyword.toLowerCase();
-      filteredData = filteredData.filter(listing => 
+      filteredData = filteredData.filter(listing =>
         listing.title.toLowerCase().includes(keyword) ||
         listing.description.toLowerCase().includes(keyword)
       );
     }
+
+    // Apply price range client-side to avoid Firestore composite index requirements
+    if (min !== undefined) filteredData = filteredData.filter(l => l.price >= min);
+    if (max !== undefined) filteredData = filteredData.filter(l => l.price <= max);
 
     // Filter out placeholder listings and old sold listings (older than 3 days)
     // BUT: When filtering by sellerId (profile page), show ALL listings including sold ones
@@ -287,8 +279,6 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const firestoreServices = await getFirestoreServices();
-
     const listingData = {
       ...body,
       sellerId: req.userId, // Use verified userId from token
@@ -297,12 +287,23 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       condition: body.condition || 'good',
     };
     
-    const listingId = await firestoreServices.listings.createListing(listingData);
-    const listing = await firestoreServices.listings.getListing(listingId);
-    
+    const listingId = await createListingAdmin(listingData);
+    const listing = await getListingAdmin(listingId);
+
+    // Fire-and-forget: notify users interested in this category
+    if (listing?.category && listing.title && listing.title !== 'AI Analyzing...' && listing.price) {
+      notifyUsersInterestedInCategory({
+        category: listing.category,
+        excludeUserId: req.userId,
+        title: `🆕 New drop in ${listing.category}`,
+        body: `"${listing.title}" — $${listing.price.toLocaleString()}. Check it out before it's gone.`,
+        data: { type: 'new_listing', listingId },
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ id: listingId, ...listing }, { status: 201 });
   } catch (error) {
-    console.error('❌ Error creating listing:', error);
+    console.error('Error creating listing:', error);
     console.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,

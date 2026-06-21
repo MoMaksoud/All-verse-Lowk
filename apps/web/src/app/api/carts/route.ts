@@ -1,16 +1,28 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { withApi } from "@/lib/withApi";
-import { firestoreServices } from "@/lib/services/firestore";
+import {
+  addToCartAdmin,
+  clearCartAdmin,
+  getCartAdmin,
+  removeFromCartAdmin,
+} from "@/lib/server/adminCarts";
 import { success, error } from "@/lib/response";
-import { badRequest, unauthorized } from "@marketplace/shared-logic";
-import { AddToCartInput } from "@/lib/types/firestore";
+import { badRequest } from "@marketplace/shared-logic";
+import type { AddToCartInput } from "@/lib/types/firestore";
+
+const addToCartSchema = z.object({
+  listingId: z.string().min(1, 'listingId is required'),
+  sellerId: z.string().min(1, 'sellerId is required'),
+  priceAtAdd: z.number().positive('priceAtAdd must be positive'),
+});
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const cart = await firestoreServices.carts.getCart(req.userId);
+    const cart = await getCartAdmin(req.userId);
     return success(cart || { items: [], updatedAt: new Date() });
   } catch (err) {
     console.error('Error fetching cart:', err);
@@ -20,55 +32,50 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const body = await req.json() as AddToCartInput;
-    
-    // Validate required fields
-    if (!body.listingId || !body.sellerId || !body.qty || !body.priceAtAdd) {
-      return error(badRequest("Missing required fields: listingId, sellerId, qty, priceAtAdd"));
+    const raw = await req.json();
+    const parsed = addToCartSchema.safeParse(raw);
+    if (!parsed.success) {
+      return error(badRequest(parsed.error.errors[0]?.message ?? 'Invalid request'));
     }
 
-    await firestoreServices.carts.addToCart(req.userId, body);
-    const updatedCart = await firestoreServices.carts.getCart(req.userId);
-    
-    return success(updatedCart, { status: 201 });
+    // You can't buy your own listing.
+    if (parsed.data.sellerId === req.userId) {
+      return error(badRequest("You can't add your own listing to your cart"));
+    }
+
+    // qty is always 1 — each listing is a unique single-unit item.
+    const input: AddToCartInput = { listingId: parsed.data.listingId as string, sellerId: parsed.data.sellerId as string, priceAtAdd: parsed.data.priceAtAdd as number, qty: 1 };
+    const added = await addToCartAdmin(req.userId, input);
+    const updatedCart = await getCartAdmin(req.userId);
+
+    // `alreadyInCart` lets the client distinguish a real add from a no-op re-add.
+    return success(
+      { ...(updatedCart ?? { items: [] }), alreadyInCart: !added },
+      { status: added ? 201 : 200 }
+    );
   } catch (err) {
     console.error('Error adding to cart:', err);
     return error(badRequest("Failed to add item to cart"));
   }
 });
 
-export const PUT = withApi(async (req: NextRequest & { userId: string }) => {
-  try {
-    const body = await req.json() as { listingId: string; qty: number };
-    
-    if (!body.listingId || body.qty === undefined) {
-      return error(badRequest("Missing required fields: listingId, qty"));
-    }
-
-    await firestoreServices.carts.updateCartItem(req.userId, body);
-    const updatedCart = await firestoreServices.carts.getCart(req.userId);
-    
-    return success(updatedCart);
-  } catch (err) {
-    console.error('Error updating cart item:', err);
-    return error(badRequest("Failed to update cart item"));
-  }
+// PUT is intentionally not supported — qty is always 1 per listing.
+export const PUT = withApi(async (_req: NextRequest & { userId: string }) => {
+  return NextResponse.json({ error: 'Quantity updates are not supported' }, { status: 405 });
 });
 
 export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
   try {
     const { searchParams } = new URL(req.url);
     const listingId = searchParams.get('listingId');
-    
+
     if (listingId) {
-      // Remove specific item
-      await firestoreServices.carts.removeFromCart(req.userId, listingId);
+      await removeFromCartAdmin(req.userId, listingId);
     } else {
-      // Clear entire cart
-      await firestoreServices.carts.clearCart(req.userId);
+      await clearCartAdmin(req.userId);
     }
-    
-    const updatedCart = await firestoreServices.carts.getCart(req.userId);
+
+    const updatedCart = await getCartAdmin(req.userId);
     return success(updatedCart);
   } catch (err) {
     console.error('Error clearing cart:', err);

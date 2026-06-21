@@ -8,7 +8,7 @@ export const preferredRegion = 'iad1';
 export const dynamic = 'force-dynamic';
 
 // Check for Gemini API key
-const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
   console.error('❌ GEMINI_API_KEY is not configured');
 }
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     });
 
     const prompt = `
-    You are a MARKET RESEARCH ANALYST for ALL VERSE GPT. Analyze the current market value for this specific item based on real-world data.
+    You are a MARKET RESEARCH ANALYST for ALL VERSE. Analyze the current market value for this specific item based on real-world data.
 
     Item Details:
     - Title: ${title}

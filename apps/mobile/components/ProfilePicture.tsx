@@ -7,6 +7,7 @@ interface ProfilePictureProps {
   name?: string;
   email?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  customSize?: number;
   style?: ViewStyle;
 }
 
@@ -29,11 +30,12 @@ export default function ProfilePicture({
   name,
   email,
   size = 'md',
+  customSize,
   style,
 }: ProfilePictureProps) {
   const [imageError, setImageError] = useState(false);
-  const dimension = sizeMap[size];
-  const fontSize = fontSizeMap[size];
+  const dimension = customSize ?? sizeMap[size];
+  const fontSize = customSize ? Math.round(customSize * 0.35) : fontSizeMap[size];
 
   const normalizeImageUrl = (url?: string | null): string | null => {
     if (!url) return null;

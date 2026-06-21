@@ -2,15 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { DynamicBackground } from '@/components/DynamicBackground';
 import { Card } from '@/components/ui/Card';
-import { 
-  Package, 
-  Calendar, 
-  DollarSign, 
-  MapPin, 
+import {
+  Package,
+  Calendar,
+  DollarSign,
+  MapPin,
   CheckCircle,
-  Clock, 
+  Clock,
   XCircle,
   Eye,
   Loader2,
@@ -64,7 +63,11 @@ const formatCurrency = (amount: number) => {
 };
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  const parsed = new Date(dateString);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Unknown date';
+  }
+  return parsed.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -72,6 +75,16 @@ const formatDate = (dateString: string) => {
     minute: '2-digit',
   });
 };
+
+function getApiErrorMessage(payload: unknown, fallback: string): string {
+  if (payload && typeof payload === 'object') {
+    const p = payload as Record<string, unknown>;
+    if (typeof p.message === 'string' && p.message.trim()) return p.message;
+    if (typeof p.error === 'string' && p.error.trim()) return p.error;
+    if (typeof p.code === 'string' && p.code.trim()) return `${fallback} (${p.code})`;
+  }
+  return fallback;
+}
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -125,7 +138,8 @@ export default function SalesPage() {
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(null);
   const [loadingShipping, setLoadingShipping] = useState(false);
   const [generatingLabel, setGeneratingLabel] = useState(false);
-  const { currentUser } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const { currentUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -135,11 +149,13 @@ export default function SalesPage() {
 
     if (!db || !isFirebaseConfigured()) {
       console.error('Database not initialized');
+      setError('Database is not configured. Please try again later.');
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null);
 
     // Real-time subscription to orders where current user is a seller
     const ordersRef = collection(db, 'orders');
@@ -148,15 +164,25 @@ export default function SalesPage() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        console.log('💰 Sales subscription fired:', snapshot.docs.length, 'total orders');
-        
         // Filter orders where current user is the seller
         const salesList = snapshot.docs
           .map(doc => {
             const data = doc.data();
+            const shippingAddress = data.shippingAddress && typeof data.shippingAddress === 'object'
+              ? data.shippingAddress
+              : {};
             return {
               id: doc.id,
               ...data,
+              items: Array.isArray(data.items) ? data.items : [],
+              shippingAddress: {
+                name: (shippingAddress as any).name || 'N/A',
+                street: (shippingAddress as any).street || 'N/A',
+                city: (shippingAddress as any).city || '',
+                state: (shippingAddress as any).state || '',
+                zip: (shippingAddress as any).zip || '',
+                country: (shippingAddress as any).country || 'N/A',
+              },
               createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
               updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
             };
@@ -170,18 +196,20 @@ export default function SalesPage() {
           })
           .map(order => {
             // Filter items to only show items sold by this seller
-            const sellerItems = (order as any).items.filter((item: OrderItem) => 
+            const sellerItems = ((order as any).items || []).filter((item: OrderItem) =>
               item.sellerId === currentUser.uid
             );
-            
-            // Calculate totals for seller's items only
-            const sellerSubtotal = sellerItems.reduce((sum: number, item: OrderItem) => 
+
+            // Prorate fees/tax from the actual order amounts by seller's share of subtotal
+            const sellerSubtotal = sellerItems.reduce((sum: number, item: OrderItem) =>
               sum + (item.unitPrice * item.qty), 0
             );
-            const sellerTax = sellerSubtotal * 0.08; // 8% tax
-            const sellerFees = sellerSubtotal * 0.029 + 0.30; // Stripe fees
+            const orderSubtotal = ((order as any).subtotal as number) || sellerSubtotal;
+            const ratio = orderSubtotal > 0 ? sellerSubtotal / orderSubtotal : 1;
+            const sellerTax = ((order as any).tax as number || 0) * ratio;
+            const sellerFees = ((order as any).fees as number || 0) * ratio;
             const sellerTotal = sellerSubtotal + sellerTax + sellerFees;
-            
+
             return {
               ...order,
               items: sellerItems,
@@ -192,12 +220,12 @@ export default function SalesPage() {
             } as Order;
           }) as Order[];
 
-        console.log(`✅ Found ${salesList.length} sales for seller ${currentUser.uid}`);
         setSales(salesList);
         setLoading(false);
       },
       (error) => {
-        console.error('❌ Error in sales subscription:', error);
+        console.error('Error in sales subscription:', error);
+        setError('Unable to load sales right now.');
         setLoading(false);
       }
     );
@@ -220,7 +248,7 @@ export default function SalesPage() {
     try {
       const shippingRef = collection(db, 'orders', orderId, 'shipping');
       const snapshot = await getDocs(shippingRef);
-      
+
       if (!snapshot.empty) {
         const shippingData = snapshot.docs[0].data() as ShippingInfo;
         setShippingInfo(shippingData);
@@ -236,16 +264,17 @@ export default function SalesPage() {
   };
 
   const handleGenerateLabel = async () => {
-    if (!selectedSale) return;
+    if (!selectedSale || generatingLabel) return;
 
     // Check if order has shipping metadata from payment intent
     const orderShipping = (selectedSale as any).shipping;
     if (!orderShipping?.rateId || !orderShipping?.shipmentId) {
-      alert('Shipping rate information not found. Please contact support.');
+      setError('Shipping rate information was not found for this sale.');
       return;
     }
 
     setGeneratingLabel(true);
+    setError(null);
     try {
       const { apiPost } = await import('@/lib/api-client');
       const response = await apiPost('/api/shipping/create-label', {
@@ -255,19 +284,15 @@ export default function SalesPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate shipping label');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(getApiErrorMessage(errorData, 'Failed to generate shipping label'));
       }
 
-      const data = await response.json();
-      
       // Refresh shipping info
       await fetchShippingInfo(selectedSale.id);
-      
-      alert('Shipping label generated successfully!');
     } catch (error) {
       console.error('Error generating label:', error);
-      alert(error instanceof Error ? error.message : 'Failed to generate shipping label');
+      setError(error instanceof Error ? error.message : 'Failed to generate shipping label');
     } finally {
       setGeneratingLabel(false);
     }
@@ -284,7 +309,7 @@ export default function SalesPage() {
       try {
         const { apiGet } = await import('@/lib/api-client');
         const response = await apiGet('/api/stripe/connect/account-status');
-        
+
         if (response.ok) {
           const data = await response.json();
           setStripeAccount(data);
@@ -301,21 +326,22 @@ export default function SalesPage() {
 
   const handleConnectStripe = async () => {
     if (!currentUser?.email) {
-      alert('Email is required to connect Stripe');
+      setError('Email is required to connect Stripe');
       return;
     }
 
     try {
       setLoadingAccount(true);
       const { apiPost } = await import('@/lib/api-client');
-      
+
       // Create account if doesn't exist
       const createResponse = await apiPost('/api/stripe/connect/create-account', {
         email: currentUser.email,
       });
 
       if (!createResponse.ok) {
-        throw new Error('Failed to create Connect account');
+        const errorData = await createResponse.json().catch(() => ({}));
+        throw new Error(getApiErrorMessage(errorData, 'Failed to create Connect account'));
       }
 
       // Get account link
@@ -325,33 +351,39 @@ export default function SalesPage() {
       });
 
       if (!linkResponse.ok) {
-        throw new Error('Failed to create account link');
+        const errorData = await linkResponse.json().catch(() => ({}));
+        throw new Error(getApiErrorMessage(errorData, 'Failed to create account link'));
       }
 
       const linkData = await linkResponse.json();
       window.location.href = linkData.url;
     } catch (error) {
       console.error('Error connecting Stripe:', error);
-      alert('Failed to connect Stripe account. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to connect Stripe account. Please try again.');
     } finally {
       setLoadingAccount(false);
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your sales</h1>
-            <Link
-              href="/signin"
-              className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-            >
-              Sign In
-            </Link>
-          </div>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your sales</h1>
+          <Link
+            href="/signin?redirect=/sales&reason=sales"
+            className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          >
+            Sign In
+          </Link>
         </div>
       </div>
     );
@@ -363,16 +395,19 @@ export default function SalesPage() {
     .reduce((sum, sale) => sum + sale.total, 0);
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <DynamicBackground intensity="low" showParticles={true} />
-      
-      <div className="relative z-10 min-h-screen pt-20 px-4 py-8">
+    <div className="min-h-screen bg-[#020617]">
+      <div className="px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-5xl font-bold text-white mb-2">My Sales</h1>
             <p className="text-gray-400">Track your sold items and earnings</p>
           </div>
+          {error && (
+            <div className="mb-6 rounded-lg border border-red-500/30 bg-red-900/20 p-4 text-red-300">
+              {error}
+            </div>
+          )}
 
           {/* Stripe Connect Setup */}
           {!loadingAccount && (!stripeAccount?.hasAccount || !stripeAccount?.payoutsEnabled) && (
@@ -383,7 +418,7 @@ export default function SalesPage() {
                   <div>
                     <h3 className="text-white font-semibold mb-1">Connect Stripe to Receive Payouts</h3>
                     <p className="text-gray-400 text-sm">
-                      {!stripeAccount?.hasAccount 
+                      {!stripeAccount?.hasAccount
                         ? 'Set up your Stripe account to receive payments from sales'
                         : 'Complete your Stripe onboarding to enable payouts'}
                     </p>
@@ -501,21 +536,30 @@ export default function SalesPage() {
                     </div>
                   </div>
 
-                  {/* Sale Summary */}
-                  <div className="mt-6 pt-6 border-t border-dark-600">
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-gray-400">
+                  {/* Sale Summary + Actions */}
+                  <div className="mt-6 pt-6 border-t border-white/[0.08]">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="text-sm text-[#94a3b8]">
                         <p>Subtotal: {formatCurrency(sale.subtotal)}</p>
                         <p>Tax: {formatCurrency(sale.tax)}</p>
                         <p>Fees: {formatCurrency(sale.fees)}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex flex-col items-end gap-2">
                         <p className="text-white font-semibold text-lg">
                           Total: {formatCurrency(sale.total)}
                         </p>
+                        {sale.status === 'paid' && (sale as any).shipping?.rateId && (
+                          <button
+                            onClick={() => { setSelectedSale(sale); }}
+                            className="inline-flex items-center gap-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white text-sm font-medium py-1.5 px-3 rounded-lg transition-colors"
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            Generate Label
+                          </button>
+                        )}
                         <button
                           onClick={() => setSelectedSale(sale)}
-                          className="mt-2 text-accent-400 hover:text-accent-300 text-sm flex items-center gap-1"
+                          className="text-[#3b82f6] hover:text-[#60a5fa] text-sm flex items-center gap-1"
                         >
                           <Eye className="w-4 h-4" />
                           View Details
@@ -532,8 +576,8 @@ export default function SalesPage() {
 
       {/* Sale Details Modal */}
       {selectedSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0f172a] rounded-2xl border border-white/[0.08] p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-white">
                 Sale Details #{selectedSale.id.slice(-8).toUpperCase()}
@@ -561,7 +605,7 @@ export default function SalesPage() {
                 <h4 className="text-white font-medium mb-3">Items Sold</h4>
                 <div className="space-y-3">
                   {selectedSale.items.map((item, index) => (
-                    <div key={index} className="bg-zinc-800 rounded-xl p-4">
+                    <div key={index} className="bg-[#1e293b] rounded-xl p-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h5 className="text-white font-medium">{item.title}</h5>
@@ -587,7 +631,7 @@ export default function SalesPage() {
                   <MapPin className="w-4 h-4" />
                   Shipping Address
                 </h4>
-                <div className="bg-zinc-800 rounded-xl p-4">
+                <div className="bg-[#1e293b] rounded-xl p-4">
                   <div className="text-zinc-300">
                     <p className="font-medium">{selectedSale.shippingAddress.name}</p>
                     <p>{selectedSale.shippingAddress.street}</p>
@@ -615,7 +659,7 @@ export default function SalesPage() {
                     <span className="text-zinc-400">Fees:</span>
                     <span className="text-white">{formatCurrency(selectedSale.fees)}</span>
                   </div>
-                  <div className="border-t border-zinc-700 pt-2">
+                  <div className="border-t border-white/[0.08] pt-2">
                     <div className="flex justify-between">
                       <span className="text-white font-semibold">Total:</span>
                       <span className="text-accent-500 font-semibold text-lg">
@@ -632,7 +676,7 @@ export default function SalesPage() {
                   <Truck className="w-4 h-4" />
                   Shipping Information
                 </h4>
-                <div className="bg-zinc-800 rounded-xl p-4">
+                <div className="bg-[#1e293b] rounded-xl p-4">
                   {loadingShipping ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-5 h-5 animate-spin text-accent-500 mr-2" />
@@ -723,4 +767,3 @@ export default function SalesPage() {
     </div>
   );
 }
-

@@ -26,7 +26,7 @@ export function SellCTASection() {
             </h2>
             
             <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
-              List your items on All Verse GPT with AI-powered descriptions, smart pricing, and reach buyers instantly.
+              List your items on All Verse with AI-powered descriptions, smart pricing, and reach buyers instantly.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

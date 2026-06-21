@@ -104,8 +104,7 @@ export async function POST(req: NextRequest) {
             name: imageFile instanceof File ? imageFile.name : "blob",
         });
 
-        const geminiApiKey =
-            process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+        const geminiApiKey = process.env.GEMINI_API_KEY;
 
         if (!geminiApiKey) {
             return NextResponse.json(

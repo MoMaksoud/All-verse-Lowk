@@ -1,51 +1,121 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { firestoreServices } from '@/lib/services/firestore';
+import { getOrderAdmin } from '@/lib/server/adminOrders';
+import { getCheckoutSnapshotAdmin } from '@/lib/server/adminCheckoutSnapshots';
+import { withApi } from '@/lib/withApi';
+import { fail, ok } from '@/lib/api/responses';
+import { serverLogger } from '@/lib/server/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/payments/confirm?session_id=...
- * Retrieves Checkout Session from Stripe, reads metadata.orderId, fetches order from Firestore.
- * Returns sanitized order summary. Do not trust query params for order lookup.
+ *
+ * Verifies the Stripe session belongs to the authenticated user and that
+ * the order has been created (webhook may be a few seconds behind).
+ * Reads orderId from the checkout snapshot — not from session metadata —
+ * so the caller never needs to trust client-supplied order IDs.
  */
-export async function GET(req: NextRequest) {
+export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   const sessionId = req.nextUrl.searchParams.get('session_id');
   if (!sessionId?.trim()) {
-    return NextResponse.json({ error: 'Missing session_id' }, { status: 400 });
+    return fail({ status: 400, code: 'MISSING_SESSION_ID', message: 'Missing session_id' });
   }
 
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId.trim(), {
-      expand: [],
-    });
+    // Verify the session is real and paid (Stripe is the authority).
+    const session = await stripe.checkout.sessions.retrieve(sessionId.trim(), { expand: [] });
 
-    const orderId = typeof session.metadata?.orderId === 'string' ? session.metadata.orderId.trim() : null;
-    if (!orderId) {
-      return NextResponse.json({ error: 'Invalid session or missing order' }, { status: 400 });
+    if (session.payment_status !== 'paid') {
+      return fail({
+        status: 409,
+        code: 'PAYMENT_NOT_SETTLED',
+        message: 'Payment is not completed yet',
+      });
     }
 
-    const order = await firestoreServices.orders.getOrder(orderId);
-    if (!order) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    // Load snapshot — it contains orderId once the webhook has run.
+    const snapshot = await getCheckoutSnapshotAdmin(sessionId.trim());
+
+    if (!snapshot) {
+      // Legacy flow: session was created before snapshot-based deploy.
+      // Fall back to session.metadata.orderId.
+      const legacyOrderId =
+        typeof session.metadata?.orderId === 'string' ? session.metadata.orderId.trim() : null;
+      if (!legacyOrderId) {
+        return fail({
+          status: 404,
+          code: 'ORDER_NOT_FOUND',
+          message: 'Order not found. If you just paid, it may take a few seconds to appear.',
+        });
+      }
+      return await resolveOrder(legacyOrderId, req.userId, session, 'legacy');
     }
 
-    return NextResponse.json({
-      success: true,
-      order: {
-        orderId: (order as any).id,
-        orderIdShort: ((order as any).id as string).slice(0, 8),
-        status: order.status,
-        total: order.total,
-        itemCount: order.items.length,
-      },
-    });
+    // Validate ownership at snapshot level.
+    if (snapshot.buyerId !== req.userId) {
+      return fail({ status: 403, code: 'FORBIDDEN', message: 'Forbidden' });
+    }
+
+    if (snapshot.status !== 'processed' || !snapshot.orderId) {
+      // Webhook hasn't fired yet — tell the client to retry in a moment.
+      return fail({
+        status: 202,
+        code: 'ORDER_PROCESSING',
+        message: 'Your payment was received. The order is being created — please wait a moment.',
+      });
+    }
+
+    return await resolveOrder(snapshot.orderId, req.userId, session, 'snapshot');
   } catch (err) {
-    console.error('[payments/confirm]', err);
-    return NextResponse.json(
-      { error: 'Failed to confirm session' },
-      { status: 500 }
-    );
+    serverLogger.error('payment_confirm_failed', {
+      route: 'api/payments/confirm',
+      userId: req.userId,
+      error: err instanceof Error ? err.message : 'Failed to confirm session',
+    });
+    return fail({ status: 500, code: 'PAYMENT_CONFIRM_FAILED', message: 'Failed to confirm payment' });
   }
+});
+
+async function resolveOrder(
+  orderId: string,
+  userId: string,
+  session: import('stripe').Stripe.Checkout.Session,
+  source: 'snapshot' | 'legacy'
+) {
+  const order = await getOrderAdmin(orderId);
+  if (!order) {
+    return fail({ status: 404, code: 'ORDER_NOT_FOUND', message: 'Order not found' });
+  }
+
+  if (order.buyerId !== userId) {
+    return fail({ status: 403, code: 'FORBIDDEN', message: 'Forbidden' });
+  }
+
+  const expectedAmountCents = Math.round(order.total * 100);
+  if (
+    typeof session.amount_total === 'number' &&
+    session.amount_total !== expectedAmountCents
+  ) {
+    return fail({ status: 409, code: 'PAYMENT_AMOUNT_MISMATCH', message: 'Payment amount mismatch' });
+  }
+
+  serverLogger.info('payment_confirm_ok', {
+    route: 'api/payments/confirm',
+    orderId,
+    userId,
+    sessionId: session.id,
+    source,
+  });
+
+  return ok({
+    order: {
+      orderId: order.id,
+      orderIdShort: (order.id as string).slice(0, 8),
+      status: order.status,
+      total: order.total,
+      itemCount: order.items.length,
+    },
+  });
 }
