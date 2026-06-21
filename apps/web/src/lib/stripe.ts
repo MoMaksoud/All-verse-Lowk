@@ -6,53 +6,25 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-08-27.basil',
 });
 
-
-// Payment intent creation
-export async function createPaymentIntent(amount: number, currency: string = 'usd', metadata?: Record<string, string>) {
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency,
-      metadata: metadata || {},
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
-
-    return {
-      success: true,
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-      paymentIntent, // Return full object for metadata updates
-    };
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create payment intent',
-    };
-  }
-}
-
-
 /**
  * Create a Stripe Checkout Session (mode: payment).
- * Call this after creating the order in Firestore; pass orderId in metadata.
+ * Does NOT create a Firestore order — the order is created atomically in the
+ * payment webhook after the buyer pays. Pass buyerId so the webhook can look
+ * up the checkout snapshot by session.id.
  */
 export async function createCheckoutSession(params: {
   amountTotalCents: number;
-  orderId: string;
+  buyerId: string;
   successUrl: string;
   cancelUrl: string;
   description?: string;
 }) {
   try {
-    // Auto-expire unpaid checkout sessions faster to reduce stale pending orders.
     const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      client_reference_id: params.orderId,
+      client_reference_id: params.buyerId,
       line_items: [
         {
           quantity: 1,
@@ -70,11 +42,11 @@ export async function createCheckoutSession(params: {
       cancel_url: params.cancelUrl,
       expires_at: expiresAt,
       metadata: {
-        orderId: params.orderId,
+        buyerId: params.buyerId,
       },
       payment_intent_data: {
         metadata: {
-          orderId: params.orderId,
+          buyerId: params.buyerId,
         },
       },
     });
@@ -93,26 +65,6 @@ export async function createCheckoutSession(params: {
     };
   }
 }
-
-// Retrieve payment intent
-export async function retrievePaymentIntent(paymentIntentId: string) {
-  try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    return {
-      success: true,
-      paymentIntent,
-    };
-  } catch (error) {
-    console.error('Error retrieving payment intent:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to retrieve payment intent',
-    };
-  }
-}
-
-
-
 
 // Verify webhook signature
 export function verifyWebhookSignature(payload: string, signature: string, secret: string) {
@@ -244,7 +196,12 @@ export async function getConnectAccount(accountId: string) {
  * Transfer funds to seller's Connect account
  * This is called after payment succeeds
  */
-export async function transferToSeller(accountId: string, amount: number, orderId: string) {
+export async function transferToSeller(
+  accountId: string,
+  amount: number,
+  orderId: string,
+  idempotencyKey?: string
+) {
   try {
     // Amount in cents
     const amountInCents = Math.round(amount * 100);
@@ -257,7 +214,7 @@ export async function transferToSeller(accountId: string, amount: number, orderI
         orderId,
         type: 'seller_payout',
       },
-    });
+    }, idempotencyKey ? { idempotencyKey } : undefined);
 
     return {
       success: true,

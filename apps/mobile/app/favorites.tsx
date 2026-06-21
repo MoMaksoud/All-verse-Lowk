@@ -7,17 +7,17 @@ import {
   TextInput,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   ScrollView,
 } from 'react-native';
-import { colors } from '../../constants/theme';
+import { Alert } from '../lib/ui/alert';
+import { colors } from '../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiClient } from '../../lib/api/client';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import ListingCard from '../../components/ListingCard';
+import { apiClient } from '../lib/api/client';
+import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ListingCard from '../components/ListingCard';
 
 interface Listing {
   id: string;
@@ -34,36 +34,30 @@ interface Listing {
 }
 
 export default function FavoritesScreen() {
+  const { currentUser } = useAuth();
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  const getFavorites = useCallback(async () => {
-    try {
-      const stored = await AsyncStorage.getItem('favorites');
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error('Error loading favorites:', error);
-      return [];
-    }
-  }, []);
-
   const loadFavorites = useCallback(async () => {
+    if (!currentUser) {
+      setFavorites([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const favoriteIds = await getFavorites();
-      
+      const res = await apiClient.get('/api/favorites', true);
+      const resData = res.ok ? await res.json() : { data: [] };
+      const favoriteIds: string[] = resData.data ?? [];
+
       if (favoriteIds.length === 0) {
         setFavorites([]);
-        setLoading(false);
         return;
       }
 
-      // Fetch details in batches of 5 to bound concurrent GC handles.
-      // Unbounded Promise.all holds all in-flight promise handles in one GC scope,
-      // which can exhaust Hermes GC scope slots.
       const BATCH_SIZE = 5;
       const favoriteListings: (Listing | null)[] = [];
       for (let i = 0; i < favoriteIds.length; i += BATCH_SIZE) {
@@ -77,8 +71,7 @@ export default function FavoritesScreen() {
                 return data.data || data;
               }
               return null;
-            } catch (error) {
-              console.error(`Error fetching listing ${id}:`, error);
+            } catch {
               return null;
             }
           })
@@ -86,21 +79,18 @@ export default function FavoritesScreen() {
         favoriteListings.push(...batchResults);
       }
 
-      // Filter out null values (deleted listings)
-      const validFavorites = favoriteListings.filter((listing) => listing !== null);
-      setFavorites(validFavorites);
-    } catch (error) {
-      console.error('Error loading favorites:', error);
+      setFavorites(favoriteListings.filter((listing): listing is Listing => listing !== null));
+    } catch {
+      // silently fail
     } finally {
       setLoading(false);
     }
-  }, [getFavorites]);
+  }, [currentUser?.uid]);
 
   useEffect(() => {
     loadFavorites();
   }, []);
 
-  // Refresh favorites when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadFavorites();
@@ -114,28 +104,21 @@ export default function FavoritesScreen() {
   }, [loadFavorites]);
 
   const removeFavorite = useCallback(async (listingId: string) => {
+    setFavorites((prev) => prev.filter((listing) => listing.id !== listingId));
     try {
-      const currentFavorites = await getFavorites();
-      const updatedFavorites = currentFavorites.filter((id: string) => id !== listingId);
-      await AsyncStorage.setItem('favorites', JSON.stringify(updatedFavorites));
-
-      // Update local state
-      setFavorites((prev) => prev.filter((listing) => listing.id !== listingId));
-    } catch (error) {
-      console.error('Error removing favorite:', error);
+      await apiClient.delete(`/api/favorites/${listingId}`, true);
+    } catch {
       Alert.alert('Error', 'Failed to remove favorite');
+      loadFavorites();
     }
-  }, [getFavorites]);
+  }, [loadFavorites]);
 
-  // Filter favorites based on search and category
   const filteredFavorites = favorites.filter((listing) => {
     const matchesSearch =
       !searchQuery ||
       listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.description.toLowerCase().includes(searchQuery.toLowerCase());
-
     const matchesCategory = !selectedCategory || listing.category === selectedCategory;
-
     return matchesSearch && matchesCategory;
   });
 
@@ -143,7 +126,6 @@ export default function FavoritesScreen() {
 
   const ListHeader = () => (
     <View>
-      {/* Page Header */}
       <View style={styles.pageHeader}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
@@ -162,7 +144,6 @@ export default function FavoritesScreen() {
       <ListHeader />
       {favorites.length > 0 && (
         <View style={styles.filtersContainer}>
-          {/* Search */}
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color={colors.text.muted} style={styles.searchIcon} />
             <TextInput
@@ -179,7 +160,6 @@ export default function FavoritesScreen() {
             )}
           </View>
 
-          {/* Category Filter */}
           <View style={styles.categoryContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
               <TouchableOpacity
@@ -196,9 +176,7 @@ export default function FavoritesScreen() {
                   style={[styles.categoryChip, selectedCategory === category && styles.categoryChipActive]}
                   onPress={() => setSelectedCategory(category)}
                 >
-                  <Text
-                    style={[styles.categoryChipText, selectedCategory === category && styles.categoryChipTextActive]}
-                  >
+                  <Text style={[styles.categoryChipText, selectedCategory === category && styles.categoryChipTextActive]}>
                     {category.charAt(0).toUpperCase() + category.slice(1)}
                   </Text>
                 </TouchableOpacity>
@@ -206,7 +184,6 @@ export default function FavoritesScreen() {
             </ScrollView>
           </View>
 
-          {/* Results count */}
           {(searchQuery || selectedCategory) && (
             <Text style={styles.resultsCount}>
               {filteredFavorites.length} of {favorites.length} favorites match your filters
@@ -245,10 +222,7 @@ export default function FavoritesScreen() {
             <Text style={styles.emptyText}>Try adjusting your search or filter criteria.</Text>
             <TouchableOpacity
               style={styles.browseButton}
-              onPress={() => {
-                setSearchQuery('');
-                setSelectedCategory('');
-              }}
+              onPress={() => { setSearchQuery(''); setSelectedCategory(''); }}
             >
               <Text style={styles.browseButtonText}>Clear Filters</Text>
             </TouchableOpacity>
@@ -407,4 +381,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

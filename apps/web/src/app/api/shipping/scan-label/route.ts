@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Initialize Gemini AI
-const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
   console.error('❌ GEMINI_API_KEY is not configured for shipping label scan');
@@ -63,7 +63,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
     // Create prompt for extracting shipping information
     const prompt = `
-      You are a SHIPPING LABEL SCANNER for ALL VERSE GPT. Analyze this shipping label image and extract the package dimensions and weight.
+      You are a SHIPPING LABEL SCANNER for ALL VERSE. Analyze this shipping label image and extract the package dimensions and weight.
 
       Extract the following information from the shipping label:
       1. Package Weight (in pounds/lbs) - look for weight fields, "WT", "Weight", or similar

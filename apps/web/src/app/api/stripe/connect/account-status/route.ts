@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { getConnectAccount } from '@/lib/stripe';
-import { ProfileService } from '@/lib/firestore';
+import { getProfileDocumentAdmin, mergeProfileAdmin } from '@/lib/server/adminProfiles';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    const profile = await ProfileService.getProfile(req.userId);
+    const profile = await getProfileDocumentAdmin(req.userId);
     
     if (!profile?.stripeConnectAccountId) {
       return NextResponse.json({
@@ -21,14 +21,22 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
     }
 
     const result = await getConnectAccount(profile.stripeConnectAccountId);
-    
+
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
+      // Avoid 500: Stripe errors are common (invalid key, deleted account). UI can still load.
+      return NextResponse.json({
+        hasAccount: true,
+        accountId: profile.stripeConnectAccountId,
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: profile.stripeConnectOnboardingComplete ?? false,
+        connectError: result.error ?? 'Unable to load Stripe account',
+      });
     }
 
-    // Update profile if onboarding is complete
+    // Update profile if onboarding is complete (Admin SDK — client rules block server writes)
     if (result.chargesEnabled && result.payoutsEnabled && !profile.stripeConnectOnboardingComplete) {
-      await ProfileService.updateProfile(req.userId, {
+      await mergeProfileAdmin(req.userId, {
         stripeConnectOnboardingComplete: true,
       });
     }

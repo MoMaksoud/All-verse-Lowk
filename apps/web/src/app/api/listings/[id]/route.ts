@@ -4,17 +4,9 @@ import { success, error } from "@/lib/response";
 import { badRequest, notFound } from "@marketplace/shared-logic";
 import { UpdateListingInput } from "@/lib/types/firestore";
 import { FirebaseCleanupService } from "@/lib/firebaseCleanup";
-
-// Import firestore services dynamically to avoid webpack issues
-async function getFirestoreServices() {
-  try {
-    const { firestoreServices } = await import("@/lib/services/firestore");
-    return firestoreServices;
-  } catch (err) {
-    console.error('Failed to import firestore services:', err);
-    throw new Error('Database services not available');
-  }
-}
+import { getListingAdmin, markAsSoldAdmin, updateListingAdmin } from "@/lib/server/adminListings";
+import { getAdminFirestore } from "@/lib/firebase-admin";
+import { sendPushNotifications } from "@/lib/server/push-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,8 +16,7 @@ export const GET = withApi(async (
   { params }: { params: { id: string } }
 ) => {
   try {
-    const firestoreServices = await getFirestoreServices();
-    const listing = await firestoreServices.listings.getListing(params.id);
+    const listing = await getListingAdmin(params.id);
     
     if (!listing) {
       return error(notFound("Listing not found"));
@@ -35,17 +26,23 @@ export const GET = withApi(async (
     // Treat items with inventory === 0 as sold even if sold field is not set
     const isSold = (listing.sold ?? false) === true || listing.inventory === 0;
     const simpleListing = {
-      id: (listing as any).id, // FirestoreListing & { id: string }
+      id: (listing as any).id,
       title: listing.title,
       description: listing.description,
       price: listing.price,
       category: listing.category,
+      condition: listing.condition,
+      brand: listing.brand,
+      model: listing.model,
+      size: (listing as any).size,
       photos: listing.images || [],
+      images: listing.images || [],
       createdAt: listing.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: listing.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       sellerId: listing.sellerId,
       sold: isSold,
       soldThroughAllVerse: isSold ? (listing as any).soldThroughAllVerse === true : undefined,
+      shipping: (listing as any).shipping ?? null,
     };
 
     return success(simpleListing);
@@ -62,10 +59,8 @@ export const PUT = withApi(async (
   try {
     const body = await req.json() as UpdateListingInput;
     
-    const firestoreServices = await getFirestoreServices();
-    
     // Get the existing listing to check ownership
-    const existingListing = await firestoreServices.listings.getListing(params.id);
+    const existingListing = await getListingAdmin(params.id);
     if (!existingListing) {
       return error(notFound("Listing not found"));
     }
@@ -77,22 +72,52 @@ export const PUT = withApi(async (
 
     // Mark as sold (manual): only owner can set; server always sets soldThroughAllVerse false
     if (body.sold === true) {
-      await firestoreServices.listings.markAsSold(params.id);
+      await markAsSoldAdmin(params.id);
       const { sold, soldAt, ...rest } = body;
       const safeRest = { ...rest } as Record<string, unknown>;
       delete safeRest.soldThroughAllVerse;
       if (Object.keys(safeRest).length > 0) {
-        await firestoreServices.listings.updateListing(params.id, safeRest as UpdateListingInput);
+        await updateListingAdmin(params.id, safeRest as UpdateListingInput);
       }
     } else {
       // Never allow client to set soldThroughAllVerse to true
       const safeBody = { ...body } as Record<string, unknown>;
       delete safeBody.soldThroughAllVerse;
-      await firestoreServices.listings.updateListing(params.id, safeBody as UpdateListingInput);
+      await updateListingAdmin(params.id, safeBody as UpdateListingInput);
     }
     
+    // Price drop notification — fire-and-forget to favoriting users
+    if (typeof body.price === 'number' && body.price < existingListing.price) {
+      (async () => {
+        try {
+          const db = getAdminFirestore();
+          const favSnap = await db.collection('favorites')
+            .where('listingIds', 'array-contains', params.id)
+            .get();
+          if (favSnap.empty) return;
+
+          const profileRefs = favSnap.docs.map(d => db.collection('profiles').doc(d.id));
+          const profileDocs = await db.getAll(...profileRefs);
+          const messages = profileDocs
+            .filter(d => d.exists && d.id !== req.userId)
+            .map(d => {
+              const token = (d.data() as any)?.expoPushToken;
+              if (!token?.startsWith('ExponentPushToken[')) return null;
+              return {
+                to: token,
+                title: 'Price dropped',
+                body: `"${existingListing.title}" is now $${body.price!.toLocaleString()}, down from $${existingListing.price.toLocaleString()}.`,
+                data: { type: 'price_drop', listingId: params.id },
+              };
+            })
+            .filter(Boolean) as any[];
+          if (messages.length > 0) await sendPushNotifications(messages);
+        } catch { /* fire-and-forget */ }
+      })();
+    }
+
     // Get the updated listing
-    const updatedListing = await firestoreServices.listings.getListing(params.id);
+    const updatedListing = await getListingAdmin(params.id);
     
     if (!updatedListing) {
       return error(notFound("Listing not found after update"));

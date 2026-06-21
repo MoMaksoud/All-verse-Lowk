@@ -1,4 +1,5 @@
-'use client';
+﻿'use client';
+
 
 import { HelpCircle, Mail } from 'lucide-react';
 
@@ -61,10 +62,10 @@ export default function FAQPage() {
             <span className="text-sm font-medium text-accent-400">Frequently Asked Questions</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            All Verse GPT – FAQ
+            All Verse – FAQ
           </h1>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            Find quick answers to common questions about using All Verse GPT
+            Find quick answers to common questions about using All Verse
           </p>
         </div>
 

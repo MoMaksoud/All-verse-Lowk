@@ -1,32 +1,31 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
-  RefreshControl,
-  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, palette } from '../../constants/theme';
+import { colors } from '../../constants/theme';
 import { apiClient } from '../../lib/api/client';
+import { useAuth } from '../../contexts/AuthContext';
+import ProfilePicture from '../../components/ProfilePicture';
 import ListingCard from '../../components/ListingCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import ProfilePicture from '../../components/ProfilePicture';
 
-const { width } = Dimensions.get('window');
-
-interface PublicProfile {
-  userId?: string;
-  id?: string;
+interface SellerProfile {
+  userId: string;
   username?: string;
   displayName?: string;
   bio?: string;
   profilePicture?: string;
   createdAt?: string;
+  interestCategories?: string[];
 }
 
 interface Listing {
@@ -42,319 +41,268 @@ interface Listing {
   inventory?: number;
 }
 
-const monthNames = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
-const buildFallbackProfile = (userId: string): PublicProfile => ({
-  userId,
-  username: 'Marketplace User',
-});
-
-const getErrorMessage = async (response: Response, fallback: string) => {
-  try {
-    const data = await response.json();
-    return data?.message || data?.error || fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const formatMemberSince = (createdAt?: string) => {
-  if (!createdAt) return '';
-
-  const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
-};
-
-export default function PublicProfileScreen() {
-  const { userId: userIdParam } = useLocalSearchParams<{ userId?: string | string[] }>();
-  const userId = useMemo(() => {
-    const value = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
-    return typeof value === 'string' ? value.trim() : '';
-  }, [userIdParam]);
-
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
+export default function SellerProfileScreen() {
+  const { userId } = useLocalSearchParams<{ userId: string }>();
+  const { currentUser } = useAuth();
+  const [profile, setProfile] = useState<SellerProfile | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [messagingLoading, setMessagingLoading] = useState(false);
 
-  const fetchProfileData = useCallback(async (showLoading = true) => {
-    if (!userId) {
-      setProfile(null);
-      setListings([]);
-      setError('Seller profile is unavailable.');
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
-
-    try {
-      if (showLoading) {
-        setLoading(true);
-      }
-      setError(null);
-
-      const encodedUserId = encodeURIComponent(userId);
-      const [profileResponse, listingsResponse] = await Promise.all([
-        apiClient.get(`/api/profile?userId=${encodedUserId}`, false),
-        apiClient.get(`/api/listings?sellerId=${encodedUserId}&limit=100`, false),
-      ]);
-
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json().catch(() => ({}));
-        setProfile(profileData?.data ? { userId, ...profileData.data } : buildFallbackProfile(userId));
-      } else if (profileResponse.status === 404) {
-        setProfile(buildFallbackProfile(userId));
-      } else {
-        const message = await getErrorMessage(profileResponse, 'Failed to load seller profile.');
-        throw new Error(message);
-      }
-
-      if (listingsResponse.ok) {
-        const listingsData = await listingsResponse.json().catch(() => ({}));
-        setListings(Array.isArray(listingsData?.data) ? listingsData.data : []);
-      } else {
-        const message = await getErrorMessage(listingsResponse, 'Failed to load seller listings.');
-        throw new Error(message);
-      }
-    } catch (err: any) {
-      setProfile(buildFallbackProfile(userId));
-      setListings([]);
-      setError(err?.message || 'Failed to load seller profile.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  useEffect(() => {
+    if (userId) {
+      fetchData();
     }
   }, [userId]);
 
-  useEffect(() => {
-    fetchProfileData();
-  }, [fetchProfileData]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [profileRes, listingsRes] = await Promise.all([
+        apiClient.get(`/api/profile?userId=${userId}`),
+        apiClient.get(`/api/listings?sellerId=${userId}&limit=30`),
+      ]);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchProfileData(false);
-  }, [fetchProfileData]);
+      if (profileRes.ok) {
+        const data = await profileRes.json();
+        setProfile(data.data || null);
+      }
 
-  if (loading) {
-    return <LoadingSpinner message="Loading seller profile..." />;
+      if (listingsRes.ok) {
+        const data = await listingsRes.json();
+        setListings(Array.isArray(data.data) ? data.data : []);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to load seller profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!currentUser) {
+      Alert.alert('Sign In Required', 'Please sign in to message sellers');
+      router.push('/auth/signin');
+      return;
+    }
+    if (!userId) return;
+
+    try {
+      setMessagingLoading(true);
+      const response = await apiClient.post('/api/chats', { otherUserId: userId }, true);
+      if (!response.ok) throw new Error('Failed to start chat');
+      const data = await response.json();
+      const chatId = data.chatId || data.id;
+      if (!chatId) throw new Error('Chat ID missing');
+      router.push(`/chat/${chatId}` as any);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to start conversation');
+    } finally {
+      setMessagingLoading(false);
+    }
+  };
+
+  if (loading) return <LoadingSpinner message="Loading profile..." />;
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+        </TouchableOpacity>
+        <View style={styles.notFound}>
+          <Ionicons name="person-outline" size={64} color={colors.text.muted} />
+          <Text style={styles.notFoundText}>Seller not found</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
-  const displayProfile = profile || (userId ? buildFallbackProfile(userId) : null);
-  const displayName = displayProfile?.displayName || displayProfile?.username || 'Marketplace User';
-  const memberSince = formatMemberSince(displayProfile?.createdAt);
+  const isOwnProfile = currentUser?.uid === userId;
+  const memberYear = profile.createdAt
+    ? new Date(profile.createdAt).getFullYear()
+    : new Date().getFullYear();
+  const activeListings = listings.filter((l) => !l.sold && (l.inventory ?? 1) > 0);
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.brand.DEFAULT}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <ProfilePicture
-              src={displayProfile?.profilePicture}
-              name={displayName}
-              size="xl"
-            />
-            <View style={styles.profileInfo}>
-              <Text style={styles.name}>{displayName}</Text>
-              {displayProfile?.username && displayProfile.username !== 'Marketplace User' && (
-                <Text style={styles.username}>@{displayProfile.username}</Text>
-              )}
-              {memberSince && (
-                <View style={styles.metaRow}>
-                  <Ionicons name="calendar-outline" size={16} color={colors.text.muted} />
-                  <Text style={styles.metaText}>Member since {memberSince}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {displayProfile?.bio && (
-            <Text style={styles.bio}>{displayProfile.bio}</Text>
-          )}
-        </View>
-
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => fetchProfileData()}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <FlatList
+        data={listings}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View>
+            {/* Back button */}
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
             </TouchableOpacity>
-          </View>
-        )}
 
-        <View style={styles.listingsSection}>
-          <Text style={styles.sectionTitle}>Listings ({listings.length})</Text>
-          {listings.length > 0 ? (
-            <View style={styles.listingsGrid}>
-              {listings.map((listing) => (
-                <View key={listing.id} style={styles.listingWrapper}>
-                  <ListingCard
-                    id={listing.id}
-                    title={listing.title}
-                    description={listing.description}
-                    price={listing.price}
-                    category={listing.category}
-                    condition={listing.condition}
-                    imageUrl={listing.photos?.[0]}
-                    sellerId={listing.sellerId}
-                    sold={listing.sold}
-                    inventory={listing.inventory}
-                  />
+            {/* Profile header */}
+            <View style={styles.header}>
+              <ProfilePicture
+                src={profile.profilePicture}
+                name={profile.username || profile.displayName}
+                size="xl"
+              />
+              <Text style={styles.username}>
+                {profile.username || profile.displayName || 'Seller'}
+              </Text>
+              {profile.bio ? (
+                <Text style={styles.bio}>{profile.bio}</Text>
+              ) : null}
+
+              <View style={styles.statsRow}>
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>{activeListings.length}</Text>
+                  <Text style={styles.statLabel}>Active</Text>
                 </View>
-              ))}
+                <View style={styles.statDivider} />
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>{listings.filter(l => l.sold).length}</Text>
+                  <Text style={styles.statLabel}>Sold</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>{memberYear}</Text>
+                  <Text style={styles.statLabel}>Joined</Text>
+                </View>
+              </View>
+
+              {!isOwnProfile && (
+                <TouchableOpacity
+                  style={styles.messageButton}
+                  onPress={handleMessage}
+                  disabled={messagingLoading}
+                >
+                  {messagingLoading ? (
+                    <ActivityIndicator size="small" color={colors.text.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="chatbubble-outline" size={18} color={colors.text.primary} />
+                      <Text style={styles.messageButtonText}>Message Seller</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="storefront-outline" size={40} color={colors.text.muted} />
-              <Text style={styles.emptyText}>No listings found.</Text>
+
+            {/* Section label */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>LISTINGS</Text>
+              <Text style={styles.sectionCount}>{listings.length}</Text>
             </View>
-          )}
-        </View>
-      </ScrollView>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <ListingCard
+            id={item.id}
+            title={item.title}
+            description={item.description}
+            price={item.price}
+            category={item.category}
+            condition={item.condition}
+            imageUrl={item.photos?.[0] || null}
+            sellerId={item.sellerId || ''}
+            sold={(item.sold ?? false) || (item.inventory ?? 1) === 0}
+            inventory={item.inventory ?? 1}
+            variant="grid"
+          />
+        )}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Ionicons name="bag-outline" size={48} color={colors.text.muted} />
+            <Text style={styles.emptyText}>No listings yet</Text>
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg.base,
+  container: { flex: 1, backgroundColor: colors.bg.base },
+  backBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    alignSelf: 'flex-start',
   },
-  scrollContent: {
+  header: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
     paddingBottom: 24,
   },
-  profileCard: {
-    backgroundColor: colors.bg.surface,
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    shadowColor: palette.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-    marginBottom: 4,
-  },
   username: {
-    fontSize: 15,
-    color: colors.text.muted,
-    marginBottom: 10,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  metaText: {
-    fontSize: 14,
-    color: colors.text.muted,
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginTop: 14,
+    marginBottom: 6,
   },
   bio: {
-    fontSize: 15,
-    color: colors.text.tertiary,
-    lineHeight: 22,
-    marginTop: 16,
-  },
-  errorContainer: {
-    backgroundColor: colors.error.soft,
-    borderColor: colors.error.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
-    marginTop: 16,
-  },
-  errorText: {
-    color: colors.error.text,
     fontSize: 14,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 12,
-  },
-  retryButton: {
-    alignSelf: 'center',
-    backgroundColor: colors.error.DEFAULT,
-    borderRadius: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
-  retryButtonText: {
-    color: colors.text.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  listingsSection: {
-    marginHorizontal: 20,
-    marginTop: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text.primary,
+    lineHeight: 20,
     marginBottom: 16,
+    maxWidth: 280,
   },
-  listingsGrid: {
+  statsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  listingWrapper: {
-    width: (width - 56) / 2,
-  },
-  emptyState: {
+    alignItems: 'center',
     backgroundColor: colors.bg.surface,
     borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginTop: 12,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: colors.border.subtle,
-    padding: 28,
+    width: '100%',
+  },
+  stat: { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: 20, fontWeight: '700', color: colors.text.primary },
+  statLabel: { fontSize: 11, color: colors.text.muted, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+  statDivider: { width: 1, height: 32, backgroundColor: colors.border.subtle },
+  messageButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    backgroundColor: colors.brand.DEFAULT,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    width: '100%',
+    justifyContent: 'center',
   },
-  emptyText: {
-    color: colors.text.muted,
+  messageButtonText: {
+    color: colors.text.primary,
     fontSize: 15,
-    textAlign: 'center',
+    fontWeight: '700',
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text.muted,
+    letterSpacing: 1.5,
+  },
+  sectionCount: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.brand.DEFAULT,
+  },
+  row: { paddingHorizontal: 16, gap: 12, marginBottom: 12 },
+  listContent: { paddingBottom: 40 },
+  empty: { alignItems: 'center', paddingVertical: 48, gap: 12 },
+  emptyText: { fontSize: 15, color: colors.text.muted },
+  notFound: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  notFoundText: { fontSize: 16, color: colors.text.muted },
 });

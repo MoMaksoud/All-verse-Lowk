@@ -1,9 +1,8 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { DynamicBackground } from '@/components/DynamicBackground';
 import { ProfilePicture } from '@/components/ProfilePicture';
 import { 
   ArrowLeft, 
@@ -32,7 +31,7 @@ type SettingsSection = 'account' | 'security' | 'billing';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>('account');
-  const { currentUser, logout, refreshProfile, userProfile, userProfilePic } = useAuth();
+  const { currentUser, loading: authLoading, logout, refreshProfile, userProfile, userProfilePic } = useAuth();
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -58,6 +57,13 @@ export default function SettingsPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
+  // Email re-auth modal state
+  const [showEmailReauthModal, setShowEmailReauthModal] = useState(false);
+  const [pendingNewEmail, setPendingNewEmail] = useState('');
+  const [emailReauthPassword, setEmailReauthPassword] = useState('');
+  const [emailReauthError, setEmailReauthError] = useState('');
+  const [changingEmail, setChangingEmail] = useState(false);
+
   const settingsSections = [
     {
       id: 'account' as SettingsSection,
@@ -80,10 +86,14 @@ export default function SettingsPage() {
   ];
 
   useEffect(() => {
+    if (!authLoading && !currentUser) {
+      router.push('/signin');
+      return;
+    }
     if (currentUser?.uid) {
       fetchProfile();
     }
-  }, [currentUser]);
+  }, [currentUser, authLoading]);
 
   const fetchProfile = async () => {
     try {
@@ -172,19 +182,11 @@ export default function SettingsPage() {
           setError('Please enter a valid email address');
           return;
         }
-        // Re-authenticate before changing email
-        const currentPassword = prompt('Please enter your current password to change email:');
-        if (!currentPassword) {
-          setError('Password is required to change email');
-          return;
-        }
-        const credential = EmailAuthProvider.credential(
-          currentUser.email!,
-          currentPassword
-        );
-        await reauthenticateWithCredential(currentUser, credential);
-        await updateEmail(currentUser, value);
-        setSuccess('Email updated successfully. Please verify your new email.');
+        // Open re-auth modal instead of prompt()
+        setPendingNewEmail(value);
+        setShowEmailReauthModal(true);
+        setSaving(false);
+        return;
       } else if (field === 'phoneNumber') {
         const { apiPut } = await import('@/lib/api-client');
         await apiPut('/api/profile', { phoneNumber: value });
@@ -308,11 +310,42 @@ export default function SettingsPage() {
     }
   };
 
+  const handleEmailChange = async () => {
+    if (!currentUser?.email || !pendingNewEmail) return;
+    if (!emailReauthPassword) {
+      setEmailReauthError('Password is required');
+      return;
+    }
+    try {
+      setChangingEmail(true);
+      setEmailReauthError('');
+      const credential = EmailAuthProvider.credential(currentUser.email, emailReauthPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+      await updateEmail(currentUser, pendingNewEmail);
+      setShowEmailReauthModal(false);
+      setEmailReauthPassword('');
+      setPendingNewEmail('');
+      setEditingField(null);
+      setEditValues({});
+      setSuccess('Email updated successfully. Please verify your new email.');
+      setTimeout(() => setSuccess(''), 4000);
+      await fetchProfile();
+    } catch (err: any) {
+      if (err.code === 'auth/wrong-password') {
+        setEmailReauthError('Incorrect password');
+      } else {
+        setEmailReauthError(err?.message || 'Failed to update email');
+      }
+    } finally {
+      setChangingEmail(false);
+    }
+  };
+
   const renderAccountManagement = () => (
     <div className="space-y-4 sm:space-y-6">
       <div>
         <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Personal Details</h2>
-        <p className="text-sm sm:text-base text-gray-400 mb-4">Manage your personal information and profile details</p>
+        <p className="text-sm sm:text-base text-[#94a3b8] mb-4">Manage your personal information and profile details</p>
       </div>
 
       {error && (
@@ -329,13 +362,13 @@ export default function SettingsPage() {
 
       <div className="space-y-3 sm:space-y-4">
         {/* Username */}
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-white font-medium text-sm sm:text-base">Username</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Your unique username (like @username)</p>
+                <p className="text-[#94a3b8] text-xs sm:text-sm">Your unique username (like @username)</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -349,7 +382,7 @@ export default function SettingsPage() {
                         const value = e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, '');
                         setEditValues({ username: value });
                       }}
-                      className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48"
+                      className="bg-[#0f172a] border border-white/[0.10] text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:border-[#3b82f6]"
                       placeholder="username"
                       maxLength={30}
                       autoFocus
@@ -389,13 +422,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Display Name */}
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-white font-medium text-sm sm:text-base">Display Name</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Your public display name (can be reused)</p>
+                <p className="text-[#94a3b8] text-xs sm:text-sm">Your public display name (can be reused)</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -405,7 +438,7 @@ export default function SettingsPage() {
                     type="text"
                     value={editValues.displayName || ''}
                     onChange={(e) => setEditValues({ displayName: e.target.value })}
-                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48"
+                    className="bg-[#0f172a] border border-white/[0.10] text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:border-[#3b82f6]"
                     placeholder="Your name"
                     maxLength={100}
                     autoFocus
@@ -443,13 +476,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Email */}
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <Mail className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-white font-medium text-sm sm:text-base">Email Address</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Your account email address</p>
+                <p className="text-[#94a3b8] text-xs sm:text-sm">Your account email address</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -459,7 +492,7 @@ export default function SettingsPage() {
                     type="email"
                     value={editValues.email || ''}
                     onChange={(e) => setEditValues({ email: e.target.value })}
-                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48"
+                    className="bg-[#0f172a] border border-white/[0.10] text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:border-[#3b82f6]"
                     autoFocus
                   />
                   <div className="flex items-center gap-2">
@@ -495,13 +528,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Phone Number */}
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <Smartphone className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-white font-medium text-sm sm:text-base">Phone Number</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Add a phone number for account recovery</p>
+                <p className="text-[#94a3b8] text-xs sm:text-sm">Add a phone number for account recovery</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -515,7 +548,7 @@ export default function SettingsPage() {
                       setEditValues({ phoneNumber: formatted });
                     }}
                     placeholder="(555) 123-4567"
-                    className="bg-dark-800 border border-dark-600 text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48"
+                    className="bg-[#0f172a] border border-white/[0.10] text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:border-[#3b82f6]"
                     autoFocus
                   />
                   <div className="flex items-center gap-2">
@@ -551,13 +584,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Profile Picture */}
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-white font-medium text-sm sm:text-base">Profile Picture</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Update your profile photo</p>
+                <p className="text-[#94a3b8] text-xs sm:text-sm">Update your profile photo</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -597,7 +630,7 @@ export default function SettingsPage() {
     <div className="space-y-4 sm:space-y-6">
       <div>
         <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Security & Login</h2>
-        <p className="text-sm sm:text-base text-gray-400 mb-4">Manage your account security and login settings</p>
+        <p className="text-sm sm:text-base text-[#94a3b8] mb-4">Manage your account security and login settings</p>
       </div>
 
       {passwordError && (
@@ -613,13 +646,13 @@ export default function SettingsPage() {
       )}
 
       <div className="space-y-3 sm:space-y-4">
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <Lock className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-white font-medium text-sm sm:text-base">Password</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Change your account password</p>
+                <p className="text-[#94a3b8] text-xs sm:text-sm">Change your account password</p>
               </div>
             </div>
             <button 
@@ -631,13 +664,13 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <Shield className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-white font-medium text-sm sm:text-base">Two-Factor Authentication</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Add an extra layer of security</p>
+                <p className="text-[#94a3b8] text-xs sm:text-sm">Add an extra layer of security</p>
               </div>
             </div>
             <div className="flex items-center shrink-0">
@@ -649,13 +682,13 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
+        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <Trash2 className="w-5 h-5 text-red-500 mr-2 sm:mr-3 shrink-0" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-white font-medium text-sm sm:text-base">Delete Account</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Permanently delete your account and data</p>
+                <p className="text-[#94a3b8] text-xs sm:text-sm">Permanently delete your account and data</p>
               </div>
             </div>
             <button 
@@ -680,56 +713,17 @@ export default function SettingsPage() {
     <div className="space-y-4 sm:space-y-6">
       <div>
         <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Billing & Payments</h2>
-        <p className="text-sm sm:text-base text-gray-400 mb-4">View your earnings and spending</p>
+        <p className="text-sm sm:text-base text-[#94a3b8] mb-4">View your earnings and spending</p>
       </div>
 
-      <div className="space-y-3 sm:space-y-4">
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <CreditCard className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Total Earnings</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Money earned from sales</p>
-              </div>
-            </div>
-            <div className="flex items-center shrink-0">
-              <span className="text-green-400 text-sm mr-2">$0.00</span>
-              <span className="text-gray-500 text-xs">(Coming Soon)</span>
-            </div>
-          </div>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-[#1e293b] border border-white/[0.07] flex items-center justify-center mb-4">
+          <CreditCard className="w-7 h-7 text-[#3b82f6]" />
         </div>
-
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <CreditCard className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Total Spending</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Money spent on purchases</p>
-              </div>
-            </div>
-            <div className="flex items-center shrink-0">
-              <span className="text-red-400 text-sm mr-2">$0.00</span>
-              <span className="text-gray-500 text-xs">(Coming Soon)</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-dark-700 rounded-lg p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <CreditCard className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Payment History</h3>
-                <p className="text-gray-400 text-xs sm:text-sm">View your past transactions</p>
-              </div>
-            </div>
-            <button className="text-accent-500 hover:text-accent-400 opacity-50 cursor-not-allowed shrink-0">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <h3 className="text-white font-semibold text-base mb-2">Coming Soon</h3>
+        <p className="text-[#94a3b8] text-sm max-w-xs">
+          Earnings, spending, and payment history will be available here once billing is live.
+        </p>
       </div>
     </div>
   );
@@ -748,67 +742,64 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden w-full max-w-screen">
-      <DynamicBackground intensity="low" showParticles={true} />
-      
-      <div className="relative z-10 min-h-screen w-full px-4 sm:px-6 py-6 sm:py-8">
-        <div className="w-full max-w-screen mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6 sm:mb-8">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center text-gray-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
-            </button>
+    <div className="min-h-screen bg-[#020617]">
+
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Header */}
+        <div className="flex items-center mb-6 sm:mb-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center text-[#94a3b8] hover:text-white transition-colors text-sm"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
+            Back
+          </button>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
+          {/* Sidebar */}
+          <div className="w-full lg:w-72 shrink-0">
+            <div className="bg-[#0f172a] rounded-2xl p-4 sm:p-6 border border-white/[0.07]">
+              <div className="mb-5 sm:mb-6">
+                <h1 className="text-3xl sm:text-4xl font-bold text-white">Settings</h1>
+              </div>
+
+              <nav className="space-y-1">
+                {settingsSections.map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() => setActiveSection(section.id)}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-colors text-left ${
+                        activeSection === section.id
+                          ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20'
+                          : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 mr-3 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate">{section.name}</div>
+                        <div className="text-xs text-[#64748b] hidden sm:block mt-0.5">{section.description}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
 
-          {/* Main Content */}
-          <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
-            {/* Sidebar */}
-            <div className="w-full lg:w-80 shrink-0">
-              <div className="bg-dark-800 rounded-2xl p-4 sm:p-6 border border-dark-700">
-                <div className="mb-4 sm:mb-6">
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">Settings</h1>
+          {/* Content Area */}
+          <div className="flex-1 min-w-0">
+            <div className="bg-[#0f172a] rounded-2xl p-4 sm:p-6 lg:p-8 border border-white/[0.07]">
+              {loadingProfile && activeSection === 'account' ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-[#94a3b8] text-sm">Loading...</div>
                 </div>
-
-                <nav className="space-y-2">
-                  {settingsSections.map((section) => {
-                    const Icon = section.icon;
-                    return (
-                      <button
-                        key={section.id}
-                        onClick={() => setActiveSection(section.id)}
-                        className={`w-full flex items-center px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-colors text-left ${
-                          activeSection === section.id
-                            ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
-                            : 'text-gray-300 hover:text-white hover:bg-dark-700/50'
-                        }`}
-                      >
-                        <Icon className="w-5 h-5 mr-2 sm:mr-3 shrink-0" />
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm sm:text-base truncate">{section.name}</div>
-                          <div className="text-xs text-gray-400 hidden sm:block">{section.description}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </div>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 min-w-0">
-              <div className="bg-dark-800 rounded-2xl p-4 sm:p-6 lg:p-8 border border-dark-700">
-                {loadingProfile && activeSection === 'account' ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-400">Loading...</div>
-                  </div>
-                ) : (
-                  renderContent()
-                )}
-              </div>
+              ) : (
+                renderContent()
+              )}
             </div>
           </div>
         </div>
@@ -817,7 +808,7 @@ export default function SettingsPage() {
       {/* Password Change Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700 max-w-md w-full">
+          <div className="bg-[#0f172a] rounded-2xl p-6 border border-white/[0.10] max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-white">Change Password</h2>
               <button
@@ -845,7 +836,7 @@ export default function SettingsPage() {
                   type="password"
                   value={passwordData.currentPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  className="w-full bg-dark-700 border border-dark-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-accent-500"
+                  className="w-full bg-[#1e293b] border border-white/[0.10] text-white px-4 py-2 rounded-lg focus:outline-none focus:border-[#3b82f6]"
                   placeholder="Enter current password"
                 />
               </div>
@@ -856,7 +847,7 @@ export default function SettingsPage() {
                   type="password"
                   value={passwordData.newPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  className="w-full bg-dark-700 border border-dark-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-accent-500"
+                  className="w-full bg-[#1e293b] border border-white/[0.10] text-white px-4 py-2 rounded-lg focus:outline-none focus:border-[#3b82f6]"
                   placeholder="Enter new password"
                 />
               </div>
@@ -867,7 +858,7 @@ export default function SettingsPage() {
                   type="password"
                   value={passwordData.confirmPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  className="w-full bg-dark-700 border border-dark-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:border-accent-500"
+                  className="w-full bg-[#1e293b] border border-white/[0.10] text-white px-4 py-2 rounded-lg focus:outline-none focus:border-[#3b82f6]"
                   placeholder="Confirm new password"
                 />
               </div>
@@ -881,7 +872,7 @@ export default function SettingsPage() {
                   setPasswordError('');
                 }}
                 disabled={changingPassword}
-                className="flex-1 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-[#1e293b] hover:bg-[#243352] text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -900,7 +891,7 @@ export default function SettingsPage() {
       {/* Delete Account Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700 max-w-md w-full">
+          <div className="bg-[#0f172a] rounded-2xl p-6 border border-white/[0.10] max-w-md w-full">
             <div className="flex items-center mb-4">
               <Trash2 className="w-6 h-6 text-red-500 mr-3" />
               <h2 className="text-xl font-bold text-white">Delete Account</h2>
@@ -936,7 +927,7 @@ export default function SettingsPage() {
                   setDeleteError('');
                 }}
                 disabled={deleting}
-                className="flex-1 px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-[#1e293b] hover:bg-[#243352] text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -968,6 +959,62 @@ export default function SettingsPage() {
                 className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleting ? 'Deleting...' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email re-auth modal */}
+      {showEmailReauthModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] rounded-2xl p-6 border border-white/[0.10] max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">Confirm Password</h2>
+              <button
+                onClick={() => { setShowEmailReauthModal(false); setEmailReauthPassword(''); setEmailReauthError(''); }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-gray-400 text-sm mb-4">
+              Enter your current password to change your email to <strong className="text-white">{pendingNewEmail}</strong>.
+            </p>
+
+            {emailReauthError && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
+                {emailReauthError}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-gray-300 text-sm mb-2">Current Password</label>
+              <input
+                type="password"
+                value={emailReauthPassword}
+                onChange={(e) => setEmailReauthPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleEmailChange(); }}
+                autoFocus
+                className="w-full bg-[#1e293b] border border-white/[0.10] text-white px-4 py-2 rounded-lg focus:outline-none focus:border-[#3b82f6]"
+                placeholder="Enter your password"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowEmailReauthModal(false); setEmailReauthPassword(''); setEmailReauthError(''); }}
+                disabled={changingEmail}
+                className="flex-1 px-4 py-2 bg-[#1e293b] hover:bg-[#243352] text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEmailChange}
+                disabled={changingEmail}
+                className="flex-1 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                {changingEmail ? 'Updating…' : 'Confirm'}
               </button>
             </div>
           </div>

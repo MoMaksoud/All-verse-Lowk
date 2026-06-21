@@ -6,10 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -418,7 +418,15 @@ export default function ProfileScreen() {
           <View style={styles.menuList}>
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => router.push('/(tabs)/cart' as any)}
+              onPress={() => router.push('/orders' as any)}
+            >
+              <Ionicons name="receipt-outline" size={24} color={colors.brand.DEFAULT} />
+              <Text style={styles.menuItemText}>My Orders</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/cart' as any)}
             >
               <Ionicons name="cart-outline" size={24} color={colors.brand.DEFAULT} />
               <Text style={styles.menuItemText}>Cart</Text>
@@ -426,7 +434,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemLast]}
-              onPress={() => router.push('/(tabs)/favorites' as any)}
+              onPress={() => router.push('/favorites' as any)}
             >
               <Ionicons name="heart-outline" size={24} color={colors.brand.DEFAULT} />
               <Text style={styles.menuItemText}>Favorites</Text>
@@ -554,8 +562,7 @@ export default function ProfileScreen() {
 
         {/* Delete Account Button */}
         <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
-          <Ionicons name="trash-outline" size={20} color={colors.error.DEFAULT} />
-          <Text style={styles.deleteAccountText}>Delete Account</Text>
+          <Text style={styles.deleteAccountText}>Delete account</Text>
         </TouchableOpacity>
 
         {error && isAuthenticated && (
@@ -590,13 +597,16 @@ const styles = StyleSheet.create({
   },
   pageHeader: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
   },
   pageTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: colors.text.primary,
+    letterSpacing: -0.3,
   },
   profileCard: {
     backgroundColor: colors.bg.surface,
@@ -604,95 +614,101 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 16,
     padding: 20,
-    shadowColor: palette.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   profileHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 16,
   },
   avatarContainer: {
     marginRight: 16,
+    borderRadius: 44,
+    borderWidth: 2,
+    borderColor: colors.brand.ring,
+    padding: 2,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.bg.surface,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.bg.raised,
   },
   profileInfo: {
     flex: 1,
   },
   name: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.text.primary,
-    marginBottom: 4,
+    marginBottom: 3,
+    letterSpacing: -0.2,
   },
   email: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text.muted,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   bio: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text.tertiary,
-    lineHeight: 20,
-    marginTop: 8,
+    lineHeight: 19,
+    marginTop: 6,
   },
   menuSection: {
-    marginTop: 20,
+    marginTop: 28,
     marginHorizontal: 20,
   },
   menuList: {
     backgroundColor: colors.bg.surface,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.bg.glass,
-    gap: 12,
+    borderBottomColor: colors.border.subtle,
+    gap: 14,
   },
   menuItemLast: {
     borderBottomWidth: 0,
   },
   menuItemText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text.primary,
     fontWeight: '500',
   },
   emptyHint: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text.muted,
     textAlign: 'center',
     marginTop: 16,
     paddingHorizontal: 8,
-    fontStyle: 'italic',
   },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.error.DEFAULT,
-    padding: 14,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.error.DEFAULT,
+    padding: 13,
     borderRadius: 12,
     marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: 24,
+    marginBottom: 12,
     gap: 8,
   },
   signOutText: {
-    color: colors.text.primary,
-    fontSize: 16,
+    color: colors.error.DEFAULT,
+    fontSize: 15,
     fontWeight: '600',
   },
   deleteAccountButton: {
@@ -700,24 +716,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.error.DEFAULT,
-    padding: 14,
+    padding: 13,
     borderRadius: 12,
     marginHorizontal: 20,
     marginBottom: 20,
     gap: 8,
   },
   deleteAccountText: {
-    color: colors.error.DEFAULT,
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.text.muted,
+    fontSize: 14,
+    fontWeight: '500',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-    marginBottom: 16,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 10,
   },
   listingsGrid: {
     flexDirection: 'row',
@@ -819,9 +835,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   username: {
-    fontSize: 14,
-    color: colors.brand.DEFAULT,
-    marginBottom: 4,
+    fontSize: 13,
+    color: colors.text.muted,
+    marginBottom: 3,
   },
   editButton: {
     flexDirection: 'row',
@@ -829,30 +845,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.brand.DEFAULT,
-    padding: 12,
-    borderRadius: 12,
-    gap: 8,
+    borderColor: colors.border.focused,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    gap: 7,
   },
   editButtonText: {
     color: colors.brand.DEFAULT,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   createProfileButton: {
     backgroundColor: colors.brand.DEFAULT,
-    padding: 14,
-    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     alignItems: 'center',
   },
   createProfileButtonText: {
     color: colors.text.primary,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   createProfileText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text.muted,
-    marginTop: 4,
+    marginTop: 3,
   },
 });

@@ -53,7 +53,7 @@ export default function AboutScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Who We Are</Text>
             <Text style={styles.sectionText}>
-              All Verse GPT is an AI-driven marketplace and interaction hub. The
+              All Verse is an AI-driven marketplace and interaction hub. The
               core idea is simple: technology should make trading smarter, safer,
               and easier for both buyers and sellers. We blend software and
               intelligent tools to remove the guesswork from pricing,

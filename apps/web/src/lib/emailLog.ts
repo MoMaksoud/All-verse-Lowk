@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 const EMAIL_LOGS_COLLECTION = 'email_logs';
 
-export type EmailLogType = 'order_confirmation' | 'seller_notification' | 'verification';
+export type EmailLogType = 'order_confirmation' | 'seller_notification' | 'verification' | 'buyer_tracking';
 
 export interface EmailLogEntry {
   type: EmailLogType;

@@ -1,98 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AdminStorageService } from '@/lib/storage-admin';
-import { firestoreServices } from '@/lib/services/firestore';
-import { ProfileService } from '@/lib/firestore';
+import { saveProfilePhotoAdmin } from '@/lib/server/adminPhotos';
+import { mergeProfileAdmin } from '@/lib/server/adminProfiles';
+import { updateUserAdmin } from '@/lib/server/adminUsers';
 import { ProfilePhotoUpload } from '@/lib/types/firestore';
 import { FirebaseCleanupService } from '@/lib/firebaseCleanup';
 import { withApi } from '@/lib/withApi';
 import StorageService from '@/lib/storage';
+import { serverLogger } from '@/lib/server/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    console.log('📸 Profile photo upload request received for user:', req.userId);
+    serverLogger.info('profile_photo_upload_start', { userId: req.userId });
 
     const formData = await req.formData();
     const file = formData.get('photo') as File;
-    
+
     if (!file) {
-      console.error('❌ No photo file provided');
+      serverLogger.warn('profile_photo_upload_missing_file', { userId: req.userId });
       return NextResponse.json({ error: 'Photo file is required' }, { status: 400 });
     }
 
-    console.log('📸 File details:', {
+    serverLogger.info('profile_photo_upload_file', {
+      userId: req.userId,
       name: file.name,
       size: file.size,
-      type: file.type
+      type: file.type,
     });
 
-    // Validate file
     const validation = StorageService.validateFile(file, {
-      maxSize: 5 * 1024 * 1024, // 5MB
+      maxSize: 5 * 1024 * 1024,
       allowedTypes: ['image/'],
-      required: true
+      required: true,
     });
     if (!validation.isValid) {
-      console.error('❌ File validation failed:', validation.error);
+      serverLogger.warn('profile_photo_upload_validation_failed', {
+        userId: req.userId,
+        error: validation.error,
+      });
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    // Upload photo to Firebase Storage using Admin SDK (bypasses security rules)
     const userEmail = req.headers.get('x-user-email') || 'unknown@example.com';
-    console.log('📸 Starting upload to Firebase Storage using Admin SDK...');
-    
+
     let result;
     try {
-      // Use Admin Storage Service for server-side uploads (bypasses security rules)
       result = await AdminStorageService.uploadProfilePicture(file, req.userId, userEmail);
-      console.log('✅ File uploaded to Storage via Admin SDK, URL:', result.url);
-    } catch (uploadError: any) {
-      console.error('❌ Firebase Storage upload failed:', uploadError);
-      console.error('❌ Upload error details:', {
-        message: uploadError?.message,
-        code: uploadError?.code,
-        stack: uploadError?.stack
+      serverLogger.info('profile_photo_storage_ok', { userId: req.userId });
+    } catch (uploadError: unknown) {
+      const err = uploadError as { message?: string; code?: string; stack?: string };
+      serverLogger.error('profile_photo_storage_failed', {
+        userId: req.userId,
+        message: err?.message,
+        code: err?.code,
       });
-      throw new Error(`Storage upload failed: ${uploadError?.message || 'Unknown error'}`);
+      throw new Error(`Storage upload failed: ${err?.message || 'Unknown error'}`);
     }
-    
-    // Use storage path as the source of truth (not URL)
-    const photoPath = result.path; // Storage path: users/{userId}/profile/{filename}
-    
-    // Generate URL from path for response (but don't store URL in profile)
+
+    const photoPath = result.path;
     const photoUrl = result.url;
 
-    // Save photo metadata to Firestore
     try {
-      const photoData: ProfilePhotoUpload = {
+      // uploadedAt is overwritten by Admin save with serverTimestamp()
+      await saveProfilePhotoAdmin({
         userId: req.userId,
-        photoUrl, // Keep URL for metadata/backwards compatibility
-        photoPath, // Store path as primary reference
-        uploadedAt: new Date() as any, // Will be converted to Timestamp in service
-      };
-
-      await firestoreServices.profilePhotos.saveProfilePhoto(photoData);
-      console.log('✅ Photo metadata saved to Firestore');
-    } catch (firestoreError: any) {
-      console.error('❌ Failed to save photo metadata:', firestoreError);
-      // Don't fail the whole request if metadata save fails - the photo is already uploaded
+        photoUrl,
+        photoPath,
+      } as ProfilePhotoUpload);
+      serverLogger.info('profile_photo_metadata_saved', { userId: req.userId });
+    } catch (firestoreError: unknown) {
+      serverLogger.warn('profile_photo_metadata_failed', {
+        userId: req.userId,
+        error: firestoreError instanceof Error ? firestoreError.message : String(firestoreError),
+      });
     }
 
-    // Update user profile/user doc with storage PATH (not URL) as source of truth
     try {
-      // Store path in profile - this is the single source of truth
-      await ProfileService.saveProfile(req.userId, { profilePicture: photoPath });
-      // Also update users collection profilePic field (for non-Google users or as fallback)
-      await firestoreServices.users.updateUser(req.userId, { 
+      await mergeProfileAdmin(req.userId, { profilePicture: photoPath });
+      await updateUserAdmin(req.userId, {
         photoURL: photoUrl,
-        profilePic: photoUrl, // Store URL in users collection for consistency
+        profilePic: photoUrl,
       });
-      console.log('✅ User profile updated with storage path:', photoPath);
-    } catch (profileError: any) {
-      console.error('❌ Failed to update user profile:', profileError);
-      // Don't fail the whole request if profile update fails - the photo is already uploaded
+      serverLogger.info('profile_photo_profile_updated', { userId: req.userId });
+    } catch (profileError: unknown) {
+      serverLogger.warn('profile_photo_profile_update_failed', {
+        userId: req.userId,
+        error: profileError instanceof Error ? profileError.message : String(profileError),
+      });
     }
 
     return NextResponse.json({
@@ -101,41 +98,48 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       photoPath,
       message: 'Profile photo uploaded successfully',
     });
-  } catch (error: any) {
-    console.error('❌ Error uploading profile photo:', error);
-    console.error('❌ Error details:', {
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
-      name: error?.name
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string; stack?: string; name?: string };
+    serverLogger.error('profile_photo_upload_fatal', {
+      userId: req.userId,
+      message: err?.message,
+      code: err?.code,
+      name: err?.name,
     });
-    
-    const errorMessage = error?.message || 'Failed to upload profile photo';
-    return NextResponse.json({ 
-      error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
-    }, { status: 500 });
+
+    const errorMessage = err?.message || 'Failed to upload profile photo';
+    return NextResponse.json(
+      {
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? err?.stack : undefined,
+      },
+      { status: 500 }
+    );
   }
 });
 
 export const DELETE = withApi(async (req: NextRequest & { userId: string }) => {
   try {
-    // Use the comprehensive cleanup service
     const cleanupResult = await FirebaseCleanupService.deleteProfilePhotoCompletely(req.userId);
-    
+
     if (cleanupResult.success) {
       return NextResponse.json({
         success: true,
         message: 'Profile photo deleted successfully',
-        warnings: cleanupResult.errors.length > 0 ? cleanupResult.errors : undefined
+        warnings: cleanupResult.errors.length > 0 ? cleanupResult.errors : undefined,
       });
-    } else {
-      return NextResponse.json({ 
-        error: `Failed to delete profile photo: ${cleanupResult.errors.join(', ')}` 
-      }, { status: 500 });
     }
-  } catch (error) {
-    console.error('Error deleting profile photo:', error);
+    return NextResponse.json(
+      {
+        error: `Failed to delete profile photo: ${cleanupResult.errors.join(', ')}`,
+      },
+      { status: 500 }
+    );
+  } catch (error: unknown) {
+    serverLogger.error('profile_photo_delete_failed', {
+      userId: req.userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json({ error: 'Failed to delete profile photo' }, { status: 500 });
   }
 });

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Users } from 'lucide-react';
@@ -53,7 +53,7 @@ export default function TeamPage() {
             Our Team
           </h1>
           <p className="text-gray-400 text-lg">
-            Meet the people building AllVerse GPT
+            Meet the people building AllVerse
           </p>
         </div>
 

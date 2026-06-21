@@ -104,9 +104,9 @@ export default function HelpScreen() {
             <Ionicons name="chatbubbles" size={20} color={colors.brand.DEFAULT} />
             <Text style={styles.badgeText}>Help Center</Text>
           </View>
-          <Text style={styles.title}>All Verse GPT – Help Center</Text>
+          <Text style={styles.title}>All Verse – Help Center</Text>
           <Text style={styles.subtitle}>
-            We're here to support you as you buy, sell, and manage listings across the All Verse GPT platform.
+            We're here to support you as you buy, sell, and manage listings across the All Verse platform.
           </Text>
           <View style={styles.contactBanner}>
             <Ionicons name="mail" size={20} color={colors.brand.DEFAULT} />
@@ -139,7 +139,7 @@ export default function HelpScreen() {
         </View>
 
         <View style={styles.footerSection}>
-          <Text style={styles.footerTitle}>Thank you for choosing All Verse GPT.</Text>
+          <Text style={styles.footerTitle}>Thank you for choosing All Verse.</Text>
           <Text style={styles.footerText}>
             Still need help? We're just an email away at{' '}
             <Text style={styles.contactLink} onPress={handleEmailPress}>info@allversegpt.com</Text>

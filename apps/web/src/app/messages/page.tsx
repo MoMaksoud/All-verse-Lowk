@@ -1,239 +1,270 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Logo } from '@/components/Logo';
 import { useChats } from '@/hooks/useChats';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { useChatContext } from '@/contexts/ChatContext';
 import { ChatList } from '@/components/chat/ChatList';
 import { ChatView } from '@/components/chat/ChatView';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { UserSearchModal } from '@/components/UserSearchModal';
-import { ArrowLeft, Plus, MessageCircle } from 'lucide-react';
-import { firestoreServices } from '@/lib/services/firestore';
+import { ArrowLeft, MessageSquare, PenSquare, Loader2, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
+import Link from 'next/link';
+import { firestoreServices } from '@/lib/services/firestore';
 
-export default function MessagesPage() {
+function MessagesInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { currentUser, loading: authLoading } = useAuth();
-  const { showError, showSuccess } = useToast();
+  const { showError } = useToast();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
-  const { chats, loading: chatsLoading, error: chatsError, startChat } = useChats();
+  const [searchQuery, setSearchQuery] = useState('');
+  const { chats, loading: chatsLoading } = useChats();
   const { setCurrentChatId } = useChatContext();
-  const { 
-    messages, 
-    loading: messagesLoading, 
-    error: messagesError, 
-    sending, 
-    sendMessage 
-  } = useChatMessages(selectedChatId);
-  const selectedChat = chats.find(chat => chat.id === selectedChatId);
+  const { messages, loading: messagesLoading, error: messagesError, sending, sendMessage } = useChatMessages(selectedChatId);
+  const selectedChat = chats.find((c) => c.id === selectedChatId);
   const otherUser = selectedChat?.otherUser;
 
-  // Update lastOpenedMessagesPageAt when Messages page is opened (clears global badge)
+  const filteredChats = searchQuery.trim()
+    ? chats.filter((c) => c.otherUser?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : chats;
+
   useEffect(() => {
     if (!currentUser?.uid || chatsLoading) return;
-    
-    // Store timestamp in localStorage to track when Messages page was last opened
-    // This is used to calculate global unread badge (shows if any chat has messages newer than this)
-    const now = Date.now();
-    localStorage.setItem(`lastOpenedMessagesPageAt_${currentUser.uid}`, now.toString());
-  }, [currentUser?.uid, chatsLoading]); // Run when page loads
+    localStorage.setItem(`lastOpenedMessagesPageAt_${currentUser.uid}`, Date.now().toString());
+  }, [currentUser?.uid, chatsLoading]);
 
-  // Sync currentChatId with selectedChatId
   useEffect(() => {
     setCurrentChatId(selectedChatId);
   }, [selectedChatId, setCurrentChatId]);
 
-  // Auto-select chat from URL parameter
   useEffect(() => {
-    const chatIdFromUrl = searchParams.get('chatId');
-    if (chatIdFromUrl && chatIdFromUrl !== selectedChatId) {
-      // Set the chat from URL - messages will load even if chat isn't in list yet
-      // (chat might be newly created and subscription hasn't updated)
-      if (!chatsLoading) {
-        setSelectedChatId(chatIdFromUrl);
-        setShowMobileChat(true);
-      }
+    const id = searchParams.get('chatId');
+    if (id && id !== selectedChatId && !chatsLoading) {
+      setSelectedChatId(id);
+      setShowMobileChat(true);
     }
   }, [searchParams, chatsLoading, selectedChatId]);
 
-  const handleChatSelect = (chatId: string) => {
+  const handleChatSelect = async (chatId: string) => {
     setSelectedChatId(chatId);
     setShowMobileChat(true);
-  };
-  
-  const handleBack = () => {
-    setShowMobileChat(false);
-  };
-
-  const handleSendMessage = async (text: string) => {
-    try {
-      await sendMessage(text);
-      } catch (error) {
-      console.error('Failed to send message:', error);
+    setCurrentChatId(chatId);
+    if (currentUser?.uid) {
+      await firestoreServices.chats.markChatAsOpened(chatId, currentUser.uid).catch(() => {});
     }
   };
 
   const handleSelectUser = async (userId: string) => {
-    if (!currentUser) {
-      showError('Sign In Required', 'Please sign in to start a conversation.');
-      return;
-    }
-    
+    if (!currentUser) { showError('Sign in to start a conversation.'); return; }
     try {
-      // Create or get existing chat
-      const chatId = await firestoreServices.chats.getOrCreateChat(currentUser.uid, userId);
-      
-      // Navigate to the chat
-      router.push(`/messages?chatId=${chatId}`);
-      setSelectedChatId(chatId);
+      const { apiPost } = await import('@/lib/api-client');
+      const res = await apiPost('/api/chats', { otherUserId: userId });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload?.chatId) throw new Error(payload?.message || 'Failed to start chat');
+      router.push(`/messages?chatId=${payload.chatId}`);
+      setSelectedChatId(payload.chatId);
       setShowMobileChat(true);
-      showSuccess('Chat Started', 'You can now start messaging!');
-    } catch (error) {
-      console.error('Error creating chat:', error);
-      showError('Failed to Start Chat', 'Please try again later.');
+    } catch {
+      showError('Could not start conversation. Please try again.');
     }
   };
 
-  // Show sign-in prompt if user is not authenticated (don't wait for chats to load)
   if (!authLoading && !currentUser) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-gray-300 text-lg mb-6">
-            Sign up to start messaging other users.
-            </p>
-            <Link
-              href="/signup"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
-            >
-              Sign Up
-            </Link>
+      <div className="flex flex-col items-center justify-center" style={{ background: '#020617', height: 'calc(100dvh - 56px)' }}>
+        <div className="text-center px-6 max-w-sm">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+            style={{ background: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)' }}>
+            <MessageSquare className="w-7 h-7 text-white" />
           </div>
+          <h1 className="text-xl font-bold mb-2" style={{ color: '#f1f5f9' }}>Sign in to see messages</h1>
+          <p className="text-sm mb-6" style={{ color: '#64748b' }}>
+            Talk directly with buyers and sellers on AllVerse.
+          </p>
+          <Link
+            href="/signin?redirect=/messages"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+            style={{ background: '#3b82f6' }}
+          >
+            Sign In
+          </Link>
         </div>
       </div>
     );
   }
 
-  // Show loading spinner while auth is loading
-  if (authLoading || chatsLoading) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <LoadingSpinner />
+      <div className="flex flex-col items-center justify-center" style={{ background: '#020617', height: 'calc(100dvh - 56px)' }}>
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#3b82f6' }} />
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-      <div className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col">
-        {/* Header */}
-        <div className="mb-4 sm:mb-6 text-center shrink-0">
-          <div className="hidden flex justify-center mb-3 sm:mb-4">
-            <Logo size="md" />
+    <div className="flex flex-col overflow-hidden" style={{ background: '#020617', height: 'calc(100dvh - 56px)' }}>
+
+      <div className="flex min-h-0" style={{ flex: '1 1 0', borderTop: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+
+        {/* ── Sidebar ── */}
+        <div
+          className={`w-full lg:w-[300px] xl:w-[340px] flex flex-col min-h-0 shrink-0 ${showMobileChat ? 'hidden lg:flex' : 'flex'}`}
+          style={{ borderRight: '1px solid rgba(255,255,255,0.07)', background: '#020617' }}
+        >
+          {/* Sidebar header */}
+          <div className="px-4 pt-5 pb-3 shrink-0">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-base font-bold" style={{ color: '#f1f5f9', letterSpacing: '-0.01em' }}>
+                Messages
+              </h1>
+              <button
+                onClick={() => setShowUserSearch(true)}
+                aria-label="New message"
+                className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+                style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.07)' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#3b82f6';
+                  e.currentTarget.style.color = '#fff';
+                  e.currentTarget.style.borderColor = '#3b82f6';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#1e293b';
+                  e.currentTarget.style.color = '#94a3b8';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                }}
+              >
+                <PenSquare className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Search bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#475569' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search conversations…"
+                className="w-full text-sm pl-9 pr-3 py-2 rounded-xl focus:outline-none"
+                style={{
+                  background: '#0f172a',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#f1f5f9',
+                }}
+                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)')}
+                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+              />
+            </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">Messages</h1>
-          <p className="text-base sm:text-lg text-zinc-400 px-4">Connect with buyers and sellers</p>
+
+          {/* Chat list */}
+          <div className="flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth: 'thin', scrollbarColor: '#1e293b transparent' }}>
+            <ChatList
+              chats={filteredChats}
+              loading={chatsLoading}
+              error={null}
+              onChatSelect={handleChatSelect}
+              selectedChatId={selectedChatId ?? undefined}
+              onNewMessage={() => setShowUserSearch(true)}
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 flex-1 min-h-0">
-          {/* Chat List - Hidden on mobile when chat is open */}
-          <div className={`lg:col-span-1 min-h-0 ${showMobileChat ? 'hidden lg:block' : 'block'}`}>
-            <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 h-full flex flex-col min-h-0">
-              <div className="p-4 border-b border-zinc-800 shrink-0 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">Conversations</h2>
+        {/* ── Chat pane ── */}
+        <div
+          className={`flex-1 flex flex-col min-h-0 min-w-0 ${showMobileChat ? 'flex' : 'hidden lg:flex'}`}
+          style={{ background: '#020617' }}
+        >
+          {selectedChatId ? (
+            <>
+              {/* Mobile back button */}
+              <div
+                className="lg:hidden flex items-center gap-3 px-4 py-3 shrink-0"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+              >
                 <button
-                  onClick={() => setShowUserSearch(true)}
-                  className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
-                  aria-label="New message"
-                  title="New message"
+                  onClick={() => setShowMobileChat(false)}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
+                  style={{ background: '#1e293b', color: '#94a3b8' }}
+                  aria-label="Back"
                 >
-                  <Plus className="w-5 h-5 text-white" />
+                  <ArrowLeft className="w-4 h-4" />
                 </button>
+                <span className="font-semibold text-sm truncate" style={{ color: '#f1f5f9' }}>
+                  {otherUser?.name || 'Chat'}
+                </span>
               </div>
-
-              <div className="flex-1 overflow-y-auto scrollbar-thin">
-                <ChatList
-                  chats={chats}
-                  loading={chatsLoading}
-                  error={chatsError}
-                  onChatSelect={handleChatSelect}
-                  selectedChatId={selectedChatId}
-                />
+              <ChatView
+                chatId={selectedChatId}
+                messages={messages}
+                loading={messagesLoading}
+                error={messagesError}
+                sending={sending}
+                onSendMessage={sendMessage}
+                otherUser={otherUser}
+              />
+            </>
+          ) : (
+            /* Empty state — no chat selected */
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+              <div
+                className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(29,78,216,0.2) 0%, rgba(59,130,246,0.2) 100%)',
+                  border: '1px solid rgba(59,130,246,0.20)',
+                }}
+              >
+                <MessageSquare className="w-9 h-9" style={{ color: '#3b82f6' }} />
               </div>
-            </div>
-          </div>
+              <h2 className="text-lg font-bold mb-2" style={{ color: '#f1f5f9' }}>
+                Your conversations
+              </h2>
+              <p className="text-sm max-w-[260px] mb-8 leading-relaxed" style={{ color: '#64748b' }}>
+                Message sellers about listings, negotiate prices, and close deals.
+              </p>
+              <button
+                onClick={() => setShowUserSearch(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+                style={{ background: '#3b82f6' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#3b82f6')}
+              >
+                <PenSquare className="w-4 h-4" />
+                New Message
+              </button>
 
-          {/* Chat View - Full screen on mobile when open */}
-          <div className={`lg:col-span-2 min-h-0 ${showMobileChat ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-zinc-900/50 rounded-xl border border-zinc-800 h-full flex flex-col min-h-0">
-              {selectedChatId ? (
-                <>
-                  {/* Mobile back button */}
-                  <div className="lg:hidden flex items-center gap-3 p-3 border-b border-zinc-800 bg-zinc-900/50">
-                    <button
-                      onClick={handleBack}
-                      className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
-                      aria-label="Back"
-                    >
-                      <ArrowLeft className="w-5 h-5 text-white" />
-                    </button>
-                    <div className="flex items-center gap-2">
-                      {otherUser?.photoURL && (
-                        <div className="w-8 h-8 overflow-hidden rounded-full">
-                          <img 
-                            src={otherUser.photoURL} 
-                            alt="" 
-                            className="w-full h-full object-cover"
-                            style={{ width: "auto", height: "auto" }}
-                          />
-                        </div>
-                      )}
-                      <span className="font-medium text-white">{otherUser?.name || 'Chat'}</span>
-                    </div>
-                  </div>
-                  <ChatView
-                    chatId={selectedChatId}
-                    messages={messages}
-                    loading={messagesLoading}
-                    error={messagesError}
-                    sending={sending}
-                    onSendMessage={handleSendMessage}
-                    otherUser={otherUser}
-                  />
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <MessageCircle className="w-16 h-16 mx-auto mb-4 text-zinc-500" />
-                    <h3 className="text-lg font-medium text-white mb-2">
-                      Select a conversation
-                    </h3>
-                    <p className="text-zinc-400">
-                      Choose a conversation from the list to start messaging
-                    </p>
-                  </div>
-                </div>
+              {chats.length > 0 && (
+                <p className="text-xs mt-6" style={{ color: '#334155' }}>
+                  ← Select a conversation from the sidebar
+                </p>
               )}
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* User Search Modal */}
       <UserSearchModal
         isOpen={showUserSearch}
         onClose={() => setShowUserSearch(false)}
         onSelectUser={handleSelectUser}
       />
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center" style={{ background: '#020617', height: 'calc(100dvh - 56px)' }}>
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#3b82f6' }} />
+      </div>
+    }>
+      <MessagesInner />
+    </Suspense>
   );
 }

@@ -9,3 +9,14 @@ export const GEMINI_MODELS = {
 } as const;
 
 export type GeminiModelKey = keyof typeof GEMINI_MODELS;
+
+/** Config key (FAST | SMART) or a raw model id string for overrides. */
+export type GeminiModelOption = GeminiModelKey | string;
+
+export function resolveGeminiModel(modelOption?: GeminiModelOption): string {
+  if (modelOption == null) return GEMINI_MODELS.FAST;
+  if (modelOption in GEMINI_MODELS) {
+    return GEMINI_MODELS[modelOption as GeminiModelKey];
+  }
+  return modelOption;
+}

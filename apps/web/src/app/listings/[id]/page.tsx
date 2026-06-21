@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Heart, Star, MessageCircle, X, ArrowLeft, Clock, Tag } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+
 import ListingCard from '@/components/ListingCard';
 import { SellerInfo } from '@/components/SellerInfo';
 import { ListingActions } from '@/components/ListingActions';
@@ -65,22 +65,77 @@ export default function ListingDetailPage() {
   const [priceSuggestionLoading, setPriceSuggestionLoading] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [similarListings, setSimilarListings] = useState<SimpleListing[]>([]);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!params.id) return;
-    
+    setLoading(true);
+    setPageError(null);
+
     try {
-      setLoading(true);
       const { apiGet } = await import('@/lib/api-client');
-      const response = await apiGet(`/api/listings/${params.id}`, { requireAuth: false });
-      if (response.ok) {
-        const data = await response.json();
-        setListing(data);
-      } else {
-        throw new Error('Failed to fetch listing');
+
+      // Step 1: fetch listing
+      const listingRes = await apiGet(`/api/listings/${params.id}`, { requireAuth: false });
+      if (!listingRes.ok) {
+        const errorData = await listingRes.json().catch(() => ({}));
+        const msg =
+          errorData?.message || errorData?.error ||
+          (errorData?.code ? `Failed to fetch listing (${errorData.code})` : null);
+        throw new Error(msg || 'Failed to fetch listing');
       }
+      const raw = await listingRes.json();
+      const listingData = raw?.data || raw;
+      if (!listingData || typeof listingData !== 'object' || !listingData.id) {
+        throw new Error('Listing data was malformed');
+      }
+
+      // Step 2: fetch seller profile + similar listings in parallel (no extra re-renders)
+      const [sellerRes, similarRes] = await Promise.all([
+        apiGet(`/api/profile?userId=${listingData.sellerId}`, { requireAuth: false }),
+        apiGet(
+          `/api/listings?category=${encodeURIComponent(listingData.category)}&limit=6`,
+          { requireAuth: false }
+        ),
+      ]);
+
+      let profile: { username?: string; profilePicture?: string | null; createdAt?: string | null } = {
+        username: 'Marketplace User',
+        profilePicture: null,
+        createdAt: null,
+      };
+      if (sellerRes.ok) {
+        const sd = await sellerRes.json();
+        profile = {
+          username: sd.data?.username || 'Marketplace User',
+          profilePicture: sd.data?.profilePicture || null,
+          createdAt: sd.data?.createdAt || null,
+        };
+      }
+
+      let similar: SimpleListing[] = [];
+      if (similarRes.ok) {
+        const sd = await similarRes.json();
+        const items: SimpleListing[] = Array.isArray(sd?.data)
+          ? sd.data
+          : Array.isArray(sd?.items)
+          ? sd.items
+          : Array.isArray(sd)
+          ? sd
+          : [];
+        similar = items
+          .filter((l) => l.id !== listingData.id && !(l.sold ?? false))
+          .slice(0, 4);
+      }
+
+      // Set all state at once — single re-render
+      setListing(listingData);
+      setSellerProfile(profile);
+      setSimilarListings(similar);
     } catch (error) {
       console.error('Error fetching listing:', error);
+      setListing(null);
+      setPageError(error instanceof Error ? error.message : 'Failed to fetch listing');
     } finally {
       setLoading(false);
     }
@@ -89,79 +144,6 @@ export default function ListingDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Fetch similar listings (same category, exclude current)
-  useEffect(() => {
-    if (!listing?.category || !listing?.id) return;
-    const fetchSimilar = async () => {
-      try {
-        const { apiGet } = await import('@/lib/api-client');
-        const response = await apiGet(
-          `/api/listings?category=${encodeURIComponent(listing.category)}&limit=6`,
-          { requireAuth: false }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          const items = Array.isArray(data.data) ? data.data : [];
-          const similar = items
-            .filter((l: SimpleListing) => l.id !== listing.id && !(l.sold ?? false))
-            .slice(0, 4);
-          setSimilarListings(similar);
-        }
-      } catch {
-        setSimilarListings([]);
-      }
-    };
-    fetchSimilar();
-  }, [listing?.id, listing?.category]);
-
-  // Fetch seller profile when listing is loaded
-  useEffect(() => {
-    if (!listing?.sellerId) return;
-
-    const fetchSellerProfile = async () => {
-      try {
-        const { apiGet } = await import('@/lib/api-client');
-        const response = await apiGet(`/api/profile?userId=${listing.sellerId}`, { 
-          requireAuth: false 
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setSellerProfile({
-            username: data.data?.username || 'Marketplace User',
-            profilePicture: data.data?.profilePicture || null,
-            createdAt: data.data?.createdAt || null,
-          });
-        } else if (response.status === 404) {
-          // Profile not found - silently handle (expected for users without profiles)
-          setSellerProfile({
-            username: 'Marketplace User',
-            profilePicture: null,
-            createdAt: null,
-          });
-        } else {
-          setSellerProfile({
-            username: 'Marketplace User',
-            profilePicture: null,
-            createdAt: null,
-          });
-        }
-      } catch (error) {
-        // Only log non-404 errors
-        if (error instanceof Error && !error.message.includes('404')) {
-          console.warn('Error fetching seller profile:', error);
-        }
-        setSellerProfile({
-          username: 'Marketplace User',
-          profilePicture: null,
-          createdAt: null,
-        });
-      }
-    };
-
-    fetchSellerProfile();
-  }, [listing?.sellerId]);
 
   // Helper function to format member since date
   const getMemberSince = () => {
@@ -270,6 +252,8 @@ export default function ListingDetailPage() {
         title: listing.title,
         description: listing.description,
         category: listing.category,
+        condition: (listing as any).condition || 'Good',
+        currentPrice: listing.price,
       }, { requireAuth: false });
       
       if (response.ok) {
@@ -294,9 +278,18 @@ export default function ListingDetailPage() {
 
   const addToCart = useCallback(async () => {
     if (!listing) return;
+    if (addingToCart) return;
     
     if (!currentUser) {
       showError('Please sign in to add items to cart');
+      return;
+    }
+    if (currentUser.uid === listing.sellerId) {
+      showError("You can't add your own listing to cart");
+      return;
+    }
+    if ((listing.sold ?? false) === true) {
+      showError('This item has already been sold');
       return;
     }
 
@@ -313,7 +306,8 @@ export default function ListingDetailPage() {
       if (response.ok) {
         showSuccess('Added to cart!');
       } else {
-        showError('Failed to add to cart');
+        const errorData = await response.json().catch(() => ({}));
+        showError(errorData.error || 'Failed to add to cart');
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -321,7 +315,7 @@ export default function ListingDetailPage() {
     } finally {
       setAddingToCart(false);
     }
-  }, [listing, currentUser]);
+  }, [listing, currentUser, addingToCart, showError, showSuccess]);
 
   const handleDeleteListing = useCallback(async () => {
     if (!listing || !currentUser) return;
@@ -346,7 +340,38 @@ export default function ListingDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950">
-        <LoadingSpinner size="lg" text="Loading listing details..." />
+
+        {/* Header bar skeleton */}
+        <div className="bg-dark-900 border-b border-dark-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="h-6 w-16 bg-dark-700 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center">
+            <div className="w-full max-w-5xl">
+              <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                  {/* Gallery skeleton */}
+                  <div className="lg:col-span-3 bg-dark-700 rounded-xl h-80 animate-pulse" />
+                  {/* Details skeleton */}
+                  <div className="lg:col-span-2 flex flex-col gap-4">
+                    <div className="h-4 w-20 bg-dark-700 rounded animate-pulse" />
+                    <div className="h-7 w-3/4 bg-dark-700 rounded animate-pulse" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-full bg-dark-700 rounded animate-pulse" />
+                      <div className="h-4 w-5/6 bg-dark-700 rounded animate-pulse" />
+                      <div className="h-4 w-4/6 bg-dark-700 rounded animate-pulse" />
+                    </div>
+                    <div className="h-10 w-full bg-dark-700 rounded-xl animate-pulse mt-4" />
+                    <div className="h-10 w-full bg-dark-700 rounded-xl animate-pulse" />
+                    <div className="h-20 w-full bg-dark-700 rounded-xl animate-pulse mt-4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -354,10 +379,13 @@ export default function ListingDetailPage() {
   if (!listing) {
     return (
       <div className="min-h-screen bg-dark-950">
+
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
-            <p className="text-gray-400">The listing you're looking for doesn't exist.</p>
+            <p className="text-gray-400">
+              {pageError || "The listing you're looking for doesn't exist."}
+            </p>
             <button
               onClick={() => router.push('/listings')}
               className="mt-4 btn btn-primary"
@@ -372,6 +400,7 @@ export default function ListingDetailPage() {
 
   return (
     <div className="min-h-screen bg-dark-950">
+
       
       {/* Header */}
       <div className="bg-dark-900 border-b border-dark-700">
@@ -583,6 +612,7 @@ export default function ListingDetailPage() {
         onClose={() => setShowPriceSuggestionModal(false)}
         suggestion={priceSuggestion}
         loading={priceSuggestionLoading}
+        listingTitle={listing?.title}
       />
     </div>
   );

@@ -419,6 +419,7 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
           maxFiles={1}
           uploadType="profile-picture"
           userId={currentUser?.uid}
+          userEmail={currentUser?.email ?? undefined}
           className="max-w-md mx-auto"
         />
 

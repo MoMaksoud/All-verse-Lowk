@@ -6,14 +6,14 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/contexts/ToastContext';
-import { Send, Bot, ShoppingCart, Store, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Send, Bot, ShoppingCart, Store, Trash2, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 
 interface Message {
   id: string;
   role: 'user' | 'ai';
   content: string;
-  timestamp: string; // Changed from Date to string for JSON serialization
+  timestamp: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
   type?: 'listings';
@@ -23,6 +23,53 @@ interface Message {
     image: string;
     url: string;
   }>;
+}
+
+const normalizeListingItems = (items: unknown): Message['items'] => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .map((item) => {
+      const title = typeof item.title === 'string' && item.title.trim().length > 0 ? item.title : 'Untitled listing';
+      const price = typeof item.price === 'number' && Number.isFinite(item.price) ? item.price : 0;
+      const image = typeof item.image === 'string' ? item.image : '';
+      const url = typeof item.url === 'string' && item.url.trim().length > 0 ? item.url : '/listings';
+      return { title, price, image, url };
+    });
+};
+
+const BUYER_SUGGESTIONS = [
+  'Find me a Nike hoodie under $50',
+  'Looking for a MacBook Pro',
+  'Show me vintage clothing',
+  'What gaming gear is available?',
+];
+
+const SELLER_SUGGESTIONS = [
+  'How should I price my iPhone 13?',
+  'Write a listing for my Jordan 1s',
+  'What category fits a vintage lamp?',
+  'Tips for selling electronics faster',
+];
+
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 px-1 py-0.5">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-current opacity-60"
+          style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }}
+        />
+      ))}
+      <style>{`
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-5px); }
+        }
+      `}</style>
+    </div>
+  );
 }
 
 export default function AssistantPage() {
@@ -42,19 +89,30 @@ export default function AssistantPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load conversation per mode - only on mount or mode change
   useEffect(() => {
     try {
       const raw = localStorage.getItem(`ai-chat-${mode}`);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setMessages(parsed);
+          const normalizedMessages: Message[] = parsed
+            .filter((msg): msg is Partial<Message> => !!msg && typeof msg === 'object')
+            .map((msg): Message => ({
+              id: typeof msg.id === 'string' ? msg.id : crypto.randomUUID(),
+              role: (msg.role === 'user' ? 'user' : 'ai') as Message['role'],
+              content: typeof msg.content === 'string' ? msg.content : '',
+              timestamp: typeof msg.timestamp === 'string' ? msg.timestamp : new Date().toISOString(),
+              mediaUrl: typeof msg.mediaUrl === 'string' ? msg.mediaUrl : undefined,
+              mediaType: msg.mediaType === 'image' || msg.mediaType === 'video' ? msg.mediaType : undefined,
+              type: msg.type === 'listings' ? 'listings' as const : undefined,
+              items: msg.type === 'listings' ? normalizeListingItems(msg.items) : undefined,
+            }))
+            .filter((msg) => msg.content || msg.mediaUrl || (msg.type === 'listings' && msg.items && msg.items.length > 0));
+          setMessages(normalizedMessages);
         }
       }
     } catch (error) {
@@ -63,22 +121,18 @@ export default function AssistantPage() {
     }
   }, [mode]);
 
-  // Debounced save to localStorage - only save after messages change
   useEffect(() => {
     if (messages.length === 0) return;
-    
     const timeoutId = setTimeout(() => {
       try {
         localStorage.setItem(`ai-chat-${mode}`, JSON.stringify(messages));
       } catch (error) {
         console.error('Error saving conversation:', error);
       }
-    }, 500); // Debounce by 500ms
-
+    }, 500);
     return () => clearTimeout(timeoutId);
   }, [messages, mode]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (!taRef.current) return;
     const el = taRef.current;
@@ -86,77 +140,44 @@ export default function AssistantPage() {
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
   }, [input]);
 
-  const handleClearChat = useCallback(() => {
-    setShowDeleteConfirm(true);
-  }, []);
+  const handleClearChat = useCallback(() => setShowDeleteConfirm(true), []);
 
   const confirmDeleteChat = useCallback(() => {
     setMessages([]);
-    try {
-      localStorage.removeItem(`ai-chat-${mode}`);
-    } catch {
-      // Silently fail if localStorage is unavailable
-    }
+    try { localStorage.removeItem(`ai-chat-${mode}`); } catch {}
     setShowDeleteConfirm(false);
   }, [mode]);
 
-  const cancelDeleteChat = useCallback(() => {
-    setShowDeleteConfirm(false);
-  }, []);
+  const cancelDeleteChat = useCallback(() => setShowDeleteConfirm(false), []);
 
   const uploadFile = useCallback(async (file: File) => {
     if (!file || !currentUser) return;
-
-    // Validate file type
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
-    
-    if (!isImage && !isVideo) {
-      showError('Invalid File', 'Please select an image or video file');
-      return;
-    }
-
-    // Validate file size (max 25MB)
-    if (file.size > 25 * 1024 * 1024) {
-      showError('File Too Large', 'File must be smaller than 25MB');
-      return;
-    }
+    if (!isImage && !isVideo) { showError('Invalid File', 'Please select an image or video file'); return; }
+    if (file.size > 25 * 1024 * 1024) { showError('File Too Large', 'File must be smaller than 25MB'); return; }
 
     setUploadingMedia(true);
     try {
-      // Upload via server-side API endpoint (bypasses security rules)
       const formData = new FormData();
       formData.append('file', file);
-      
-      // Get auth token for the request
       if (auth) {
         await auth.authStateReady();
         const firebaseUser = auth.currentUser;
-        if (firebaseUser) {
-          await firebaseUser.getIdToken(true);
-        }
+        if (firebaseUser) await firebaseUser.getIdToken(true);
       }
-      
       const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-      
-      // Use fetch directly - browser will set Content-Type automatically for FormData
+      if (!token) throw new Error('Authentication required');
+
       const response = await fetch('/api/upload/ai-chat', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          // Do NOT set Content-Type - browser will set it with boundary for FormData
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       });
-      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to upload file');
       }
-
       const data = await response.json();
       setPendingMedia({ url: data.url, type: data.type });
       showSuccess('File Uploaded', 'Your file is ready to send');
@@ -165,31 +186,23 @@ export default function AssistantPage() {
       showError('Upload Failed', error?.message || 'Please try again.');
     } finally {
       setUploadingMedia(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }, [currentUser, showError, showSuccess]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      uploadFile(file);
-    }
+    if (file) uploadFile(file);
   }, [uploadFile]);
 
   const handleSearch = useCallback(async (searchQuery: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
     if ((!searchQuery.trim() && !mediaUrl) || isLoading || !currentUser) return;
 
-    // Ensure auth is ready and force token refresh before making API call
     if (auth) {
       await auth.authStateReady();
       const firebaseUser = auth.currentUser;
       if (firebaseUser) {
-        // Force refresh token to ensure it's valid
         await firebaseUser.getIdToken(true);
-        // Small delay to ensure token is propagated
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
@@ -197,18 +210,16 @@ export default function AssistantPage() {
     const userMessage = searchQuery.trim().slice(0, 2000);
     setInput('');
     setIsLoading(true);
-    setPendingMedia(null); // Clear pending media after sending
+    setPendingMedia(null);
 
-    // Add user message immediately
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: 'user',
       content: userMessage,
-      timestamp: new Date().toISOString(), // Store as ISO string
+      timestamp: new Date().toISOString(),
       mediaUrl,
       mediaType,
     };
-    
     setMessages(prev => [...prev, userMsg]);
 
     try {
@@ -223,36 +234,32 @@ export default function AssistantPage() {
           mediaType: m.mediaType,
         })),
       };
-
-      // Include media if present
       if (mediaUrl && mediaType) {
         requestBody.mediaUrl = mediaUrl;
         requestBody.mediaType = mediaType;
       }
 
-      const response = await apiPost('/api/ai/chat', requestBody);
+      const abortController = new AbortController();
+      const timeout = setTimeout(() => abortController.abort(), 35000);
+      let response: Response;
+      try {
+        response = await apiPost('/api/ai/chat', requestBody, { signal: abortController.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || errorData.message || 'Failed to get response';
-        
-        // Provide more specific error messages
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please refresh the page and try again.');
-        } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded. Please try again later.');
-        } else {
-          throw new Error(errorMessage);
-        }
+        if (response.status === 401) throw new Error('Authentication failed. Please refresh the page and try again.');
+        else if (response.status === 429) throw new Error('Rate limit exceeded. Please try again later.');
+        else throw new Error(errorMessage);
       }
 
       const data = await response.json();
-
-      // Check if response is a listings format
       let aiMsg: Message;
       const responseData = data.response;
-      
-      // Check if response is already in listings format
+
       if (responseData && typeof responseData === 'object' && responseData.type === 'listings' && Array.isArray(responseData.items)) {
         aiMsg = {
           id: crypto.randomUUID(),
@@ -260,10 +267,9 @@ export default function AssistantPage() {
           content: responseData.message || 'Here are some items:',
           timestamp: new Date().toISOString(),
           type: 'listings',
-          items: responseData.items,
+          items: normalizeListingItems(responseData.items),
         };
       } else {
-        // Regular text response
         const responseText = typeof responseData === 'string' ? responseData : (responseData?.message || 'No response received');
         aiMsg = {
           id: crypto.randomUUID(),
@@ -275,13 +281,15 @@ export default function AssistantPage() {
       setMessages(prev => [...prev, aiMsg]);
     } catch (error) {
       console.error('Error:', error);
-      const errorMsg: Message = {
+      const errorMessage = error instanceof Error && error.name === 'AbortError'
+        ? 'The AI response is taking longer than expected. Please try again.'
+        : error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again.';
+      setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
         role: 'ai',
-        content: error instanceof Error ? error.message : 'Sorry, I encountered an error. Please try again.',
+        content: errorMessage,
         timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -293,139 +301,165 @@ export default function AssistantPage() {
     handleSearch(input.trim() || 'User submitted image/video', pendingMedia?.url, pendingMedia?.type);
   }, [input, isLoading, currentUser, handleSearch, pendingMedia]);
 
-  // Read query from URL and populate input field
   useEffect(() => {
     const query = searchParams.get('query');
-    if (query) {
-      const decodedQuery = decodeURIComponent(query);
-      setInput(decodedQuery);
-    }
+    if (query) setInput(decodeURIComponent(query));
   }, [searchParams]);
 
-  // Show sign-in notice if user is not authenticated
   if (!currentUser) {
     return (
-      <div className="h-[calc(100vh-64px)] overflow-hidden flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-300 text-lg mb-6">
-            Sign up to start chatting with your AI assistant.
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg)' }}>
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: 'var(--accent)' }}>
+            <Bot className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text)' }}>AI Assistant</h2>
+          <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
+            Sign in to start chatting with your AI assistant.
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+            style={{ background: 'var(--accent)' }}
           >
-            Sign Up
+            Get started
           </Link>
         </div>
       </div>
     );
   }
 
+  const suggestions = mode === 'buyer' ? BUYER_SUGGESTIONS : SELLER_SUGGESTIONS;
+
   return (
-    <div className="h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] overflow-hidden">
-      <main className="flex flex-col h-full max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+    <div className="h-[calc(100vh-56px)] overflow-hidden" style={{ background: 'var(--bg)' }}>
+      <main className="flex flex-col h-full max-w-3xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+
         {/* Header */}
-        <div className="mb-3 sm:mb-4">
-          <div className="my-8">
-            <div className="text-center">
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">
-                AI Assistant
-              </h1>
-              <p className="text-sm sm:text-lg text-gray-400 px-4">
-                Discover amazing items with AI-powered recommendations
+        <div className="flex items-center justify-between mb-3 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--accent)' }}>
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold leading-tight" style={{ color: 'var(--text)', fontFamily: 'var(--font-display)' }}>AI Assistant</h1>
+              <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                {mode === 'buyer' ? 'Find anything on the marketplace' : 'Optimize your listings & pricing'}
               </p>
             </div>
           </div>
 
-          {/* Mode Toggle */}
-          <div className="flex bg-zinc-800 rounded-lg p-1 w-full sm:w-fit mx-auto">
-            <button
-              onClick={() => setMode('buyer')}
-              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5 sm:gap-2 ${
-                mode === 'buyer' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-zinc-400 hover:text-white'
-              }`}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Mode toggle */}
+            <div
+              className="flex rounded-lg p-0.5 gap-0.5"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
             >
-              <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" /> <span>Buyer</span>
-            </button>
-            <button
-              onClick={() => setMode('seller')}
-              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-1.5 sm:gap-2 ${
-                mode === 'seller' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Store className="w-3 h-3 sm:w-4 sm:h-4" /> <span>Seller</span>
-            </button>
+              {(['buyer', 'seller'] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 capitalize"
+                  style={mode === m
+                    ? { background: 'var(--accent)', color: '#fff' }
+                    : { color: 'var(--text-muted)' }
+                  }
+                >
+                  {m === 'buyer' ? <ShoppingCart className="w-3 h-3" /> : <Store className="w-3 h-3" />}
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {messages.length > 0 && (
+              <button
+                onClick={handleClearChat}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: 'var(--text-dim)' }}
+                title="Clear conversation"
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-dim)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Chat Box Container */}
-        <div className="flex-1 flex min-h-0 mb-4 gap-2 sm:gap-3">
-        <div className="flex items-end pb-3 sm:pb-4 shrink-0" aria-hidden="true">
-          <div className="px-3 sm:px-4 py-2 sm:py-3 invisible">
-            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col min-h-0 bg-zinc-900/50 rounded-xl border border-zinc-800 overflow-hidden">
-          {/* Messages Area with Scrollbar */}
+        {/* Chat container */}
+        <div
+          className="flex-1 flex flex-col min-h-0 rounded-2xl overflow-hidden"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 chat-scrollbar">
-            <div className={messages.length === 0 ? "h-full" : "space-y-4"}>
-              {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center text-zinc-500">
-                  <Bot className="w-12 h-12 mb-4" />
-                  <p className="text-lg font-medium">Start a conversation</p>
-                  <p className="text-sm">Your AI assistant is ready to help!</p>
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+                  style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.20)' }}
+                >
+                  <Sparkles className="w-7 h-7" style={{ color: 'var(--accent)' }} />
                 </div>
-              ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] sm:max-w-[80%] px-3 sm:px-4 py-2 sm:py-3 rounded-xl text-xs sm:text-sm break-words whitespace-pre-wrap ${
-                        msg.role === 'ai'
-                          ? 'bg-zinc-800/80 border border-zinc-700 text-zinc-100'
-                          : 'bg-blue-600 text-white'
-                      }`}
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>
+                  {mode === 'buyer' ? 'What are you looking for?' : 'How can I help you sell?'}
+                </p>
+                <p className="text-xs mb-6" style={{ color: 'var(--text-muted)' }}>
+                  Try one of these or type your own
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleSearch(s)}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150"
+                      style={{
+                        background: 'var(--surface-2)',
+                        color: 'var(--text-muted)',
+                        border: '1px solid var(--border-med)',
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.color = 'var(--text)';
+                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
+                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-med)';
+                      }}
                     >
-                      {/* Render media preview for user messages */}
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className="max-w-[85%] sm:max-w-[78%] px-3.5 py-2.5 rounded-2xl text-sm break-words whitespace-pre-wrap"
+                      style={msg.role === 'ai'
+                        ? { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)' }
+                        : { background: 'var(--accent)', color: '#fff' }
+                      }
+                    >
                       {msg.role === 'user' && msg.mediaUrl && (
                         <div className="mb-2">
-                          {msg.mediaType === 'image' ? (
-                            <img 
-                              src={msg.mediaUrl} 
-                              alt="Uploaded" 
-                              className="rounded-lg max-w-xs max-h-64 object-cover"
-                            />
-                          ) : (
-                            <video 
-                              src={msg.mediaUrl} 
-                              controls 
-                              className="rounded-lg max-w-xs max-h-64"
-                            />
-                          )}
+                          {msg.mediaType === 'image'
+                            ? <img src={msg.mediaUrl} alt="Uploaded" className="rounded-xl max-w-xs max-h-64 object-cover" />
+                            : <video src={msg.mediaUrl} controls className="rounded-xl max-w-xs max-h-64" />
+                          }
                         </div>
                       )}
-                      
-                      {/* Render listings */}
+
                       {msg.type === 'listings' && msg.items ? (
                         <div>
-                          {msg.content && <p className="mb-3">{msg.content}</p>}
-                          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+                          {msg.content && <p className="mb-3 text-sm" style={{ color: 'var(--text-muted)' }}>{msg.content}</p>}
+                          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
                             {msg.items.map((item, index) => {
-                              // Normalize URL: ensure it starts with / and uses /listings/ (plural) not /listing/
                               let listingUrl = item.url.startsWith('/') ? item.url : `/${item.url}`;
-                              // Fix route: replace /listing/ with /listings/ if needed
                               listingUrl = listingUrl.replace(/^\/listing\//, '/listings/');
-                              
-                              // Use data URL SVG as fallback instead of external placeholder
-                              const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23222" width="300" height="300"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
-                              
-                              // Only use item.image if it's a valid HTTPS URL
+                              const fallbackImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Crect fill="%231e293b" width="300" height="200"/%3E%3Ctext fill="%2364748b" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo image%3C/text%3E%3C/svg%3E';
                               let imageUrl = fallbackImage;
                               if (item.image && typeof item.image === 'string') {
                                 const trimmed = item.image.trim();
@@ -433,30 +467,29 @@ export default function AssistantPage() {
                                   imageUrl = trimmed;
                                 }
                               }
-                              
                               return (
                                 <div
                                   key={index}
-                                  onClick={() => {
-                                    console.log('Navigating to:', listingUrl);
-                                    router.push(listingUrl);
+                                  onClick={() => router.push(listingUrl)}
+                                  className="shrink-0 rounded-xl overflow-hidden cursor-pointer transition-all duration-150 w-44"
+                                  style={{
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border-med)',
                                   }}
-                                  className="shrink-0 border border-zinc-800 bg-zinc-900 rounded-xl p-3 hover:bg-zinc-800 transition w-56 cursor-pointer"
+                                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'}
+                                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-med)'}
                                 >
-                                  <img 
+                                  <img
                                     src={imageUrl}
                                     alt={item.title}
-                                    className="rounded-lg w-full h-32 object-cover mb-2"
-                                    onError={(e) => {
-                                      // Fallback to data URL if image fails
-                                      (e.target as HTMLImageElement).src = fallbackImage;
-                                    }}
+                                    className="w-full h-28 object-cover"
+                                    onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage; }}
                                   />
-                                  <h3 className="text-sm font-medium text-zinc-100 mb-1 line-clamp-2">
-                                    {item.title}
-                                  </h3>
-                                  <p className="text-xs text-zinc-400 mb-2">{formatPrice(item.price)}</p>
-                                  <span className="text-blue-400 text-xs">View Listing</span>
+                                  <div className="p-2.5">
+                                    <p className="text-xs font-medium line-clamp-2 mb-1" style={{ color: 'var(--text)' }}>{item.title}</p>
+                                    <p className="text-xs font-bold mb-2" style={{ color: 'var(--accent)' }}>{formatPrice(item.price)}</p>
+                                    <span className="text-[11px] font-medium" style={{ color: 'var(--accent)' }}>View listing →</span>
+                                  </div>
                                 </div>
                               );
                             })}
@@ -467,106 +500,93 @@ export default function AssistantPage() {
                       )}
                     </div>
                   </div>
-                ))
-              )}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-zinc-800/80 border border-zinc-700 px-4 py-3 rounded-xl text-sm text-zinc-400">
-                    Thinking...
+                ))}
+
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div
+                      className="px-4 py-3 rounded-2xl text-sm"
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+                    >
+                      <TypingDots />
+                    </div>
                   </div>
-                </div>
-              )}
-              <div ref={scrollRef} />
-            </div>
+                )}
+                <div ref={scrollRef} />
+              </div>
+            )}
           </div>
 
-          {/* Input Area */}
-          <div 
-            className={`shrink-0 border-t border-zinc-800 p-3 sm:p-4 safe-area-bottom ${isDragging ? 'bg-zinc-800/50' : ''}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              setIsDragging(false);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDragging(false);
-              const file = e.dataTransfer.files[0];
-              if (file) {
-                uploadFile(file);
-              }
-            }}
+          {/* Input area */}
+          <div
+            className={`shrink-0 p-3 safe-area-bottom transition-colors ${isDragging ? 'opacity-70' : ''}`}
+            style={{ borderTop: '1px solid var(--border)' }}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+            onDrop={(e) => { e.preventDefault(); setIsDragging(false); const file = e.dataTransfer.files[0]; if (file) uploadFile(file); }}
           >
-            {/* Pending media preview */}
             {pendingMedia && (
               <div className="mb-2 flex items-center gap-2">
-                {pendingMedia.type === 'image' ? (
-                  <img 
-                    src={pendingMedia.url} 
-                    alt="Preview" 
-                    className="rounded-lg w-16 h-16 object-cover"
-                  />
-                ) : (
-                  <video 
-                    src={pendingMedia.url} 
-                    className="rounded-lg w-16 h-16 object-cover"
-                  />
-                )}
+                {pendingMedia.type === 'image'
+                  ? <img src={pendingMedia.url} alt="Preview" className="rounded-lg w-14 h-14 object-cover" />
+                  : <video src={pendingMedia.url} className="rounded-lg w-14 h-14 object-cover" />
+                }
                 <button
                   onClick={() => setPendingMedia(null)}
-                  className="text-zinc-400 hover:text-white text-xs"
+                  className="text-xs transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   Remove
                 </button>
               </div>
             )}
-            
-            <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-2">
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,video/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              
-              {/* Upload button */}
+
+            <form onSubmit={handleSubmit} className="flex items-end gap-2">
+              <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileSelect} className="hidden" />
+
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading || uploadingMedia || !currentUser}
-                className="px-2 sm:px-3 py-2 sm:py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center shrink-0"
+                className="p-2.5 rounded-xl transition-colors shrink-0 disabled:opacity-40"
+                style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
                 title="Upload image or video"
               >
-                {uploadingMedia ? (
-                  <div className="w-4 h-4 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                )}
+                {uploadingMedia
+                  ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  : <ImageIcon className="w-4 h-4" />
+                }
               </button>
-              
+
               <textarea
                 ref={taRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={mode === 'buyer' ? 'What are you looking for?' : 'How can I help you sell?'}
-                className="flex-1 resize-none rounded-xl bg-zinc-900/80 text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-3 outline-none border border-zinc-700 focus:border-blue-600 min-h-[44px] sm:min-h-[48px] max-h-[120px] text-zinc-100 placeholder:text-zinc-500"
+                className="flex-1 resize-none rounded-xl text-sm px-3.5 py-2.5 outline-none min-h-[44px] max-h-[120px] transition-colors"
+                style={{
+                  background: 'var(--surface-2)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border-med)',
+                }}
+                onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+                onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-med)')}
                 rows={1}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleSubmit(e);
+                    handleSubmit(e as any);
                   }
                 }}
               />
+
               <button
                 type="submit"
                 disabled={isLoading || (!input.trim() && !pendingMedia) || !currentUser}
-                className="px-3 sm:px-5 py-2 sm:py-3 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1 sm:gap-2 shrink-0"
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: 'var(--accent)' }}
+                onMouseEnter={e => { if (!isLoading) (e.currentTarget as HTMLElement).style.background = '#2563eb'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent)'; }}
               >
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">Send</span>
@@ -574,35 +594,35 @@ export default function AssistantPage() {
             </form>
           </div>
         </div>
-        <div className="flex items-end pb-3 sm:pb-4 shrink-0">
-          <button
-            onClick={handleClearChat}
-            disabled={messages.length === 0}
-            className={`px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors flex items-center justify-center shrink-0 ${messages.length === 0 ? 'invisible' : ''}`}
-            title="Clear conversation"
-          >
-            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-        </div>
-        </div>
       </main>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete confirmation modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={cancelDeleteChat}>
-          <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4 sm:p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Clear Conversation</h3>
-            <p className="text-sm sm:text-base text-zinc-400 mb-4 sm:mb-6">Are you sure you want to clear this conversation? This action cannot be undone.</p>
-            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={cancelDeleteChat}
+        >
+          <div
+            className="rounded-2xl p-6 max-w-sm w-full"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border-med)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text)' }}>Clear conversation</h3>
+            <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
+              This will permanently delete your chat history. You can&apos;t undo this.
+            </p>
+            <div className="flex gap-2 justify-end">
               <button
                 onClick={cancelDeleteChat}
-                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium transition-colors w-full sm:w-auto"
+                className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                style={{ background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)' }}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeleteChat}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors w-full sm:w-auto"
+                className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors"
               >
                 Clear
               </button>

@@ -17,7 +17,9 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "lint": "echo \"@marketplace/types: no eslint config\"",
+    "test": "echo \"@marketplace/types: no unit tests yet\""
   },
   "devDependencies": {
     "typescript": "^5.3.0"

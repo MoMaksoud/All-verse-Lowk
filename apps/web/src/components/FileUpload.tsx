@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useCallback } from 'react';
-import { Upload, X, Image, Video, File, AlertCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Video, File, AlertCircle } from 'lucide-react';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import StorageService from '@/lib/storage';
 
@@ -13,6 +13,8 @@ interface FileUploadProps {
   maxFiles?: number;
   uploadType?: 'profile-picture';
   userId?: string;
+  /** Used for storage metadata; omit only when unavailable (e.g. edge cases). */
+  userEmail?: string;
   className?: string;
   disabled?: boolean;
 }
@@ -25,6 +27,7 @@ export function FileUpload({
   maxFiles = 1,
   uploadType = 'profile-picture',
   userId,
+  userEmail,
   className = '',
   disabled = false,
 }: FileUploadProps) {
@@ -69,7 +72,7 @@ export function FileUpload({
       
       try {
         if (!userId) throw new Error('User ID is required for profile picture upload');
-        const result = await uploadProfilePicture(file, userId, 'user@example.com'); // TODO: Get actual user email
+        const result = await uploadProfilePicture(file, userId, userEmail ?? '');
 
         if (result) {
           onUploadComplete({ url: result.url, path: result.path });
@@ -78,7 +81,7 @@ export function FileUpload({
         onUploadError?.(err.message || 'Upload failed');
       }
     }
-  }, [uploadProfilePicture, maxSize, accept, userId, onUploadComplete, onUploadError, clearError]);
+  }, [uploadProfilePicture, maxSize, accept, userId, userEmail, onUploadComplete, onUploadError, clearError]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -115,7 +118,7 @@ export function FileUpload({
   }, []);
 
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) return <Image className="w-4 h-4" />;
+    if (file.type.startsWith('image/')) return <ImageIcon className="w-4 h-4" aria-hidden />;
     if (file.type.startsWith('video/')) return <Video className="w-4 h-4" />;
     return <File className="w-4 h-4" />;
   };

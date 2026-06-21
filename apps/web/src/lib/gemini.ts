@@ -1,20 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS } from '@/lib/ai/models';
+import { GEMINI_MODELS, resolveGeminiModel, type GeminiModelOption } from '@/lib/ai/models';
 
-export type GeminiModelOption = keyof typeof GEMINI_MODELS | string;
-
-function resolveModel(modelOption?: GeminiModelOption): string {
-  if (modelOption == null) return GEMINI_MODELS.FAST;
-  if (modelOption in GEMINI_MODELS) return GEMINI_MODELS[modelOption as keyof typeof GEMINI_MODELS];
-  return modelOption;
-}
+export type { GeminiModelOption };
 
 // Lazy initialization function to avoid module-level errors
 function getGenAI() {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY or NEXT_PUBLIC_GEMINI_API_KEY environment variable is required. Please add it to your .env.local file.');
+    throw new Error('GEMINI_API_KEY environment variable is required. Please add it to your server environment.');
   }
   
   return new GoogleGenerativeAI(apiKey);
@@ -59,7 +53,7 @@ export class GeminiService {
   ): Promise<string> {
     // Define system prompts for each role
     const buyerPrompt = `
-    You are the ALL VERSE GPT Buyer Assistant for the AllVerse marketplace.
+    You are the ALL VERSE Buyer Assistant for the AllVerse marketplace.
 
     Your sole purpose is to help users find, compare, and decide on items within the AllVerse marketplace.
     You have access to the current listings in our database and must use ONLY those listings when answering questions.
@@ -108,7 +102,7 @@ export class GeminiService {
     `;
 
 const sellerPrompt = `
-You are the ALL VERSE GPT Seller Assistant.
+You are the ALL VERSE Seller Assistant.
 
 Your sole purpose is to help users create, optimize, and price their listings on the AllVerse marketplace.
 If a user asks anything unrelated to selling, listings, or pricing, politely refuse and remind them that this chat is for sellers only.
@@ -169,7 +163,7 @@ Always end with a short, encouraging call-to-action question.
       }
 
       console.log('🔵 Calling Gemini generateContent, prompt length:', fullPrompt.length);
-      const modelName = resolveModel(options?.model);
+      const modelName = resolveGeminiModel(options?.model);
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(fullPrompt);
       console.log('✅ Gemini generateContent completed');
@@ -220,7 +214,7 @@ Always end with a short, encouraging call-to-action question.
   static async generateResponse(prompt: string, options?: { model?: GeminiModelOption }): Promise<ChatResponse> {
     try {
       const genAI = getGenAI();
-      const modelName = resolveModel(options?.model);
+      const modelName = resolveGeminiModel(options?.model);
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const response = await result.response;

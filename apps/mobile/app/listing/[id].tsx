@@ -7,18 +7,24 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
-  Alert,
   ActivityIndicator,
+  Share,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
+import { formatPrice } from '../../lib/format';
 import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../../lib/api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ProfilePicture from '../../components/ProfilePicture';
+import ImageViewerModal from '../../components/ImageViewerModal';
 
 const { width } = Dimensions.get('window');
 
@@ -52,6 +58,10 @@ export default function ListingDetailScreen() {
   const [contactLoading, setContactLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [offerModalVisible, setOfferModalVisible] = useState(false);
+  const [offerAmount, setOfferAmount] = useState('');
+  const [offerLoading, setOfferLoading] = useState(false);
   const imageScrollViewRef = useRef<any>(null);
 
   useEffect(() => {
@@ -62,21 +72,14 @@ export default function ListingDetailScreen() {
   }, [id]);
 
   const loadFavoriteState = async () => {
-    if (!id) return;
+    if (!id || !currentUser) return;
     try {
-      const favorites = await AsyncStorage.getItem('favorites');
-      if (favorites) {
-        try {
-          const parsed = JSON.parse(favorites);
-          const favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
-          setIsFavorited(favArray.includes(id));
-        } catch {
-          setIsFavorited(false);
-        }
+      const res = await apiClient.get('/api/favorites', true);
+      if (res.ok) {
+        const data = await res.json();
+        setIsFavorited((data.data as string[])?.includes(id) ?? false);
       }
-    } catch (error) {
-      console.error('Error loading favorite state:', error);
-    }
+    } catch {}
   };
 
   const fetchListing = async () => {
@@ -142,7 +145,19 @@ export default function ListingDetailScreen() {
       }, true);
 
       if (response.ok) {
-        Alert.alert('Success', 'Item added to cart!');
+        const result = await response.json().catch(() => ({}));
+        const alreadyInCart = result?.data?.alreadyInCart ?? result?.alreadyInCart ?? false;
+        if (alreadyInCart) {
+          Alert.alert('Already in your cart', 'This item is already waiting in your cart.', [
+            { text: 'Keep browsing', style: 'cancel' },
+            { text: 'Checkout', onPress: () => router.push('/checkout' as any) },
+          ]);
+        } else {
+          Alert.alert('Added to cart', 'Nice pick — it’s in your cart.', [
+            { text: 'Keep browsing', style: 'cancel' },
+            { text: 'Checkout', onPress: () => router.push('/checkout' as any) },
+          ]);
+        }
       } else {
         const error = await response.json();
         Alert.alert('Error', error.message || 'Failed to add to cart');
@@ -216,26 +231,119 @@ export default function ListingDetailScreen() {
     }
   };
 
-  const handleSellerProfilePress = () => {
-    const sellerId = listing?.sellerId?.trim();
-    if (!sellerId) {
-      Alert.alert('Error', 'Seller profile is unavailable');
+  const handleShare = async () => {
+    if (!listing) return;
+    try {
+      await Share.share({
+        title: listing.title,
+        message: `Check out "${listing.title}" for $${listing.price.toLocaleString()} on AllVerse!\nhttps://allversegpt.com/listings/${id}`,
+      });
+    } catch {}
+  };
+
+  const handleMakeOffer = async () => {
+    if (!currentUser) {
+      Alert.alert('Sign In Required', 'Please sign in to make an offer');
+      router.push('/auth/signin');
+      return;
+    }
+    if (!listing?.sellerId) return;
+    if (currentUser.uid === listing.sellerId) {
+      Alert.alert('Not Allowed', 'You cannot make an offer on your own listing');
       return;
     }
 
-    router.push({
-      pathname: '/profile/[userId]',
-      params: { userId: sellerId },
-    } as any);
+    const amount = parseFloat(offerAmount.replace(/[^0-9.]/g, ''));
+    if (!amount || amount <= 0) {
+      Alert.alert('Invalid Offer', 'Please enter a valid offer amount');
+      return;
+    }
+    if (amount >= listing.price) {
+      Alert.alert('Low Offer', 'Your offer must be less than the listed price');
+      return;
+    }
+
+    try {
+      setOfferLoading(true);
+      // Create or get existing chat with seller
+      const chatResponse = await apiClient.post('/api/chats', { otherUserId: listing.sellerId }, true);
+      if (!chatResponse.ok) throw new Error('Could not start conversation');
+
+      const chatData = await chatResponse.json();
+      const chatId = chatData.chatId || chatData.id;
+      if (!chatId) throw new Error('Chat ID missing');
+
+      // Send offer as a structured message
+      const offerText = `💰 Offer: $${amount.toFixed(2)}\n\nI'd like to offer $${amount.toFixed(2)} for "${listing.title}" (listed at $${listing.price.toLocaleString()}).`;
+      const msgResponse = await apiClient.post(
+        `/api/chats/${chatId}/messages`,
+        { text: offerText, listingId: listing.id },
+        true
+      );
+      if (!msgResponse.ok) throw new Error('Failed to send offer');
+
+      setOfferModalVisible(false);
+      setOfferAmount('');
+      router.push(`/chat/${chatId}` as any);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to send offer');
+    } finally {
+      setOfferLoading(false);
+    }
   };
 
-  const handleEditListingPrice = () => {
-    if (!listing?.id) return;
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Listing',
+      'This will permanently remove your listing. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await apiClient.delete(`/api/listings/${id}`, true);
+              if (response.ok) {
+                Alert.alert('Deleted', 'Your listing has been removed.', [
+                  { text: 'OK', onPress: () => router.back() },
+                ]);
+              } else {
+                const err = await response.json().catch(() => ({}));
+                Alert.alert('Error', err.message || 'Failed to delete listing');
+              }
+            } catch {
+              Alert.alert('Error', 'Failed to delete listing');
+            }
+          },
+        },
+      ]
+    );
+  };
 
-    router.push({
-      pathname: '/listing/[id]/edit',
-      params: { id: listing.id },
-    } as any);
+  const handleMarkAsSold = () => {
+    Alert.alert(
+      'Mark as Sold',
+      'This will mark the listing as sold and hide it from the marketplace.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark as Sold',
+          onPress: async () => {
+            try {
+              const response = await apiClient.put(`/api/listings/${id}`, { sold: true }, true);
+              if (response.ok) {
+                setListing(prev => prev ? { ...prev, sold: true } : prev);
+              } else {
+                Alert.alert('Error', 'Failed to mark as sold');
+              }
+            } catch {
+              Alert.alert('Error', 'Failed to mark as sold');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleFavorite = async () => {
@@ -244,34 +352,18 @@ export default function ListingDetailScreen() {
       router.push('/auth/signin');
       return;
     }
-
     if (!id) return;
 
+    const next = !isFavorited;
+    setIsFavorited(next);
     try {
-      const favorites = await AsyncStorage.getItem('favorites');
-      let favArray: string[] = [];
-      if (favorites) {
-        try {
-          const parsed = JSON.parse(favorites);
-          favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
-        } catch {
-          favArray = [];
-        }
-      }
-
-      if (isFavorited) {
-        const updated = favArray.filter((fav: string) => fav !== id);
-        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
-        setIsFavorited(false);
-        Alert.alert('Removed from favorites');
+      if (next) {
+        await apiClient.post('/api/favorites', { listingId: id }, true);
       } else {
-        const updated = [...favArray, id];
-        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
-        setIsFavorited(true);
-        Alert.alert('Added to favorites');
+        await apiClient.delete(`/api/favorites/${id}`, true);
       }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
+    } catch {
+      setIsFavorited(!next);
       Alert.alert('Error', 'Failed to update favorites');
     }
   };
@@ -288,29 +380,30 @@ export default function ListingDetailScreen() {
     );
   }
 
-  const normalizeImageUrl = (url?: string | null): string => {
-    if (!url) return 'https://via.placeholder.com/400';
-    if (url.startsWith('http')) return url;
-    return 'https://via.placeholder.com/400';
-  };
-
-  const isOwner = Boolean(currentUser?.uid && listing.sellerId && currentUser.uid === listing.sellerId);
+  const isOwnListing = !!(currentUser && listing.sellerId && currentUser.uid === listing.sellerId);
   const isSold = (listing.sold ?? false) || listing.inventory === 0;
+
+  const normalizeImageUrl = (url?: string | null): string | null => {
+    if (url && url.startsWith('http')) return url;
+    return null;
+  };
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        {/* Favorite Button - Floating */}
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={handleFavorite}
-        >
-          <Ionicons
-            name={isFavorited ? 'heart' : 'heart-outline'}
-            size={24}
-            color={isFavorited ? colors.error.DEFAULT : colors.text.primary}
-          />
+        {/* Floating action buttons over image */}
+        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+          <Ionicons name="share-outline" size={22} color={colors.text.primary} />
         </TouchableOpacity>
+        {!isOwnListing && (
+          <TouchableOpacity style={styles.favoriteButton} onPress={handleFavorite}>
+            <Ionicons
+              name={isFavorited ? 'heart' : 'heart-outline'}
+              size={24}
+              color={isFavorited ? colors.error.DEFAULT : colors.text.primary}
+            />
+          </TouchableOpacity>
+        )}
 
         {/* Image Gallery */}
         <View style={styles.imageContainer}>
@@ -327,14 +420,32 @@ export default function ListingDetailScreen() {
               scrollEventThrottle={16}
             >
               {(listing.photos && listing.photos.length > 0 ? listing.photos : [null]).map(
-                (photo, index) => (
-                  <Image
-                    key={index}
-                    source={{ uri: normalizeImageUrl(photo) }}
-                    style={styles.image}
-                    resizeMode="cover"
-                  />
-                )
+                (photo, index) => {
+                  const validUrl = normalizeImageUrl(photo);
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      activeOpacity={0.95}
+                      onPress={() => {
+                        if (listing.photos && listing.photos.length > 0) {
+                          setViewerVisible(true);
+                        }
+                      }}
+                    >
+                      {validUrl ? (
+                        <Image
+                          source={{ uri: validUrl }}
+                          style={styles.image}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.image, styles.imagePlaceholderDetail]}>
+                          <Ionicons name="image-outline" size={48} color={colors.text.muted} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                }
               )}
             </ScrollView>
             
@@ -394,9 +505,9 @@ export default function ListingDetailScreen() {
           <View style={styles.priceRow}>
             <View>
               <Text style={styles.priceLabel}>Price</Text>
-              <Text style={styles.price}>${listing.price.toLocaleString()}</Text>
+              <Text style={styles.price}>{formatPrice(listing.price)}</Text>
             </View>
-            {isSold && (
+            {((listing.sold ?? false) || listing.inventory === 0) && (
               <View style={styles.soldBadge}>
                 <Text style={styles.soldText}>SOLD</Text>
               </View>
@@ -420,6 +531,22 @@ export default function ListingDetailScreen() {
             )}
           </View>
 
+          {/* Shipping + buyer protection */}
+          {!isOwnListing && !isSold && (
+            <View style={styles.trustBox}>
+              <View style={styles.trustRow}>
+                <Ionicons name="cube-outline" size={18} color={colors.text.secondary} />
+                <Text style={styles.trustText}>Shipping calculated at checkout</Text>
+              </View>
+              <View style={styles.trustRow}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={colors.success.DEFAULT} />
+                <Text style={styles.trustText}>
+                  Buyer protection — pay securely with Stripe
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Description */}
           <View style={styles.descriptionSection}>
             <Text style={styles.sectionTitle}>Description</Text>
@@ -432,7 +559,7 @@ export default function ListingDetailScreen() {
               <Text style={styles.sectionTitle}>Seller</Text>
               <TouchableOpacity
                 style={styles.sellerCard}
-                onPress={handleSellerProfilePress}
+                onPress={() => router.push(`/profile/${listing.sellerId}`)}
               >
                 <ProfilePicture
                   src={seller.profilePicture}
@@ -443,9 +570,11 @@ export default function ListingDetailScreen() {
                   <Text style={styles.sellerName}>
                     {seller.username || 'Marketplace User'}
                   </Text>
-                  <Text style={styles.sellerMeta}>
-                    Member since {new Date(seller.createdAt || Date.now()).getFullYear()}
-                  </Text>
+                  {!!seller.createdAt && (
+                    <Text style={styles.sellerMeta}>
+                      Member since {new Date(seller.createdAt).getFullYear()}
+                    </Text>
+                  )}
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.text.primary} />
               </TouchableOpacity>
@@ -455,53 +584,145 @@ export default function ListingDetailScreen() {
       </ScrollView>
 
       {/* Action Buttons */}
-      {isOwner && !isSold && (
+      {isOwnListing ? (
         <View style={styles.actionBar}>
-          <TouchableOpacity
-            style={[styles.button, styles.editPriceButton]}
-            onPress={handleEditListingPrice}
-          >
-            <Ionicons name="create-outline" size={22} color={colors.text.primary} />
-            <Text style={styles.buttonText}>Edit Price</Text>
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.button, styles.editButton]}
+              onPress={() => router.push(`/listing/edit/${id}` as any)}
+            >
+              <Ionicons name="create-outline" size={20} color={colors.text.primary} />
+              <Text style={styles.buttonText}>Edit Listing</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.deleteButton]}
+              onPress={handleDelete}
+            >
+              <Ionicons name="trash-outline" size={20} color={colors.error.DEFAULT} />
+              <Text style={[styles.buttonText, styles.deleteButtonText]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+          {!isSold && (
+            <TouchableOpacity style={styles.markSoldButton} onPress={handleMarkAsSold}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={colors.text.muted} />
+              <Text style={styles.markSoldText}>Mark as Sold</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      )}
-      {!isOwner && !isSold && (
-        <View style={styles.actionBar}>
-          <TouchableOpacity
-            style={[styles.button, styles.contactButton]}
-            onPress={handleContact}
-            disabled={contactLoading}
-          >
-            {contactLoading ? (
-              <ActivityIndicator size="small" color={colors.text.primary} />
-            ) : (
-              <>
-                <Ionicons name="chatbubble-outline" size={22} color={colors.text.primary} />
-                <Text style={styles.buttonText}>Message</Text>
-              </>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.cartButton]}
-            onPress={handleAddToCart}
-            disabled={addingToCart}
-          >
-            <Ionicons name="cart-outline" size={22} color={colors.text.primary} />
-            <Text style={styles.buttonText}>
-              {addingToCart ? 'Adding...' : 'Add to Cart'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {isSold && (
+      ) : isSold ? (
         <View style={styles.actionBar}>
           <View style={styles.soldButton}>
             <Ionicons name="close-circle" size={22} color={colors.error.DEFAULT} />
             <Text style={styles.soldButtonText}>Item Sold</Text>
           </View>
         </View>
+      ) : (
+        <View style={styles.actionBar}>
+          <TouchableOpacity
+            style={styles.offerButton}
+            onPress={() => setOfferModalVisible(true)}
+          >
+            <Ionicons name="pricetag-outline" size={20} color={colors.brand.DEFAULT} />
+            <Text style={styles.offerButtonText}>Make an Offer</Text>
+          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.button, styles.contactButton]}
+              onPress={handleContact}
+              disabled={contactLoading}
+            >
+              {contactLoading ? (
+                <ActivityIndicator size="small" color={colors.text.primary} />
+              ) : (
+                <>
+                  <Ionicons name="chatbubble-outline" size={20} color={colors.text.primary} />
+                  <Text style={styles.buttonText}>Message</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.cartButton]}
+              onPress={handleAddToCart}
+              disabled={addingToCart}
+            >
+              <Ionicons name="cart-outline" size={20} color={colors.text.primary} />
+              <Text style={styles.buttonText}>
+                {addingToCart ? 'Adding...' : 'Add to Cart'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
+
+      {/* Full-screen image viewer */}
+      {listing.photos && listing.photos.length > 0 && (
+        <ImageViewerModal
+          images={listing.photos.map(normalizeImageUrl).filter((u): u is string => !!u)}
+          initialIndex={currentImageIndex}
+          visible={viewerVisible}
+          onClose={() => setViewerVisible(false)}
+        />
+      )}
+
+      {/* Make an Offer Modal */}
+      <Modal
+        visible={offerModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setOfferModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setOfferModalVisible(false)}
+          />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Make an Offer</Text>
+            <Text style={styles.modalSubtitle}>
+              Listed at{' '}
+              <Text style={styles.modalListedPrice}>${listing?.price?.toLocaleString()}</Text>
+            </Text>
+
+            <View style={styles.offerInputWrap}>
+              <Text style={styles.currencySymbol}>$</Text>
+              <TextInput
+                style={styles.offerInput}
+                placeholder="0.00"
+                placeholderTextColor={colors.text.muted}
+                keyboardType="decimal-pad"
+                value={offerAmount}
+                onChangeText={setOfferAmount}
+                autoFocus
+                returnKeyType="done"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitOfferButton, offerLoading && { opacity: 0.6 }]}
+              onPress={handleMakeOffer}
+              disabled={offerLoading}
+            >
+              {offerLoading ? (
+                <ActivityIndicator size="small" color={colors.text.primary} />
+              ) : (
+                <Text style={styles.submitOfferText}>Send Offer</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelOfferButton}
+              onPress={() => { setOfferModalVisible(false); setOfferAmount(''); }}
+            >
+              <Text style={styles.cancelOfferText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -514,10 +735,22 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  shareButton: {
+    position: 'absolute',
+    top: 18,
+    right: 20,
+    zIndex: 100,
+    backgroundColor: colors.bg.overlay,
+    borderRadius: 24,
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   favoriteButton: {
     position: 'absolute',
-    top: 40,
-    right: 20,
+    top: 18,
+    right: 76,
     zIndex: 100,
     backgroundColor: colors.bg.overlay,
     borderRadius: 24,
@@ -541,6 +774,10 @@ const styles = StyleSheet.create({
     width: width - 40,
     height: (width - 40) * 0.85,
     backgroundColor: colors.bg.raised,
+  },
+  imagePlaceholderDetail: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   navArrow: {
     position: 'absolute',
@@ -651,6 +888,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.bg.glass,
   },
+  trustBox: {
+    marginBottom: 24,
+    backgroundColor: colors.bg.surface,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.bg.glass,
+    gap: 10,
+  },
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  trustText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -693,9 +950,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 28,
+    gap: 10,
     backgroundColor: colors.bg.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border.subtle,
@@ -705,14 +963,34 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  offerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.brand.DEFAULT,
+    backgroundColor: colors.brand.softer,
+  },
+  offerButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.brand.DEFAULT,
+  },
   button: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 12,
-    gap: 10,
+    gap: 8,
   },
   contactButton: {
     backgroundColor: palette.gray[700],
@@ -720,13 +998,116 @@ const styles = StyleSheet.create({
   cartButton: {
     backgroundColor: colors.brand.DEFAULT,
   },
-  editPriceButton: {
-    backgroundColor: colors.brand.DEFAULT,
+  editButton: {
+    backgroundColor: palette.gray[700],
+  },
+  deleteButton: {
+    backgroundColor: colors.error.soft,
+    borderWidth: 1,
+    borderColor: colors.error.border,
+  },
+  deleteButtonText: {
+    color: colors.error.DEFAULT,
+  },
+  markSoldButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 8,
+  },
+  markSoldText: {
+    fontSize: 14,
+    color: colors.text.muted,
+    fontWeight: '500',
   },
   buttonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  // Make an Offer modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  modalSheet: {
+    backgroundColor: colors.bg.raised,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border.default,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: colors.text.muted,
+    marginBottom: 24,
+  },
+  modalListedPrice: {
+    color: colors.text.primary,
+    fontWeight: '600',
+  },
+  offerInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg.surface,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.brand.DEFAULT,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  currencySymbol: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginRight: 4,
+  },
+  offerInput: {
+    flex: 1,
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.text.primary,
+    paddingVertical: 14,
+  },
+  submitOfferButton: {
+    backgroundColor: colors.brand.DEFAULT,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  submitOfferText: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.text.primary,
+  },
+  cancelOfferButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelOfferText: {
+    fontSize: 15,
+    color: colors.text.muted,
+    fontWeight: '500',
   },
   soldButton: {
     flex: 1,

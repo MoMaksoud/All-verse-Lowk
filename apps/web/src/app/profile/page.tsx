@@ -1,11 +1,10 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
-import { DynamicBackground } from '@/components/DynamicBackground';
 import { ProfilePicture } from '@/components/ProfilePicture';
 import { Profile } from '@marketplace/types';
 import { User, Settings, Edit, Camera, Shield } from 'lucide-react';
@@ -17,8 +16,14 @@ export default function ProfilePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [stats, setStats] = useState({ listingsCount: 0, salesCount: 0, reviewsCount: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { currentUser, refreshProfile, userProfile, userProfilePic } = useAuth();
+  const { currentUser, loading: authLoading, refreshProfile, userProfile, userProfilePic } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
+      router.replace('/signin?redirect=/profile&reason=profile');
+    }
+  }, [authLoading, currentUser, router]);
 
   useEffect(() => {
     if (currentUser?.uid) {
@@ -167,24 +172,17 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <DynamicBackground intensity="low" showParticles={true} />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-white text-xl">Loading profile...</div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#020617' }}>
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden w-full max-w-screen">
-      <DynamicBackground intensity="low" showParticles={true} />
-      
-      {/* Navigation */}
-      
-      <div className="relative z-10 min-h-screen w-full px-4 sm:px-6 py-6 sm:py-8">
+    <div className="min-h-screen w-full" style={{ background: '#020617' }}>
+      <div className="w-full px-4 sm:px-6 py-6 sm:py-8">
         <div className="w-full max-w-screen mx-auto">
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">

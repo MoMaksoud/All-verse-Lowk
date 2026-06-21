@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Image } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import {colors} from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { apiClient } from '../../lib/api/client';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import UserSearchModal from '../../components/UserSearchModal';
+import ProfilePicture from '../../components/ProfilePicture';
 
 interface Chat {
   id: string;
@@ -301,7 +303,7 @@ export default function MessagesScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.chatItem}
+        style={[styles.chatItem, hasUnread && styles.chatItemUnread]}
         onPress={async () => {
           // Guard against concurrent taps stacking async handles in the GC scope
           if (navigatingRef.current) return;
@@ -323,14 +325,9 @@ export default function MessagesScreen() {
           }
         }}
       >
+        {hasUnread && <View style={styles.unreadAccent} />}
         <View style={styles.avatarContainer}>
-          {photoURL ? (
-            <Image source={{ uri: photoURL }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={24} color={colors.text.tertiary} />
-            </View>
-          )}
+          <ProfilePicture src={photoURL} name={displayName} customSize={48} />
         </View>
         <View style={styles.chatContent}>
           <View style={styles.chatHeader}>
@@ -399,21 +396,23 @@ export default function MessagesScreen() {
   }
 
   const renderHeader = () => (
-    <>
-      {/* Page Header */}
-      <View style={styles.pageHeader}>
+    <View style={styles.pageHeader}>
+      <View>
         <Text style={styles.pageTitle}>Messages</Text>
+        {chats.length > 0 && (
+          <Text style={styles.pageSubtitle}>
+            {chats.length} conversation{chats.length !== 1 ? 's' : ''}
+          </Text>
+        )}
       </View>
-      
-      {/* New Message Button */}
       <TouchableOpacity
-        style={styles.newMessageButton}
+        style={styles.composeButton}
         onPress={() => setShowUserSearch(true)}
+        accessibilityLabel="New message"
       >
-        <Ionicons name="create-outline" size={24} color={colors.text.primary} />
-        <Text style={styles.newMessageText}>New Message</Text>
+        <Ionicons name="create-outline" size={20} color={colors.text.primary} />
       </TouchableOpacity>
-    </>
+    </View>
   );
 
   return (
@@ -458,72 +457,96 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg.base,
   },
   pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
+    paddingTop: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
   },
   pageTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: colors.text.primary,
+    letterSpacing: -0.3,
+  },
+  pageSubtitle: {
+    fontSize: 13,
+    color: colors.text.muted,
+    marginTop: 2,
+  },
+  composeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    paddingTop: 80,
   },
   emptyTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text.primary,
-    marginTop: 20,
-    marginBottom: 8,
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.text.secondary,
+    marginTop: 16,
+    marginBottom: 6,
   },
   emptyText: {
     fontSize: 14,
-    color: colors.text.tertiary,
+    color: colors.text.muted,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 28,
+    lineHeight: 20,
   },
   signInButton: {
     backgroundColor: colors.brand.DEFAULT,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingHorizontal: 28,
+    paddingVertical: 13,
+    borderRadius: 10,
   },
   signInButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text.primary,
   },
   listContent: {
-    paddingVertical: 8,
+    flexGrow: 1,
   },
   chatItem: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.bg.surface,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: colors.bg.base,
     borderBottomWidth: 1,
-    borderBottomColor: colors.bg.glass,
+    borderBottomColor: colors.border.subtle,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  chatItemUnread: {
+    backgroundColor: colors.bg.raised,
+  },
+  unreadAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: colors.brand.DEFAULT,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
   },
   avatarContainer: {
-    marginRight: 12,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.bg.glassHover,
-  },
-  avatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.bg.glassHover,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginRight: 14,
   },
   chatContent: {
     flex: 1,
@@ -533,10 +556,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   chatName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text.primary,
     flex: 1,
@@ -544,7 +567,8 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 12,
     color: colors.text.muted,
-    marginLeft: 8,
+    marginLeft: 10,
+    flexShrink: 0,
   },
   chatFooter: {
     flexDirection: 'row',
@@ -552,47 +576,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lastMessage: {
-    fontSize: 14,
-    color: colors.text.tertiary,
+    fontSize: 13,
+    color: colors.text.muted,
     flex: 1,
   },
   unreadMessage: {
-    color: colors.text.primary,
+    color: colors.text.secondary,
     fontWeight: '500',
   },
   unreadBadge: {
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
-    minWidth: 12,
+    minWidth: 8,
   },
   unreadDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.brand.DEFAULT,
-  },
-  unreadText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text.primary,
-  },
-  newMessageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.brand.DEFAULT,
-    marginHorizontal: 20,
-    marginTop: 12,
-    marginBottom: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  newMessageText: {
-    color: colors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

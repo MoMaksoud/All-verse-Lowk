@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { ArrowLeft, Shield } from 'lucide-react';
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             {/* Introduction */}
             <section className="mb-8">
               <p className="text-gray-300 leading-relaxed">
-                All Verse GPT ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our marketplace platform and services.
+                All Verse ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our marketplace platform and services.
               </p>
             </section>
 
@@ -259,7 +259,7 @@ export default function PrivacyPage() {
               </p>
               <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                 <p className="text-gray-300">
-                  <strong className="text-white">All Verse GPT</strong><br />
+                  <strong className="text-white">All Verse</strong><br />
                   Email: <a href="mailto:allversegpt@gmail.com" className="text-accent-400 hover:text-accent-300">allversegpt@gmail.com</a><br />
                   Website: <a href="https://www.allversegpt.com" className="text-accent-400 hover:text-accent-300">www.allversegpt.com</a>
                 </p>
