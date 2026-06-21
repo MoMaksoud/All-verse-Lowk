@@ -31,7 +31,7 @@ export function Logo({ size = 'md', className = '' }: LogoProps) {
           className={`font-bold leading-tight text-white ${text}`}
           style={{ fontFamily: 'var(--font-display, var(--font-inter))' }}
         >
-          AllVerse
+          All Verse
         </span>
       )}
     </div>
