@@ -5,6 +5,8 @@ import { badRequest, notFound } from "@marketplace/shared-logic";
 import { UpdateListingInput } from "@/lib/types/firestore";
 import { FirebaseCleanupService } from "@/lib/firebaseCleanup";
 import { getListingAdmin, markAsSoldAdmin, updateListingAdmin } from "@/lib/server/adminListings";
+import { getAdminFirestore } from "@/lib/firebase-admin";
+import { sendPushNotifications } from "@/lib/server/push-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,6 +86,36 @@ export const PUT = withApi(async (
       await updateListingAdmin(params.id, safeBody as UpdateListingInput);
     }
     
+    // Price drop notification — fire-and-forget to favoriting users
+    if (typeof body.price === 'number' && body.price < existingListing.price) {
+      (async () => {
+        try {
+          const db = getAdminFirestore();
+          const favSnap = await db.collection('favorites')
+            .where('listingIds', 'array-contains', params.id)
+            .get();
+          if (favSnap.empty) return;
+
+          const profileRefs = favSnap.docs.map(d => db.collection('profiles').doc(d.id));
+          const profileDocs = await db.getAll(...profileRefs);
+          const messages = profileDocs
+            .filter(d => d.exists && d.id !== req.userId)
+            .map(d => {
+              const token = (d.data() as any)?.expoPushToken;
+              if (!token?.startsWith('ExponentPushToken[')) return null;
+              return {
+                to: token,
+                title: 'Price dropped',
+                body: `"${existingListing.title}" is now $${body.price!.toLocaleString()}, down from $${existingListing.price.toLocaleString()}.`,
+                data: { type: 'price_drop', listingId: params.id },
+              };
+            })
+            .filter(Boolean) as any[];
+          if (messages.length > 0) await sendPushNotifications(messages);
+        } catch { /* fire-and-forget */ }
+      })();
+    }
+
     // Get the updated listing
     const updatedListing = await getListingAdmin(params.id);
     

@@ -268,7 +268,7 @@ type SearchFilters = {
 } | undefined;
 
 /**
- * Search internal All Verse GPT listings using Gemini AI for intelligent matching
+ * Search internal All Verse listings using Gemini AI for intelligent matching
  */
 async function searchInternalListings(query: string, filters?: SearchFilters): Promise<InternalResult[]> {
   try {

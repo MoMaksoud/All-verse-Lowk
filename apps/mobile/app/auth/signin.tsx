@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -89,7 +89,7 @@ export default function SignInScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue to AllVerse GPT</Text>
+            <Text style={styles.subtitle}>Sign in to continue to AllVerse</Text>
           </View>
 
           {/* Form */}

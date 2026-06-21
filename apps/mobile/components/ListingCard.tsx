@@ -6,14 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Alert,
-  ActivityIndicator,
 } from 'react-native';
+import { Alert } from '../lib/ui/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
-import { apiClient } from '../lib/api/client';
+import { useFavorites } from '../contexts/FavoritesContext';
+import { formatPrice } from '../lib/format';
+import ProfilePicture from './ProfilePicture';
 import { colors, spacing, radii, typography } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -29,6 +29,8 @@ interface ListingCardProps {
   condition?: string;
   imageUrl?: string | null;
   sellerId?: string;
+  sellerName?: string;
+  sellerAvatar?: string;
   sold?: boolean;
   inventory?: number;
   variant?: 'grid' | 'list';
@@ -43,39 +45,25 @@ export default function ListingCard({
   condition,
   imageUrl,
   sellerId,
+  sellerName,
+  sellerAvatar,
   sold = false,
   inventory,
   variant = 'grid',
 }: ListingCardProps) {
   const { currentUser } = useAuth();
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [addingToCart, setAddingToCart] = useState(false);
+  const { isFavorite, toggle } = useFavorites();
   const [imageError, setImageError] = useState(false);
+
+  const isFavorited = isFavorite(id);
+
+  // You can't buy your own listing.
+  const isOwnListing = !!currentUser && !!sellerId && currentUser.uid === sellerId;
 
   // Reset image error when imageUrl changes (e.g. new listing)
   React.useEffect(() => {
     setImageError(false);
   }, [imageUrl]);
-  // Load favorite state on mount
-  React.useEffect(() => {
-    const loadFavoriteState = async () => {
-      try {
-        const favorites = await AsyncStorage.getItem('favorites');
-        if (favorites) {
-          try {
-            const parsed = JSON.parse(favorites);
-            const favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
-            setIsFavorited(favArray.includes(id));
-          } catch {
-            setIsFavorited(false);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading favorite state:', error);
-      }
-    };
-    loadFavoriteState();
-  }, [id]);
 
   const handlePress = () => {
     try {
@@ -85,86 +73,17 @@ export default function ListingCard({
     }
   };
 
-  const handleFavorite = useCallback(async () => {
-    try {
-      const favorites = await AsyncStorage.getItem('favorites');
-      let favArray: string[] = [];
-      if (favorites) {
-        try {
-          const parsed = JSON.parse(favorites);
-          favArray = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
-        } catch {
-          favArray = [];
-        }
-      }
-      
-      if (isFavorited) {
-        const updated = favArray.filter((fav: string) => fav !== id);
-        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
-        setIsFavorited(false);
-      } else {
-        const updated = [...favArray, id];
-        await AsyncStorage.setItem('favorites', JSON.stringify(updated));
-        setIsFavorited(true);
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-    }
-  }, [id, isFavorited]);
-
-  const handleAddToCart = useCallback(async (e?: any) => {
-    if (e) {
-      e.stopPropagation?.();
-    }
-
+  const handleFavorite = useCallback(() => {
     if (!currentUser) {
-      Alert.alert('Sign In Required', 'Please sign in to add items to cart');
+      Alert.alert('Sign in required', 'Sign in to save items to your favorites.');
       return;
     }
+    toggle(id);
+  }, [currentUser, toggle, id]);
 
-    if (!sellerId) {
-      Alert.alert('Error', 'Unable to add item to cart');
-      return;
-    }
-
-    if (sold || inventory === 0) {
-      Alert.alert('Item Unavailable', 'This item is sold out');
-      return;
-    }
-
-    try {
-      setAddingToCart(true);
-      const response = await apiClient.post('/api/carts', {
-        listingId: id,
-        sellerId: sellerId,
-        qty: 1,
-        priceAtAdd: price,
-      }, true);
-
-      if (response.ok) {
-        Alert.alert('Success', 'Item added to cart!');
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        Alert.alert('Error', errorData.message || 'Failed to add item to cart');
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      Alert.alert('Error', 'Failed to add item to cart');
-    } finally {
-      setAddingToCart(false);
-    }
-  }, [currentUser, sellerId, id, price, sold, inventory]);
-
-  const formatPrice = (price: number): string => {
-    return `$${price.toLocaleString()}`;
-  };
-
-  const normalizeImageUrl = (url?: string | null): string => {
-    if (!url) return 'https://via.placeholder.com/300';
-    if (url.startsWith('http')) return url;
-    // For now, return placeholder for local paths
-    return 'https://via.placeholder.com/300';
-  };
+  // Only render real http(s) images; otherwise show a local placeholder.
+  const validImageUrl = imageUrl && imageUrl.startsWith('http') ? imageUrl : null;
+  const showPlaceholder = imageError || !validImageUrl;
 
   if (variant === 'list') {
     return (
@@ -173,13 +92,13 @@ export default function ListingCard({
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        {imageError ? (
+        {showPlaceholder ? (
           <View style={[styles.listImage, styles.imagePlaceholder]}>
             <Ionicons name="image-outline" size={32} color={colors.text.muted} />
           </View>
         ) : (
           <Image
-            source={{ uri: normalizeImageUrl(imageUrl) }}
+            source={{ uri: validImageUrl! }}
             style={styles.listImage}
             resizeMode="cover"
             onError={() => setImageError(true)}
@@ -196,22 +115,17 @@ export default function ListingCard({
             <Text style={styles.price}>{formatPrice(price)}</Text>
             <Text style={styles.category}>{category}</Text>
           </View>
-          {!(sold || inventory === 0) && (
-            <TouchableOpacity
-              style={[styles.addToCartButton, addingToCart && styles.addToCartButtonDisabled]}
-              onPress={handleAddToCart}
-              disabled={addingToCart}
-            >
-              {addingToCart ? (
-                <ActivityIndicator size="small" color={colors.text.primary} />
-              ) : (
-                <>
-                  <Ionicons name="cart-outline" size={16} color={colors.text.primary} />
-                  <Text style={styles.addToCartText}>Add to Cart</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
+          {isOwnListing ? (
+            <View style={styles.ownListingTag}>
+              <Ionicons name="pricetag-outline" size={14} color={colors.text.muted} />
+              <Text style={styles.ownListingText}>Your listing</Text>
+            </View>
+          ) : sellerName ? (
+            <View style={styles.sellerRow}>
+              <ProfilePicture src={sellerAvatar} name={sellerName} customSize={18} />
+              <Text style={styles.sellerHandle} numberOfLines={1}>{sellerName}</Text>
+            </View>
+          ) : null}
         </View>
         <TouchableOpacity
           style={styles.favoriteButton}
@@ -233,13 +147,13 @@ export default function ListingCard({
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      {imageError ? (
+      {showPlaceholder ? (
         <View style={[styles.gridImage, styles.imagePlaceholder]}>
           <Ionicons name="image-outline" size={40} color={colors.text.muted} />
         </View>
       ) : (
         <Image
-          source={{ uri: normalizeImageUrl(imageUrl) }}
+          source={{ uri: validImageUrl! }}
           style={styles.gridImage}
           resizeMode="cover"
           onError={() => setImageError(true)}
@@ -280,22 +194,17 @@ export default function ListingCard({
             </View>
           )}
         </View>
-        {!(sold || inventory === 0) && (
-          <TouchableOpacity
-            style={[styles.addToCartButton, addingToCart && styles.addToCartButtonDisabled]}
-            onPress={handleAddToCart}
-            disabled={addingToCart}
-          >
-            {addingToCart ? (
-              <ActivityIndicator size="small" color={colors.text.primary} />
-            ) : (
-              <>
-                <Ionicons name="cart-outline" size={16} color={colors.text.primary} />
-                <Text style={styles.addToCartText}>Add to Cart</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
+        {isOwnListing ? (
+          <View style={styles.ownListingTag}>
+            <Ionicons name="pricetag-outline" size={14} color={colors.text.muted} />
+            <Text style={styles.ownListingText}>Your listing</Text>
+          </View>
+        ) : sellerName ? (
+          <View style={styles.sellerRow}>
+            <ProfilePicture src={sellerAvatar} name={sellerName} customSize={18} />
+            <Text style={styles.sellerHandle} numberOfLines={1}>{sellerName}</Text>
+          </View>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -471,6 +380,36 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontSize: typography.size.base - 1,
     fontWeight: typography.weight.semibold,
+  },
+  ownListingTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs + 2,
+    backgroundColor: colors.bg.raised,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm + 2,
+  },
+  ownListingText: {
+    color: colors.text.muted,
+    fontSize: typography.size.base - 1,
+    fontWeight: typography.weight.semibold,
+  },
+  sellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    marginTop: spacing.sm,
+  },
+  sellerHandle: {
+    flex: 1,
+    fontSize: typography.size.sm,
+    color: colors.text.tertiary,
+    fontWeight: typography.weight.medium,
   },
 });
 

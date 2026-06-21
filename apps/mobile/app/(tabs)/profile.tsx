@@ -6,10 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -419,7 +419,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => router.push('/(tabs)/cart' as any)}
+              onPress={() => router.push('/cart' as any)}
             >
               <Ionicons name="cart-outline" size={24} color={colors.brand.DEFAULT} />
               <Text style={styles.menuItemText}>Cart</Text>
@@ -427,7 +427,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemLast]}
-              onPress={() => router.push('/(tabs)/favorites' as any)}
+              onPress={() => router.push('/favorites' as any)}
             >
               <Ionicons name="heart-outline" size={24} color={colors.brand.DEFAULT} />
               <Text style={styles.menuItemText}>Favorites</Text>

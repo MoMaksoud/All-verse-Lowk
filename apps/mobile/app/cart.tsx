@@ -1,21 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
   Image,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
-import { colors } from '../../constants/theme';
+import { Alert } from '../lib/ui/alert';
+import { formatPrice } from '../lib/format';
+import { colors } from '../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useAuth } from '../../contexts/AuthContext';
-import { apiClient } from '../../lib/api/client';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { useAuth } from '../contexts/AuthContext';
+import { apiClient } from '../lib/api/client';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 interface CartItem {
   listingId: string;
@@ -42,6 +43,7 @@ export default function CartScreen() {
   const { currentUser } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [listings, setListings] = useState<Record<string, Listing>>({});
+  const [sellerNames, setSellerNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -107,6 +109,25 @@ export default function CartScreen() {
         });
 
         setListings(listingsMap);
+
+        // Fetch display names for each unique seller (best-effort).
+        const uniqueSellerIds = [...new Set(allItems.map((i) => i.sellerId).filter(Boolean))];
+        const nameEntries = await Promise.all(
+          uniqueSellerIds.map(async (sellerId) => {
+            try {
+              const res = await apiClient.get(`/api/profile?userId=${sellerId}`, false);
+              if (res.ok) {
+                const data = await res.json();
+                const name = data.data?.displayName || data.data?.username;
+                return [sellerId, name || 'Seller'] as const;
+              }
+            } catch {
+              // ignore — fall back to generic label
+            }
+            return [sellerId, 'Seller'] as const;
+          })
+        );
+        setSellerNames(Object.fromEntries(nameEntries));
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
@@ -120,24 +141,6 @@ export default function CartScreen() {
     await fetchCart();
     setRefreshing(false);
   }, [currentUser]);
-
-  const updateCartItem = async (listingId: string, qty: number) => {
-    if (!currentUser) return;
-
-    try {
-      const response = await apiClient.put('/api/carts', { listingId, qty }, true);
-
-      if (response.ok) {
-        await fetchCart();
-      } else {
-        const errorData = await response.json();
-        Alert.alert('Error', errorData.message || 'Failed to update cart item');
-      }
-    } catch (error) {
-      console.error('Error updating cart item:', error);
-      Alert.alert('Error', 'Failed to update cart item');
-    }
-  };
 
   const removeFromCart = async (listingId: string) => {
     if (!currentUser) return;
@@ -170,9 +173,23 @@ export default function CartScreen() {
     );
   };
 
-  const calculateTotal = () => {
-    return cartItems.reduce((sum, item) => sum + item.priceAtAdd * item.qty, 0);
-  };
+  const calculateTotal = () =>
+    cartItems.reduce((sum, item) => sum + item.priceAtAdd, 0);
+
+  // Group cart items by seller — each seller is checked out and paid separately.
+  const sellerSections = useMemo(() => {
+    const map = new Map<string, CartItem[]>();
+    for (const item of cartItems) {
+      if (!map.has(item.sellerId)) map.set(item.sellerId, []);
+      map.get(item.sellerId)!.push(item);
+    }
+    return [...map.entries()].map(([sellerId, items]) => ({
+      sellerId,
+      sellerName: sellerNames[sellerId] || 'Seller',
+      subtotal: items.reduce((sum, i) => sum + i.priceAtAdd, 0),
+      data: items,
+    }));
+  }, [cartItems, sellerNames]);
 
   const ListHeader = () => (
     <View style={styles.pageHeader}>
@@ -229,34 +246,9 @@ export default function CartScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Second Line: Category and Price */}
-            <View style={styles.itemFooter}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemCategory} numberOfLines={1}>
-                  {listing.category}
-                </Text>
-                <Text style={styles.itemPrice} numberOfLines={1}>
-                  ${item.priceAtAdd.toFixed(2)}
-                </Text>
-              </View>
-              
-              {/* Quantity Controls */}
-              <View style={styles.quantityControls}>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() => updateCartItem(item.listingId, Math.max(1, item.qty - 1))}
-                >
-                  <Ionicons name="remove" size={18} color={colors.text.primary} />
-                </TouchableOpacity>
-                <Text style={styles.quantityText}>{item.qty}</Text>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() => updateCartItem(item.listingId, item.qty + 1)}
-                >
-                  <Ionicons name="add" size={18} color={colors.text.primary} />
-                </TouchableOpacity>
-              </View>
-            </View>
+            {/* Category + Price */}
+            <Text style={styles.itemCategory}>{listing.category}</Text>
+            <Text style={styles.itemPrice}>{formatPrice(item.priceAtAdd)}</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -310,52 +302,94 @@ export default function CartScreen() {
         </>
       ) : (
         <>
-          <FlatList
-            data={cartItems}
+          <SectionList
+            sections={sellerSections}
             renderItem={renderCartItem}
             keyExtractor={(item) => item.listingId}
             contentContainerStyle={styles.listContent}
+            stickySectionHeadersEnabled={false}
+            showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand.DEFAULT} />}
             ListHeaderComponent={ListHeader}
+            SectionSeparatorComponent={() => <View style={{ height: 4 }} />}
+            renderSectionHeader={({ section }) => (
+              <View style={styles.sellerHeader}>
+                <View style={styles.sellerHeaderLeft}>
+                  <Ionicons name="storefront-outline" size={15} color={colors.brand.DEFAULT} />
+                  <Text style={styles.sellerHeaderName} numberOfLines={1}>
+                    {(section as any).sellerName}
+                  </Text>
+                </View>
+                <Text style={styles.sellerHeaderCount}>
+                  {(section as any).data.length} {(section as any).data.length === 1 ? 'item' : 'items'}
+                </Text>
+              </View>
+            )}
+            renderSectionFooter={({ section }) => (
+              <View style={styles.sellerFooter}>
+                <Text style={styles.sellerFooterLabel}>Seller subtotal</Text>
+                <Text style={styles.sellerFooterValue}>{formatPrice((section as any).subtotal)}</Text>
+              </View>
+            )}
+            ListFooterComponent={
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Order Summary</Text>
+
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Subtotal ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})</Text>
+                  <Text style={styles.summaryValue}>{formatPrice(total)}</Text>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Tax (8%)</Text>
+                  <Text style={styles.summaryValue}>{formatPrice(tax)}</Text>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Processing Fee</Text>
+                  <Text style={styles.summaryValue}>{formatPrice(processingFee)}</Text>
+                </View>
+
+                <View style={styles.summaryDivider} />
+
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryTotalLabel}>Total</Text>
+                  <Text style={styles.summaryTotalValue}>{formatPrice(finalTotal)}</Text>
+                </View>
+
+                {sellerSections.length > 1 && (
+                  <View style={styles.multiSellerNote}>
+                    <Ionicons name="information-circle-outline" size={15} color={colors.text.muted} />
+                    <Text style={styles.multiSellerNoteText}>
+                      {sellerSections.length} sellers — you'll pay each one separately at checkout.
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.protectionRow}>
+                  <Ionicons name="shield-checkmark-outline" size={15} color={colors.success.DEFAULT} />
+                  <Text style={styles.protectionText}>
+                    Buyer protection — pay securely with Stripe
+                  </Text>
+                </View>
+              </View>
+            }
           />
 
-          {/* Order Summary */}
-          <View style={styles.summaryContainer}>
-            <View style={styles.summaryContent}>
-              <Text style={styles.summaryTitle}>Order Summary</Text>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Subtotal ({cartItems.length} items)</Text>
-                <Text style={styles.summaryValue}>${total.toFixed(2)}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Tax (8%)</Text>
-                <Text style={styles.summaryValue}>${tax.toFixed(2)}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Processing Fee</Text>
-                <Text style={styles.summaryValue}>${processingFee.toFixed(2)}</Text>
-              </View>
-
-              <View style={styles.summaryDivider} />
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryTotalLabel}>Total</Text>
-                <Text style={styles.summaryTotalValue}>${finalTotal.toFixed(2)}</Text>
-              </View>
-
-              <TouchableOpacity 
-                style={styles.checkoutButton}
-                onPress={() => router.push('/checkout' as any)}
-              >
-                <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
-                <Ionicons name="arrow-forward" size={20} color={colors.text.primary} />
-              </TouchableOpacity>
-
-              <Text style={styles.checkoutNote}>Secure checkout powered by Stripe</Text>
+          {/* Sticky pay bar — slim, always reachable, never covers content */}
+          <View style={styles.payBar}>
+            <View style={styles.payBarTotals}>
+              <Text style={styles.payBarLabel}>Total</Text>
+              <Text style={styles.payBarValue}>{formatPrice(finalTotal)}</Text>
             </View>
+            <TouchableOpacity
+              style={styles.payBarButton}
+              onPress={() => router.push('/checkout' as any)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.payBarButtonText}>Checkout</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.text.primary} />
+            </TouchableOpacity>
           </View>
         </>
       )}
@@ -387,7 +421,77 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 200, // Space for summary
+    paddingBottom: 110, // clears the slim sticky pay bar
+  },
+  sellerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    marginTop: 4,
+    paddingHorizontal: 2,
+  },
+  sellerHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    flex: 1,
+    marginRight: 12,
+  },
+  sellerHeaderName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text.primary,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    flexShrink: 1,
+  },
+  sellerHeaderCount: {
+    fontSize: 12,
+    color: colors.text.muted,
+  },
+  sellerFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 4,
+    paddingHorizontal: 2,
+    paddingBottom: 22,
+  },
+  sellerFooterLabel: {
+    fontSize: 13,
+    color: colors.text.tertiary,
+  },
+  sellerFooterValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  multiSellerNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.bg.raised,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 14,
+  },
+  multiSellerNoteText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.text.tertiary,
+    lineHeight: 17,
+  },
+  protectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+  },
+  protectionText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.text.tertiary,
   },
   cartItem: {
     backgroundColor: colors.bg.surface,
@@ -451,16 +555,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
     lineHeight: 22,
   },
-  itemFooter: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  itemInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
   itemCategory: {
     fontSize: 13,
     color: colors.text.tertiary,
@@ -471,30 +565,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.brand.DEFAULT,
-  },
-  quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bg.raised,
-    borderRadius: 8,
-    padding: 4,
-    gap: 4,
-  },
-  quantityButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: colors.bg.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quantityText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginHorizontal: 12,
-    minWidth: 24,
-    textAlign: 'center',
   },
   removeButton: {
     padding: 6,
@@ -541,78 +611,97 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  summaryContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  summaryCard: {
     backgroundColor: colors.bg.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-    paddingTop: 16,
-    paddingBottom: 32,
-    paddingHorizontal: 16,
-  },
-  summaryContent: {
-    maxWidth: 600,
-    width: '100%',
-    alignSelf: 'center',
+    borderRadius: 16,
+    padding: 18,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   summaryTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text.primary,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text.muted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
     marginBottom: 16,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 10,
   },
   summaryLabel: {
     fontSize: 14,
-    color: colors.text.tertiary,
+    color: colors.text.muted,
   },
   summaryValue: {
     fontSize: 14,
     color: colors.text.tertiary,
+    fontWeight: '500',
   },
   summaryDivider: {
     height: 1,
     backgroundColor: colors.bg.glassHover,
-    marginVertical: 12,
+    marginTop: 4,
+    marginBottom: 12,
   },
   summaryTotalLabel: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: colors.text.primary,
   },
   summaryTotalValue: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: colors.brand.DEFAULT,
   },
-  checkoutButton: {
+  payBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.bg.raised,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+    paddingTop: 12,
+    paddingBottom: 30,
+    paddingHorizontal: 16,
+  },
+  payBarTotals: {
+    justifyContent: 'center',
+  },
+  payBarLabel: {
+    fontSize: 11,
+    color: colors.text.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  payBarValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.text.primary,
+  },
+  payBarButton: {
+    flex: 1,
     backgroundColor: colors.brand.DEFAULT,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    paddingVertical: 15,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
+    gap: 8,
   },
-  checkoutButtonText: {
+  payBarButtonText: {
     color: colors.text.primary,
     fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  checkoutNote: {
-    fontSize: 12,
-    color: colors.text.muted,
-    textAlign: 'center',
-    marginTop: 12,
+    fontWeight: '700',
   },
 });
 

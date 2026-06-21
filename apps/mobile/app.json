@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AllVerse GPT",
+    "name": "AllVerse",
     "slug": "allverse-gpt",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,10 +18,10 @@
       "bundleIdentifier": "com.allversegpt.mobile",
       "buildNumber": "7",
       "infoPlist": {
-        "NSCameraUsageDescription": "AllVerse GPT needs access to your camera to take photos of items you want to sell.",
-        "NSPhotoLibraryUsageDescription": "AllVerse GPT needs access to your photo library to upload product photos.",
-        "NSPhotoLibraryAddUsageDescription": "AllVerse GPT needs permission to save photos to your library.",
-        "NSLocalNetworkUsageDescription": "AllVerse GPT may use the local network to connect to services you use.",
+        "NSCameraUsageDescription": "AllVerse needs access to your camera to take photos of items you want to sell.",
+        "NSPhotoLibraryUsageDescription": "AllVerse needs access to your photo library to upload product photos.",
+        "NSPhotoLibraryAddUsageDescription": "AllVerse needs permission to save photos to your library.",
+        "NSLocalNetworkUsageDescription": "AllVerse may use the local network to connect to services you use.",
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": ["remote-notification"]
       }
@@ -48,7 +48,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AllVerse GPT to access your photos to upload product images."
+          "photosPermission": "Allow AllVerse to access your photos to upload product images."
         }
       ],
       "expo-web-browser",

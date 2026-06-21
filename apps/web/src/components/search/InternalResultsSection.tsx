@@ -64,7 +64,7 @@ export function InternalResultsSection({ results, loading }: InternalResultsSect
                       </span>
                     )}
                     <span className="text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-green-500/20 text-green-200 rounded-full border border-green-500/30">
-                      AVGPT
+                      AV
                     </span>
                   </div>
                 </div>

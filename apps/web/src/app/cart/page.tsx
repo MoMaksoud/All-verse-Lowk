@@ -49,6 +49,7 @@ interface Listing {
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [listings, setListings] = useState<Record<string, Listing>>({});
+  const [sellerNames, setSellerNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -88,8 +89,27 @@ export default function CartPage() {
       listingResults.forEach((r) => { if (r) listingsMap[r.id] = r.listing; });
 
       // Drop cart items whose listings are gone.
-      setCartItems(rawItems.filter((item) => !!listingsMap[item.listingId]));
+      const liveItems = rawItems.filter((item) => !!listingsMap[item.listingId]);
+      setCartItems(liveItems);
       setListings(listingsMap);
+
+      // Fetch each unique seller's display name (best-effort).
+      const uniqueSellerIds = [...new Set(liveItems.map((i) => i.sellerId).filter(Boolean))];
+      const nameEntries = await Promise.all(
+        uniqueSellerIds.map(async (sellerId) => {
+          try {
+            const res = await apiGet(`/api/profile?userId=${sellerId}`, { requireAuth: false } as Parameters<typeof apiGet>[1]);
+            if (res.ok) {
+              const d = await res.json();
+              return [sellerId, d.data?.displayName || d.data?.username || 'Seller'] as const;
+            }
+          } catch {
+            // ignore
+          }
+          return [sellerId, 'Seller'] as const;
+        })
+      );
+      setSellerNames(Object.fromEntries(nameEntries));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch cart');
     } finally {
@@ -136,6 +156,21 @@ export default function CartPage() {
   const tax = subtotal * 0.08;
   const fees = (subtotal + tax) * 0.029 + 0.30;
   const estimatedTotal = subtotal + tax + fees;
+
+  // Group items by seller — each seller is paid separately at checkout.
+  const sellerGroups = (() => {
+    const map = new Map<string, CartItem[]>();
+    for (const item of cartItems) {
+      if (!map.has(item.sellerId)) map.set(item.sellerId, []);
+      map.get(item.sellerId)!.push(item);
+    }
+    return [...map.entries()].map(([sellerId, items]) => ({
+      sellerId,
+      sellerName: sellerNames[sellerId] || 'Seller',
+      items,
+      subtotal: items.reduce((s, i) => s + i.priceAtAdd, 0),
+    }));
+  })();
 
   if (!currentUser) {
     return (
@@ -203,63 +238,83 @@ export default function CartPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Items */}
-              <div className="lg:col-span-2 space-y-3">
-                {cartItems.map((item) => {
-                  const listing = listings[item.listingId];
-                  if (!listing) return null;
-                  const removing = removingItems.has(item.listingId);
-
-                  return (
-                    <div
-                      key={item.listingId}
-                      className={`bg-dark-800 border border-dark-700 rounded-xl p-4 flex items-center gap-4 transition-opacity ${removing ? 'opacity-50' : ''}`}
-                    >
-                      {/* Image */}
-                      <Link href={`/listings/${item.listingId}`} className="shrink-0">
-                        <div className="w-20 h-20 bg-dark-700 rounded-lg overflow-hidden">
-                          {listing.photos?.[0] ? (
-                            <img
-                              src={listing.photos[0]}
-                              alt={listing.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ShoppingBag className="w-6 h-6 text-gray-600" />
-                            </div>
-                          )}
-                        </div>
-                      </Link>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/listings/${item.listingId}`}>
-                          <p className="text-white font-medium truncate hover:text-accent-400 transition-colors">
-                            {listing.title}
-                          </p>
-                        </Link>
-                        <p className="text-gray-500 text-sm capitalize">{listing.condition}</p>
-                        <p className="text-gray-500 text-sm">{listing.category}</p>
-                      </div>
-
-                      {/* Price + Remove */}
-                      <div className="flex items-center gap-4 shrink-0">
-                        <span className="text-white font-semibold text-lg">
-                          {formatPrice(item.priceAtAdd)}
+              {/* Items grouped by seller */}
+              <div className="lg:col-span-2 space-y-6">
+                {sellerGroups.map((group) => (
+                  <div key={group.sellerId} className="space-y-3">
+                    {/* Seller header */}
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <ShoppingBag className="w-4 h-4 text-gray-500 shrink-0" />
+                        <span className="text-sm font-semibold text-gray-300 uppercase tracking-wide truncate">
+                          {group.sellerName}
                         </span>
-                        <button
-                          onClick={() => removeItem(item.listingId)}
-                          disabled={removing}
-                          aria-label="Remove item"
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-400 hover:bg-dark-700 transition-colors"
-                        >
-                          {removing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        </button>
+                        <span className="text-xs text-gray-500">
+                          · {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
+                        </span>
                       </div>
+                      <span className="text-sm font-semibold text-white shrink-0">
+                        {formatCurrency(group.subtotal)}
+                      </span>
                     </div>
-                  );
-                })}
+
+                    {group.items.map((item) => {
+                      const listing = listings[item.listingId];
+                      if (!listing) return null;
+                      const removing = removingItems.has(item.listingId);
+
+                      return (
+                        <div
+                          key={item.listingId}
+                          className={`bg-dark-800 border border-dark-700 rounded-xl p-4 flex items-center gap-4 transition-opacity ${removing ? 'opacity-50' : ''}`}
+                        >
+                          {/* Image */}
+                          <Link href={`/listings/${item.listingId}`} className="shrink-0">
+                            <div className="w-20 h-20 bg-dark-700 rounded-lg overflow-hidden">
+                              {listing.photos?.[0] ? (
+                                <img
+                                  src={listing.photos[0]}
+                                  alt={listing.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <ShoppingBag className="w-6 h-6 text-gray-600" />
+                                </div>
+                              )}
+                            </div>
+                          </Link>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <Link href={`/listings/${item.listingId}`}>
+                              <p className="text-white font-medium truncate hover:text-accent-400 transition-colors">
+                                {listing.title}
+                              </p>
+                            </Link>
+                            <p className="text-gray-500 text-sm capitalize">{listing.condition}</p>
+                            <p className="text-gray-500 text-sm">{listing.category}</p>
+                          </div>
+
+                          {/* Price + Remove */}
+                          <div className="flex items-center gap-4 shrink-0">
+                            <span className="text-white font-semibold text-lg">
+                              {formatPrice(item.priceAtAdd)}
+                            </span>
+                            <button
+                              onClick={() => removeItem(item.listingId)}
+                              disabled={removing}
+                              aria-label="Remove item"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-400 hover:bg-dark-700 transition-colors"
+                            >
+                              {removing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
 
               {/* Summary */}
@@ -289,6 +344,13 @@ export default function CartPage() {
                       <span className="text-white font-bold text-lg">{formatCurrency(estimatedTotal)}</span>
                     </div>
                   </div>
+
+                  {sellerGroups.length > 1 && (
+                    <div className="flex items-start gap-2 bg-dark-700/60 border border-dark-600 rounded-lg p-3 mb-4 text-xs text-gray-400 leading-relaxed">
+                      <ShoppingBag className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
+                      <span>{sellerGroups.length} sellers in your bag — you'll pay each one separately at checkout.</span>
+                    </div>
+                  )}
 
                   <button
                     onClick={handleCheckout}

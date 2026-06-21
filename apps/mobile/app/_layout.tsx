@@ -1,12 +1,15 @@
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useEffect, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {colors} from '../constants/theme';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { FavoritesProvider } from '../contexts/FavoritesContext';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { registerForPushNotifications, Notifications } from '../lib/notifications';
-import { apiClient } from '../lib/api/client';
+import { Notifications } from '../lib/notifications';
+import { AlertHost } from '../lib/ui/alert';
+import { NotificationPrimer } from '../components/NotificationPrimer';
 
 function AuthGate() {
   const { currentUser, loading, hasProfile, profileLoading } = useAuth();
@@ -34,12 +37,9 @@ function NotificationSetup() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Register push token and store it
-    registerForPushNotifications().then((token) => {
-      if (token) {
-        apiClient.post('/api/notifications/token', { token }, true).catch(() => {});
-      }
-    });
+    // Permission request + token registration is handled by <NotificationPrimer />
+    // (custom priming first, then the OS prompt only on opt-in). Here we just
+    // wire up the foreground + tap listeners.
 
     // Foreground notification listener
     notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
@@ -71,19 +71,18 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <FavoritesProvider>
         <View style={styles.container}>
           <StatusBar style="light" />
           <AuthGate />
           <NotificationSetup />
+          <NotificationPrimer />
         <Stack
         screenOptions={{
           headerStyle: {
             backgroundColor: colors.bg.base,
-            elevation: 0,
-            shadowOpacity: 0,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border.subtle,
           },
+          headerShadowVisible: false,
           headerTintColor: colors.brand.DEFAULT,
           headerTitleStyle: {
             fontWeight: '700',
@@ -93,20 +92,44 @@ export default function RootLayout() {
           contentStyle: {
             backgroundColor: colors.bg.base,
           },
-          headerBackTitleVisible: false,
+          headerBackButtonDisplayMode: 'minimal',
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="favorites"
+          options={{
+            headerShown: false,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="cart"
+          options={{
+            headerShown: false,
+            gestureEnabled: true,
+          }}
+        />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/verify-email" options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen name="auth/setup-profile" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen 
           name="listing/[id]" 
           options={{ 
             title: 'Listing Details',
             headerShown: true,
-            headerBackTitle: 'Home',
-            headerBackTitleVisible: true,
+            headerLeft: () => (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Back to marketplace"
+                hitSlop={12}
+                style={styles.headerBackButton}
+                onPress={() => {
+                  if (router.canGoBack()) router.back();
+                  else router.replace('/(tabs)' as any);
+                }}
+              >
+                <Ionicons name="chevron-back" size={28} color={colors.brand.DEFAULT} />
+              </TouchableOpacity>
+            ),
           }} 
         />
         <Stack.Screen 
@@ -115,7 +138,6 @@ export default function RootLayout() {
             title: 'Chat',
             headerShown: false,
             headerBackTitle: 'Back',
-            headerBackTitleVisible: true,
           }} 
         />
         <Stack.Screen
@@ -190,7 +212,9 @@ export default function RootLayout() {
           }}
         />
       </Stack>
+        <AlertHost />
       </View>
+        </FavoritesProvider>
     </AuthProvider>
     </ErrorBoundary>
   );
@@ -200,6 +224,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg.base,
+  },
+  headerBackButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 44,
+    minHeight: 44,
   },
 });
 

@@ -31,7 +31,10 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     }
 
     const listing = await getListingAdmin(listingId);
-    if (listing && listing.sellerId !== req.userId) {
+    if (!listing) {
+      return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
+    }
+    if (listing.sellerId !== req.userId) {
       return NextResponse.json({ error: 'You can only upload photos for your own listings' }, { status: 403 });
     }
 
@@ -40,15 +43,15 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return NextResponse.json({ error: 'At least one photo is required' }, { status: 400 });
     }
 
-    if (files.length > 10) {
+    if (files.length > 6) {
       console.log('❌ Too many files:', files.length);
-      return NextResponse.json({ error: 'Maximum 10 photos allowed' }, { status: 400 });
+      return NextResponse.json({ error: 'Maximum 6 photos allowed' }, { status: 400 });
     }
 
     // Validate all files
     for (const file of files) {
       const validation = StorageService.validateFile(file, {
-        maxSize: 10 * 1024 * 1024, // 10MB
+        maxSize: 6 * 1024 * 1024, // 6MB
         allowedTypes: ['image/'],
         required: true
       });
@@ -76,6 +79,14 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       }
     }
     console.log('📸 Photos uploaded:', photoUrls.length);
+
+    if (photoUrls.length !== files.length) {
+      await Promise.allSettled(photoUrls.map((url) => StorageService.deleteFile(url)));
+      return NextResponse.json(
+        { error: 'One or more photos could not be uploaded. Please try again.' },
+        { status: 500 }
+      );
+    }
     
     // Extract file paths from URLs for tracking (only for Firebase Storage URLs)
     const photoPaths = photoUrls.map(url => {
@@ -91,32 +102,32 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       }
     });
 
+    try {
       // Save photo metadata to Firestore (only if Firebase is configured)
       if (isFirebaseConfigured()) {
         console.log('📸 Saving photo metadata to Firestore...');
         const photoData: ListingPhotoUpload = {
           listingId,
           userId: req.userId,
-        photoUrls,
-        photoPaths,
-        uploadedAt: new Date() as any, // Will be converted to Timestamp in service
-      };
+          photoUrls,
+          photoPaths,
+          uploadedAt: new Date() as any, // Will be converted to Timestamp in service
+        };
 
-      await saveListingPhotosAdmin(photoData);
-    } else {
-      console.log('📸 Firebase not configured, skipping metadata save');
-    }
+        await saveListingPhotosAdmin(photoData);
+      } else {
+        console.log('📸 Firebase not configured, skipping metadata save');
+      }
 
-    // Update listing with new photo URLs (only if listing exists)
-    console.log('📸 Updating listing with photo URLs...');
-    try {
+      // Update the verified listing with its new photo URLs.
+      console.log('📸 Updating listing with photo URLs...');
       await updateListingAdmin(listingId, {
         images: photoUrls,
       });
       console.log('📸 Listing updated successfully');
-    } catch (updateError) {
-      console.log('📸 Listing update failed (listing may not exist yet):', updateError);
-      // Don't fail the upload if listing doesn't exist yet
+    } catch (error) {
+      await Promise.allSettled(photoUrls.map((url) => StorageService.deleteFile(url)));
+      throw error;
     }
 
     console.log('📸 Upload completed successfully');

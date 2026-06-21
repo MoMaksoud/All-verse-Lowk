@@ -50,7 +50,7 @@ export class AIAnalysisService {
     }
 
     const prompt = `
-      You are a VISUAL PRODUCT LISTER for ALL VERSE GPT. Your job is to (A) extract only what is visibly true from the image(s), then (B) craft a concise, buyer-ready listing that a human can post immediately, with clearly marked placeholders for any info not visible (e.g., storage, battery %, carrier).
+      You are a VISUAL PRODUCT LISTER for ALL VERSE. Your job is to (A) extract only what is visibly true from the image(s), then (B) craft a concise, buyer-ready listing that a human can post immediately, with clearly marked placeholders for any info not visible (e.g., storage, battery %, carrier).
 
       Rules:
       - Use ONLY visible evidence (logos, model text, ports, buttons, materials, labels, barcodes, regulatory marks). Include OCR of readable text exactly as seen.
@@ -318,7 +318,7 @@ export class AIAnalysisService {
     }
 
     const prompt = `
-      You are a PROFESSIONAL PRODUCT LISTER for ALL VERSE GPT. Create a polished, buyer-ready listing that is accurate, detailed, and natural-sounding.
+      You are a PROFESSIONAL PRODUCT LISTER for ALL VERSE. Create a polished, buyer-ready listing that is accurate, detailed, and natural-sounding.
 
       Initial Analysis Evidence:
       ${JSON.stringify(initialEvidence, null, 2)}

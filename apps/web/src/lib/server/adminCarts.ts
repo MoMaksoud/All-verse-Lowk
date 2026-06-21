@@ -27,7 +27,12 @@ export async function getCartAdmin(uid: string): Promise<CartDoc | null> {
   return { id: snap.id, ...(snap.data() as FirestoreCart) };
 }
 
-export async function addToCartAdmin(uid: string, item: AddToCartInput): Promise<void> {
+/**
+ * Adds an item to the cart. Returns `true` if the item was newly added, or
+ * `false` if it was already in the cart (each listing is a unique 1-unit item,
+ * so re-adding is a no-op).
+ */
+export async function addToCartAdmin(uid: string, item: AddToCartInput): Promise<boolean> {
   let cart = await getCartAdmin(uid);
   if (!cart) {
     await ensureCart(uid);
@@ -38,13 +43,14 @@ export async function addToCartAdmin(uid: string, item: AddToCartInput): Promise
   }
 
   // Each listing is a unique 1-unit item — adding the same listing twice is a no-op.
-  if (cart.items.some((c) => c.listingId === item.listingId)) return;
+  if (cart.items.some((c) => c.listingId === item.listingId)) return false;
   const updatedItems = [...cart.items, { ...item, qty: 1 }];
 
   await getAdminFirestore().collection(COLLECTIONS.CARTS).doc(uid).update({
     items: updatedItems,
     updatedAt: FieldValue.serverTimestamp(),
   });
+  return true;
 }
 
 export async function updateCartItemAdmin(uid: string, update: UpdateCartItemInput): Promise<void> {

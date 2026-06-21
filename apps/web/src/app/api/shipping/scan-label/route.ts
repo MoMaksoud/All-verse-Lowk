@@ -63,7 +63,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
     // Create prompt for extracting shipping information
     const prompt = `
-      You are a SHIPPING LABEL SCANNER for ALL VERSE GPT. Analyze this shipping label image and extract the package dimensions and weight.
+      You are a SHIPPING LABEL SCANNER for ALL VERSE. Analyze this shipping label image and extract the package dimensions and weight.
 
       Extract the following information from the shipping label:
       1. Package Weight (in pounds/lbs) - look for weight fields, "WT", "Weight", or similar

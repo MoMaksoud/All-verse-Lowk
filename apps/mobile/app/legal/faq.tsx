@@ -75,9 +75,9 @@ export default function FAQScreen() {
             <Ionicons name="help-circle" size={20} color={colors.brand.DEFAULT} />
             <Text style={styles.badgeText}>Frequently Asked Questions</Text>
           </View>
-          <Text style={styles.title}>All Verse GPT – FAQ</Text>
+          <Text style={styles.title}>All Verse – FAQ</Text>
           <Text style={styles.subtitle}>
-            Find quick answers to common questions about using All Verse GPT
+            Find quick answers to common questions about using All Verse
           </Text>
         </View>
 

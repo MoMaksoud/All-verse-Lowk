@@ -1,18 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { 
-  CreditCard, 
-  ShoppingBag, 
-  ArrowLeft, 
+import {
+  CreditCard,
+  ShoppingBag,
+  ArrowLeft,
   CheckCircle,
   AlertCircle,
   Loader2,
-  Truck
+  Truck,
+  Store,
 } from 'lucide-react';
 
 const formatCurrency = (amount: number) =>
@@ -27,9 +26,6 @@ function getApiErrorMessage(payload: unknown, fallback: string): string {
   }
   return fallback;
 }
-
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 interface CartItem {
   listingId: string;
@@ -50,19 +46,27 @@ interface ShippingRate {
   price: number;
   currency: string;
   deliveryDays?: number;
-  deliveryDate?: string;
-  deliveryDateGuaranteed?: boolean;
 }
 
-interface SelectedShipping {
-  rate: ShippingRate;
-  shipmentId: string;
-  rateId: string;
+interface SellerShippingState {
+  rates: ShippingRate[];
+  selected: ShippingRate | null;
+  shipmentId: string | null;
+  loading: boolean;
+  error: string | null;
 }
+
+const EMPTY_SHIPPING: SellerShippingState = {
+  rates: [],
+  selected: null,
+  shipmentId: null,
+  loading: false,
+  error: null,
+};
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
   const { currentUser } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [payingSellerId, setPayingSellerId] = useState<string | null>(null);
   const [shippingAddress, setShippingAddress] = useState({
     name: currentUser?.displayName || '',
     street: '',
@@ -71,199 +75,191 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
     zip: '',
     country: 'US',
   });
+  const [sellerNames, setSellerNames] = useState<Record<string, string>>({});
+  const [sellerShipping, setSellerShipping] = useState<Record<string, SellerShippingState>>({});
 
-  const [totals, setTotals] = useState({
-    subtotal: 0,
-    tax: 0,
-    fees: 0,
-    shipping: 0,
-    total: 0,
-  });
+  // Group cart items by seller — each seller is a separate order + payment.
+  const sellerGroups = useMemo(() => {
+    const map = new Map<string, CartItem[]>();
+    for (const item of cartItems) {
+      if (!map.has(item.sellerId)) map.set(item.sellerId, []);
+      map.get(item.sellerId)!.push(item);
+    }
+    return [...map.entries()].map(([sellerId, items]) => ({
+      sellerId,
+      sellerName: sellerNames[sellerId] || 'Seller',
+      items,
+      subtotal: items.reduce((s, i) => s + i.priceAtAdd * i.qty, 0),
+    }));
+  }, [cartItems, sellerNames]);
 
-  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
-  const [selectedShipping, setSelectedShipping] = useState<SelectedShipping | null>(null);
-  const [loadingRates, setLoadingRates] = useState(false);
-  const [ratesError, setRatesError] = useState<string | null>(null);
-  const [shipmentId, setShipmentId] = useState<string | null>(null);
-  const ratesRequestIdRef = useRef(0);
+  const multiSeller = sellerGroups.length > 1;
 
+  // Fetch seller display names once.
   useEffect(() => {
-    calculateTotals();
-  }, [cartItems, selectedShipping]);
-
-  useEffect(() => {
-    // Fetch shipping rates when ZIP code is entered and valid
-    if (shippingAddress.zip && shippingAddress.zip.length >= 5) {
-      fetchShippingRates();
-    } else {
-      setShippingRates([]);
-      setSelectedShipping(null);
-      setShipmentId(null);
-    }
-  }, [shippingAddress.zip, cartItems]);
-
-  const calculateTotals = () => {
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.priceAtAdd * item.qty), 0);
-    const tax = subtotal * 0.08; // 8% tax
-    const shipping = selectedShipping?.rate.price || 0;
-    const fees = (subtotal + tax + shipping) * 0.029 + 0.30; // Stripe fees
-    const total = subtotal + tax + fees + shipping;
-
-    setTotals({ subtotal, tax, fees, shipping, total });
-  };
-
-  const fetchShippingRates = async () => {
-    if (!shippingAddress.zip || shippingAddress.zip.length < 5) {
-      return;
-    }
-
-    const toZip = shippingAddress.zip.replace(/[^\d]/g, '').slice(0, 5);
-    if (toZip.length < 5) {
-      setRatesError('ZIP code must be at least 5 digits');
-      setShippingRates([]);
-      setSelectedShipping(null);
-      setShipmentId(null);
-      return;
-    }
-
-    const requestId = ratesRequestIdRef.current + 1;
-    ratesRequestIdRef.current = requestId;
-    setLoadingRates(true);
-    setRatesError(null);
-
-    try {
-      // Fetch listings to get shipping dimensions
+    let cancelled = false;
+    (async () => {
       const { apiGet } = await import('@/lib/api-client');
-      const listings = await Promise.all(
-        cartItems.map(async (item) => {
-          const response = await apiGet(`/api/listings/${item.listingId}`, { requireAuth: false });
-          if (response.ok) {
-            const payload = await response.json();
-            return payload?.data || payload || null;
+      const uniqueSellerIds = [...new Set(cartItems.map((i) => i.sellerId).filter(Boolean))];
+      const entries = await Promise.all(
+        uniqueSellerIds.map(async (sellerId) => {
+          try {
+            const res = await apiGet(`/api/profile?userId=${sellerId}`, { requireAuth: false });
+            if (res.ok) {
+              const d = await res.json();
+              return [sellerId, d.data?.displayName || d.data?.username || 'Seller'] as const;
+            }
+          } catch {
+            // ignore
           }
-          return null;
+          return [sellerId, 'Seller'] as const;
         })
       );
+      if (!cancelled) setSellerNames(Object.fromEntries(entries));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cartItems]);
 
-      // Aggregate shipping dimensions (use first item's shipping or defaults)
-      // For simplicity, we'll use defaults if shipping info is not available
-      // In production, you'd want to aggregate all items properly
-      const firstListing = listings.find((l) => l && typeof l === 'object' && (l as any).shipping);
-      const shipping = firstListing?.shipping || {
-        weight: 2, // Default 2 lbs
-        length: 12,
-        width: 8,
-        height: 6,
-      };
+  const fetchRatesForSeller = useCallback(
+    async (sellerId: string, items: CartItem[]) => {
+      const toZip = shippingAddress.zip.replace(/[^\d]/g, '').slice(0, 5);
+      if (toZip.length < 5) return;
 
-      // Get real seller ZIP from seller profile
-      // For multi-seller carts, use the first seller's ZIP (can be improved later)
-      const sellerIds = [...new Set(cartItems.map(item => item.sellerId))];
-      let fromZip = '10001'; // Fallback default
+      setSellerShipping((prev) => ({
+        ...prev,
+        [sellerId]: { ...(prev[sellerId] ?? EMPTY_SHIPPING), loading: true, error: null },
+      }));
 
-      if (sellerIds.length > 0) {
+      try {
+        const { apiGet, apiPost } = await import('@/lib/api-client');
+
+        // Package dimensions from the first listing that has them.
+        const listingDetails = await Promise.all(
+          items.map(async (item) => {
+            const response = await apiGet(`/api/listings/${item.listingId}`, { requireAuth: false });
+            if (response.ok) {
+              const payload = await response.json();
+              return payload?.data || payload || null;
+            }
+            return null;
+          })
+        );
+        const firstWithShipping = listingDetails.find(
+          (l) => l && typeof l === 'object' && (l as any).shipping
+        );
+        const dims = (firstWithShipping as any)?.shipping || { weight: 2, length: 12, width: 8, height: 6 };
+
+        // Seller origin ZIP.
+        let fromZip = '10001';
         try {
-          // Fetch seller profile to get their shipping address
-          const sellerResponse = await apiGet(`/api/profile?userId=${sellerIds[0]}`, { requireAuth: false });
+          const sellerResponse = await apiGet(`/api/profile?userId=${sellerId}`, { requireAuth: false });
           if (sellerResponse.ok) {
             const sellerData = await sellerResponse.json();
             fromZip = sellerData.data?.shippingAddress?.zip || '10001';
-            
-            if (!sellerData.data?.shippingAddress?.zip) {
-              console.warn('Seller does not have shipping address configured. Using default ZIP.');
-            }
-          } else if (sellerResponse.status === 404) {
-            // Profile not found - silently use fallback (expected for users without profiles)
-            // Use fallback ZIP
           }
-        } catch (error) {
-          // Only log non-404 errors
-          if (error instanceof Error && !error.message.includes('404')) {
-            console.warn('Error fetching seller address:', error);
-          }
-          // Use fallback
+        } catch {
+          // use fallback
         }
-      }
 
-      // Call shipping rates API
-      const { apiPost } = await import('@/lib/api-client');
-      const ratesResponse = await apiPost('/api/shipping/get-rates', {
-        weight: shipping.weight || 2,
-        length: shipping.length || 12,
-        width: shipping.width || 8,
-        height: shipping.height || 6,
-        fromZip,
-        toZip,
-      });
-
-      if (!ratesResponse.ok) {
-        const errorData = await ratesResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch shipping rates');
-      }
-
-      const ratesData = await ratesResponse.json();
-      if (requestId !== ratesRequestIdRef.current) {
-        return;
-      }
-
-      const normalizedRates = Array.isArray(ratesData.rates) ? ratesData.rates : [];
-      setShippingRates(normalizedRates);
-      setShipmentId(typeof ratesData.shipmentId === 'string' ? ratesData.shipmentId : null);
-      
-      // Auto-select first (cheapest) rate
-      if (normalizedRates.length > 0 && ratesData.shipmentId) {
-        const firstRate = normalizedRates[0];
-        setSelectedShipping({
-          rate: firstRate,
-          shipmentId: ratesData.shipmentId,
-          rateId: firstRate.id || '',
+        const ratesResponse = await apiPost('/api/shipping/get-rates', {
+          weight: dims.weight || 2,
+          length: dims.length || 12,
+          width: dims.width || 8,
+          height: dims.height || 6,
+          fromZip: String(fromZip).replace(/[^\d]/g, '').slice(0, 5) || '10001',
+          toZip,
         });
-      } else {
-        setSelectedShipping(null);
+
+        if (!ratesResponse.ok) {
+          const errorData = await ratesResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to fetch shipping rates');
+        }
+
+        const ratesData = await ratesResponse.json();
+        const rates: ShippingRate[] = Array.isArray(ratesData.rates) ? ratesData.rates : [];
+
+        setSellerShipping((prev) => ({
+          ...prev,
+          [sellerId]: {
+            rates,
+            selected: rates.length > 0 ? rates[0] : null,
+            shipmentId: typeof ratesData.shipmentId === 'string' ? ratesData.shipmentId : null,
+            loading: false,
+            error: rates.length === 0 ? 'No shipping rates available for this address.' : null,
+          },
+        }));
+      } catch (error) {
+        setSellerShipping((prev) => ({
+          ...prev,
+          [sellerId]: {
+            ...EMPTY_SHIPPING,
+            error: error instanceof Error ? error.message : 'Failed to load shipping rates',
+          },
+        }));
       }
-    } catch (error) {
-      console.error('Error fetching shipping rates:', error);
-      setRatesError(error instanceof Error ? error.message : 'Failed to load shipping rates');
-      setShippingRates([]);
-      setSelectedShipping(null);
-    } finally {
-      setLoadingRates(false);
+    },
+    [shippingAddress.zip]
+  );
+
+  // When ZIP is valid, quote shipping for every seller.
+  useEffect(() => {
+    const toZip = shippingAddress.zip.replace(/[^\d]/g, '');
+    if (toZip.length >= 5 && sellerGroups.length > 0) {
+      sellerGroups.forEach((group) => fetchRatesForSeller(group.sellerId, group.items));
+    } else {
+      setSellerShipping({});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingAddress.zip, cartItems]);
+
+  const computeSellerTotals = (group: { subtotal: number; sellerId: string }) => {
+    const subtotal = group.subtotal;
+    const tax = subtotal * 0.08;
+    const shipping = sellerShipping[group.sellerId]?.selected?.price || 0;
+    const fees = (subtotal + tax + shipping) * 0.029 + 0.3;
+    const total = subtotal + tax + fees + shipping;
+    return { subtotal, tax, shipping, fees, total };
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (loading || loadingRates) return;
+  const addressComplete =
+    !!shippingAddress.name &&
+    !!shippingAddress.street &&
+    !!shippingAddress.city &&
+    !!shippingAddress.state &&
+    shippingAddress.zip.replace(/[^\d]/g, '').length >= 5;
 
-    const requiresShippingSelection = shippingAddress.zip.replace(/[^\d]/g, '').length >= 5;
-    if (requiresShippingSelection && !selectedShipping) {
-      onError('Please select a shipping option before checkout.');
+  const handleSellerCheckout = async (sellerId: string) => {
+    if (payingSellerId) return;
+
+    if (!addressComplete) {
+      onError('Please complete your shipping address before checkout.');
+      return;
+    }
+    const ship = sellerShipping[sellerId];
+    if (!ship?.selected) {
+      onError('Please select a shipping option for this seller.');
       return;
     }
 
-    setLoading(true);
-
+    setPayingSellerId(sellerId);
     try {
       const { apiPost } = await import('@/lib/api-client');
       const response = await apiPost('/api/payments/create-checkout-session', {
-        cartItems,
+        sellerId,
         shippingAddress,
-        selectedShipping: selectedShipping ? {
-          rateId: selectedShipping.rateId,
-          shipmentId: selectedShipping.shipmentId,
-          carrier: selectedShipping.rate.carrier,
-          serviceName: selectedShipping.rate.serviceName,
-          price: selectedShipping.rate.price,
-        } : null,
+        selectedShipping: {
+          rateId: ship.selected.id,
+          shipmentId: ship.shipmentId,
+          carrier: ship.selected.carrier,
+          serviceName: ship.selected.serviceName,
+          price: ship.selected.price,
+        },
       });
 
       const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || !data || typeof data !== 'object') {
-        throw new Error(getApiErrorMessage(data, 'Failed to create checkout session'));
-      }
-
-      if ((data as { success?: boolean }).success === false) {
+      if (!response.ok || (data as { success?: boolean }).success === false) {
         throw new Error(getApiErrorMessage(data, 'Failed to create checkout session'));
       }
 
@@ -272,94 +268,161 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
         window.location.href = checkoutUrl;
         return;
       }
-
       throw new Error('No checkout URL returned');
     } catch (error) {
-      console.error('Checkout error:', error);
       onError(error instanceof Error ? error.message : 'Checkout failed');
-    } finally {
-      setLoading(false);
+      setPayingSellerId(null);
     }
   };
 
+  const renderShippingOptions = (sellerId: string) => {
+    const state = sellerShipping[sellerId] ?? EMPTY_SHIPPING;
+    const zipValid = shippingAddress.zip.replace(/[^\d]/g, '').length >= 5;
+
+    if (!zipValid) {
+      return <p className="text-gray-400 text-sm">Enter your ZIP above to see shipping options.</p>;
+    }
+    if (state.loading) {
+      return (
+        <div className="flex items-center py-4">
+          <Loader2 className="w-5 h-5 animate-spin text-accent-500 mr-2" />
+          <span className="text-gray-300 text-sm">Loading shipping rates…</span>
+        </div>
+      );
+    }
+    if (state.error) {
+      return (
+        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+          <p className="text-red-400 text-sm">{state.error}</p>
+        </div>
+      );
+    }
+    if (state.rates.length === 0) {
+      return <p className="text-gray-400 text-sm">No shipping rates available for this address.</p>;
+    }
+
+    return (
+      <div className="space-y-2">
+        {state.rates.map((rate, index) => {
+          const tierName = rate.serviceName;
+          const isSelected = state.selected === rate;
+          const isRecommended = tierName.toLowerCase().startsWith('standard');
+
+          let deliveryWindow = '';
+          if (tierName.toLowerCase().startsWith('economy')) deliveryWindow = '3–5 days';
+          else if (tierName.toLowerCase().startsWith('standard')) deliveryWindow = '2–3 days';
+          else if (tierName.toLowerCase().startsWith('express')) deliveryWindow = '1–2 days';
+          else if (tierName.toLowerCase().startsWith('overnight')) deliveryWindow = '1 day';
+          else if (rate.deliveryDays)
+            deliveryWindow = `${rate.deliveryDays} ${rate.deliveryDays === 1 ? 'day' : 'days'}`;
+
+          return (
+            <button
+              key={index}
+              type="button"
+              onClick={() =>
+                setSellerShipping((prev) => ({
+                  ...prev,
+                  [sellerId]: { ...(prev[sellerId] ?? EMPTY_SHIPPING), selected: rate },
+                }))
+              }
+              className={`w-full text-left rounded-xl border px-4 py-3 transition-all flex items-center justify-between gap-4 ${
+                isSelected
+                  ? 'border-accent-500 bg-accent-500/10'
+                  : 'border-dark-500 bg-dark-600 hover:border-dark-400 hover:bg-dark-500'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={`mt-1 h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                    isSelected ? 'border-accent-500' : 'border-gray-500'
+                  }`}
+                >
+                  {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-accent-500" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-white">{tierName}</span>
+                    {isRecommended && (
+                      <span className="rounded-full bg-accent-500/15 px-2 py-0.5 text-xs font-medium text-accent-300 border border-accent-500/40">
+                        Recommended
+                      </span>
+                    )}
+                  </div>
+                  {deliveryWindow && <p className="mt-0.5 text-sm text-gray-400">{deliveryWindow}</p>}
+                </div>
+              </div>
+              <p className="text-base font-semibold text-white">{formatCurrency(rate.price)}</p>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Shipping Address */}
+    <div className="space-y-6">
+      {/* Shipping Address (shared) */}
       <div className="bg-dark-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">
-          Shipping Address
-        </h3>
+        <h3 className="text-lg font-semibold text-white mb-4">Shipping Address</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Full Name
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
             <input
               type="text"
               value={shippingAddress.name}
-              onChange={(e) => setShippingAddress(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setShippingAddress((prev) => ({ ...prev, name: e.target.value }))}
               className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Street Address
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Street Address</label>
             <input
               type="text"
               value={shippingAddress.street}
-              onChange={(e) => setShippingAddress(prev => ({ ...prev, street: e.target.value }))}
+              onChange={(e) => setShippingAddress((prev) => ({ ...prev, street: e.target.value }))}
               className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              City
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">City</label>
             <input
               type="text"
               value={shippingAddress.city}
-              onChange={(e) => setShippingAddress(prev => ({ ...prev, city: e.target.value }))}
+              onChange={(e) => setShippingAddress((prev) => ({ ...prev, city: e.target.value }))}
               className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              State
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">State</label>
             <input
               type="text"
               value={shippingAddress.state}
-              onChange={(e) => setShippingAddress(prev => ({ ...prev, state: e.target.value }))}
+              onChange={(e) => setShippingAddress((prev) => ({ ...prev, state: e.target.value }))}
               className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              ZIP Code
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">ZIP Code</label>
             <input
               type="text"
               value={shippingAddress.zip}
-              onChange={(e) => setShippingAddress(prev => ({
-                ...prev,
-                zip: e.target.value.replace(/[^\d\s-]/g, ''),
-              }))}
+              onChange={(e) =>
+                setShippingAddress((prev) => ({ ...prev, zip: e.target.value.replace(/[^\d\s-]/g, '') }))
+              }
               className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Country
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Country</label>
             <select
               value={shippingAddress.country}
-              onChange={(e) => setShippingAddress(prev => ({ ...prev, country: e.target.value }))}
+              onChange={(e) => setShippingAddress((prev) => ({ ...prev, country: e.target.value }))}
               className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
             >
               <option value="US">United States</option>
@@ -369,163 +432,103 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
         </div>
       </div>
 
-      {/* Shipping Options */}
-      {shippingAddress.zip && shippingAddress.zip.length >= 5 && (
-        <div className="bg-dark-700 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Truck className="w-5 h-5 mr-2 text-accent-500" />
-            Shipping Options
-          </h3>
-          
-          {loadingRates ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-accent-500 mr-2" />
-              <span className="text-gray-300">Loading shipping rates...</span>
-            </div>
-          ) : ratesError ? (
-            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
-              <p className="text-red-400 text-sm">{ratesError}</p>
-            </div>
-          ) : shippingRates.length > 0 ? (
-            <div className="space-y-3">
-              {shippingRates.map((rate, index) => {
-                const tierName = rate.serviceName;
-                const isSelected = selectedShipping?.rate === rate;
-                const isRecommended = tierName.toLowerCase().startsWith('standard');
-
-                let deliveryWindow = '';
-                if (tierName.toLowerCase().startsWith('economy')) {
-                  deliveryWindow = '3–5 days';
-                } else if (tierName.toLowerCase().startsWith('standard')) {
-                  deliveryWindow = '2–3 days';
-                } else if (tierName.toLowerCase().startsWith('express')) {
-                  deliveryWindow = '1–2 days';
-                } else if (tierName.toLowerCase().startsWith('overnight')) {
-                  deliveryWindow = '1 day';
-                } else if (rate.deliveryDays) {
-                  deliveryWindow = `${rate.deliveryDays} ${
-                    rate.deliveryDays === 1 ? 'day' : 'days'
-                  }`;
-                }
-
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => {
-                      if (shipmentId) {
-                        setSelectedShipping({
-                          rate,
-                          shipmentId,
-                          rateId: rate.id || '',
-                        });
-                      }
-                    }}
-                    className={`w-full text-left rounded-xl border px-4 py-4 md:px-5 md:py-5 transition-all flex items-center justify-between gap-4 ${
-                      isSelected
-                        ? 'border-accent-500 bg-accent-500/10 shadow-lg shadow-accent-500/20'
-                        : 'border-dark-500 bg-dark-600 hover:border-dark-400 hover:bg-dark-500'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`mt-1 h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                          isSelected ? 'border-accent-500' : 'border-gray-500'
-                        }`}
-                      >
-                        {isSelected && (
-                          <div className="h-2.5 w-2.5 rounded-full bg-accent-500" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white">{tierName}</span>
-                          {isRecommended && (
-                            <span className="rounded-full bg-accent-500/15 px-2 py-0.5 text-xs font-medium text-accent-300 border border-accent-500/40">
-                              Recommended
-                            </span>
-                          )}
-                        </div>
-                        {deliveryWindow && (
-                          <p className="mt-1 text-sm text-gray-400">{deliveryWindow}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-base md:text-lg font-semibold text-white">
-                        {formatCurrency(rate.price)}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm">No shipping rates available for this address.</p>
-          )}
+      {multiSeller && (
+        <div className="flex items-start gap-3 bg-accent-500/10 border border-accent-500/40 rounded-lg p-4">
+          <Store className="w-5 h-5 text-accent-300 shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-300 leading-relaxed">
+            Your bag has {sellerGroups.length} sellers. Each is a separate order with its own shipping
+            and is paid for separately. Check out each seller below.
+          </p>
         </div>
       )}
 
-      {/* Payment via Stripe Checkout */}
-      <div className="bg-dark-700 rounded-lg p-6">
-        <p className="text-gray-300 text-sm">
-          You will complete payment securely on Stripe Checkout.
-        </p>
-      </div>
+      {/* Per-seller groups */}
+      {sellerGroups.map((group, index) => {
+        const totals = computeSellerTotals(group);
+        const ship = sellerShipping[group.sellerId];
+        const isPaying = payingSellerId === group.sellerId;
+        const canPay = addressComplete && !!ship?.selected && !payingSellerId;
 
-      {/* Order Summary */}
-      <div className="bg-dark-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <ShoppingBag className="w-5 h-5 mr-2 text-accent-500" />
-          Order Summary
-        </h3>
-        <div className="space-y-2">
-          <div className="flex justify-between text-gray-300">
-            <span>Subtotal</span>
-            <span>{formatCurrency(totals.subtotal)}</span>
-          </div>
-          {totals.shipping > 0 && (
-            <div className="flex justify-between text-gray-300">
-              <span>Shipping</span>
-              <span>{formatCurrency(totals.shipping)}</span>
+        return (
+          <div key={group.sellerId} className="bg-dark-700 rounded-lg p-6 space-y-5">
+            {/* Seller header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <Store className="w-5 h-5 text-accent-500 shrink-0" />
+                <span className="font-semibold text-white truncate">{group.sellerName}</span>
+              </div>
+              {multiSeller && (
+                <span className="text-xs text-gray-500">
+                  Order {index + 1} of {sellerGroups.length}
+                </span>
+              )}
             </div>
-          )}
-          <div className="flex justify-between text-gray-300">
-            <span>Tax</span>
-            <span>{formatCurrency(totals.tax)}</span>
-          </div>
-          <div className="flex justify-between text-gray-300">
-            <span>Processing Fee</span>
-            <span>{formatCurrency(totals.fees)}</span>
-          </div>
-          <div className="border-t border-dark-500 pt-2">
-            <div className="flex justify-between text-white font-semibold text-lg">
-              <span>Total</span>
-              <span>{formatCurrency(totals.total)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Submit Button */}
-      <button
-        type="submit"
-        disabled={loading || loadingRates || cartItems.length === 0 || (!!shippingAddress.zip && shippingAddress.zip.length >= 5 && !selectedShipping)}
-        className="w-full bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Redirecting to Checkout...
-          </>
-        ) : (
-          <>
-            <CreditCard className="w-5 h-5 mr-2" />
-            Proceed to Stripe Checkout — {formatCurrency(totals.total)}
-          </>
-        )}
-      </button>
-    </form>
+            {/* Shipping */}
+            <div>
+              <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+                <Truck className="w-4 h-4 mr-2 text-accent-500" />
+                Shipping
+              </h4>
+              {renderShippingOptions(group.sellerId)}
+            </div>
+
+            {/* Summary */}
+            <div className="border-t border-dark-500 pt-4 space-y-2">
+              <div className="flex justify-between text-gray-300 text-sm">
+                <span>Subtotal ({group.items.length} {group.items.length === 1 ? 'item' : 'items'})</span>
+                <span>{formatCurrency(totals.subtotal)}</span>
+              </div>
+              {totals.shipping > 0 && (
+                <div className="flex justify-between text-gray-300 text-sm">
+                  <span>Shipping</span>
+                  <span>{formatCurrency(totals.shipping)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-gray-300 text-sm">
+                <span>Tax</span>
+                <span>{formatCurrency(totals.tax)}</span>
+              </div>
+              <div className="flex justify-between text-gray-300 text-sm">
+                <span>Processing Fee</span>
+                <span>{formatCurrency(totals.fees)}</span>
+              </div>
+              <div className="flex justify-between text-white font-semibold text-base pt-1">
+                <span>Total</span>
+                <span>{formatCurrency(totals.total)}</span>
+              </div>
+            </div>
+
+            {/* Per-seller checkout button */}
+            <button
+              type="button"
+              onClick={() => handleSellerCheckout(group.sellerId)}
+              disabled={!canPay}
+              className="w-full bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+            >
+              {isPaying ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Redirecting to Checkout…
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-5 h-5 mr-2" />
+                  {multiSeller
+                    ? `Pay ${group.sellerName} — ${formatCurrency(totals.total)}`
+                    : `Proceed to Stripe Checkout — ${formatCurrency(totals.total)}`}
+                </>
+              )}
+            </button>
+          </div>
+        );
+      })}
+
+      <p className="text-gray-500 text-xs text-center flex items-center justify-center gap-1.5">
+        <ShoppingBag className="w-3.5 h-3.5" />
+        Secure checkout · Powered by Stripe
+      </p>
+    </div>
   );
 };
 
@@ -538,11 +541,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBack }) => {
   const router = useRouter();
   const [status, setStatus] = useState<'checkout' | 'success' | 'error'>('checkout');
   const [message, setMessage] = useState('');
-
-  const handleSuccess = (orderId: string) => {
-    setStatus('success');
-    setMessage(`Order #${orderId} confirmed! You will receive an email confirmation shortly.`);
-  };
 
   const handleError = (error: string) => {
     setStatus('error');
@@ -606,12 +604,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBack }) => {
         <h1 className="text-2xl font-bold text-white">Checkout</h1>
       </div>
 
-      <Elements stripe={stripePromise}>
-        <CheckoutForm
-          cartItems={cartItems}
-          onError={handleError}
-        />
-      </Elements>
+      <CheckoutForm cartItems={cartItems} onError={handleError} />
     </div>
   );
 };

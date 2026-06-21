@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   RefreshControl,
   TouchableOpacity,
-  TextInput,
   Dimensions,
-  Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { apiClient } from '../../lib/api/client';
 import { getCache, setCache } from '../../lib/cache';
@@ -41,102 +40,88 @@ interface Listing {
   sellerId?: string;
   sold?: boolean;
   inventory?: number;
+  sellerProfile?: { username?: string; profilePicture?: string } | null;
 }
+
+const PAGE_SIZE = 20;
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [imageSearchOpen, setImageSearchOpen] = useState(false);
   const favoritesCount = useFavoritesCount();
+  const pageRef = useRef(1);
+
+  // Load a page of listings. mode: 'initial' (show skeletons), 'refresh'
+  // (pull-to-refresh), 'more' (append next page), 'silent' (background refresh).
+  const fetchPage = useCallback(async (pageNum: number, mode: 'initial' | 'refresh' | 'more' | 'silent') => {
+    try {
+      if (mode === 'initial') { setLoading(true); setError(false); }
+      if (mode === 'more') setLoadingMore(true);
+
+      const response = await apiClient.get(`/api/listings?page=${pageNum}&limit=${PAGE_SIZE}&sort=newest`);
+      const data = await response.json();
+      const items: Listing[] = Array.isArray(data?.data) ? data.data : [];
+
+      if (response.ok) {
+        setHasMore(!!data?.pagination?.hasMore);
+        pageRef.current = pageNum;
+        setListings((prev) => (mode === 'more' ? [...prev, ...items] : items));
+        if (mode !== 'more') setCache('home_listings', items);
+        setError(false);
+      } else if (mode !== 'more' && mode !== 'silent') {
+        setError(true);
+      }
+    } catch (err) {
+      console.error('Error fetching home listings:', err);
+      if (mode !== 'more' && mode !== 'silent') setError(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchListings();
-  }, []);
-
-  // On focus: show cache instantly, refresh silently in background if stale
-  useFocusEffect(
-    useCallback(() => {
-      const cached = getCache<Listing[]>('home_listings', 60_000);
-      if (cached) {
-        setListings(cached);
-        setLoading(false);
-        // Background refresh without showing spinner
-        fetchListings(true);
-      } else {
-        fetchListings(false);
-      }
-    }, [])
-  );
-
-  const fetchListings = async (silent = false) => {
-    try {
-      if (!silent) {
-        setLoading(true);
-        setError(null);
-      }
-      const response = await apiClient.get('/api/listings?limit=4');
-      const data = await response.json();
-
-      if (response.ok && data.data && Array.isArray(data.data)) {
-        setListings(data.data);
-        setCache('home_listings', data.data);
-        setError(null);
-      } else if (response.ok && Array.isArray(data.data?.items)) {
-        setListings(data.data.items);
-        setCache('home_listings', data.data.items);
-        setError(null);
-      } else if (!silent) {
-        setError(`No listings found. Status: ${response.status}`);
-      }
-    } catch (err: any) {
-      if (!silent) setError(`Error: ${err?.message || err}`);
-    } finally {
-      if (!silent) setLoading(false);
+    const cached = getCache<Listing[]>('home_listings', 60_000);
+    if (cached && cached.length > 0) {
+      setListings(cached);
+      setLoading(false);
+      fetchPage(1, 'silent');
+    } else {
+      fetchPage(1, 'initial');
     }
-  };
+  }, [fetchPage]);
 
-  const onRefresh = React.useCallback(async () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    await fetchListings();
-    setRefreshing(false);
-  }, []);
+    fetchPage(1, 'refresh');
+  }, [fetchPage]);
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      router.push(`/(tabs)/search?q=${encodeURIComponent(searchQuery)}`);
-    }
-  };
+  const loadMore = useCallback(() => {
+    if (loading || loadingMore || refreshing || !hasMore) return;
+    fetchPage(pageRef.current + 1, 'more');
+  }, [loading, loadingMore, refreshing, hasMore, fetchPage]);
+
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.brand.DEFAULT}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header - Now part of scrollable content */}
+      {/* Pinned header: brand + search */}
+      <View style={styles.pinnedHeader}>
         <View style={styles.scrollableHeader}>
           <View style={styles.headerContent}>
-            <Image 
-              source={logoSource} 
-              style={styles.headerLogo}
-              contentFit="contain"
-            />
-            <Text style={styles.headerTitle}>ALL VERSE GPT</Text>
+            <Image source={logoSource} style={styles.headerLogo} contentFit="contain" />
+            <Text style={styles.headerTitle}>ALL VERSE</Text>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity
               style={styles.headerIconButton}
-              onPress={() => router.push('/(tabs)/favorites')}
+              onPress={() => router.push('/favorites' as any)}
+              accessibilityLabel="Favorites"
             >
               <Ionicons name="heart-outline" size={24} color={colors.text.primary} />
               {favoritesCount > 0 && (
@@ -149,261 +134,119 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconButton}
-              onPress={() => router.push('/(tabs)/cart')}
+              onPress={() => router.push('/cart' as any)}
+              accessibilityLabel="Cart"
             >
               <Ionicons name="cart-outline" size={24} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <View style={styles.badge}>
-            <Ionicons name="sparkles" size={16} color={colors.brand.DEFAULT} />
-            <Text style={styles.badgeText}>Universal AI Shopping Search</Text>
-          </View>
-          
-          <Text style={styles.heroTitle}>Find Anything,{'\n'}Anywhere</Text>
-          <Text style={styles.heroSubtitle}>
-            One search. Every marketplace. AI-powered insights that help you buy smarter.
-          </Text>
-
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <View style={styles.searchBar}>
+        <View style={styles.searchBarPinned}>
+          <View style={styles.searchBar}>
+            <TouchableOpacity
+              style={styles.searchPillMain}
+              onPress={() => router.push('/(tabs)/search' as any)}
+              activeOpacity={0.7}
+              accessibilityRole="search"
+              accessibilityLabel="Search AllVerse and the web"
+            >
               <Ionicons name="search" size={20} color={colors.text.tertiary} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search for electronics, fashion, home goods..."
-                placeholderTextColor={colors.text.muted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-              />
-              <TouchableOpacity
-                onPress={() => setImageSearchOpen(true)}
-                style={styles.cameraButton}
-                accessibilityLabel="Search with image"
-              >
-                <Ionicons name="camera-outline" size={20} color={colors.text.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSearch}
-                style={[styles.searchButton, !searchQuery.trim() && styles.searchButtonDisabled]}
-                disabled={!searchQuery.trim()}
-              >
-                <Ionicons name="search" size={18} color={colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Popular Searches */}
-            <View style={styles.popularSearches}>
-              <Text style={styles.popularLabel}>Popular:</Text>
-              {POPULAR_SEARCHES.map((term) => (
-                <TouchableOpacity
-                  key={term}
-                  style={styles.popularTag}
-                  onPress={() => {
-                    setSearchQuery(term);
-                    router.push(`/(tabs)/search?q=${encodeURIComponent(term)}`);
-                  }}
-                >
-                  <Text style={styles.popularTagText}>{term}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Featured Listings */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Featured Listings</Text>
-              <Text style={styles.sectionSubtitle}>AI-recommended items for you</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.viewAllButton}
-              onPress={() => router.push('/(tabs)/search')}
+              <Text style={styles.searchPillText}>Search AllVerse &amp; the web</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setImageSearchOpen(true)}
+              style={styles.cameraButton}
+              accessibilityLabel="Search with image"
             >
-              <Text style={styles.viewAllText}>View All</Text>
-              <Ionicons name="arrow-forward" size={16} color={colors.brand.DEFAULT} />
+              <Ionicons name="camera-outline" size={20} color={colors.text.primary} />
             </TouchableOpacity>
           </View>
-          
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+        </View>
+      </View>
+
+      {/* Feed */}
+      {loading && listings.length === 0 ? (
+        <View style={styles.listContent}>
+          <View style={styles.listingsGrid}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={`skeleton-${i}`} />
+            ))}
+          </View>
+        </View>
+      ) : error && listings.length === 0 ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="cloud-offline-outline" size={40} color={colors.text.muted} />
+          <Text style={styles.errorTitle}>We couldn&apos;t load listings right now.</Text>
+          <Text style={styles.errorSubtext}>Check your connection and try again.</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => fetchPage(1, 'initial')}>
+            <Ionicons name="refresh" size={16} color={colors.text.primary} />
+            <Text style={styles.retryButtonText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={listings}
+          numColumns={2}
+          keyExtractor={(item) => item.id}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand.DEFAULT} />
+          }
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListHeaderComponent={
+            <View style={styles.feedHeader}>
+              <View style={styles.popularSearches}>
+                <Text style={styles.popularLabel}>Popular:</Text>
+                {POPULAR_SEARCHES.map((term) => (
+                  <TouchableOpacity
+                    key={term}
+                    style={styles.popularTag}
+                    onPress={() => router.push(`/(tabs)/search?q=${encodeURIComponent(term)}` as any)}
+                  >
+                    <Text style={styles.popularTagText}>{term}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.feedLabel}>Fresh listings</Text>
             </View>
-          )}
-          {loading ? (
-            <View style={styles.listingsGrid}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <SkeletonCard key={`skeleton-${i}`} />
-              ))}
-            </View>
-          ) : listings.length > 0 ? (
-            <View style={styles.listingsGrid}>
-              {listings.slice(0, 4).map((listing) => (
-                <ListingCard
-                  key={listing.id}
-                  id={listing.id}
-                  title={listing.title}
-                  description={listing.description}
-                  price={listing.price}
-                  category={listing.category}
-                  condition={listing.condition}
-                  imageUrl={listing.photos?.[0]}
-                  sellerId={listing.sellerId}
-                  sold={listing.sold}
-                  inventory={listing.inventory}
-                  variant="grid"
-                />
-              ))}
-            </View>
-          ) : !error && (
+          }
+          ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.placeholderText}>No listings available</Text>
-              <Text style={styles.emptyStateSubtext}>Pull down to refresh</Text>
+              <Ionicons name="storefront-outline" size={48} color={colors.text.muted} />
+              <Text style={styles.placeholderText}>No listings yet</Text>
+              <Text style={styles.emptyStateSubtext}>Pull down to refresh, or be the first to sell.</Text>
             </View>
+          }
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.loadMoreFooter}>
+                <ActivityIndicator color={colors.brand.DEFAULT} />
+              </View>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <ListingCard
+              id={item.id}
+              title={item.title}
+              description={item.description}
+              price={item.price}
+              category={item.category}
+              condition={item.condition}
+              imageUrl={item.photos?.[0]}
+              sellerId={item.sellerId}
+              sellerName={item.sellerProfile?.username}
+              sellerAvatar={item.sellerProfile?.profilePicture}
+              sold={item.sold}
+              inventory={item.inventory}
+              variant="grid"
+            />
           )}
-        </View>
-
-        {/* AI-Powered Features — centered to mirror apps/web hero */}
-        <View style={styles.section}>
-          <View style={styles.featuresHeader}>
-            <Text style={[styles.sectionTitle, styles.featuresTitle]}>AI-Powered Features</Text>
-            <Text style={[styles.sectionSubtitle, styles.featuresSubtitle]}>
-              Experience the future of marketplace interactions
-            </Text>
-          </View>
-
-          <View style={styles.featuresGrid}>
-            <TouchableOpacity 
-              style={styles.featureCard}
-              onPress={() => router.push('/(tabs)/messages')}
-            >
-              <View style={styles.featureIcon}>
-                <Ionicons name="chatbubbles" size={24} color={colors.text.primary} />
-              </View>
-              <Text style={styles.featureTitle}>Smart Chat</Text>
-              <Text style={styles.featureDescription}>AI-powered conversations with sellers</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.featureCard}
-              onPress={() => router.push('/(tabs)/search')}
-            >
-              <View style={styles.featureIcon}>
-                <Ionicons name="flash" size={24} color={colors.text.primary} />
-              </View>
-              <Text style={styles.featureTitle}>Smart Search</Text>
-              <Text style={styles.featureDescription}>AI-powered search and discovery</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.featureCard}
-              onPress={() => router.push('/(tabs)/sell' as any)}
-            >
-              <View style={styles.featureIcon}>
-                <Ionicons name="bulb" size={24} color={colors.text.primary} />
-              </View>
-              <Text style={styles.featureTitle}>AI Pricing</Text>
-              <Text style={styles.featureDescription}>AI-suggested fair prices</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.featureCard}
-              onPress={() => router.push('/(tabs)/search')}
-            >
-              <View style={styles.featureIcon}>
-                <Ionicons name="bag" size={24} color={colors.text.primary} />
-              </View>
-              <Text style={styles.featureTitle}>Smart Discovery</Text>
-              <Text style={styles.featureDescription}>Find exactly what you need</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* CTA Section */}
-        <View style={styles.ctaSection}>
-          <View style={styles.ctaCard}>
-            <View style={styles.ctaLogoContainer}>
-              <Image 
-                source={require('../../assets/icon.png')} 
-                style={styles.ctaLogo}
-                contentFit="contain"
-              />
-            </View>
-            <Text style={styles.ctaTitle}>Ready to Start Selling?</Text>
-            <Text style={styles.ctaSubtitle}>
-              Turn your items into earnings with AI-assisted listing and pricing.
-            </Text>
-            <TouchableOpacity
-              style={styles.ctaButton}
-              onPress={() => router.push('/(tabs)/sell')}
-            >
-              <Text style={styles.ctaButtonText}>Start Selling</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.text.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/*
-          Footer — mobile port of apps/web/src/app/page.tsx footer (lines
-          280-346). Web uses a 3-column grid; we stack vertically to respect
-          the narrow viewport. Contact email mirrors legal/contact.tsx.
-        */}
-        <View style={styles.footer}>
-          <View style={styles.footerDivider} />
-
-          {/* Contact */}
-          <View style={styles.footerSection}>
-            <Text style={styles.footerHeading}>CONTACT</Text>
-            <TouchableOpacity
-              style={styles.footerLinkRow}
-              onPress={() => Linking.openURL('mailto:info@allversegpt.com')}
-            >
-              <Ionicons name="mail-outline" size={16} color={colors.text.tertiary} />
-              <Text style={styles.footerLink}>info@allversegpt.com</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Quick Links */}
-          <View style={styles.footerSection}>
-            <Text style={styles.footerHeading}>QUICK LINKS</Text>
-            <TouchableOpacity onPress={() => router.push('/legal/about' as any)}>
-              <Text style={styles.footerLink}>About</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/legal/privacy' as any)}>
-              <Text style={styles.footerLink}>Privacy Policy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/legal/terms' as any)}>
-              <Text style={styles.footerLink}>Terms of Service</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Resources */}
-          <View style={styles.footerSection}>
-            <Text style={styles.footerHeading}>RESOURCES</Text>
-            <TouchableOpacity onPress={() => router.push('/legal/help' as any)}>
-              <Text style={styles.footerLink}>Help Center</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/legal/faq' as any)}>
-              <Text style={styles.footerLink}>FAQ</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/legal/contact' as any)}>
-              <Text style={styles.footerLink}>Contact</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footerDivider} />
-          <Text style={styles.footerCopyright}>
-            © {new Date().getFullYear()} All Verse GPT. All rights reserved.
-          </Text>
-        </View>
-      </ScrollView>
+        />
+      )}
 
       {/* Image search modal (camera / library) */}
       <ImageSearchModal
@@ -418,6 +261,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg.base,
+  },
+  pinnedHeader: {
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+    backgroundColor: colors.bg.base,
+  },
+  searchBarPinned: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xs,
+  },
+  searchPillMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  searchPillText: {
+    flex: 1,
+    fontSize: typography.size.base,
+    color: colors.text.muted,
+  },
+  listContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing['3xl'],
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+  },
+  feedHeader: {
+    marginBottom: spacing.xs,
+  },
+  feedLabel: {
+    fontSize: typography.size.lg,
+    fontWeight: typography.weight.bold,
+    color: colors.text.primary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  loadMoreFooter: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
   },
   scrollContent: {
     paddingBottom: spacing.md,
@@ -435,13 +321,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    flex: 1,
-    justifyContent: 'center',
   },
   headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm + 2,
   },
   headerIconButton: {
     width: 40,
@@ -470,6 +354,39 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: typography.weight.bold,
     lineHeight: 12,
+  },
+  aiAssistantCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md + 2,
+    borderRadius: radii.lg,
+    backgroundColor: colors.bg.surface,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  aiAssistantIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radii.md,
+    backgroundColor: colors.brand.DEFAULT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiAssistantTextWrap: {
+    flex: 1,
+  },
+  aiAssistantTitle: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    color: colors.text.primary,
+  },
+  aiAssistantSubtitle: {
+    fontSize: typography.size.sm,
+    color: colors.text.muted,
+    marginTop: 1,
   },
   headerLogo: {
     width: 28,
@@ -634,16 +551,36 @@ const styles = StyleSheet.create({
     color: colors.brand.DEFAULT,
   },
   errorContainer: {
-    padding: spacing.lg,
-    backgroundColor: colors.error.soft,
-    borderRadius: radii.lg,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.error.border,
+    paddingVertical: spacing['3xl'],
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.xs,
   },
-  errorText: {
-    color: colors.error.DEFAULT,
+  errorTitle: {
+    color: colors.text.primary,
     fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
+    marginTop: spacing.sm,
+  },
+  errorSubtext: {
+    color: colors.text.muted,
+    fontSize: typography.size.sm,
+    marginBottom: spacing.sm,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    backgroundColor: colors.brand.DEFAULT,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    marginTop: spacing.xs,
+  },
+  retryButtonText: {
+    color: colors.text.primary,
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.semibold,
   },
   listingsGrid: {
     flexDirection: 'row',

@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -91,7 +91,7 @@ export default function SignUpScreen() {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Join AllVerse GPT today</Text>
+              <Text style={styles.subtitle}>Join AllVerse today</Text>
             </View>
 
             {/* Form */}

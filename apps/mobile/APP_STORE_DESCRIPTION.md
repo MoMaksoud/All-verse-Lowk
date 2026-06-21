@@ -1,8 +1,8 @@
-# AllVerse GPT - App Store Description
+# AllVerse - App Store Description
 
 ## App Description (4,000 character limit)
 
-**AllVerse GPT** is the next-generation marketplace app powered by artificial intelligence, making buying and selling easier, smarter, and more intuitive than ever before.
+**AllVerse** is the next-generation marketplace app powered by artificial intelligence, making buying and selling easier, smarter, and more intuitive than ever before.
 
 ### 🤖 AI-Powered Features
 
@@ -80,13 +80,13 @@
 - Automotive
 - And more!
 
-Whether you're looking to declutter your home, find great deals, or start selling your items, AllVerse GPT makes it effortless with the power of AI. Download now and experience the future of online marketplaces!
+Whether you're looking to declutter your home, find great deals, or start selling your items, AllVerse makes it effortless with the power of AI. Download now and experience the future of online marketplaces!
 
 ---
 
 ## Short Description (170 character limit)
 
-AllVerse GPT: AI-powered marketplace app. Buy and sell with smart AI that analyzes photos, suggests prices, and helps you create perfect listings. Secure, fast, and intuitive.
+AllVerse: AI-powered marketplace app. Buy and sell with smart AI that analyzes photos, suggests prices, and helps you create perfect listings. Secure, fast, and intuitive.
 
 ---
 

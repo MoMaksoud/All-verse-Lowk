@@ -7,18 +7,25 @@ import { colors } from '../constants/theme';
 import { apiClient } from '../lib/api/client';
 
 export default function CheckoutSuccessScreen() {
-  const { session_id } = useLocalSearchParams<{ session_id: string }>();
+  const { session_id, order_ids } = useLocalSearchParams<{
+    session_id?: string;
+    order_ids?: string;
+  }>();
   const [verifying, setVerifying] = useState(true);
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderIds, setOrderIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (session_id) {
       verifyPayment();
+    } else if (order_ids) {
+      setOrderIds(order_ids.split(',').filter(Boolean));
+      setVerifying(false);
     } else {
+      setError('No verified payment was provided. Check Orders for the latest status.');
       setVerifying(false);
     }
-  }, [session_id]);
+  }, [session_id, order_ids]);
 
   const verifyPayment = async () => {
     try {
@@ -28,7 +35,9 @@ export default function CheckoutSuccessScreen() {
       );
       const data = await response.json();
       if (response.ok && data.success) {
-        setOrderId(data.orderId || data.data?.orderId || null);
+        const orderId = data.order?.orderId || data.orderId || data.data?.orderId;
+        if (orderId) setOrderIds([orderId]);
+        else setError('Payment was verified, but the order could not be found.');
       } else {
         setError(data.message || 'Could not verify payment');
       }
@@ -64,10 +73,14 @@ export default function CheckoutSuccessScreen() {
             <Text style={styles.subtitle}>
               Your payment went through. We'll notify you when your order ships.
             </Text>
-            {orderId && (
+            {orderIds.length > 0 && (
               <View style={styles.orderIdBadge}>
-                <Text style={styles.orderIdLabel}>ORDER</Text>
-                <Text style={styles.orderId}>#{orderId.slice(-8).toUpperCase()}</Text>
+                <Text style={styles.orderIdLabel}>
+                  {orderIds.length === 1 ? 'ORDER' : `${orderIds.length} ORDERS`}
+                </Text>
+                <Text style={styles.orderId}>
+                  {orderIds.map((id) => `#${id.slice(-8).toUpperCase()}`).join('  ')}
+                </Text>
               </View>
             )}
           </>
@@ -84,7 +97,7 @@ export default function CheckoutSuccessScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryButton}
-            onPress={() => router.replace('/(tabs)/profile' as any)}
+            onPress={() => router.replace('/orders' as any)}
           >
             <Text style={styles.secondaryButtonText}>View Orders</Text>
           </TouchableOpacity>

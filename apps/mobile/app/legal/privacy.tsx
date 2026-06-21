@@ -44,7 +44,7 @@ export default function PrivacyScreen() {
         <View style={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionText}>
-              All Verse GPT ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our marketplace platform and services.
+              All Verse ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our marketplace platform and services.
             </Text>
           </View>
 
@@ -139,7 +139,7 @@ export default function PrivacyScreen() {
             </Text>
             <View style={styles.contactBox}>
               <Text style={styles.contactText}>
-                <Text style={styles.contactLabel}>All Verse GPT</Text>{'\n'}
+                <Text style={styles.contactLabel}>All Verse</Text>{'\n'}
                 Email: <Text style={styles.link} onPress={handleEmailPress}>allversegpt@gmail.com</Text>{'\n'}
                 Website: <Text style={styles.link} onPress={handleWebsitePress}>www.allversegpt.com</Text>
               </Text>

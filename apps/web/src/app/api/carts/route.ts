@@ -38,12 +38,21 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
       return error(badRequest(parsed.error.errors[0]?.message ?? 'Invalid request'));
     }
 
+    // You can't buy your own listing.
+    if (parsed.data.sellerId === req.userId) {
+      return error(badRequest("You can't add your own listing to your cart"));
+    }
+
     // qty is always 1 — each listing is a unique single-unit item.
     const input: AddToCartInput = { listingId: parsed.data.listingId as string, sellerId: parsed.data.sellerId as string, priceAtAdd: parsed.data.priceAtAdd as number, qty: 1 };
-    await addToCartAdmin(req.userId, input);
+    const added = await addToCartAdmin(req.userId, input);
     const updatedCart = await getCartAdmin(req.userId);
 
-    return success(updatedCart, { status: 201 });
+    // `alreadyInCart` lets the client distinguish a real add from a no-op re-add.
+    return success(
+      { ...(updatedCart ?? { items: [] }), alreadyInCart: !added },
+      { status: added ? 201 : 200 }
+    );
   } catch (err) {
     console.error('Error adding to cart:', err);
     return error(badRequest("Failed to add item to cart"));

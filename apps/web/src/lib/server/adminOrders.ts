@@ -36,8 +36,12 @@ export async function createOrderAdmin(orderData: CreateOrderInput): Promise<str
  *   1. Re-verifies every listing is still active and has enough inventory
  *   2. Creates the order document (status: 'paid' — no zombie 'pending' orders)
  *   3. Decrements inventory for each line item
- *   4. Clears the buyer's cart
+ *   4. Removes only this order's items from the buyer's cart
  *   5. Marks the snapshot as processed
+ *
+ * Cart clearing is per-item, not a full wipe: Depop-style checkout pays each
+ * seller separately, so paying one seller must leave the other sellers' items
+ * in the cart for their own payment.
  *
  * Throws if any listing is unavailable — the transaction rolls back cleanly.
  */
@@ -52,16 +56,24 @@ export async function createOrderFromSnapshotAdmin(
     const listingRefs = snapshot.items.map((item) =>
       db.collection(COLLECTIONS.LISTINGS).doc(item.listingId)
     );
+    const cartRef = db.collection(COLLECTIONS.CARTS).doc(snapshot.buyerId);
+    // All transaction reads must precede writes.
     const listingDocs = await Promise.all(listingRefs.map((ref) => tx.get(ref)));
+    const cartDoc = await tx.get(cartRef);
 
     for (let i = 0; i < snapshot.items.length; i++) {
       const item = snapshot.items[i];
       const doc = listingDocs[i];
       const data = doc.data();
-      if (!doc.exists || !data?.isActive) {
+      // Match the app's availability rules: isActive defaults to active unless
+      // explicitly false, inventory is 1 unit when unset, sold flag respected.
+      const active = data?.isActive !== false;
+      const sold = (data?.sold ?? false) === true;
+      const availableQty = typeof data?.inventory === 'number' ? data.inventory : 1;
+      if (!doc.exists || !active || sold) {
         throw new Error(`"${item.title}" is no longer available`);
       }
-      if ((data.inventory ?? 0) < item.qty) {
+      if (availableQty < item.qty) {
         throw new Error(`"${item.title}" has insufficient stock`);
       }
     }
@@ -94,16 +106,30 @@ export async function createOrderFromSnapshotAdmin(
     });
 
     // --- 3. Decrement inventory ---
+    // Compute explicitly (legacy docs may have undefined inventory → treat as 1)
+    // so stock never goes negative, and flip isActive/sold when it hits zero.
     for (let i = 0; i < snapshot.items.length; i++) {
+      const data = listingDocs[i].data();
+      const currentQty = typeof data?.inventory === 'number' ? data.inventory : 1;
+      const newQty = Math.max(0, currentQty - snapshot.items[i].qty);
       tx.update(listingRefs[i], {
-        inventory: FieldValue.increment(-snapshot.items[i].qty),
+        inventory: newQty,
+        isActive: newQty > 0,
+        sold: newQty <= 0,
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
 
-    // --- 4. Clear buyer cart ---
-    const cartRef = db.collection(COLLECTIONS.CARTS).doc(snapshot.buyerId);
-    tx.set(cartRef, { items: [], updatedAt: FieldValue.serverTimestamp() });
+    // --- 4. Remove only this order's items from the buyer cart ---
+    // (Other sellers' items stay so they can be paid for separately.)
+    const orderedListingIds = new Set(snapshot.items.map((i) => i.listingId));
+    const existingCartItems: Array<{ listingId: string }> = Array.isArray(cartDoc.data()?.items)
+      ? (cartDoc.data()!.items as Array<{ listingId: string }>)
+      : [];
+    const remainingCartItems = existingCartItems.filter(
+      (item) => !orderedListingIds.has(item.listingId)
+    );
+    tx.set(cartRef, { items: remainingCartItems, updatedAt: FieldValue.serverTimestamp() });
 
     // --- 5. Mark snapshot processed ---
     const snapshotRef = db.collection(COLLECTIONS.CHECKOUT_SNAPSHOTS).doc(snapshot.sessionId);

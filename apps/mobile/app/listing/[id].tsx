@@ -7,7 +7,6 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
-  Alert,
   ActivityIndicator,
   Share,
   Modal,
@@ -15,6 +14,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
+import { formatPrice } from '../../lib/format';
 import { colors, palette } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -144,7 +145,19 @@ export default function ListingDetailScreen() {
       }, true);
 
       if (response.ok) {
-        Alert.alert('Success', 'Item added to cart!');
+        const result = await response.json().catch(() => ({}));
+        const alreadyInCart = result?.data?.alreadyInCart ?? result?.alreadyInCart ?? false;
+        if (alreadyInCart) {
+          Alert.alert('Already in your cart', 'This item is already waiting in your cart.', [
+            { text: 'Keep browsing', style: 'cancel' },
+            { text: 'Checkout', onPress: () => router.push('/checkout' as any) },
+          ]);
+        } else {
+          Alert.alert('Added to cart', 'Nice pick — it’s in your cart.', [
+            { text: 'Keep browsing', style: 'cancel' },
+            { text: 'Checkout', onPress: () => router.push('/checkout' as any) },
+          ]);
+        }
       } else {
         const error = await response.json();
         Alert.alert('Error', error.message || 'Failed to add to cart');
@@ -279,6 +292,60 @@ export default function ListingDetailScreen() {
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Listing',
+      'This will permanently remove your listing. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await apiClient.delete(`/api/listings/${id}`, true);
+              if (response.ok) {
+                Alert.alert('Deleted', 'Your listing has been removed.', [
+                  { text: 'OK', onPress: () => router.back() },
+                ]);
+              } else {
+                const err = await response.json().catch(() => ({}));
+                Alert.alert('Error', err.message || 'Failed to delete listing');
+              }
+            } catch {
+              Alert.alert('Error', 'Failed to delete listing');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMarkAsSold = () => {
+    Alert.alert(
+      'Mark as Sold',
+      'This will mark the listing as sold and hide it from the marketplace.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark as Sold',
+          onPress: async () => {
+            try {
+              const response = await apiClient.put(`/api/listings/${id}`, { sold: true }, true);
+              if (response.ok) {
+                setListing(prev => prev ? { ...prev, sold: true } : prev);
+              } else {
+                Alert.alert('Error', 'Failed to mark as sold');
+              }
+            } catch {
+              Alert.alert('Error', 'Failed to mark as sold');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleFavorite = async () => {
     if (!currentUser) {
       Alert.alert('Sign In Required', 'Please sign in to favorite items');
@@ -313,10 +380,12 @@ export default function ListingDetailScreen() {
     );
   }
 
-  const normalizeImageUrl = (url?: string): string => {
-    if (!url) return 'https://via.placeholder.com/400';
-    if (url.startsWith('http')) return url;
-    return 'https://via.placeholder.com/400';
+  const isOwnListing = !!(currentUser && listing.sellerId && currentUser.uid === listing.sellerId);
+  const isSold = (listing.sold ?? false) || listing.inventory === 0;
+
+  const normalizeImageUrl = (url?: string | null): string | null => {
+    if (url && url.startsWith('http')) return url;
+    return null;
   };
 
   return (
@@ -326,13 +395,15 @@ export default function ListingDetailScreen() {
         <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
           <Ionicons name="share-outline" size={22} color={colors.text.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.favoriteButton} onPress={handleFavorite}>
-          <Ionicons
-            name={isFavorited ? 'heart' : 'heart-outline'}
-            size={24}
-            color={isFavorited ? colors.error.DEFAULT : colors.text.primary}
-          />
-        </TouchableOpacity>
+        {!isOwnListing && (
+          <TouchableOpacity style={styles.favoriteButton} onPress={handleFavorite}>
+            <Ionicons
+              name={isFavorited ? 'heart' : 'heart-outline'}
+              size={24}
+              color={isFavorited ? colors.error.DEFAULT : colors.text.primary}
+            />
+          </TouchableOpacity>
+        )}
 
         {/* Image Gallery */}
         <View style={styles.imageContainer}>
@@ -349,23 +420,32 @@ export default function ListingDetailScreen() {
               scrollEventThrottle={16}
             >
               {(listing.photos && listing.photos.length > 0 ? listing.photos : [null]).map(
-                (photo, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    activeOpacity={0.95}
-                    onPress={() => {
-                      if (listing.photos && listing.photos.length > 0) {
-                        setViewerVisible(true);
-                      }
-                    }}
-                  >
-                    <Image
-                      source={{ uri: normalizeImageUrl(photo) }}
-                      style={styles.image}
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                )
+                (photo, index) => {
+                  const validUrl = normalizeImageUrl(photo);
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      activeOpacity={0.95}
+                      onPress={() => {
+                        if (listing.photos && listing.photos.length > 0) {
+                          setViewerVisible(true);
+                        }
+                      }}
+                    >
+                      {validUrl ? (
+                        <Image
+                          source={{ uri: validUrl }}
+                          style={styles.image}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.image, styles.imagePlaceholderDetail]}>
+                          <Ionicons name="image-outline" size={48} color={colors.text.muted} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                }
               )}
             </ScrollView>
             
@@ -425,7 +505,7 @@ export default function ListingDetailScreen() {
           <View style={styles.priceRow}>
             <View>
               <Text style={styles.priceLabel}>Price</Text>
-              <Text style={styles.price}>${listing.price.toLocaleString()}</Text>
+              <Text style={styles.price}>{formatPrice(listing.price)}</Text>
             </View>
             {((listing.sold ?? false) || listing.inventory === 0) && (
               <View style={styles.soldBadge}>
@@ -451,6 +531,22 @@ export default function ListingDetailScreen() {
             )}
           </View>
 
+          {/* Shipping + buyer protection */}
+          {!isOwnListing && !isSold && (
+            <View style={styles.trustBox}>
+              <View style={styles.trustRow}>
+                <Ionicons name="cube-outline" size={18} color={colors.text.secondary} />
+                <Text style={styles.trustText}>Shipping calculated at checkout</Text>
+              </View>
+              <View style={styles.trustRow}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={colors.success.DEFAULT} />
+                <Text style={styles.trustText}>
+                  Buyer protection — pay securely with Stripe
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Description */}
           <View style={styles.descriptionSection}>
             <Text style={styles.sectionTitle}>Description</Text>
@@ -474,9 +570,11 @@ export default function ListingDetailScreen() {
                   <Text style={styles.sellerName}>
                     {seller.username || 'Marketplace User'}
                   </Text>
-                  <Text style={styles.sellerMeta}>
-                    Member since {new Date(seller.createdAt || Date.now()).getFullYear()}
-                  </Text>
+                  {!!seller.createdAt && (
+                    <Text style={styles.sellerMeta}>
+                      Member since {new Date(seller.createdAt).getFullYear()}
+                    </Text>
+                  )}
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.text.primary} />
               </TouchableOpacity>
@@ -486,9 +584,40 @@ export default function ListingDetailScreen() {
       </ScrollView>
 
       {/* Action Buttons */}
-      {!listing.sold && (
+      {isOwnListing ? (
         <View style={styles.actionBar}>
-          {/* Top row: Make an Offer (prominent) */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.button, styles.editButton]}
+              onPress={() => router.push(`/listing/edit/${id}` as any)}
+            >
+              <Ionicons name="create-outline" size={20} color={colors.text.primary} />
+              <Text style={styles.buttonText}>Edit Listing</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.deleteButton]}
+              onPress={handleDelete}
+            >
+              <Ionicons name="trash-outline" size={20} color={colors.error.DEFAULT} />
+              <Text style={[styles.buttonText, styles.deleteButtonText]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+          {!isSold && (
+            <TouchableOpacity style={styles.markSoldButton} onPress={handleMarkAsSold}>
+              <Ionicons name="checkmark-circle-outline" size={18} color={colors.text.muted} />
+              <Text style={styles.markSoldText}>Mark as Sold</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : isSold ? (
+        <View style={styles.actionBar}>
+          <View style={styles.soldButton}>
+            <Ionicons name="close-circle" size={22} color={colors.error.DEFAULT} />
+            <Text style={styles.soldButtonText}>Item Sold</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.actionBar}>
           <TouchableOpacity
             style={styles.offerButton}
             onPress={() => setOfferModalVisible(true)}
@@ -496,7 +625,6 @@ export default function ListingDetailScreen() {
             <Ionicons name="pricetag-outline" size={20} color={colors.brand.DEFAULT} />
             <Text style={styles.offerButtonText}>Make an Offer</Text>
           </TouchableOpacity>
-          {/* Bottom row: Message + Cart */}
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.button, styles.contactButton]}
@@ -525,19 +653,11 @@ export default function ListingDetailScreen() {
           </View>
         </View>
       )}
-      {((listing.sold ?? false) || listing.inventory === 0) && (
-        <View style={styles.actionBar}>
-          <View style={styles.soldButton}>
-            <Ionicons name="close-circle" size={22} color={colors.error.DEFAULT} />
-            <Text style={styles.soldButtonText}>Item Sold</Text>
-          </View>
-        </View>
-      )}
 
       {/* Full-screen image viewer */}
       {listing.photos && listing.photos.length > 0 && (
         <ImageViewerModal
-          images={listing.photos.map(normalizeImageUrl)}
+          images={listing.photos.map(normalizeImageUrl).filter((u): u is string => !!u)}
           initialIndex={currentImageIndex}
           visible={viewerVisible}
           onClose={() => setViewerVisible(false)}
@@ -617,8 +737,8 @@ const styles = StyleSheet.create({
   },
   shareButton: {
     position: 'absolute',
-    top: 40,
-    right: 76,
+    top: 18,
+    right: 20,
     zIndex: 100,
     backgroundColor: colors.bg.overlay,
     borderRadius: 24,
@@ -629,8 +749,8 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     position: 'absolute',
-    top: 40,
-    right: 20,
+    top: 18,
+    right: 76,
     zIndex: 100,
     backgroundColor: colors.bg.overlay,
     borderRadius: 24,
@@ -654,6 +774,10 @@ const styles = StyleSheet.create({
     width: width - 40,
     height: (width - 40) * 0.85,
     backgroundColor: colors.bg.raised,
+  },
+  imagePlaceholderDetail: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   navArrow: {
     position: 'absolute',
@@ -764,6 +888,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.bg.glass,
   },
+  trustBox: {
+    marginBottom: 24,
+    backgroundColor: colors.bg.surface,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.bg.glass,
+    gap: 10,
+  },
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  trustText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -853,6 +997,29 @@ const styles = StyleSheet.create({
   },
   cartButton: {
     backgroundColor: colors.brand.DEFAULT,
+  },
+  editButton: {
+    backgroundColor: palette.gray[700],
+  },
+  deleteButton: {
+    backgroundColor: colors.error.soft,
+    borderWidth: 1,
+    borderColor: colors.error.border,
+  },
+  deleteButtonText: {
+    color: colors.error.DEFAULT,
+  },
+  markSoldButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 8,
+  },
+  markSoldText: {
+    fontSize: 14,
+    color: colors.text.muted,
+    fontWeight: '500',
   },
   buttonText: {
     fontSize: 15,
@@ -970,4 +1137,3 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
   },
 });
-

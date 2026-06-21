@@ -6,13 +6,14 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
+import { Alert } from '../lib/ui/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/theme';
 import { apiClient } from '../lib/api/client';
+import { formatPrice } from '../lib/format';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 interface OrderItem {
@@ -78,7 +79,7 @@ function OrderCard({ order }: { order: Order }) {
             <Text style={styles.extraItems}>+{extraCount} more item{extraCount > 1 ? 's' : ''}</Text>
           )}
         </View>
-        <Text style={styles.total}>${(order.total / 100).toFixed(2)}</Text>
+        <Text style={styles.total}>{formatPrice(order.total)}</Text>
       </View>
 
       {order.trackingNumber ? (

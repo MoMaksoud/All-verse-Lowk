@@ -22,18 +22,34 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
 
   try {
     const body = await req.json();
-    const { shippingAddress, selectedShipping, platform } = body;
+    const { shippingAddress, selectedShipping, platform, sellerId } = body;
     const isMobile = platform === 'mobile';
 
     // Source of truth: server-side cart, not client payload.
     const userCart = await getCartAdmin(req.userId);
-    const cartItems = userCart?.items ?? [];
+    let cartItems = userCart?.items ?? [];
     if (cartItems.length === 0) {
       return fail({
         status: 400,
         code: 'EMPTY_CART',
         message: 'Your cart is empty. Add items before checkout.',
       });
+    }
+
+    // Depop-style separate payments: each Stripe session is scoped to a single
+    // seller. The client pays each seller in turn, and each payment produces its
+    // own order with its own shipping, tax, and fees. When sellerId is provided,
+    // narrow the cart to just that seller's items.
+    if (typeof sellerId === 'string' && sellerId.trim()) {
+      const scopedSellerId = sellerId.trim();
+      cartItems = cartItems.filter((item) => item.sellerId === scopedSellerId);
+      if (cartItems.length === 0) {
+        return fail({
+          status: 400,
+          code: 'SELLER_ITEMS_NOT_FOUND',
+          message: 'No items from this seller are in your cart.',
+        });
+      }
     }
 
     // Validate listings + lock pricing + get shipping quote.

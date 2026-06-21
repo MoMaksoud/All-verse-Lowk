@@ -335,7 +335,7 @@ export default function HomePage() {
           {/* Copyright */}
           <div className="mt-8 pt-8 border-t border-gray-800/50 text-center">
             <p className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} All Verse GPT. All rights reserved.
+              © {new Date().getFullYear()} All Verse. All rights reserved.
             </p>
           </div>
         </div>

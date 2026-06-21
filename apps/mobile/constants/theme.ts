@@ -1,5 +1,5 @@
 /**
- * AllVerse GPT — Mobile Design Tokens
+ * AllVerse — Mobile Design Tokens
  *
  * Single source of truth for colors, typography, spacing, radii, and shadows.
  * Mirrors `apps/web/tailwind.config.js` + `apps/web/src/app/globals.css` so

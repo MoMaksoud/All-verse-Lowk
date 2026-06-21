@@ -9,8 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Alert,
 } from 'react-native';
+import { Alert } from '../../lib/ui/alert';
 import { colors } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';

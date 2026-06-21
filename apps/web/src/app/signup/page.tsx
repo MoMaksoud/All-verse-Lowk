@@ -333,7 +333,6 @@ export default function SignUp() {
               </div>
             </div>
           </div>
-        </div>
       </div>
     );
   }
@@ -422,7 +421,6 @@ export default function SignUp() {
               </div>
             </div>
           </div>
-        </div>
       </div>
     );
   }
@@ -473,7 +471,6 @@ export default function SignUp() {
               </div>
             )}
           </div>
-        </div>
       </div>
     );
   }

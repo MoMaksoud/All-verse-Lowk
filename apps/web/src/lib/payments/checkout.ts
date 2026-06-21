@@ -215,7 +215,14 @@ export async function prepareTrustedCheckout(params: {
       throw new Error(`Listing ${cartItem.listingId} not found`);
     }
 
-    if (!listing.isActive || listing.inventory < cartItem.qty) {
+    // Availability check must match how the rest of the app reads a listing:
+    // isActive defaults to active unless explicitly false, inventory is treated
+    // as 1 unit when unset (legacy docs), and the `sold` flag is respected.
+    const listingActive = (listing as { isActive?: boolean }).isActive !== false;
+    const listingSold = ((listing as { sold?: boolean }).sold ?? false) === true;
+    const availableQty =
+      typeof listing.inventory === 'number' ? listing.inventory : 1;
+    if (!listingActive || listingSold || availableQty < cartItem.qty) {
       throw new Error(`Listing ${listing.title} is not available or has insufficient inventory`);
     }
 

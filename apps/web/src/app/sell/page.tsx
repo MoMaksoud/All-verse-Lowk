@@ -1566,7 +1566,7 @@ export default function SellPage() {
           {/* Desktop: Small Logo Badge */}
           <div className="hidden lg:inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300">
             <Logo size="sm" />
-            <span>ALL VERSE GPT</span>
+            <span>ALL VERSE</span>
           </div>
           
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-100 px-4">Sell Your Item</h1>

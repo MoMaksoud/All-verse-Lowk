@@ -20,7 +20,7 @@ export function Logo({ size = 'md', className = '' }: LogoProps) {
     <div className={`flex items-center gap-2 ${className}`}>
       <Image
         src="/logo.png"
-        alt="AllVerse GPT"
+        alt="AllVerse"
         width={img}
         height={img}
         unoptimized
@@ -31,7 +31,7 @@ export function Logo({ size = 'md', className = '' }: LogoProps) {
           className={`font-bold leading-tight text-white ${text}`}
           style={{ fontFamily: 'var(--font-display, var(--font-inter))' }}
         >
-          AllVerse GPT
+          AllVerse
         </span>
       )}
     </div>

@@ -53,15 +53,14 @@ export async function GET(req: NextRequest) {
     }
 
     // When filtering by sellerId (profile page), show all listings including inactive ones
+    // Price range is intentionally excluded from the Firestore query: mixing a price inequality
+    // with orderBy('createdAt') requires a composite index that may not exist for both directions.
+    // We apply min/max client-side below instead, same pattern as keyword filtering.
     const filters = {
       keyword: q,
       category: category,
       condition: condition,
-      minPrice: min,
-      maxPrice: max,
       sellerId: sellerId,
-      // For profile pages, don't filter by isActive (show all listings)
-      // For general browsing, only show active listings
       isActive: sellerId ? undefined : true,
     };
 
@@ -90,11 +89,15 @@ export async function GET(req: NextRequest) {
     let filteredData = [...result.items];
     if (filters.keyword) {
       const keyword = filters.keyword.toLowerCase();
-      filteredData = filteredData.filter(listing => 
+      filteredData = filteredData.filter(listing =>
         listing.title.toLowerCase().includes(keyword) ||
         listing.description.toLowerCase().includes(keyword)
       );
     }
+
+    // Apply price range client-side to avoid Firestore composite index requirements
+    if (min !== undefined) filteredData = filteredData.filter(l => l.price >= min);
+    if (max !== undefined) filteredData = filteredData.filter(l => l.price <= max);
 
     // Filter out placeholder listings and old sold listings (older than 3 days)
     // BUT: When filtering by sellerId (profile page), show ALL listings including sold ones

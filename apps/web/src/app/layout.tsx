@@ -32,9 +32,9 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://allversegpt.com'),
-  title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
+  title: 'AllVerse | Price, list, and sell your stuff faster with AI.',
   description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
-  keywords: ['AI', 'marketplace', 'GPT', 'buy', 'sell', 'intelligent'],
+  keywords: ['AI', 'marketplace', 'buy', 'sell', 'intelligent'],
   authors: [{ name: 'All-Verse Team' }],
   icons: {
     icon: '/logo.png',
@@ -42,19 +42,19 @@ export const metadata: Metadata = {
     apple: '/logo.png',
   },
   appleWebApp: {
-    title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
+    title: 'AllVerse | Price, list, and sell your stuff faster with AI.',
   },
   openGraph: {
-    title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
+    title: 'AllVerse | Price, list, and sell your stuff faster with AI.',
     description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
     url: 'https://allversegpt.com',
-    siteName: 'AllVerse GPT',
+    siteName: 'AllVerse',
     images: [
       {
         url: '/logo.png',
         width: 1200,
         height: 630,
-        alt: 'AllVerse GPT AI Marketplace',
+        alt: 'AllVerse AI Marketplace',
       },
     ],
     locale: 'en_US',
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AllVerse GPT | Price, list, and sell your stuff faster with AI.',
+    title: 'AllVerse | Price, list, and sell your stuff faster with AI.',
     description: 'AI platform for smart item search, live negotiation, and simple buying & selling in one place',
     images: ['/logo.png'],
   },

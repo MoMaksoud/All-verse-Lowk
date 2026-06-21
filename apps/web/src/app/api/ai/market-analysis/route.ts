@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     });
 
     const prompt = `
-    You are a MARKET RESEARCH ANALYST for ALL VERSE GPT. Analyze the current market value for this specific item based on real-world data.
+    You are a MARKET RESEARCH ANALYST for ALL VERSE. Analyze the current market value for this specific item based on real-world data.
 
     Item Details:
     - Title: ${title}

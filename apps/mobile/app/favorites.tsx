@@ -7,17 +7,17 @@ import {
   TextInput,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   ScrollView,
 } from 'react-native';
-import { colors } from '../../constants/theme';
+import { Alert } from '../lib/ui/alert';
+import { colors } from '../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { apiClient } from '../../lib/api/client';
-import { useAuth } from '../../contexts/AuthContext';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import ListingCard from '../../components/ListingCard';
+import { apiClient } from '../lib/api/client';
+import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ListingCard from '../components/ListingCard';
 
 interface Listing {
   id: string;
@@ -91,7 +91,6 @@ export default function FavoritesScreen() {
     loadFavorites();
   }, []);
 
-  // Refresh favorites when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadFavorites();
@@ -114,15 +113,12 @@ export default function FavoritesScreen() {
     }
   }, [loadFavorites]);
 
-  // Filter favorites based on search and category
   const filteredFavorites = favorites.filter((listing) => {
     const matchesSearch =
       !searchQuery ||
       listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.description.toLowerCase().includes(searchQuery.toLowerCase());
-
     const matchesCategory = !selectedCategory || listing.category === selectedCategory;
-
     return matchesSearch && matchesCategory;
   });
 
@@ -130,7 +126,6 @@ export default function FavoritesScreen() {
 
   const ListHeader = () => (
     <View>
-      {/* Page Header */}
       <View style={styles.pageHeader}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
@@ -149,7 +144,6 @@ export default function FavoritesScreen() {
       <ListHeader />
       {favorites.length > 0 && (
         <View style={styles.filtersContainer}>
-          {/* Search */}
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color={colors.text.muted} style={styles.searchIcon} />
             <TextInput
@@ -166,7 +160,6 @@ export default function FavoritesScreen() {
             )}
           </View>
 
-          {/* Category Filter */}
           <View style={styles.categoryContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
               <TouchableOpacity
@@ -183,9 +176,7 @@ export default function FavoritesScreen() {
                   style={[styles.categoryChip, selectedCategory === category && styles.categoryChipActive]}
                   onPress={() => setSelectedCategory(category)}
                 >
-                  <Text
-                    style={[styles.categoryChipText, selectedCategory === category && styles.categoryChipTextActive]}
-                  >
+                  <Text style={[styles.categoryChipText, selectedCategory === category && styles.categoryChipTextActive]}>
                     {category.charAt(0).toUpperCase() + category.slice(1)}
                   </Text>
                 </TouchableOpacity>
@@ -193,7 +184,6 @@ export default function FavoritesScreen() {
             </ScrollView>
           </View>
 
-          {/* Results count */}
           {(searchQuery || selectedCategory) && (
             <Text style={styles.resultsCount}>
               {filteredFavorites.length} of {favorites.length} favorites match your filters
@@ -232,10 +222,7 @@ export default function FavoritesScreen() {
             <Text style={styles.emptyText}>Try adjusting your search or filter criteria.</Text>
             <TouchableOpacity
               style={styles.browseButton}
-              onPress={() => {
-                setSearchQuery('');
-                setSelectedCategory('');
-              }}
+              onPress={() => { setSearchQuery(''); setSelectedCategory(''); }}
             >
               <Text style={styles.browseButtonText}>Clear Filters</Text>
             </TouchableOpacity>
@@ -394,4 +381,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
