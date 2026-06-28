@@ -30,8 +30,9 @@ AllVerse search prioritizes internal marketplace listings first, then shows exte
 V1 uses the existing search configuration:
 
 - `SERPAPI_API_KEY`
+- `AMAZON_ASSOCIATE_TAG` required in production for Amazon Associate tracking
 
-Amazon Associate tagging and the official Amazon Product Advertising API can be added later when the referral setup is ready.
+The official Amazon Product Advertising API can be added later if we want to replace the SerpAPI Amazon feed with Amazon's direct product API.
 
 ## 📬 Get In Touch  
 We’d love to connect with collaborators, mentors, and anyone excited about the future of AI-powered commerce.

@@ -8,6 +8,10 @@ function cleanQuery(query: string): string {
     return query.replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
+function getAmazonAssociateTag(): string {
+    return (process.env.AMAZON_ASSOCIATE_TAG || "").trim();
+}
+
 function buildAmazonSearchUrl(query: string): string {
     const params = new URLSearchParams({
         k: query,
@@ -27,6 +31,20 @@ function isAmazonUrl(url: string | null | undefined): boolean {
         return isAmazonHost(new URL(url).hostname);
     } catch {
         return false;
+    }
+}
+
+function applyAmazonAssociateTag(url: string): string {
+    const associateTag = getAmazonAssociateTag();
+    if (!associateTag) return url;
+
+    try {
+        const parsed = new URL(url);
+        if (!isAmazonHost(parsed.hostname)) return url;
+        parsed.searchParams.set("tag", associateTag);
+        return parsed.toString();
+    } catch {
+        return url;
     }
 }
 
@@ -65,6 +83,7 @@ function markAmazonResult(result: ExternalResult): ExternalResult {
     return {
         ...result,
         source: AMAZON_SOURCE,
+        url: applyAmazonAssociateTag(result.url),
     };
 }
 
@@ -73,7 +92,7 @@ function buildSearchResult(query: string): ExternalResult {
         title: `Shop ${query} on Amazon`,
         price: 0,
         source: AMAZON_SOURCE,
-        url: buildAmazonSearchUrl(query),
+        url: applyAmazonAssociateTag(buildAmazonSearchUrl(query)),
         image: null,
     };
 }
@@ -121,8 +140,8 @@ async function fetchAmazonProductResults(args: {
 
             const rawUrl = typeof item.link === "string" ? item.link : "";
             const url = isAmazonUrl(rawUrl)
-                ? rawUrl
-                : buildAmazonSearchUrl(title);
+                ? applyAmazonAssociateTag(rawUrl)
+                : applyAmazonAssociateTag(buildAmazonSearchUrl(title));
             const image =
                 typeof item.thumbnail === "string"
                     ? item.thumbnail
