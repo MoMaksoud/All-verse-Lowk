@@ -56,6 +56,14 @@ function buildMarketPricingResponse(marketPricing: Awaited<ReturnType<typeof get
   };
 }
 
+function marketPricingFallback(marketPricing: Awaited<ReturnType<typeof getMarketPricing>>) {
+  return NextResponse.json({
+    success: true,
+    data: buildMarketPricingResponse(marketPricing),
+    source: 'market-pricing',
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Basic rate limit (30/min per IP)
@@ -81,11 +89,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!apiKey || !genAI) {
-      return NextResponse.json({
-        success: true,
-        data: buildMarketPricingResponse(marketPricing),
-        source: 'market-pricing'
-      });
+      return marketPricingFallback(marketPricing);
     }
 
     const liveMarketBlock = `\n\nLIVE MARKET DATA (current search results for this product):\n${formatMarketPricingForPrompt(marketPricing)}\n\nUse this data to inform suggestedPrice, priceRange, confidence, and reasoning. If comparable count is low or confidence is below 0.40, say the seller should verify pricing.`;
@@ -96,7 +100,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.3,
         topK: 1,
         topP: 0.8,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 4096,
         responseMimeType: "application/json"
       }
     });
@@ -170,39 +174,44 @@ export async function POST(req: NextRequest) {
 
     const result = await model_ai.generateContent(prompt);
     const response = await result.response;
-    
-    // Handle response - since responseMimeType is set to JSON, it might already be parsed
+
+    const candidate = response.candidates?.[0];
+    const responseMetadata = {
+      candidateCount: response.candidates?.length ?? 0,
+      finishReason: candidate?.finishReason ?? 'unknown',
+      safetyRatings: candidate?.safetyRatings ?? [],
+      promptFeedback: response.promptFeedback,
+    };
+
     let analysis: any;
     try {
       const text = response.text();
       console.log('🔍 Raw AI market analysis response:', text);
-      
+
       // Clean and parse JSON response
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
       console.log('🔍 Cleaned AI response:', cleanText);
-      
+
+      if (!cleanText) {
+        throw new Error('Gemini returned an empty response');
+      }
+
       analysis = JSON.parse(cleanText);
       console.log('🔍 Parsed AI market analysis:', analysis);
     } catch (parseError) {
-      // Try to get JSON directly if responseMimeType handled it
-      try {
-        const jsonText = (response as any).text?.() || '';
-        if (jsonText) {
-          analysis = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
-          console.log('🔍 Parsed from JSON response:', analysis);
-        } else {
-          throw parseError;
-        }
-      } catch (fallbackError) {
-        console.error('🔍 JSON parsing failed:', parseError);
-        console.error('🔍 Fallback parsing also failed:', fallbackError);
-        throw new Error(`Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`);
-      }
+      console.error('🔍 Gemini returned unusable JSON; using market-pricing fallback.', {
+        error: parseError instanceof Error ? parseError.message : 'Unknown parsing error',
+        ...responseMetadata,
+      });
+      return marketPricingFallback(marketPricing);
     }
 
     // Validate the analysis structure
     if (!analysis.marketAnalysis || typeof analysis.marketAnalysis.suggestedPrice !== 'number') {
-      throw new Error('Invalid market analysis structure received from AI');
+      console.error('🔍 Gemini returned an invalid market analysis structure; using fallback.', {
+        ...responseMetadata,
+      });
+      return marketPricingFallback(marketPricing);
     }
 
     if (marketPricing.suggestedPrice && marketPricing.priceRange && marketPricing.confidence >= 0.3) {
