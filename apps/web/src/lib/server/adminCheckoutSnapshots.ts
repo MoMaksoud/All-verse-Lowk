@@ -24,11 +24,14 @@ export async function createCheckoutSnapshotAdmin(
   }
 ): Promise<void> {
   const expiresAt = Timestamp.fromDate(new Date(Date.now() + SESSION_TTL_MS));
+  const { sellerShippingRates, ...requiredData } = data;
+
   await getAdminFirestore()
     .collection(COL)
     .doc(sessionId)
     .set({
-      ...data,
+      ...requiredData,
+      ...(sellerShippingRates !== undefined ? { sellerShippingRates } : {}),
       sessionId,
       status: 'pending',
       createdAt: FieldValue.serverTimestamp(),
