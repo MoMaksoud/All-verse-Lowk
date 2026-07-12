@@ -16,6 +16,7 @@ type Props = {
 };
 
 export function OtherMarketplacesFeed(props: Props) {
+  const { keyword, category, condition, minPrice, maxPrice, interestCategories } = props;
   const [enabled, setEnabled] = useState(false);
   const [results, setResults] = useState<ExternalResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,13 +35,13 @@ export function OtherMarketplacesFeed(props: Props) {
   const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    propsRef.current = props;
+    propsRef.current = { keyword, category, condition, minPrice, maxPrice, interestCategories };
     const history = readDiscoveryHistory();
     const candidates = [
-      props.keyword,
-      props.category,
+      keyword,
+      category,
       ...history.map((item) => item.query),
-      ...(props.interestCategories || []),
+      ...(interestCategories || []),
     ]
       .map((value) => value?.trim())
       .filter((value): value is string => Boolean(value));
@@ -48,7 +49,7 @@ export function OtherMarketplacesFeed(props: Props) {
     const nextSeeds = [...new Set(candidates.map((value) => value.toLowerCase()))].slice(0, 20);
     seedsRef.current = nextSeeds;
     setSeeds(nextSeeds);
-  }, [props.keyword, props.category, props.interestCategories]);
+  }, [category, condition, interestCategories, keyword, maxPrice, minPrice]);
 
   const loadNext = useCallback(async () => {
     if (!enabledRef.current || inFlight.current || !hasMoreRef.current) return;

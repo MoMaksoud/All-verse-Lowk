@@ -45,7 +45,10 @@ export async function uploadListingPhotoFile(params: {
 
   const r = ref(storage, storagePath);
   // Always use normalized contentType (image/jpeg for converted files)
-  await uploadBytes(r, normalizedFile, { contentType: normalizedFile.type });
+  await uploadBytes(r, normalizedFile, {
+    contentType: normalizedFile.type,
+    cacheControl: 'public,max-age=31536000,immutable',
+  });
   const url = await getDownloadURL(r);
   return { url, storagePath };
 }
@@ -365,7 +368,10 @@ export async function uploadCroppedPhoto(params: {
   const filename = `${crypto.randomUUID()}.${ext}`;
   const path = `listing-photos/${uid}/${listingId}/${filename}`;
   const r = ref(storage, path);
-  await uploadBytes(r, blob, { contentType: `image/${ext}` });
+  await uploadBytes(r, blob, {
+    contentType: `image/${ext}`,
+    cacheControl: 'public,max-age=31536000,immutable',
+  });
   const url = await getDownloadURL(r);
   return { url, storagePath: path };
 }

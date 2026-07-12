@@ -11,9 +11,11 @@ const nextConfig = {
     removeConsole: { exclude: ['error', 'warn'] },
   },
   
-  // Image optimization - disabled globally
   images: {
-    unoptimized: true,
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400,
+    deviceSizes: [320, 420, 640, 768, 1024, 1280, 1536],
+    imageSizes: [64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: 'https',

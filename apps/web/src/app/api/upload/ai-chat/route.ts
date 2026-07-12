@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { getAdminStorage } from '@/lib/firebase-admin';
+import sharp from 'sharp';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -76,8 +77,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     // Upload using Admin SDK (bypasses security rules)
     const timestamp = Date.now();
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}-${sanitizedFileName}`;
-    const path = `ai-chat-uploads/${req.userId}/${filename}`;
+    let filename = `${timestamp}-${sanitizedFileName}`;
     
     // Use Admin Storage for server-side upload
     const storage = getAdminStorage();
@@ -85,25 +85,54 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     
     // Convert File/Blob to Buffer
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let buffer: Buffer<ArrayBufferLike> = Buffer.from(arrayBuffer);
     
     // Update fileSize from actual buffer size if it was 0
     if (fileSize === 0) {
       fileSize = buffer.length;
     }
+
+    // Listing creation reuses AI-chat image URLs. Normalize those images here so
+    // cards never receive raw multi-megabyte phone photos or HEIC files.
+    if (isImage && contentType !== 'image/gif') {
+      try {
+        buffer = await sharp(buffer)
+          .rotate()
+          .resize({
+            width: 1600,
+            height: 1600,
+            fit: 'inside',
+            withoutEnlargement: true,
+          })
+          .webp({ quality: 82, effort: 4 })
+          .toBuffer();
+        contentType = 'image/webp';
+        filename = `${timestamp}-${sanitizedFileName.replace(/\.[^.]+$/, '')}.webp`;
+      } catch (error) {
+        console.error('AI chat image optimization failed:', error);
+        return NextResponse.json(
+          { error: 'This image could not be optimized. Please upload a JPEG, PNG, or WebP image.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const path = `ai-chat-uploads/${req.userId}/${filename}`;
     
     // Upload to Firebase Storage
     const fileRef = bucket.file(path);
     await fileRef.save(buffer, {
       metadata: {
-        contentType: contentType,
+        contentType,
+        cacheControl: 'public, max-age=31536000, immutable',
         metadata: {
           userId: req.userId,
           userEmail,
           uploadedAt: new Date().toISOString(),
           category: 'ai-chat-upload',
           originalFileName: fileName,
-          fileSize: fileSize.toString(),
+          originalFileSize: fileSize.toString(),
+          optimizedFileSize: buffer.length.toString(),
         },
       },
     });
@@ -127,4 +156,3 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     );
   }
 });
-

@@ -5,6 +5,8 @@
 
 const WEB_SAFE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const HEIC_TYPES = ['image/heic', 'image/heif', 'image/heic-sequence'];
+const MAX_LISTING_IMAGE_DIMENSION = 1600;
+const LISTING_IMAGE_QUALITY = 0.82;
 
 function isWebSafeType(type: string): boolean {
   return WEB_SAFE_IMAGE_TYPES.includes(type?.toLowerCase?.() || '');
@@ -60,6 +62,48 @@ async function convertToJpegViaCanvas(file: File): Promise<File> {
   });
 }
 
+async function optimizeWebImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      try {
+        const scale = Math.min(
+          1,
+          MAX_LISTING_IMAGE_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight)
+        );
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Could not create image canvas');
+        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Image optimization failed'));
+              return;
+            }
+            const name = file.name.replace(/\.[^.]+$/, '') || 'listing-photo';
+            resolve(new File([blob], `${name}.webp`, { type: 'image/webp' }));
+          },
+          'image/webp',
+          LISTING_IMAGE_QUALITY
+        );
+      } catch (error) {
+        reject(error);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Image could not be decoded for optimization'));
+    };
+    img.src = url;
+  });
+}
+
 /**
  * Normalize an image file for upload. Converts unsupported formats (HEIC, etc.)
  * to JPEG so they display correctly in all browsers.
@@ -73,7 +117,14 @@ export async function normalizeImageForUpload(file: File): Promise<File> {
   }
 
   if (isWebSafeType(file.type)) {
-    return file;
+    // Preserve animated GIFs; resize and compress normal listing photos.
+    if (file.type.toLowerCase() === 'image/gif') return file;
+    try {
+      return await optimizeWebImage(file);
+    } catch (error) {
+      console.warn('Image optimization failed; uploading the original image:', error);
+      return file;
+    }
   }
 
   // HEIC: cannot convert in-browser without heic2any (causes Next.js build issues)
