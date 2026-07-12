@@ -161,6 +161,10 @@ export async function POST(req: NextRequest) {
 
     Guidelines (US MARKET ONLY):
     - When LIVE MARKET DATA is provided above, use it to set suggestedPrice and priceRange; base reasoning on those real results.
+    - First determine whether the supplied listing details describe a full-size vehicle or a scale model/toy. Respect category "automotive" as a strong signal for a real vehicle unless the title or description explicitly says die-cast, scale model, miniature, RC, toy, replica, or includes a scale ratio such as 1:18 or 1:64.
+    - When the item is a full-size car, truck, SUV, motorcycle, or other vehicle, price the actual vehicle. Use comparable real vehicles matching make, model, year, trim, mileage, title status, location, and condition when those attributes are available.
+    - For full-size vehicles, exclude die-cast cars, scale models, miniatures, toys, RC vehicles, model kits, accessories, and parts-only listings from all price comparisons. Never infer "scale model" merely from a short title or missing vehicle details.
+    - Only use scale-model or toy pricing when the supplied listing details explicitly identify the item that way. If vehicle identity is uncertain, lower confidence and explain which vehicle attributes the seller should provide rather than substituting toy prices.
     - Use realistic US market prices based on actual US marketplace data
     - Consider depreciation for used items in US market
     - Factor in brand value and model popularity in US market

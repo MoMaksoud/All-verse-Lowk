@@ -500,6 +500,10 @@ Return ONLY valid JSON:
 
 Rules:
 - Do not finalize a generic identity such as "Black Remote Control" when brand, compatible device, or model is unclear; ask a targeted identity question.
+- Carefully distinguish full-size vehicles from die-cast cars, scale models, RC cars, and toys. A real vehicle should use product_type "car", "truck", "SUV", "motorcycle", or another specific vehicle type and category "automotive".
+- Treat a pictured car as a real, full-size vehicle when scene-scale evidence supports it, including roads, parking spaces, license plates, a drivable interior, full-size wheels, buildings, or people. Do not call it a scale model merely because the photo is close-cropped, polished, or lacks people.
+- Classify a vehicle as a scale model, die-cast item, RC car, or toy only when there is positive evidence such as packaging, a printed scale ratio (for example 1:18 or 1:64), a display base, handheld/tabletop scale, toy-like wheels or controls, or explicit text identifying it as a model or toy.
+- For a real vehicle, extract the visible make/model and ask for missing year, trim, mileage, title status, drivetrain, and mechanical condition when those details are needed. Never estimate a full-size vehicle's price using toy or scale-model comparables.
 - Never invent brand, model, condition, storage, size, carrier, accessories, warranty, or price.
 - Use all photos. Later photos may contain model labels, tags, ports, or package text.
 - Ask no more than 6 questions. Prefer questions that materially improve title, description, condition, and price.
@@ -549,6 +553,8 @@ Return ONLY valid JSON:
 
 Rules:
 - Specificity is mandatory. Avoid titles like "Black Remote Control", "Product Item", "Electronic Device", or "Shoes".
+- Preserve the established real-vehicle versus scale-model identity. If the images show a full-size vehicle, write and price it as an automotive vehicle; never reinterpret it as a die-cast, RC, toy, or scale model without explicit contrary evidence in the images or seller answers.
+- For a full-size vehicle, use vehicle-market comparables matching make, model, year, trim, mileage, title status, and condition when available. Exclude toy, collectible, scale-model, parts-only, and RC listings from pricing.
 - If the seller provided exact identity details, use those details in the title.
 - Do not claim an exact model unless it is visible or provided by the seller.
 - Use the seller's exact condition answer when provided. If condition is still unknown, return null for condition.
