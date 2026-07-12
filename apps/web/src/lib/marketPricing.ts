@@ -1,4 +1,5 @@
 import { serpapiShoppingSearch } from "@/lib/search/external/serpapiShopping";
+import { serpapiOrganicSearch } from "@/lib/search/external/serpapiOrgnaic";
 import { simpleInternalSearch } from "@/lib/search/internal/simpleInternalSearch";
 
 export type MarketComparable = {
@@ -29,8 +30,30 @@ function cleanPart(value: unknown): string {
   return trimmed;
 }
 
+const MODEL_OR_TOY_TERMS =
+  /\b(?:die[ -]?cast|scale model|model kit|miniature|toy|lego|hot wheels|matchbox|remote control|radio control|rc car|collectible model|display model)\b|\b1\s*[:/]\s*(?:8|12|18|24|32|43|64)\b/i;
+
+function isRealVehiclePricing(args: {
+  title?: string;
+  description?: string;
+  category?: string;
+  productType?: string;
+}): boolean {
+  const category = cleanPart(args.category).toLowerCase();
+  const productType = cleanPart(args.productType).toLowerCase();
+  const listingText = `${cleanPart(args.title)} ${cleanPart(args.description)}`.trim();
+
+  if (MODEL_OR_TOY_TERMS.test(listingText)) return false;
+  if (/\b(?:car|truck|suv|vehicle|motorcycle|van|coupe|sedan|convertible|roadster)\b/i.test(productType)) {
+    return true;
+  }
+
+  return category === "automotive";
+}
+
 function buildQuery(args: {
   title?: string;
+  description?: string;
   category?: string;
   brand?: string;
   model?: string;
@@ -45,7 +68,7 @@ function buildQuery(args: {
   ];
 
   const seen = new Set<string>();
-  return parts
+  const baseQuery = parts
     .filter(Boolean)
     .filter((part) => {
       const key = part.toLowerCase();
@@ -55,8 +78,13 @@ function buildQuery(args: {
     })
     .join(" ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 100);
+    .trim();
+
+  const query = isRealVehiclePricing(args)
+    ? `${baseQuery} used vehicle for sale -diecast -toy -miniature -lego -"scale model" -"model kit"`
+    : baseQuery;
+
+  return query.slice(0, 160);
 }
 
 function median(values: number[]): number {
@@ -111,11 +139,21 @@ function applyConditionMultiplier(price: number, multiplier: number): number {
   return Math.max(1, Math.round(price * multiplier));
 }
 
-function toComparable(result: { title: string; price: number; source?: string }): MarketComparable | null {
+function toComparable(
+  result: { title: string; price: number; source?: string },
+  options: { realVehicle: boolean }
+): MarketComparable | null {
   const price = Number(result.price);
   if (!result.title?.trim() || !Number.isFinite(price) || price <= 0) return null;
+  const title = result.title.trim();
+  if (
+    options.realVehicle &&
+    (MODEL_OR_TOY_TERMS.test(title) || /\b(?:car|vehicle|spider|stradale) model(?: car)?\s*$/i.test(title))
+  ) {
+    return null;
+  }
   return {
-    title: result.title.trim().slice(0, 160),
+    title: title.slice(0, 160),
     price,
     source: result.source || "Marketplace",
   };
@@ -134,6 +172,7 @@ export async function getMarketPricing(args: {
   debug?: boolean;
 }): Promise<MarketPricingResult> {
   const query = buildQuery(args);
+  const realVehicle = isRealVehiclePricing(args);
 
   if (!query) {
     return {
@@ -152,8 +191,9 @@ export async function getMarketPricing(args: {
   const traceId = args.traceId || crypto.randomUUID();
   const conditionAdjustment = getConditionMultiplier(args.condition);
 
+  const externalSearch = realVehicle ? serpapiOrganicSearch : serpapiShoppingSearch;
   const [externalResults, internalSearch] = await Promise.all([
-    serpapiShoppingSearch({
+    externalSearch({
       query,
       limit,
       traceId,
@@ -173,9 +213,9 @@ export async function getMarketPricing(args: {
   ]);
 
   const comparables = [
-    ...externalResults.map(toComparable),
+    ...externalResults.map((item) => toComparable(item, { realVehicle })),
     ...(internalSearch.results || []).map((item) =>
-      toComparable({ title: item.title, price: item.price, source: "AllVerse" })
+      toComparable({ title: item.title, price: item.price, source: "AllVerse" }, { realVehicle })
     ),
   ]
     .filter((item): item is MarketComparable => Boolean(item))
