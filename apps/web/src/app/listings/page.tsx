@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useEffect, useState, Suspense, useCallback } from 'react';
+import React, { useEffect, useState, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Grid, List, Loader2 } from 'lucide-react';
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
@@ -27,14 +27,20 @@ function ListingsContent() {
   const [hasMoreListings, setHasMoreListings] = useState(false);
   const [totalListings, setTotalListings] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [appliedFilters, setAppliedFilters] = useState<ListingFilters>({});
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
   const fetchData = useCallback(async (page = 1, append = false) => {
+    if (append && loadingMoreRef.current) return;
     try {
-      if (append) setLoadingMore(true);
+      if (append) {
+        loadingMoreRef.current = true;
+        setLoadingMore(true);
+      }
       else setLoading(true);
       
       // Build query parameters
@@ -94,7 +100,10 @@ function ListingsContent() {
       if (!append) setListings([]);
       setHasMoreListings(false);
     } finally {
-      if (append) setLoadingMore(false);
+      if (append) {
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      }
       else setLoading(false);
     }
   }, [appliedFilters, pageSize, sortBy]);
@@ -102,6 +111,26 @@ function ListingsContent() {
   useEffect(() => {
     void fetchData(1, false);
   }, [fetchData]);
+
+  const loadMoreListings = useCallback(() => {
+    if (!hasMoreListings || loadingMoreRef.current) return;
+    void fetchData(nextPage, true);
+  }, [fetchData, hasMoreListings, nextPage]);
+
+  useEffect(() => {
+    if (!hasMoreListings) return;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadMoreListings();
+      },
+      { rootMargin: '1200px 0px', threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMoreListings, loadMoreListings]);
 
   useEffect(() => {
     // Parse URL params for filters
@@ -310,16 +339,24 @@ function ListingsContent() {
                 )}
 
                 {hasMoreListings ? (
-                  <div className="mt-12 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => void fetchData(nextPage, true)}
-                      disabled={loadingMore}
-                      className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {loadingMore && <Loader2 className="h-5 w-5 animate-spin" />}
-                      {loadingMore ? 'Loading listings…' : 'Load more AllVerse listings'}
-                    </button>
+                  <div ref={loadMoreSentinelRef} className="mt-6 min-h-[18rem]" aria-live="polite">
+                    {loadingMore ? (
+                      <>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                          {Array.from({ length: 6 }).map((_, index) => (
+                            <SkeletonCard key={`more-${index}`} />
+                          ))}
+                        </div>
+                        <div className="mt-5 flex items-center justify-center gap-2 text-sm text-gray-400">
+                          <Loader2 className="h-5 w-5 animate-spin text-accent-400" />
+                          Loading more AllVerse listings…
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                        More listings will load as you continue.
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <OtherMarketplacesFeed
