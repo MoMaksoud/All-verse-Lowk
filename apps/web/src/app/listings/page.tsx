@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Grid, List, ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingCart } from 'lucide-react';
+import { Grid, List, Loader2 } from 'lucide-react';
 import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
 import ListingCard from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
@@ -13,25 +12,30 @@ import ListingCollection from '@/components/ListingCollection';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
+import { OtherMarketplacesFeed } from '@/components/OtherMarketplacesFeed';
 
 function ListingsContent() {
+  const pageSize = 24;
   const searchParams = useSearchParams();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const { showSuccess, showError } = useToast();
   const { startChat } = useStartChatFromListing();
   const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [nextPage, setNextPage] = useState(2);
+  const [hasMoreListings, setHasMoreListings] = useState(false);
+  const [totalListings, setTotalListings] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [appliedFilters, setAppliedFilters] = useState<ListingFilters>({});
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (page = 1, append = false) => {
     try {
-      setLoading(true);
+      if (append) setLoadingMore(true);
+      else setLoading(true);
       
       // Build query parameters
       const params = new URLSearchParams();
@@ -40,8 +44,8 @@ function ListingsContent() {
       if (appliedFilters.condition) params.set('condition', appliedFilters.condition);
       if (appliedFilters.minPrice !== undefined) params.set('min', appliedFilters.minPrice.toString());
       if (appliedFilters.maxPrice !== undefined) params.set('max', appliedFilters.maxPrice.toString());
-      params.set('page', currentPage.toString());
-      params.set('limit', '9'); // Reduced from 12 to 9 for faster loading
+      params.set('page', page.toString());
+      params.set('limit', pageSize.toString());
     
       // Add sort parameter - map to new sort options
       switch (sortBy) {
@@ -67,11 +71,18 @@ function ListingsContent() {
 
       const data = await response.json();
       if (response.ok) {
-        setListings(data.data || []);
-        setTotalPages(Math.ceil((data.pagination?.total || 0) / 9));
+        const incoming = Array.isArray(data.data) ? data.data : [];
+        setListings((current) => {
+          if (!append) return incoming;
+          const seen = new Set(current.map((listing) => listing.id));
+          return [...current, ...incoming.filter((listing: SimpleListing) => !seen.has(listing.id))];
+        });
+        setHasMoreListings(Boolean(data.pagination?.hasMore));
+        setTotalListings(data.pagination?.total || incoming.length);
+        setNextPage(page + 1);
       } else {
-        setListings([]);
-        setTotalPages(1);
+        if (!append) setListings([]);
+        setHasMoreListings(false);
       }
 
       if (categoriesResponse.ok) {
@@ -80,15 +91,16 @@ function ListingsContent() {
       }
     } catch (error) {
       console.error('Error fetching listings:', error);
-      setListings([]);
-      setTotalPages(1);
+      if (!append) setListings([]);
+      setHasMoreListings(false);
     } finally {
-      setLoading(false);
+      if (append) setLoadingMore(false);
+      else setLoading(false);
     }
-  }, [appliedFilters, currentPage, sortBy]);
+  }, [appliedFilters, pageSize, sortBy]);
 
   useEffect(() => {
-    fetchData();
+    void fetchData(1, false);
   }, [fetchData]);
 
   useEffect(() => {
@@ -109,14 +121,7 @@ function ListingsContent() {
 
     
     setAppliedFilters(newFilters);
-    setCurrentPage(1);
   }, [searchParams]);
-
-
-  const handlePageChange = useCallback((page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
 
 
   const handleMessageClick = useCallback(async (listing: SimpleListing) => {
@@ -216,7 +221,7 @@ function ListingsContent() {
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="text-xs sm:text-sm text-gray-400">
-                {listings.length} listings found
+                Showing {listings.length} of {totalListings} listings
               </div>
               
               <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -304,41 +309,28 @@ function ListingsContent() {
                   />
                 )}
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center mt-12">
-                    <nav className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="btn-ghost p-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`px-3 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
-                            currentPage === page
-                              ? 'bg-accent-500 text-white'
-                              : 'text-gray-400 hover:text-white hover:bg-dark-700'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                      
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="btn-ghost p-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </nav>
+                {hasMoreListings ? (
+                  <div className="mt-12 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => void fetchData(nextPage, true)}
+                      disabled={loadingMore}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {loadingMore && <Loader2 className="h-5 w-5 animate-spin" />}
+                      {loadingMore ? 'Loading listings…' : 'Load more AllVerse listings'}
+                    </button>
                   </div>
+                ) : (
+                  <OtherMarketplacesFeed
+                    key={JSON.stringify(appliedFilters)}
+                    keyword={appliedFilters.keyword}
+                    category={appliedFilters.category}
+                    condition={appliedFilters.condition}
+                    minPrice={appliedFilters.minPrice}
+                    maxPrice={appliedFilters.maxPrice}
+                    interestCategories={userProfile?.interestCategories}
+                  />
                 )}
               </>
             ) : (
@@ -350,6 +342,15 @@ function ListingsContent() {
                 <p className="text-sm sm:text-base text-gray-400">
                   Try adjusting your filters or search terms
                 </p>
+                <OtherMarketplacesFeed
+                  key={JSON.stringify(appliedFilters)}
+                  keyword={appliedFilters.keyword}
+                  category={appliedFilters.category}
+                  condition={appliedFilters.condition}
+                  minPrice={appliedFilters.minPrice}
+                  maxPrice={appliedFilters.maxPrice}
+                  interestCategories={userProfile?.interestCategories}
+                />
               </div>
             )}
           </div>

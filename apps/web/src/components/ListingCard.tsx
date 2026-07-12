@@ -11,6 +11,7 @@ import { MessageInputModal } from '@/components/MessageInputModal';
 import { ProfilePicture } from '@/components/ProfilePicture';
 import { normalizeImageSrc } from '@marketplace/shared-logic';
 import { formatPrice as formatPriceUtil } from '@/lib/format';
+import { recordDiscoveryClick } from '@/lib/discoveryHistory';
 
 type SellerProfile = { username?: string; profilePicture?: string; createdAt?: string | Date | { toDate?: () => Date } };
 
@@ -258,7 +259,11 @@ function ListingCard({
 
   return (
     <>
-      <Link href={`/listings/${id}`} className="block h-full w-30">
+      <Link
+        href={`/listings/${id}`}
+        className="block h-full w-30"
+        onClick={() => recordDiscoveryClick({ query: title, category, source: 'AllVerse' })}
+      >
         <article
         className={clsx(
           "rounded-xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
