@@ -34,6 +34,26 @@ V1 uses the existing search configuration:
 
 The official Amazon Product Advertising API can be added later if we want to replace the SerpAPI Amazon feed with Amazon's direct product API.
 
+## 🧪 Branches & Environments
+Each branch deploys to its own environment. **Read [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) before deploying or testing anything.**
+
+| Branch | Environment | What it's for |
+|---|---|---|
+| `dev` | **Playground** | Day-to-day work. Merge here first; break things freely. |
+| `staging` | **Staging** | Final QA of a release in a prod-like setup. |
+| `main` | **Production** | Real users. Only updated through a PR from `staging`. |
+
+Flow: `feature branch → dev → staging → main`.
+
+> **Heads up:** the separate Playground and Staging cloud setups are still being created (see the plan). Until then, the `dev` preview deploy still talks to production data, so test on your own machine:
+
+```bash
+pnpm install
+pnpm sandbox   # local Firebase emulators + seed data + web app at http://localhost:3000
+```
+
+Requires Java 21+ for the Firebase emulators. Seeded accounts (`seller1@test.local`, `buyer1@test.local`, …) all use password `password123`. The sandbox never charges cards, buys labels, or sends real emails.
+
 ## 📬 Get In Touch  
 We’d love to connect with collaborators, mentors, and anyone excited about the future of AI-powered commerce.
 
