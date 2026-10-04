@@ -27,8 +27,15 @@ function getAdminApp(): App {
 
   // Initialize with service account or default credentials
   try {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    // Local emulator mode: no credentials needed; must match the project seeded by scripts/seed-local.mjs
+    const useEmulator = process.env.NEXT_PUBLIC_USE_EMULATOR === 'true';
+    if (useEmulator) {
+      process.env.FIRESTORE_EMULATOR_HOST ??= 'localhost:8080';
+      process.env.FIREBASE_AUTH_EMULATOR_HOST ??= 'localhost:9099';
+      process.env.FIREBASE_STORAGE_EMULATOR_HOST ??= 'localhost:9199';
+    }
+    const serviceAccount = useEmulator ? undefined : process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    const projectId = useEmulator ? 'demo-allverse' : process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     
     if (serviceAccount) {
       console.log('🔑 Initializing Firebase Admin with service account...');

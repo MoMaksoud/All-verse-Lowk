@@ -1,5 +1,8 @@
 import Stripe from 'stripe';
 import { calculateStripeFees as calculateStripeFeesBase } from '@/lib/payments/pricing';
+import { assertNotLiveKey } from '@/lib/sandbox';
+
+assertNotLiveKey('STRIPE_SECRET_KEY', process.env.STRIPE_SECRET_KEY);
 
 // Server-side Stripe instance
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {

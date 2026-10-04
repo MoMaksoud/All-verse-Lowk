@@ -1,4 +1,10 @@
 import sgMail from '@sendgrid/mail';
+import { isSandbox } from '@/lib/sandbox';
+
+// In a sandbox, log emails instead of sending them to real inboxes.
+const sendMail: typeof sgMail.send = isSandbox
+  ? async (msg) => { console.warn('[sandbox] email not sent:', JSON.stringify(msg)); return [] as never; }
+  : sgMail.send.bind(sgMail);
 
 const REQUIRED_SENDGRID_ENV = [
   'SENDGRID_API_KEY',
@@ -13,6 +19,7 @@ function getMissingSendGridEnv(): string[] {
 }
 
 function assertSendGridConfig(): { ok: false; error: string } | { ok: true } {
+  if (isSandbox) return { ok: true }; // sendMail only logs in a sandbox
   if (!process.env.SENDGRID_API_KEY) {
     return { ok: false, error: 'Missing SENDGRID_API_KEY' };
   }
@@ -49,7 +56,7 @@ export async function sendVerificationEmail(
   const fromEmail = process.env.SENDGRID_FROM_EMAIL!;
 
   try {
-    await sgMail.send({
+    await sendMail({
       to,
       from: fromEmail,
       templateId,
@@ -94,7 +101,7 @@ export async function sendOrderConfirmationEmail(
   const fromEmail = process.env.SENDGRID_FROM_EMAIL!;
 
   try {
-    await sgMail.send({
+    await sendMail({
       to: data.buyerEmail,
       from: fromEmail,
       templateId,
@@ -141,7 +148,7 @@ export interface BuyerTrackingEmailData {
 export async function sendBuyerTrackingEmail(
   data: BuyerTrackingEmailData
 ): Promise<{ success: boolean; error?: string }> {
-  if (!process.env.SENDGRID_API_KEY) {
+  if (!isSandbox && !process.env.SENDGRID_API_KEY) {
     return { success: false, error: 'Missing SENDGRID_API_KEY' };
   }
   const templateId = process.env.SENDGRID_TRACKING_TEMPLATE_ID;
@@ -155,7 +162,7 @@ export async function sendBuyerTrackingEmail(
     return { success: false, error: 'Missing SENDGRID_FROM_EMAIL' };
   }
   try {
-    await sgMail.send({
+    await sendMail({
       to: data.buyerEmail,
       from: fromEmail,
       templateId,
@@ -207,7 +214,7 @@ export async function sendSellerNotificationEmail(
   const fromEmail = process.env.SENDGRID_FROM_EMAIL!;
 
   try {
-    await sgMail.send({
+    await sendMail({
       to: data.sellerEmail,
       from: fromEmail,
       templateId,

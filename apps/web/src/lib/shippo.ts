@@ -1,4 +1,5 @@
 import { Shippo } from 'shippo';
+import { assertNotLiveKey } from '@/lib/sandbox';
 
 function getApiKey(): string {
   const apiKey = process.env.SHIPPO_API_KEY;
@@ -7,6 +8,7 @@ function getApiKey(): string {
       'SHIPPO_API_KEY is required. Set it in .env.local (e.g. SHIPPO_API_KEY=shippo_test_...) and restart the dev server.'
     );
   }
+  assertNotLiveKey('SHIPPO_API_KEY', apiKey);
   return apiKey;
 }
 

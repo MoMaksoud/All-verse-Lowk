@@ -7,6 +7,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "emulators": "npx -y firebase-tools emulators:start --only auth,firestore,storage --project demo-allverse",
+    "sandbox": "npx -y firebase-tools emulators:exec --ui --only auth,firestore,storage --project demo-allverse \"pnpm --filter @marketplace/web seed:local && pnpm --filter @marketplace/web dev:local\"",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean",

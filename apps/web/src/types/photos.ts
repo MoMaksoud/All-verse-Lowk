@@ -11,5 +11,9 @@ export interface PhotoItem {
 }
 
 // Helper function to validate cloud URLs
+// Storage emulator (local sandbox) serves plain http on port 9199
+const EMULATOR_STORAGE = /^http:\/\/(localhost|127\.0\.0\.1):9199\//;
+
 export const isCloudUrl = (u?: string): boolean =>
-  !!u && (u.startsWith("https://firebasestorage.googleapis.com/") || u.startsWith("https://"));
+  !!u && (u.startsWith("https://") ||
+    (process.env.NEXT_PUBLIC_USE_EMULATOR === "true" && EMULATOR_STORAGE.test(u)));

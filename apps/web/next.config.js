@@ -25,6 +25,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'storage.googleapis.com',
       },
+      // Local sandbox: Firebase Storage emulator
+      ...(process.env.NEXT_PUBLIC_USE_EMULATOR === 'true'
+        ? ['localhost', '127.0.0.1'].map((hostname) => ({ protocol: 'http', hostname, port: '9199' }))
+        : []),
     ],
   },
 
