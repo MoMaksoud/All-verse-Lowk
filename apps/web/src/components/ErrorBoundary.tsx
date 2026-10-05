@@ -35,9 +35,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
           <div className="card p-8 max-w-md w-full text-center">
             <div className="flex justify-center mb-4">
-              <AlertTriangle className="w-12 h-12 text-red-500" />
+              <AlertTriangle className="w-12 h-12 text-red-700" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+            <h2 className="text-xl font-bold text-dark-50 mb-2">Something went wrong</h2>
             <p className="text-gray-400 mb-6">
               We're sorry, but something unexpected happened. Please try refreshing the page.
             </p>

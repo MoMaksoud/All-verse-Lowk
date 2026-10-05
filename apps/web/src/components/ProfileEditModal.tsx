@@ -185,7 +185,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center p-4 z-50"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -194,10 +194,10 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     >
       <div className="bg-dark-800 rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto chat-scrollbar border border-dark-700">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">Edit Profile</h2>
+          <h2 className="text-2xl font-bold text-dark-50">Edit Profile</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-dark-50 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -205,21 +205,21 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
         {error && (
           <div className="mb-6 p-4 bg-red-900/20 border border-red-500 rounded-lg">
-            <p className="text-red-400">{error}</p>
+            <p className="text-red-700">{error}</p>
           </div>
         )}
 
         {success && (
           <div className="mb-6 p-4 bg-green-900/20 border border-green-500 rounded-lg">
-            <p className="text-green-400">Profile updated successfully!</p>
+            <p className="text-green-700">Profile updated successfully!</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-white flex items-center">
-              <User className="w-5 h-5 mr-2 text-accent-500" />
+            <h3 className="text-xl font-semibold text-dark-50 flex items-center">
+              <User className="w-5 h-5 mr-2 text-accent-700" />
               Basic Information
             </h3>
 
@@ -233,11 +233,11 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   value={formData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
                   placeholder="Choose a unique username"
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                   maxLength={30}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-400 mt-1">
                   {formData.username.length}/30 characters
                 </p>
               </div>
@@ -255,14 +255,14 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   placeholder="Age"
                   min="13"
                   max="120"
-                  className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 ${
+                  className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 ${
                     showAgeValidation && isAgeInvalid()
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-dark-600 focus:ring-accent-500'
                   }`}
                 />
                 {showAgeValidation && isAgeInvalid() && (
-                  <p className="text-xs text-red-400 mt-1">
+                  <p className="text-xs text-red-700 mt-1">
                     Age must be between 13-120
                   </p>
                 )}
@@ -279,9 +279,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 placeholder="Tell us about yourself..."
                 rows={3}
                 maxLength={280}
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 resize-none"
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 resize-none"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-400 mt-1">
                 {(formData.bio || '').length}/280 characters
               </p>
             </div>
@@ -316,15 +316,15 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   handleInputChange('phoneNumber', formatted);
                 }}
                 placeholder="(555) 123-4567"
-                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
               />
             </div>
           </div>
 
           {/* Interest Categories */}
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-white flex items-center">
-              <Heart className="w-5 h-5 mr-2 text-accent-500" />
+            <h3 className="text-xl font-semibold text-dark-50 flex items-center">
+              <Heart className="w-5 h-5 mr-2 text-accent-700" />
               Interest Categories
             </h3>
             <p className="text-gray-400 text-sm">What are you interested in? Select all that apply</p>
@@ -336,7 +336,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   onClick={() => handleCategoryToggle(category.id)}
                   className={`p-4 rounded-lg border-2 transition-colors ${
                     formData.interestCategories.includes(category.id)
-                      ? 'border-accent-500 bg-accent-500/10 text-accent-400'
+                      ? 'border-accent-500 bg-accent-500/10 text-accent-700'
                       : 'border-dark-600 bg-dark-700 text-gray-300 hover:border-dark-500'
                   }`}
                 >
@@ -349,8 +349,8 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
           {/* Shopping Preferences */}
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-white flex items-center">
-              <ShoppingBag className="w-5 h-5 mr-2 text-accent-500" />
+            <h3 className="text-xl font-semibold text-dark-50 flex items-center">
+              <ShoppingBag className="w-5 h-5 mr-2 text-accent-700" />
               Shopping Preferences
             </h3>
 
@@ -405,8 +405,8 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
           {/* Budget */}
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-white flex items-center">
-              <DollarSign className="w-5 h-5 mr-2 text-accent-500" />
+            <h3 className="text-xl font-semibold text-dark-50 flex items-center">
+              <DollarSign className="w-5 h-5 mr-2 text-accent-700" />
               Budget
             </h3>
 
@@ -421,7 +421,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   onChange={(e) => handleInputChange('budget', { ...formData.budget, min: parseInt(e.target.value) || 0 })}
                   placeholder="0"
                   min="0"
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 />
               </div>
 
@@ -435,7 +435,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   onChange={(e) => handleInputChange('budget', { ...formData.budget, max: parseInt(e.target.value) || 1000 })}
                   placeholder="1000"
                   min="0"
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 />
               </div>
 
@@ -458,8 +458,8 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
           {/* Shipping Address (for sellers) */}
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-white flex items-center">
-              <MapPin className="w-5 h-5 mr-2 text-accent-500" />
+            <h3 className="text-xl font-semibold text-dark-50 flex items-center">
+              <MapPin className="w-5 h-5 mr-2 text-accent-700" />
               Shipping Address
               <span className="text-sm text-gray-400 ml-2 font-normal">(Required for sellers)</span>
             </h3>
@@ -475,7 +475,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   value={formData.shippingAddress.street}
                   onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, street: e.target.value })}
                   placeholder="123 Main St"
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 />
               </div>
 
@@ -488,7 +488,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   value={formData.shippingAddress.city}
                   onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, city: e.target.value })}
                   placeholder="New York"
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 />
               </div>
 
@@ -501,7 +501,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   value={formData.shippingAddress.state}
                   onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, state: e.target.value })}
                   placeholder="NY"
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 />
               </div>
 
@@ -515,9 +515,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, zip: e.target.value })}
                   placeholder="10001"
                   pattern="\d{5}(-\d{4})?"
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">Required for accurate shipping rate calculations</p>
+                <p className="text-xs text-gray-400 mt-1">Required for accurate shipping rate calculations</p>
               </div>
 
               <div>
@@ -527,7 +527,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 <select
                   value={formData.shippingAddress.country}
                   onChange={(e) => handleInputChange('shippingAddress', { ...formData.shippingAddress, country: e.target.value })}
-                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-dark-50 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 >
                   <option value="US">United States</option>
                   <option value="CA">Canada</option>

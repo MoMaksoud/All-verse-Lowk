@@ -4,10 +4,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { Logo } from '@/components/Logo';
 import { ProfilePicture } from '@/components/ProfilePicture';
 import { Profile } from '@marketplace/types';
-import { User, Settings, Edit, Camera, Shield } from 'lucide-react';
+import { Settings, Camera, Pencil } from 'lucide-react';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 
 export default function ProfilePage() {
@@ -129,12 +128,12 @@ export default function ProfilePage() {
     }
   };
 
-  const getMemberSince = () => {
-    if (!profile?.createdAt) return '2025';
+  const getMemberSince = (): string | null => {
+    if (!profile?.createdAt) return null;
     try {
       // Handle Firestore Timestamp, ISO string, or Date object
       const createdAt = profile.createdAt;
-      if (!createdAt) return '2025';
+      if (!createdAt) return null;
       
       let date: Date | null = null;
       // Safe conversion: check for Timestamp, then Date, then string
@@ -146,21 +145,21 @@ export default function ProfilePage() {
           date = timestampObj;
         } else {
           // Invalid object, cannot convert
-          return '2025';
+          return null;
         }
       } else if (typeof createdAt === 'string') {
         date = new Date(createdAt);
       } else {
-        return '2025';
+        return null;
       }
       
       if (!date || isNaN(date.getTime())) {
-        return '2025';
+        return null;
       }
       
       // Validate date
       if (isNaN(date.getTime())) {
-        return '2025';
+        return null;
       }
       
       return new Intl.DateTimeFormat("en-US", {
@@ -168,160 +167,149 @@ export default function ProfilePage() {
         year: "numeric"
       }).format(date);
     } catch {
-      return '2025';
+      return null;
     }
   };
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#020617' }}>
-        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
+      <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6" aria-busy="true" aria-label="Loading profile">
+        <div className="h-8 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="flex items-center gap-5">
+            <div className="h-20 w-20 animate-pulse rounded-full bg-zinc-100" />
+            <div className="space-y-3">
+              <div className="h-5 w-40 animate-pulse rounded bg-zinc-100" />
+              <div className="h-4 w-56 animate-pulse rounded bg-zinc-100" />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="h-4 w-24 animate-pulse rounded bg-zinc-100" />
+            <div className="h-4 w-24 animate-pulse rounded bg-zinc-100" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  const memberSince = getMemberSince();
+
   return (
-    <div className="min-h-screen w-full" style={{ background: '#020617' }}>
-      <div className="w-full px-4 sm:px-6 py-6 sm:py-8">
-        <div className="w-full max-w-screen mx-auto">
-          {/* Header */}
-          <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white break-words">Profile</h1>
-            <p className="text-sm sm:text-base text-gray-400 mt-2">Manage your account and preferences</p>
-          </div>
+    <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Your profile</h1>
+        <p className="mt-2 text-zinc-600">How you appear to buyers and sellers on AllVerse.</p>
+      </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-            {/* Main Profile Information */}
-            <div className="lg:col-span-2">
-              <div className="bg-dark-800 rounded-2xl p-4 sm:p-6 md:p-8 border border-dark-700">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
-                  <h2 className="text-lg sm:text-xl font-semibold text-white">Profile Information</h2>
-                  <div className="flex items-center space-x-3 w-full sm:w-auto">
-                    <button
-                      onClick={() => setShowEditModal(true)}
-                      className="flex items-center px-3 py-1.5 sm:px-4 sm:py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors text-sm sm:text-base w-full sm:w-auto justify-center"
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </button>
-                  </div>
-                </div>
-
-                {profile ? (
-                  <div className="space-y-8">
-                    {/* User Identity */}
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-                      <div className="relative shrink-0">
-                        <ProfilePicture
-                          src={profile.profilePicture || userProfile?.profilePicture}
-                          alt={profile.username}
-                          name={profile.username}
-                          email={currentUser?.email}
-                          size="xl"
-                          currentUser={currentUser}
-                          userProfilePic={userProfilePic}
-                        />
-                        <button
-                          onClick={onCameraClick}
-                          className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-7 h-7 sm:w-8 sm:h-8 bg-accent-500 hover:bg-accent-600 rounded-full flex items-center justify-center transition-colors"
-                        >
-                          <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                        </button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={onFileSelected}
-                        />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0 text-center sm:text-left">
-                        <h3 className="text-xl sm:text-2xl font-bold text-white mb-1 break-words">
-                          {profile.username}
-                        </h3>
-                        <p className="text-sm sm:text-base text-gray-400 mb-1 sm:mb-2 break-all">
-                          {currentUser?.email}
-                        </p>
-                        <p className="text-xs sm:text-sm text-gray-500">
-                          Member since {getMemberSince()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Profile Details */}
-                    <div className="space-y-6">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-300 mb-2">Bio</h4>
-                        <p className="text-gray-400">
-                          {profile.bio || 'No bio added yet.'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-white mb-2">No Profile Found</h3>
-                    <p className="text-gray-400 mb-6">
-                      It looks like you haven't set up your profile yet.
-                    </p>
-                    <button
-                      onClick={() => setShowEditModal(true)}
-                      className="flex items-center px-6 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors mx-auto"
-                    >
-                      <Settings className="w-5 h-5 mr-2" />
-                      Set Up Profile
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Quick Stats */}
-              <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700">
-                <h3 className="text-lg font-semibold text-white mb-4">Quick Stats</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Listings</span>
-                    <span className="text-white font-semibold">{stats.listingsCount}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Sales</span>
-                    <span className="text-white font-semibold">{stats.salesCount}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Reviews</span>
-                    <span className="text-white font-semibold">{stats.reviewsCount}</span>
-                  </div>
-                </div>
+      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16">
+        <section className="min-w-0">
+          {profile ? (
+            <div className="flex flex-col gap-8 sm:flex-row sm:items-start">
+              <div className="relative shrink-0">
+                <ProfilePicture
+                  src={profile.profilePicture || userProfile?.profilePicture}
+                  alt={profile.username}
+                  name={profile.username}
+                  email={currentUser?.email}
+                  size="xl"
+                  currentUser={currentUser}
+                  userProfilePic={userProfilePic}
+                />
+                <button
+                  type="button"
+                  onClick={onCameraClick}
+                  aria-label="Change profile photo"
+                  className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-900 transition hover:bg-zinc-50"
+                >
+                  <Camera strokeWidth={1.75} className="h-4 w-4" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onFileSelected}
+                />
               </div>
 
-              {/* Settings */}
-              <div className="bg-dark-800 rounded-2xl p-6 border border-dark-700">
-                <h3 className="text-lg font-semibold text-white mb-4">Settings</h3>
-                <div className="space-y-3">
-                  <Link
-                    href="/settings"
-                    className="w-full flex items-center px-4 py-3 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors"
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h2 className="break-words text-xl font-semibold text-zinc-950">{profile.username}</h2>
+                    <p className="mt-1 break-all text-sm text-zinc-600">{currentUser?.email}</p>
+                    {memberSince && <p className="mt-1 text-sm text-zinc-500">Member since {memberSince}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(true)}
+                    className="btn btn-outline shrink-0 gap-2"
                   >
-                    <Settings className="w-5 h-5 mr-3 text-accent-500" />
-                    Account Settings
-                  </Link>
-                  <button className="w-full flex items-center px-4 py-3 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors">
-                    <Shield className="w-5 h-5 mr-3 text-accent-500" />
-                    Privacy
+                    <Pencil strokeWidth={1.75} className="h-4 w-4" />
+                    Edit profile
                   </button>
                 </div>
+
+                <div className="mt-8 border-t border-zinc-200 pt-6">
+                  <h3 className="text-sm font-semibold text-zinc-950">About</h3>
+                  <p className="mt-2 max-w-[65ch] leading-relaxed text-zinc-600">
+                    {profile.bio || 'You haven’t written a bio yet. Buyers see it on your public profile.'}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          ) : (
+            <div className="flex flex-col items-start rounded-2xl border border-dashed border-zinc-300 p-8 sm:p-10">
+              <Settings strokeWidth={1.5} className="h-8 w-8 text-zinc-500" />
+              <h2 className="mt-4 font-semibold text-zinc-950">Set up your profile</h2>
+              <p className="mt-1 max-w-[44ch] text-sm text-zinc-600">
+                Add a name and photo so buyers know who they’re buying from.
+              </p>
+              <button type="button" onClick={() => setShowEditModal(true)} className="btn btn-primary mt-6">
+                Set up profile
+              </button>
+            </div>
+          )}
+        </section>
+
+        <aside className="space-y-10">
+          <section>
+            <h3 className="text-sm font-semibold text-zinc-950">Activity</h3>
+            <dl className="mt-3 divide-y divide-zinc-200 border-y border-zinc-200 text-sm">
+              <div className="flex items-center justify-between py-3">
+                <dt className="text-zinc-600">Listings</dt>
+                <dd className="font-semibold tabular-nums text-zinc-950">{stats.listingsCount}</dd>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <dt className="text-zinc-600">Sales</dt>
+                <dd className="font-semibold tabular-nums text-zinc-950">{stats.salesCount}</dd>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <dt className="text-zinc-600">Reviews</dt>
+                <dd className="font-semibold tabular-nums text-zinc-950">{stats.reviewsCount}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold text-zinc-950">Manage</h3>
+            <ul className="mt-3 divide-y divide-zinc-200 border-y border-zinc-200 text-sm">
+              <li>
+                <Link href="/settings" className="flex items-center justify-between py-3 font-medium text-zinc-950 hover:text-primary-700">
+                  Account settings
+                  <span aria-hidden="true" className="text-zinc-400">→</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/my-listings" className="flex items-center justify-between py-3 font-medium text-zinc-950 hover:text-primary-700">
+                  My listings
+                  <span aria-hidden="true" className="text-zinc-400">→</span>
+                </Link>
+              </li>
+            </ul>
+          </section>
+        </aside>
       </div>
 
-      {/* Edit Profile Modal */}
       <ProfileEditModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}

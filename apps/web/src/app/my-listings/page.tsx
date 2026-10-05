@@ -4,21 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
-
-import { Card } from '@/components/ui/Card';
-import {
-  Package,
-  Edit,
-  Trash2,
-  Eye,
-  Plus,
-  Loader2,
-  Calendar,
-  DollarSign,
-  Tag,
-  AlertCircle,
-  CheckCircle
-} from 'lucide-react';
+import { Package, Loader2, AlertCircle } from 'lucide-react';
 import { useFirebaseCleanup } from '@/hooks/useFirebaseCleanup';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -56,18 +42,16 @@ const formatDate = (dateString: string) => {
 const getStatusColor = (listing: MyListing) => {
   if (listing.sold) {
     return listing.soldThroughAllVerse
-      ? 'text-emerald-400 bg-emerald-900/20 border-emerald-500/20'
-      : 'text-red-400 bg-red-900/20 border-red-500/20';
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : 'border-zinc-200 bg-zinc-100 text-zinc-700';
   }
   switch (listing.status) {
     case 'active':
-      return 'text-green-400 bg-green-900/20 border-green-500/20';
+      return 'border-primary-200 bg-primary-50 text-primary-700';
     case 'draft':
-      return 'text-yellow-400 bg-yellow-900/20 border-yellow-500/20';
-    case 'inactive':
-      return 'text-gray-400 bg-gray-900/20 border-gray-500/20';
+      return 'border-amber-200 bg-amber-50 text-amber-800';
     default:
-      return 'text-gray-400 bg-gray-900/20 border-gray-500/20';
+      return 'border-zinc-200 bg-zinc-50 text-zinc-600';
   }
 };
 
@@ -122,7 +106,7 @@ export default function MyListingsPage() {
       if (response.status === 401) {
         // User not authenticated - redirect to login or show message
         const errorData = await response.json().catch(() => ({}));
-        console.error('❌ 401 Unauthorized:', errorData);
+        console.error('401 Unauthorized:', errorData);
         setError('Please sign in to view your listings');
         return;
       }
@@ -210,18 +194,12 @@ export default function MyListingsPage() {
   const cancelMarkSold = () => {
     setMarkSoldModal({ isOpen: false, listingId: null, listingTitle: '' });
   };
-
   // Wait for auth to finish loading before showing sign-in prompt
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#020617]">
-
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-            <p className="text-zinc-400 text-lg">Loading your listings...</p>
-          </div>
-        </div>
+      <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6" aria-busy="true" aria-label="Loading your listings">
+        <div className="h-8 w-40 animate-pulse rounded bg-zinc-100" />
+        <div className="mt-8 h-24 animate-pulse rounded-2xl bg-zinc-100" />
       </div>
     );
   }
@@ -229,235 +207,151 @@ export default function MyListingsPage() {
   // Show sign-in prompt if not authenticated
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#020617]">
-
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your listings</h1>
-            <Link
-              href="/signin"
-              className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 inline-flex items-center gap-2"
-            >
-              Sign In
-            </Link>
-          </div>
-        </div>
+      <div className="mx-auto flex min-h-[70dvh] w-full max-w-2xl flex-col justify-center px-4 py-16 sm:px-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Your listings</h1>
+        <p className="mt-2 text-zinc-600">Sign in to see and manage what you’re selling.</p>
+        <Link href="/signin?redirect=/my-listings" className="btn btn-primary mt-8 self-start">
+          Sign in
+        </Link>
       </div>
     );
   }
 
+  const activeCount = listings.filter(l => l.status === 'active' && !l.sold).length;
+
   return (
-    <div className="min-h-screen bg-[#020617]">
-
-
-      <div className="px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-10">
-            <h1 className="text-5xl font-bold text-white mb-3 bg-gradient-to-r from-white to-zinc-300 bg-clip-text text-transparent">My Listings</h1>
-            <p className="text-zinc-400 text-lg">Manage your marketplace listings</p>
-          </div>
-
-          {/* Action Bar */}
-          <div className="flex justify-between items-center mb-8">
-            <div className="flex items-center gap-4">
-              <div className="bg-zinc-800 px-4 py-2 rounded-lg border border-zinc-700">
-                <span className="text-zinc-300 font-semibold">
-                  {listings.length} {listings.length === 1 ? 'listing' : 'listings'}
-                </span>
-              </div>
-              {listings.length > 0 && (
-                <div className="text-sm text-zinc-500">
-                  {listings.filter(l => l.status === 'active').length} active
-                </div>
-              )}
-            </div>
-            <Link
-              href="/sell"
-              className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center gap-2 hover:shadow-lg hover:shadow-blue-500/25"
-            >
-              <Plus className="w-5 h-5" />
-              Create New Listing
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="text-center">
-                <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-                <p className="text-zinc-400 text-lg">Loading your listings...</p>
-              </div>
-            </div>
-          ) : error ? (
-            <Card className="border-red-500/20 bg-red-500/5">
-              <div className="text-center py-12">
-                <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
-                <h2 className="text-2xl font-bold text-white mb-3">Error Loading Listings</h2>
-                <p className="text-zinc-400 mb-6 text-lg">{error}</p>
-                <button
-                  onClick={fetchMyListings}
-                  className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-red-500/25"
-                >
-                  Try Again
-                </button>
-              </div>
-            </Card>
-          ) : listings.length === 0 ? (
-            <Card className="border-zinc-700 bg-gradient-to-br from-zinc-800/50 to-zinc-900/50">
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Package className="w-10 h-10 text-zinc-400" />
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-3">No Listings Yet</h2>
-                <p className="text-zinc-400 mb-8 text-lg max-w-md mx-auto">Start selling by creating your first listing. It's easy and takes just a few minutes!</p>
-                <Link
-                  href="/sell"
-                  className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 inline-flex items-center gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  Create Your First Listing
-                </Link>
-              </div>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-              {listings.map((listing) => (
-                <Card key={listing.id} className="group hover:scale-[1.02] transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10">
-                  {/* Image */}
-                  <div className="relative aspect-[4/3] bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl overflow-hidden mb-4 group-hover:rounded-2xl transition-all duration-300">
-                    {listing.photos && listing.photos.length > 0 ? (() => {
-                      const photoSrc = listing.photos[0];
-                      // Safe URL validation: enforce valid format for Next.js Image
-                      const imgSrc = photoSrc?.startsWith("/") ? photoSrc
-                        : photoSrc?.startsWith("http") ? photoSrc
-                        : "/default-avatar.png";
-                      return (
-                        <Image
-                          src={imgSrc}
-                          alt={listing.title}
-                          fill
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                          className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = 'https://via.placeholder.com/400x300/1e293b/64748b?text=No+Image';
-                          }}
-                        />
-                      );
-                    })() : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900">
-                        <div className="text-center text-zinc-400 group-hover:text-zinc-300 transition-colors">
-                          <Package className="w-12 h-12 mx-auto mb-2 opacity-60" />
-                          <div className="text-sm font-medium">No Image</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Status Badge */}
-                    <div className={`absolute top-3 left-3 px-3 py-1.5 rounded-full border backdrop-blur-sm text-xs font-semibold shadow-lg transition-all duration-300 group-hover:scale-105 ${getStatusColor(listing)}`}>
-                      {getStatusLabel(listing)}
-                    </div>
-
-                    {/* Photo Count Badge */}
-                    {listing.photos && listing.photos.length > 1 && (
-                      <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs font-medium border border-white/20">
-                        {listing.photos.length} photos
-                      </div>
-                    )}
-
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="text-zinc-100 font-semibold text-lg line-clamp-2 mb-2 group-hover:text-white transition-colors">
-                        {listing.title}
-                      </h3>
-                      <p className="text-zinc-400 text-sm line-clamp-2 leading-relaxed group-hover:text-zinc-300 transition-colors">
-                        {listing.description}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">
-                        <Tag className="w-3.5 h-3.5" />
-                        <span className="capitalize font-medium">{listing.category}</span>
-                      </div>
-                      <div className="text-blue-400 font-bold text-lg group-hover:text-blue-300 transition-colors">
-                        {formatCurrency(listing.price)}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-sm text-zinc-500 group-hover:text-zinc-400 transition-colors">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>Created {formatDate(listing.createdAt)}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="pt-4 border-t border-zinc-800 group-hover:border-zinc-700 transition-colors">
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/listings/${listing.id}`}
-                        className="shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5 hover:shadow-md"
-                      >
-                        <Eye className="w-4 h-4 shrink-0" />
-                        View
-                      </Link>
-                      <Link
-                        href={`/listings/${listing.id}/edit`}
-                        className="shrink-0 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5 hover:shadow-md hover:shadow-blue-500/25"
-                      >
-                        <Edit className="w-4 h-4 shrink-0" />
-                        Edit
-                      </Link>
-                      {!listing.sold && (
-                        <button
-                          onClick={() => handleMarkAsSold(listing)}
-                          className="shrink-0 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 hover:text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5 hover:shadow-md"
-                          title="I sold this elsewhere"
-                        >
-                          <CheckCircle className="w-4 h-4 shrink-0" />
-                          Sold
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDeleteListing(listing.id)}
-                        className="shrink-0 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 inline-flex items-center justify-center gap-1.5 hover:shadow-md hover:shadow-red-500/25"
-                      >
-                        <Trash2 className="w-4 h-4 shrink-0" />
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+    <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Your listings</h1>
+          {!loading && !error && (
+            <p className="mt-2 text-zinc-600">
+              {listings.length === 0
+                ? 'Nothing listed yet.'
+                : `${listings.length} ${listings.length === 1 ? 'listing' : 'listings'}, ${activeCount} active`}
+            </p>
           )}
         </div>
-      </div>
+        <Link href="/sell" className="btn btn-primary self-start sm:self-auto">
+          New listing
+        </Link>
+      </header>
 
-      {/* Delete Confirmation Modal */}
+      {loading ? (
+        <div className="mt-10 divide-y divide-zinc-200 border-y border-zinc-200" aria-busy="true" aria-label="Loading your listings">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex gap-4 py-5">
+              <div className="h-20 w-20 shrink-0 animate-pulse rounded-xl bg-zinc-100" />
+              <div className="flex-1 space-y-3">
+                <div className="h-4 w-1/2 animate-pulse rounded bg-zinc-100" />
+                <div className="h-4 w-1/3 animate-pulse rounded bg-zinc-100" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="mt-10 flex flex-col items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-6">
+          <div className="flex items-center gap-2 font-medium text-red-800">
+            <AlertCircle strokeWidth={1.75} className="h-4 w-4" />
+            Couldn’t load your listings
+          </div>
+          <p className="text-sm text-red-700">{error}</p>
+          <button type="button" onClick={fetchMyListings} className="btn btn-outline">
+            Try again
+          </button>
+        </div>
+      ) : listings.length === 0 ? (
+        <div className="mt-10 flex flex-col items-start rounded-2xl border border-dashed border-zinc-300 p-8 sm:p-10">
+          <Package strokeWidth={1.5} className="h-8 w-8 text-zinc-500" />
+          <h2 className="mt-4 font-semibold text-zinc-950">No listings yet</h2>
+          <p className="mt-1 max-w-[44ch] text-sm text-zinc-600">
+            Add a few photos and the AI drafts the listing and suggests a price. You review it before anything goes live.
+          </p>
+          <Link href="/sell" className="btn btn-primary mt-6">Create a listing</Link>
+        </div>
+      ) : (
+        <ul className="mt-8 divide-y divide-zinc-200 border-y border-zinc-200">
+          {listings.map((listing, i) => (
+            <li key={listing.id} className="reveal py-5" style={{ '--i': i } as React.CSSProperties}>
+              <div className="flex gap-4 sm:gap-5">
+                <Link href={`/listings/${listing.id}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-zinc-100 sm:h-24 sm:w-24">
+                  {listing.photos?.[0]?.startsWith('/') || listing.photos?.[0]?.startsWith('http') ? (
+                    <Image
+                      src={listing.photos[0]}
+                      alt=""
+                      fill
+                      sizes="96px"
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-full w-full place-items-center text-xs text-zinc-500">No photo</span>
+                  )}
+                </Link>
+
+                <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link href={`/listings/${listing.id}`} className="truncate font-semibold text-zinc-950 hover:text-primary-700">
+                        {listing.title}
+                      </Link>
+                      <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusColor(listing)}`}>
+                        {getStatusLabel(listing)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm tabular-nums text-zinc-900">{formatCurrency(listing.price)}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      <span className="capitalize">{listing.category}</span> · Created {formatDate(listing.createdAt)}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium">
+                    <Link href={`/listings/${listing.id}/edit`} className="text-primary-600 hover:text-primary-700">
+                      Edit
+                    </Link>
+                    {!listing.sold && (
+                      <button
+                        type="button"
+                        onClick={() => handleMarkAsSold(listing)}
+                        className="text-zinc-700 hover:text-zinc-950"
+                        title="I sold this elsewhere"
+                      >
+                        Mark as sold
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteListing(listing.id)}
+                      className="text-red-700 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <ConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={cancelDeleteListing}
         onConfirm={confirmDeleteListing}
-        title="Delete Listing"
-        message={`Are you sure you want to delete "${deleteModal.listingTitle}"? This action cannot be undone.`}
+        title="Delete listing"
+        message={`Delete “${deleteModal.listingTitle}”? This can’t be undone.`}
         confirmText="Delete"
-        cancelText="Cancel"
+        cancelText="Keep it"
         type="danger"
         isLoading={isDeleting}
       />
 
-      {/* Mark as sold confirmation */}
       <ConfirmationModal
         isOpen={markSoldModal.isOpen}
         onClose={cancelMarkSold}
         onConfirm={confirmMarkAsSold}
         title="Mark as sold"
-        message={`Mark "${markSoldModal.listingTitle}" as sold (sold elsewhere)? It will stay on your profile but show as "Sold" rather than "Sold through AllVerse."`}
+        message={`Mark “${markSoldModal.listingTitle}” as sold elsewhere? It stays on your profile, labeled Sold.`}
         confirmText="Mark as sold"
         cancelText="Cancel"
         type="info"

@@ -15,7 +15,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     <div className="space-y-1">
       <div className={`max-w-[75%] px-4 py-3 rounded-xl text-sm ${
         message.role === 'assistant' 
-          ? 'bg-zinc-900/80 border border-zinc-800 text-zinc-100' 
+          ? 'bg-white border border-zinc-200 text-zinc-900' 
           : 'bg-white text-black shadow ml-auto'
       }`}>
         {message.content}

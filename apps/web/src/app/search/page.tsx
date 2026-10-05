@@ -1,5 +1,4 @@
-import { DynamicBackground } from "@/components/DynamicBackground";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { redirect } from "next/navigation";
 import { serverSearch } from "@/lib/search/serverSearch";
 import SearchClientShell from "@/components/search/SearchClientShell";
 
@@ -44,17 +43,8 @@ export default async function SearchPage({
   }
 
   if (!query) {
-    return (
-      <div className="min-h-screen bg-dark-950">
-        <DynamicBackground intensity="low" showParticles={false} />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <LoadingSpinner
-            size="lg"
-            text="No query provided. Redirect from home search."
-          />
-        </div>
-      </div>
-    );
+    // Nothing to search for: send people to browse instead of an empty page
+    redirect("/listings");
   }
 
   const payload = await serverSearch({
@@ -83,8 +73,7 @@ export default async function SearchPage({
   }
 
   return (
-    <div className="min-h-screen bg-dark-950">
-      <DynamicBackground intensity="low" showParticles={false} />
+    <div className="min-h-screen bg-white">
 
       <SearchClientShell
         initialQuery={payload.query}

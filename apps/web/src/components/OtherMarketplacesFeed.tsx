@@ -143,36 +143,40 @@ export function OtherMarketplacesFeed(props: Props) {
 
   if (!enabled) {
     return (
-      <div className="mt-12 flex justify-center">
+      <div className="mt-14 flex flex-col items-start gap-4 border-t border-zinc-200 pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-medium text-zinc-950">Want more options?</p>
+          <p className="mt-1 text-sm text-zinc-500">See matching items listed on other marketplaces.</p>
+        </div>
         <button
           type="button"
           onClick={() => {
             enabledRef.current = true;
             setEnabled(true);
           }}
-          className="inline-flex items-center gap-2 rounded-xl bg-accent-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-600"
+          className="btn btn-outline gap-2"
         >
-          <Globe2 className="h-5 w-5" />
-          Load from other marketplaces
+          <Globe2 strokeWidth={1.75} className="h-4 w-4" />
+          Show other marketplaces
         </button>
       </div>
     );
   }
 
   return (
-    <section className="mt-12 border-t border-white/10 pt-8">
-      <h2 className="text-2xl font-bold text-white">Recommended from other marketplaces</h2>
-      <p className="mt-1 text-sm text-gray-400">
+    <section className="mt-14 border-t border-zinc-200 pt-8">
+      <h2 className="text-xl font-semibold tracking-tight text-zinc-950">From other marketplaces</h2>
+      <p className="mb-6 mt-1 text-sm text-zinc-500">
         Based on your filters, interests, and recent product clicks{seeds.length > 0 ? '.' : ''}
       </p>
       <ExternalResultsSection results={results} />
       <div ref={sentinelRef} className="flex min-h-20 items-center justify-center py-6">
-        {loading && <Loader2 className="h-6 w-6 animate-spin text-accent-400" />}
+        {loading && <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />}
         {!loading && !hasMore && results.length > 0 && (
-          <span className="text-sm text-gray-500">You’re all caught up.</span>
+          <span className="text-sm text-zinc-500">You’re all caught up.</span>
         )}
         {!loading && !hasMore && results.length === 0 && (
-          <span className="text-sm text-gray-500">No matching external listings were found.</span>
+          <span className="text-sm text-zinc-500">No matching external listings were found.</span>
         )}
       </div>
     </section>

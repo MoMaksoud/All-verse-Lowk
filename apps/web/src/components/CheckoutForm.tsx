@@ -1,18 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import clsx from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  CreditCard,
-  ShoppingBag,
-  ArrowLeft,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  Truck,
-  Store,
-} from 'lucide-react';
+import { ArrowLeft, AlertCircle, Loader2, Lock, ShieldCheck } from 'lucide-react';
+import { calculateCheckoutTotals } from '@/lib/payments/pricing';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -32,11 +24,6 @@ interface CartItem {
   sellerId: string;
   qty: number;
   priceAtAdd: number;
-}
-
-interface CheckoutFormProps {
-  cartItems: CartItem[];
-  onError: (error: string) => void;
 }
 
 interface ShippingRate {
@@ -64,10 +51,40 @@ const EMPTY_SHIPPING: SellerShippingState = {
   error: null,
 };
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
+type Address = { name: string; street: string; city: string; state: string; zip: string; country: string };
+
+const FIELDS: { key: keyof Address; label: string; autoComplete: string; span?: boolean; inputMode?: 'numeric' }[] = [
+  { key: 'name', label: 'Full name', autoComplete: 'name', span: true },
+  { key: 'street', label: 'Street address', autoComplete: 'street-address', span: true },
+  { key: 'city', label: 'City', autoComplete: 'address-level2' },
+  { key: 'state', label: 'State', autoComplete: 'address-level1' },
+  { key: 'zip', label: 'ZIP code', autoComplete: 'postal-code', inputMode: 'numeric' },
+];
+
+const inputClass =
+  'h-11 w-full rounded-lg border bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10';
+
+const deliveryWindow = (rate: ShippingRate) => {
+  const t = rate.serviceName.toLowerCase();
+  if (t.startsWith('economy')) return '3–5 days';
+  if (t.startsWith('standard')) return '2–3 days';
+  if (t.startsWith('express')) return '1–2 days';
+  if (t.startsWith('overnight')) return '1 day';
+  if (rate.deliveryDays) return `${rate.deliveryDays} ${rate.deliveryDays === 1 ? 'day' : 'days'}`;
+  return '';
+};
+
+interface CheckoutPageProps {
+  cartItems: CartItem[];
+  onBack: () => void;
+}
+
+const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBack }) => {
   const { currentUser } = useAuth();
   const [payingSellerId, setPayingSellerId] = useState<string | null>(null);
-  const [shippingAddress, setShippingAddress] = useState({
+  const [error, setError] = useState<string | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState<Address>({
     name: currentUser?.displayName || '',
     street: '',
     city: '',
@@ -77,6 +94,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
   });
   const [sellerNames, setSellerNames] = useState<Record<string, string>>({});
   const [sellerShipping, setSellerShipping] = useState<Record<string, SellerShippingState>>({});
+
+  const zipDigits = shippingAddress.zip.replace(/[^\d]/g, '');
+  const zipValid = zipDigits.length >= 5;
 
   // Group cart items by seller — each seller is a separate order + payment.
   const sellerGroups = useMemo(() => {
@@ -95,7 +115,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
 
   const multiSeller = sellerGroups.length > 1;
 
-  // Fetch seller display names once.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -174,7 +193,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
 
         if (!ratesResponse.ok) {
           const errorData = await ratesResponse.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to fetch shipping rates');
+          throw new Error(errorData.error || 'Couldn’t load shipping options.');
         }
 
         const ratesData = await ratesResponse.json();
@@ -187,7 +206,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
             selected: rates.length > 0 ? rates[0] : null,
             shipmentId: typeof ratesData.shipmentId === 'string' ? ratesData.shipmentId : null,
             loading: false,
-            error: rates.length === 0 ? 'No shipping rates available for this address.' : null,
+            error: rates.length === 0 ? 'No shipping options for this address.' : null,
           },
         }));
       } catch (error) {
@@ -195,7 +214,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
           ...prev,
           [sellerId]: {
             ...EMPTY_SHIPPING,
-            error: error instanceof Error ? error.message : 'Failed to load shipping rates',
+            error: error instanceof Error ? error.message : 'Couldn’t load shipping options.',
           },
         }));
       }
@@ -205,8 +224,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
 
   // When ZIP is valid, quote shipping for every seller.
   useEffect(() => {
-    const toZip = shippingAddress.zip.replace(/[^\d]/g, '');
-    if (toZip.length >= 5 && sellerGroups.length > 0) {
+    if (zipValid && sellerGroups.length > 0) {
       sellerGroups.forEach((group) => fetchRatesForSeller(group.sellerId, group.items));
     } else {
       setSellerShipping({});
@@ -214,32 +232,21 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shippingAddress.zip, cartItems]);
 
-  const computeSellerTotals = (group: { subtotal: number; sellerId: string }) => {
-    const subtotal = group.subtotal;
-    const tax = subtotal * 0.08;
-    const shipping = sellerShipping[group.sellerId]?.selected?.price || 0;
-    const fees = (subtotal + tax + shipping) * 0.029 + 0.3;
-    const total = subtotal + tax + fees + shipping;
-    return { subtotal, tax, shipping, fees, total };
-  };
-
-  const addressComplete =
-    !!shippingAddress.name &&
-    !!shippingAddress.street &&
-    !!shippingAddress.city &&
-    !!shippingAddress.state &&
-    shippingAddress.zip.replace(/[^\d]/g, '').length >= 5;
+  const missing = (key: keyof Address) => (key === 'zip' ? !zipValid : !shippingAddress[key].trim());
+  const addressComplete = FIELDS.every((f) => !missing(f.key));
 
   const handleSellerCheckout = async (sellerId: string) => {
     if (payingSellerId) return;
+    setError(null);
 
     if (!addressComplete) {
-      onError('Please complete your shipping address before checkout.');
+      setShowErrors(true);
+      setError('Add your shipping address to continue.');
       return;
     }
     const ship = sellerShipping[sellerId];
     if (!ship?.selected) {
-      onError('Please select a shipping option for this seller.');
+      setError('Pick a shipping option first.');
       return;
     }
 
@@ -260,7 +267,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok || (data as { success?: boolean }).success === false) {
-        throw new Error(getApiErrorMessage(data, 'Failed to create checkout session'));
+        throw new Error(getApiErrorMessage(data, 'Couldn’t start checkout.'));
       }
 
       const checkoutUrl = (data as { url?: string }).url;
@@ -268,343 +275,198 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ cartItems, onError }) => {
         window.location.href = checkoutUrl;
         return;
       }
-      throw new Error('No checkout URL returned');
+      throw new Error('Couldn’t start checkout.');
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Checkout failed');
+      setError(error instanceof Error ? error.message : 'Checkout failed.');
       setPayingSellerId(null);
     }
   };
 
-  const renderShippingOptions = (sellerId: string) => {
-    const state = sellerShipping[sellerId] ?? EMPTY_SHIPPING;
-    const zipValid = shippingAddress.zip.replace(/[^\d]/g, '').length >= 5;
-
-    if (!zipValid) {
-      return <p className="text-gray-400 text-sm">Enter your ZIP above to see shipping options.</p>;
-    }
-    if (state.loading) {
-      return (
-        <div className="flex items-center py-4">
-          <Loader2 className="w-5 h-5 animate-spin text-accent-500 mr-2" />
-          <span className="text-gray-300 text-sm">Loading shipping rates…</span>
-        </div>
-      );
-    }
-    if (state.error) {
-      return (
-        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-          <p className="text-red-400 text-sm">{state.error}</p>
-        </div>
-      );
-    }
-    if (state.rates.length === 0) {
-      return <p className="text-gray-400 text-sm">No shipping rates available for this address.</p>;
-    }
-
-    return (
-      <div className="space-y-2">
-        {state.rates.map((rate, index) => {
-          const tierName = rate.serviceName;
-          const isSelected = state.selected === rate;
-          const isRecommended = tierName.toLowerCase().startsWith('standard');
-
-          let deliveryWindow = '';
-          if (tierName.toLowerCase().startsWith('economy')) deliveryWindow = '3–5 days';
-          else if (tierName.toLowerCase().startsWith('standard')) deliveryWindow = '2–3 days';
-          else if (tierName.toLowerCase().startsWith('express')) deliveryWindow = '1–2 days';
-          else if (tierName.toLowerCase().startsWith('overnight')) deliveryWindow = '1 day';
-          else if (rate.deliveryDays)
-            deliveryWindow = `${rate.deliveryDays} ${rate.deliveryDays === 1 ? 'day' : 'days'}`;
-
-          return (
-            <button
-              key={index}
-              type="button"
-              onClick={() =>
-                setSellerShipping((prev) => ({
-                  ...prev,
-                  [sellerId]: { ...(prev[sellerId] ?? EMPTY_SHIPPING), selected: rate },
-                }))
-              }
-              className={`w-full text-left rounded-xl border px-4 py-3 transition-all flex items-center justify-between gap-4 ${
-                isSelected
-                  ? 'border-accent-500 bg-accent-500/10'
-                  : 'border-dark-500 bg-dark-600 hover:border-dark-400 hover:bg-dark-500'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`mt-1 h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                    isSelected ? 'border-accent-500' : 'border-gray-500'
-                  }`}
-                >
-                  {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-accent-500" />}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">{tierName}</span>
-                    {isRecommended && (
-                      <span className="rounded-full bg-accent-500/15 px-2 py-0.5 text-xs font-medium text-accent-300 border border-accent-500/40">
-                        Recommended
-                      </span>
-                    )}
-                  </div>
-                  {deliveryWindow && <p className="mt-0.5 text-sm text-gray-400">{deliveryWindow}</p>}
-                </div>
-              </div>
-              <p className="text-base font-semibold text-white">{formatCurrency(rate.price)}</p>
-            </button>
-          );
-        })}
-      </div>
-    );
-  };
+  const selectRate = (sellerId: string, rate: ShippingRate) =>
+    setSellerShipping((prev) => ({
+      ...prev,
+      [sellerId]: { ...(prev[sellerId] ?? EMPTY_SHIPPING), selected: rate },
+    }));
 
   return (
-    <div className="space-y-6">
-      {/* Shipping Address (shared) */}
-      <div className="bg-dark-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Shipping Address</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
-            <input
-              type="text"
-              value={shippingAddress.name}
-              onChange={(e) => setShippingAddress((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Street Address</label>
-            <input
-              type="text"
-              value={shippingAddress.street}
-              onChange={(e) => setShippingAddress((prev) => ({ ...prev, street: e.target.value }))}
-              className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">City</label>
-            <input
-              type="text"
-              value={shippingAddress.city}
-              onChange={(e) => setShippingAddress((prev) => ({ ...prev, city: e.target.value }))}
-              className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">State</label>
-            <input
-              type="text"
-              value={shippingAddress.state}
-              onChange={(e) => setShippingAddress((prev) => ({ ...prev, state: e.target.value }))}
-              className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">ZIP Code</label>
-            <input
-              type="text"
-              value={shippingAddress.zip}
-              onChange={(e) =>
-                setShippingAddress((prev) => ({ ...prev, zip: e.target.value.replace(/[^\d\s-]/g, '') }))
-              }
-              className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Country</label>
-            <select
-              value={shippingAddress.country}
-              onChange={(e) => setShippingAddress((prev) => ({ ...prev, country: e.target.value }))}
-              className="w-full px-3 py-2 bg-dark-600 border border-dark-500 rounded-lg text-white focus:outline-none focus:border-accent-500"
-            >
-              <option value="US">United States</option>
-              <option value="CA">Canada</option>
-            </select>
-          </div>
-        </div>
-      </div>
+    <div className="mx-auto min-h-[70dvh] w-full max-w-6xl px-4 pb-20 pt-10 sm:px-6 lg:px-8">
+      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-950">
+        <ArrowLeft strokeWidth={1.75} className="h-4 w-4" /> Back to cart
+      </button>
+      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-950">Checkout</h1>
 
-      {multiSeller && (
-        <div className="flex items-start gap-3 bg-accent-500/10 border border-accent-500/40 rounded-lg p-4">
-          <Store className="w-5 h-5 text-accent-300 shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-300 leading-relaxed">
-            Your bag has {sellerGroups.length} sellers. Each is a separate order with its own shipping
-            and is paid for separately. Check out each seller below.
-          </p>
+      {error && (
+        <div role="alert" className="mt-6 flex max-w-xl items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <AlertCircle strokeWidth={1.75} className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+          {error}
         </div>
       )}
 
-      {/* Per-seller groups */}
-      {sellerGroups.map((group, index) => {
-        const totals = computeSellerTotals(group);
-        const ship = sellerShipping[group.sellerId];
-        const isPaying = payingSellerId === group.sellerId;
-        const canPay = addressComplete && !!ship?.selected && !payingSellerId;
-
-        return (
-          <div key={group.sellerId} className="bg-dark-700 rounded-lg p-6 space-y-5">
-            {/* Seller header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <Store className="w-5 h-5 text-accent-500 shrink-0" />
-                <span className="font-semibold text-white truncate">{group.sellerName}</span>
-              </div>
-              {multiSeller && (
-                <span className="text-xs text-gray-500">
-                  Order {index + 1} of {sellerGroups.length}
-                </span>
-              )}
-            </div>
-
-            {/* Shipping */}
-            <div>
-              <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
-                <Truck className="w-4 h-4 mr-2 text-accent-500" />
-                Shipping
-              </h4>
-              {renderShippingOptions(group.sellerId)}
-            </div>
-
-            {/* Summary */}
-            <div className="border-t border-dark-500 pt-4 space-y-2">
-              <div className="flex justify-between text-gray-300 text-sm">
-                <span>Subtotal ({group.items.length} {group.items.length === 1 ? 'item' : 'items'})</span>
-                <span>{formatCurrency(totals.subtotal)}</span>
-              </div>
-              {totals.shipping > 0 && (
-                <div className="flex justify-between text-gray-300 text-sm">
-                  <span>Shipping</span>
-                  <span>{formatCurrency(totals.shipping)}</span>
+      <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_24rem] lg:gap-14">
+        {/* Address */}
+        <section aria-labelledby="ship-to">
+          <h2 id="ship-to" className="font-semibold text-zinc-950">Ship to</h2>
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {FIELDS.map((f) => {
+              const invalid = showErrors && missing(f.key);
+              return (
+                <div key={f.key} className={clsx('flex flex-col gap-2', f.span && 'sm:col-span-2')}>
+                  <label htmlFor={`addr-${f.key}`} className="text-sm font-medium text-zinc-800">{f.label}</label>
+                  <input
+                    id={`addr-${f.key}`}
+                    type="text"
+                    autoComplete={f.autoComplete}
+                    inputMode={f.inputMode}
+                    value={shippingAddress[f.key]}
+                    onChange={(e) => {
+                      const v = f.key === 'zip' ? e.target.value.replace(/[^\d\s-]/g, '') : e.target.value;
+                      setShippingAddress((prev) => ({ ...prev, [f.key]: v }));
+                    }}
+                    aria-invalid={invalid}
+                    aria-describedby={invalid ? `addr-${f.key}-err` : undefined}
+                    className={clsx(inputClass, invalid ? 'border-red-400' : 'border-zinc-300')}
+                  />
+                  {invalid && (
+                    <p id={`addr-${f.key}-err`} className="text-xs text-red-600">
+                      {f.key === 'zip' ? 'Enter a 5-digit ZIP code.' : 'Required.'}
+                    </p>
+                  )}
                 </div>
-              )}
-              <div className="flex justify-between text-gray-300 text-sm">
-                <span>Tax</span>
-                <span>{formatCurrency(totals.tax)}</span>
-              </div>
-              <div className="flex justify-between text-gray-300 text-sm">
-                <span>Processing Fee</span>
-                <span>{formatCurrency(totals.fees)}</span>
-              </div>
-              <div className="flex justify-between text-white font-semibold text-base pt-1">
-                <span>Total</span>
-                <span>{formatCurrency(totals.total)}</span>
-              </div>
+              );
+            })}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="addr-country" className="text-sm font-medium text-zinc-800">Country</label>
+              <select
+                id="addr-country"
+                autoComplete="country"
+                value={shippingAddress.country}
+                onChange={(e) => setShippingAddress((prev) => ({ ...prev, country: e.target.value }))}
+                className={clsx(inputClass, 'border-zinc-300')}
+              >
+                <option value="US">United States</option>
+                <option value="CA">Canada</option>
+              </select>
             </div>
-
-            {/* Per-seller checkout button */}
-            <button
-              type="button"
-              onClick={() => handleSellerCheckout(group.sellerId)}
-              disabled={!canPay}
-              className="w-full bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
-            >
-              {isPaying ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Redirecting to Checkout…
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-5 h-5 mr-2" />
-                  {multiSeller
-                    ? `Pay ${group.sellerName} — ${formatCurrency(totals.total)}`
-                    : `Proceed to Stripe Checkout — ${formatCurrency(totals.total)}`}
-                </>
-              )}
-            </button>
           </div>
-        );
-      })}
+        </section>
 
-      <p className="text-gray-500 text-xs text-center flex items-center justify-center gap-1.5">
-        <ShoppingBag className="w-3.5 h-3.5" />
-        Secure checkout · Powered by Stripe
-      </p>
-    </div>
-  );
-};
+        {/* Orders, one per seller */}
+        <div className="space-y-6">
+          {multiSeller && (
+            <p className="text-sm text-zinc-600">
+              Your cart has {sellerGroups.length} sellers. Each one ships and is paid for separately.
+            </p>
+          )}
 
-interface CheckoutPageProps {
-  cartItems: CartItem[];
-  onBack: () => void;
-}
+          {sellerGroups.map((group, index) => {
+            const ship = sellerShipping[group.sellerId] ?? EMPTY_SHIPPING;
+            const totals = calculateCheckoutTotals(group.subtotal, ship.selected?.price || 0);
+            const isPaying = payingSellerId === group.sellerId;
 
-const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBack }) => {
-  const router = useRouter();
-  const [status, setStatus] = useState<'checkout' | 'success' | 'error'>('checkout');
-  const [message, setMessage] = useState('');
+            return (
+              <section key={group.sellerId} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="text-sm text-zinc-500">
+                    From <span className="font-medium text-zinc-950">{group.sellerName}</span>
+                  </h2>
+                  {multiSeller && (
+                    <span className="text-xs text-zinc-500">Order {index + 1} of {sellerGroups.length}</span>
+                  )}
+                </div>
 
-  const handleError = (error: string) => {
-    setStatus('error');
-    setMessage(error);
-  };
+                <fieldset className="mt-5">
+                  <legend className="text-sm font-medium text-zinc-800">Delivery</legend>
+                  <div className="mt-3">
+                    {!zipValid ? (
+                      <p className="text-sm text-zinc-500">Enter your ZIP code to see delivery options.</p>
+                    ) : ship.loading ? (
+                      <div className="space-y-2" aria-busy="true">
+                        <div className="h-14 animate-pulse rounded-lg bg-zinc-200/70" />
+                        <div className="h-14 animate-pulse rounded-lg bg-zinc-200/70" />
+                      </div>
+                    ) : ship.error ? (
+                      <div className="text-sm">
+                        <p className="text-red-600">{ship.error}</p>
+                        <button
+                          onClick={() => fetchRatesForSeller(group.sellerId, group.items)}
+                          className="mt-1 font-medium text-primary-700 hover:underline"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {ship.rates.map((rate, i) => {
+                          const selected = ship.selected === rate;
+                          const eta = deliveryWindow(rate);
+                          return (
+                            <label
+                              key={rate.id ?? i}
+                              className={clsx(
+                                'flex cursor-pointer items-center gap-3 rounded-lg border bg-white px-4 py-3 transition',
+                                selected ? 'border-primary-600 ring-1 ring-primary-600' : 'border-zinc-200 hover:border-zinc-300'
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name={`ship-${group.sellerId}`}
+                                checked={selected}
+                                onChange={() => selectRate(group.sellerId, rate)}
+                                className="h-4 w-4 accent-primary-600"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-medium text-zinc-950">{rate.serviceName}</span>
+                                {eta && <span className="block text-xs text-zinc-500">{eta}</span>}
+                              </span>
+                              <span className="text-sm font-medium tabular-nums text-zinc-950">{formatCurrency(rate.price)}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </fieldset>
 
-  if (status === 'success') {
-    return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-8 text-center">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Payment Successful!</h2>
-          <p className="text-gray-300 mb-6">{message}</p>
-          <button
-            onClick={() => router.push('/orders')}
-            className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-          >
-            View Orders
-          </button>
+                <dl className="mt-6 space-y-2 border-t border-zinc-200 pt-4 text-sm">
+                  {[
+                    [`Items (${group.items.length})`, formatCurrency(totals.subtotal)],
+                    ['Shipping', ship.selected ? formatCurrency(totals.shipping) : '—'],
+                    ['Estimated tax', formatCurrency(totals.tax)],
+                    ['Card processing', formatCurrency(totals.fees)],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between">
+                      <dt className="text-zinc-600">{k}</dt>
+                      <dd className="tabular-nums text-zinc-950">{v}</dd>
+                    </div>
+                  ))}
+                  <div className="flex justify-between pt-2">
+                    <dt className="font-medium text-zinc-950">Total</dt>
+                    <dd className="text-lg font-semibold tabular-nums text-zinc-950">{formatCurrency(totals.total)}</dd>
+                  </div>
+                </dl>
+
+                <button
+                  type="button"
+                  onClick={() => handleSellerCheckout(group.sellerId)}
+                  disabled={!!payingSellerId || ship.loading}
+                  className="btn btn-primary mt-5 w-full gap-2 py-3"
+                >
+                  {isPaying ? (
+                    <><Loader2 strokeWidth={2} className="h-4 w-4 animate-spin" /> Opening Stripe…</>
+                  ) : (
+                    <><Lock strokeWidth={1.75} className="h-4 w-4" /> Pay {formatCurrency(totals.total)}</>
+                  )}
+                </button>
+              </section>
+            );
+          })}
+
+          <p className="flex gap-2 text-xs leading-relaxed text-zinc-500">
+            <ShieldCheck strokeWidth={1.75} className="h-4 w-4 shrink-0 text-primary-600" />
+            You’ll enter your card on Stripe’s secure page. AllVerse never sees your card number.
+          </p>
         </div>
       </div>
-    );
-  }
-
-  if (status === 'error') {
-    return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-8 text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Payment Failed</h2>
-          <p className="text-gray-300 mb-6">{message}</p>
-          <div className="space-x-4">
-            <button
-              onClick={() => setStatus('checkout')}
-              className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={onBack}
-              className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-            >
-              Back to Cart
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="flex items-center mb-6">
-        <button
-          onClick={onBack}
-          className="flex items-center text-gray-400 hover:text-white transition-colors mr-4"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          Back
-        </button>
-        <h1 className="text-2xl font-bold text-white">Checkout</h1>
-      </div>
-
-      <CheckoutForm cartItems={cartItems} onError={handleError} />
     </div>
   );
 };

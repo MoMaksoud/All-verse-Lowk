@@ -1,174 +1,160 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
-import Select from './Select';
-import type { ListingFilters, Category } from '@marketplace/types';
+import { Search } from 'lucide-react';
+import clsx from 'clsx';
+import type { ListingFilters } from '@marketplace/types';
+import { CATEGORIES } from '@/lib/categories';
 
 interface ListingFiltersProps {
   filters: ListingFilters;
-  categories: Category[];
   onFiltersChange: (filters: ListingFilters) => void;
 }
 
-export function ListingFilters({ filters, categories, onFiltersChange }: ListingFiltersProps) {
-  const [localFilters, setLocalFilters] = useState<ListingFilters>(filters);
+const CONDITIONS = [
+  { value: 'new', label: 'New' },
+  { value: 'like-new', label: 'Like new' },
+  { value: 'good', label: 'Good' },
+  { value: 'fair', label: 'Fair' },
+  { value: 'poor', label: 'Poor' },
+];
 
-  // Sync local filters with props when they change (e.g., from URL params)
+const inputClass =
+  'h-10 w-full min-w-0 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10';
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t border-zinc-200 py-5 first:border-t-0 first:pt-0">
+      <h3 className="mb-3 text-sm font-semibold text-zinc-950">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+export function ListingFilters({ filters, onFiltersChange }: ListingFiltersProps) {
+  // Text and price inputs are drafted locally and applied on Enter / Apply;
+  // category and condition apply immediately.
+  const [draft, setDraft] = useState<ListingFilters>(filters);
+
   useEffect(() => {
-    setLocalFilters(filters);
+    setDraft(filters);
   }, [filters]);
 
-  const handleFilterChange = (key: keyof ListingFilters, value: any) => {
-    const newFilters = { ...localFilters, [key]: value };
-    setLocalFilters(newFilters);
-    // Don't auto-apply - only update local state
-  };
+  const apply = (patch: Partial<ListingFilters> = {}) => onFiltersChange({ ...draft, ...patch });
 
-  const handleApplyFilters = () => {
-    onFiltersChange(localFilters);
-  };
-
-  const handleClearFilters = () => {
-    const clearedFilters: ListingFilters = {};
-    setLocalFilters(clearedFilters);
-    onFiltersChange(clearedFilters);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const onEnter = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      // Clear any pending debounced calls and apply immediately
-      onFiltersChange(localFilters);
+      apply();
     }
   };
 
-  const hasActiveFilters = Object.values(filters).some(value => value !== undefined && value !== '');
+  const priceInvalid =
+    draft.minPrice !== undefined && draft.maxPrice !== undefined && draft.minPrice > draft.maxPrice;
 
   return (
-    <aside className="rounded-2xl border border-white/10 bg-[#0B1220] p-4 sm:p-5 md:p-6 shadow-lg/30">
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">Filters</h3>
-          {hasActiveFilters && (
-            <button
-              onClick={handleClearFilters}
-              className="text-sm text-zinc-400 hover:text-white flex items-center gap-1 transition"
-            >
-              <X className="w-4 h-4" />
-              Clear all
-            </button>
-          )}
-        </div>
-
-        {/* Search */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-semibold tracking-wide text-zinc-300/80 uppercase">Search</h3>
-          <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
-              <Search className="h-4.5 w-4.5" />
-            </span>
-            <input
-              type="text"
-              value={localFilters.keyword || ''}
-              onChange={(e) => handleFilterChange('keyword', e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Search listings..."
-              className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-[#0E1526] pl-9 px-3 text-sm text-zinc-100
-                         placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
-            />
-          </div>
-        </div>
-
-        {/* Category */}
-        <div className="space-y-2">
-          <Select
-            label="Category"
-            value={localFilters.category || null}
-            onChange={(value) => handleFilterChange('category', value)}
-            options={[
-              { value: '', label: 'All Categories' },
-              ...categories.map((category) => ({
-                value: category.id,
-                label: category.name
-              }))
-            ]}
-            placeholder="All Categories"
+    <aside aria-label="Filters">
+      <Section title="Search">
+        <div className="relative">
+          <Search aria-hidden strokeWidth={1.75} className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <label htmlFor="filter-keyword" className="sr-only">Keyword</label>
+          <input
+            id="filter-keyword"
+            type="text"
+            value={draft.keyword || ''}
+            onChange={(e) => setDraft({ ...draft, keyword: e.target.value })}
+            onKeyDown={onEnter}
+            placeholder="Keyword"
+            className={clsx(inputClass, 'pl-9')}
           />
         </div>
+      </Section>
 
-        {/* Price Range */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-semibold tracking-wide text-zinc-300/80 uppercase">Price Range</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="number"
-              value={localFilters.minPrice || ''}
-              onChange={(e) => handleFilterChange('minPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
-              onKeyPress={handleKeyPress}
-              placeholder="Min"
-              inputMode="numeric"
-              className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-[#0E1526] px-3 text-sm text-zinc-100
-                         placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
-            />
-            <input
-              type="number"
-              value={localFilters.maxPrice || ''}
-              onChange={(e) => handleFilterChange('maxPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
-              onKeyPress={handleKeyPress}
-              placeholder="Max"
-              inputMode="numeric"
-              className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-[#0E1526] px-3 text-sm text-zinc-100
-                         placeholder:text-zinc-400 shadow-sm focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/60 outline-none transition"
-            />
-          </div>
-        </div>
+      <Section title="Category">
+        <ul className="-mx-2 space-y-0.5">
+          {[{ id: '', label: 'All categories' }, ...CATEGORIES].map((c) => {
+            const active = (filters.category || '') === c.id;
+            return (
+              <li key={c.id || 'all'}>
+                <button
+                  type="button"
+                  onClick={() => apply({ category: c.id || undefined })}
+                  aria-pressed={active}
+                  className={clsx(
+                    'w-full rounded-md px-2 py-1.5 text-left text-sm transition',
+                    active ? 'bg-primary-50 font-medium text-primary-700' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
+                  )}
+                >
+                  {c.label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Section>
 
-        {/* Condition */}
-        <div className="space-y-2">
-          <Select
-            label="Condition"
-            value={localFilters.condition || null}
-            onChange={(value) => handleFilterChange('condition', value)}
-            options={[
-              { value: '', label: 'Any Condition' },
-              { value: 'new', label: 'New' },
-              { value: 'like-new', label: 'Like New' },
-              { value: 'good', label: 'Good' },
-              { value: 'fair', label: 'Fair' },
-              { value: 'poor', label: 'Poor' }
-            ]}
-            placeholder="Any Condition"
+      <Section title="Price">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <label className="sr-only" htmlFor="filter-min">Minimum price</label>
+          <input
+            id="filter-min"
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={draft.minPrice ?? ''}
+            onChange={(e) => setDraft({ ...draft, minPrice: e.target.value ? parseFloat(e.target.value) : undefined })}
+            onKeyDown={onEnter}
+            placeholder="$ Min"
+            className={inputClass}
+          />
+          <span className="text-zinc-400">to</span>
+          <label className="sr-only" htmlFor="filter-max">Maximum price</label>
+          <input
+            id="filter-max"
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={draft.maxPrice ?? ''}
+            onChange={(e) => setDraft({ ...draft, maxPrice: e.target.value ? parseFloat(e.target.value) : undefined })}
+            onKeyDown={onEnter}
+            placeholder="$ Max"
+            className={inputClass}
           />
         </div>
+        {priceInvalid && <p className="mt-2 text-xs text-red-600">Minimum is higher than maximum.</p>}
+        <button
+          type="button"
+          onClick={() => apply()}
+          disabled={priceInvalid}
+          className="btn btn-outline mt-3 w-full py-2"
+        >
+          Apply price
+        </button>
+      </Section>
 
-        {/* Sort By */}
-        <div className="space-y-2">
-          <Select
-            label="Sort By"
-            value={localFilters.sortBy || null}
-            onChange={(value) => handleFilterChange('sortBy', value)}
-            options={[
-              { value: '', label: 'Relevance' },
-              { value: 'price', label: 'Price' },
-              { value: 'date', label: 'Date' }
-            ]}
-            placeholder="Relevance"
-          />
+      <Section title="Condition">
+        <div className="flex flex-wrap gap-2">
+          {CONDITIONS.map((c) => {
+            const active = filters.condition === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => apply({ condition: active ? undefined : c.value })}
+                aria-pressed={active}
+                className={clsx(
+                  'rounded-full border px-3 py-1.5 text-sm transition active:scale-[0.97]',
+                  active
+                    ? 'border-primary-600 bg-primary-600 text-white'
+                    : 'border-zinc-300 text-zinc-700 hover:border-zinc-400 hover:text-zinc-950'
+                )}
+              >
+                {c.label}
+              </button>
+            );
+          })}
         </div>
-
-        {/* Apply Button */}
-        <div className="pt-2">
-          <button
-            onClick={handleApplyFilters}
-            className="w-full h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-lg
-                       hover:bg-blue-500 active:bg-blue-700 focus:ring-2 focus:ring-blue-500/60 transition"
-          >
-            Apply Filters
-          </button>
-        </div>
-      </div>
+      </Section>
     </aside>
   );
 }

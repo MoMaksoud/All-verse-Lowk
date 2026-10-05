@@ -3,13 +3,13 @@
 import React, { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlertCircle, Search, ArrowLeft, Home, Camera, MessageCircle } from "lucide-react";
+import { AlertCircle, Search, ArrowLeft, Camera, MessageCircle, SearchX } from "lucide-react";
 
 import { AISummarySection } from "@/components/search/AISummarySection";
 import { ExternalResultsSection } from "@/components/search/ExternalResultsSection";
 import { InternalResultsSection } from "@/components/search/InternalResultsSection";
 import { SellCTASection } from "@/components/search/SellCTASection";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { ListingCardSkeleton } from "@/components/ListingCard";
 
 import { getPopularSearches } from "@/lib/searchAnalytics";
 import { normalizeSearchState } from "@/lib/search/state";
@@ -458,192 +458,170 @@ export default function SearchClientShell({
 
     return (
         <>
-            {/* Persistent Search Bar */}
-            <div className="sticky top-0 z-40 bg-dark-950/95 backdrop-blur-lg border-b border-dark-700/50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/"
-                            className="hidden sm:block p-2 hover:bg-white/10 rounded-lg transition-colors"
-                            title="Back to Home"
-                        >
-                            <ArrowLeft className="w-5 h-5 text-gray-400" />
-                        </Link>
-
-                        <form onSubmit={handleSearch} className="flex-1">
-                            <div className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl overflow-hidden hover:border-accent-500/50 transition-all">
-                                <div className="pl-3 sm:pl-4">
-                                    <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                                </div>
-                                <input
-                                    type="text"
-                                    value={searchInput}
-                                    onChange={(e) => setSearchInput(e.target.value)}
-                                    placeholder="Search for products..."
-                                    className="flex-1 bg-transparent text-white placeholder-white/60 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base outline-none"
-                                    autoComplete="off"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!searchInput.trim()}
-                                    className="m-1.5 sm:m-2 px-4 sm:px-6 py-1.5 sm:py-2 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm sm:text-base font-semibold rounded-lg transition-all"
-                                >
-                                    Search
-                                </button>
-                            </div>
-                        </form>
-
-                        <Link
-                            href="/"
-                            className="hidden sm:block p-2 hover:bg-white/10 rounded-lg transition-colors"
-                            title="Home"
-                        >
-                            <Home className="w-5 h-5 text-gray-400" />
-                        </Link>
-                    </div>
-                </div>
-            </div>
-
-            {/* Search Header */}
-            <div className="relative py-6 border-b border-dark-700/50">
-                <div className="w-full px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-7xl mx-auto text-center">
-                        {imageSearch && (
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-3 rounded-full bg-accent-500/20 border border-accent-500/30 text-accent-300 text-sm">
-                                <Camera className="w-4 h-4" />
-                                Searched by image
-                            </div>
-                        )}
-                        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                            {query ? `Search Results for "${query}"` : "Search Results"}
-                        </h1>
-                        <p className="text-gray-400">{statusText}</p>
-                        {debugSearch && (
-                            <p className="mt-2 text-xs text-amber-300">
-                                Debug Trace: <span className="font-mono">{searchId}</span>
-                            </p>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* AI refinement */}
-            {!loading && query && effectiveRefinement && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8">
-                        <div className="flex items-center gap-2 mb-4">
-                            <MessageCircle className="w-5 h-5 text-accent-400" />
-                            <span className="text-sm font-medium text-accent-300">AI assistant</span>
+            {/* Persistent search bar */}
+            <div className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-lg">
+                <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
+                    <Link
+                        href="/"
+                        className="hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 sm:grid"
+                        aria-label="Back to home"
+                    >
+                        <ArrowLeft strokeWidth={1.75} className="h-5 w-5" />
+                    </Link>
+                    <form onSubmit={handleSearch} className="flex-1" role="search">
+                        <div className="flex items-center rounded-xl border border-zinc-300 bg-white p-1 transition focus-within:border-primary-500 focus-within:ring-4 focus-within:ring-primary-500/10">
+                            <Search aria-hidden strokeWidth={1.75} className="ml-3 h-4 w-4 shrink-0 text-zinc-400" />
+                            <label htmlFor="search-input" className="sr-only">Search</label>
+                            <input
+                                id="search-input"
+                                type="text"
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                placeholder="Search for anything"
+                                className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 sm:text-base"
+                                autoComplete="off"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!searchInput.trim()}
+                                className="h-9 shrink-0 rounded-lg bg-primary-600 px-4 text-sm font-medium text-white transition hover:bg-primary-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-primary-600/50"
+                            >
+                                Search
+                            </button>
                         </div>
-                        <p className="text-lg font-semibold text-white mb-4">{effectiveRefinement.question}</p>
-                        <div className="flex flex-wrap gap-3">
+                    </form>
+                </div>
+            </div>
+
+            <div className="mx-auto max-w-7xl space-y-14 px-4 pb-20 pt-8 sm:px-6 md:pt-12 lg:px-8">
+                <header>
+                    {imageSearch && (
+                        <p className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-primary-700">
+                            <Camera strokeWidth={1.75} className="h-4 w-4" />
+                            Searched by image
+                        </p>
+                    )}
+                    <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 md:text-4xl">
+                        {query ? <>Results for <span className="text-primary-600">“{query}”</span></> : 'Search results'}
+                    </h1>
+                    <p className="mt-2 text-sm text-zinc-500">{statusText}</p>
+                    {debugSearch && (
+                        <p className="mt-2 text-xs text-amber-700">
+                            Debug trace: <span className="font-mono">{searchId}</span>
+                        </p>
+                    )}
+                </header>
+
+                {/* AI refinement */}
+                {!loading && query && effectiveRefinement && (
+                    <section className="rounded-2xl border border-zinc-200 p-5 sm:p-7">
+                        <p className="flex items-center gap-2 text-sm font-medium text-primary-700">
+                            <MessageCircle strokeWidth={1.75} className="h-4 w-4" />
+                            Help us narrow it down
+                        </p>
+                        <p className="mt-2 text-lg font-semibold text-zinc-950">{effectiveRefinement.question}</p>
+                        <div className="mt-4 flex flex-wrap gap-2">
                             {effectiveRefinement.options.map((option) => (
                                 <button
                                     key={option}
                                     type="button"
                                     disabled={loading}
                                     onClick={() => handleRefinementOption(option)}
-                                    className="px-5 py-2.5 bg-white/10 hover:bg-accent-500/20 border border-white/20 hover:border-accent-500/50 rounded-xl text-white font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 transition hover:border-primary-600 hover:text-primary-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {option}
                                 </button>
                             ))}
                         </div>
-                    </div>
-                </div>
-            )}
+                    </section>
+                )}
 
-            {/* Error */}
-            {effectiveError && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 flex items-start gap-4">
-                        <AlertCircle className="w-6 h-6 text-red-400 shrink-0 mt-1" />
+                {/* Error */}
+                {effectiveError && (
+                    <div role="alert" className="flex items-start gap-4 rounded-2xl border border-red-200 bg-red-50 p-5">
+                        <AlertCircle strokeWidth={1.75} className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
                         <div>
-                            <h3 className="text-lg font-semibold text-red-400 mb-1">Search Error</h3>
-                            <p className="text-red-300">{effectiveError}</p>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
-                            >
-                                Try Again
+                            <p className="font-semibold text-red-800">Search didn&apos;t finish</p>
+                            <p className="mt-1 text-sm text-red-700">{effectiveError}</p>
+                            <button onClick={() => window.location.reload()} className="btn btn-outline mt-4 py-2">
+                                Try again
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Loading */}
-            {loading && !effectiveError && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                    <LoadingSpinner size="lg" text="Searching across the web..." />
-                </div>
-            )}
-
-            {/* Results */}
-            {!loading && !effectiveError && effectiveResults && (
-                <>
-                    {hasResults && (
-                        <AISummarySection summary={effectiveResults.summary} query={query} hasResults={hasResults} />
-                    )}
-
-                    {internalResults.length > 0 && (
-                        <div>
-                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-                                <h2 className="text-2xl font-bold text-white mb-2">AllVerse Marketplace</h2>
-                                <p className="text-gray-400">From our community</p>
-                            </div>
-                            <InternalResultsSection results={internalResults} />
+                {/* Loading */}
+                {loading && !effectiveError && (
+                    <div aria-live="polite" className="space-y-6">
+                        <div className="h-40 animate-pulse rounded-2xl bg-zinc-100" />
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+                            {Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />)}
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {externalResults.length > 0 && (
-                        <div>
-                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-                                <h2 className="text-2xl font-bold text-white mb-2">From Other Marketplaces</h2>
-                                <p className="text-gray-400">External marketplace results</p>
+                {/* Results */}
+                {!loading && !effectiveError && effectiveResults && (
+                    <>
+                        {hasResults && (
+                            <AISummarySection summary={effectiveResults.summary} query={query} hasResults={hasResults} />
+                        )}
+
+                        {internalResults.length > 0 && (
+                            <section>
+                                <h2 className="mb-6 text-xl font-semibold tracking-tight text-zinc-950">
+                                    On AllVerse <span className="font-normal text-zinc-400">{internalResults.length}</span>
+                                </h2>
+                                <InternalResultsSection results={internalResults} />
+                            </section>
+                        )}
+
+                        {externalResults.length > 0 && (
+                            <section>
+                                <h2 className="text-xl font-semibold tracking-tight text-zinc-950">
+                                    From other marketplaces <span className="font-normal text-zinc-400">{externalResults.length}</span>
+                                </h2>
+                                <p className="mb-6 mt-1 text-sm text-zinc-500">Opens the seller&apos;s site in a new tab.</p>
+                                <ExternalResultsSection results={externalResults} />
+                            </section>
+                        )}
+
+                        {hasResults && popularSearchTerms.length > 0 && (
+                            <div className="border-t border-zinc-200 pt-8">
+                                <p className="mb-3 text-sm font-medium text-zinc-950">Others also searched for</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {popularSearchTerms.map((term) => (
+                                        <Link
+                                            key={term}
+                                            href={searchHref(term)}
+                                            className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 transition hover:bg-zinc-200 hover:text-zinc-950"
+                                        >
+                                            {term}
+                                        </Link>
+                                    ))}
+                                </div>
                             </div>
-                            <ExternalResultsSection results={externalResults} />
-                        </div>
-                    )}
+                        )}
 
-                    {hasResults && popularSearchTerms.length > 0 && (
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                            <p className="text-sm text-gray-400 mb-2">Others also searched for</p>
-                            <div className="flex flex-wrap gap-2">
-                                {popularSearchTerms.map((term) => (
-                                    <Link
-                                        key={term}
-                                        href={searchHref(term)}
-                                        className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white text-sm transition-colors"
-                                    >
-                                        {term}
-                                    </Link>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {!hasResults && (
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                            <div className="text-center py-12">
-                                <div className="text-6xl mb-4">🔍</div>
-                                <h3 className="text-2xl font-bold text-white mb-2">No results found</h3>
-                                <p className="text-gray-400 mb-6">
-                                    Try searching with different keywords or browse our marketplace
-                                </p>
-                                <button
-                                    onClick={() => router.push("/listings")}
-                                    className="px-6 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-xl transition-colors"
-                                >
-                                    Browse All Listings
+                        {!hasResults && (
+                            <div className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-zinc-300 px-6 py-10">
+                                <SearchX strokeWidth={1.5} className="h-8 w-8 text-zinc-400" />
+                                <div>
+                                    <p className="font-medium text-zinc-950">Nothing found for “{query}”</p>
+                                    <p className="mt-1 text-sm text-zinc-500">
+                                        Try fewer or different words, or browse the marketplace.
+                                    </p>
+                                </div>
+                                <button onClick={() => router.push("/listings")} className="btn btn-outline py-2">
+                                    Browse marketplace
                                 </button>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    <SellCTASection />
-                </>
-            )}
+                        <SellCTASection />
+                    </>
+                )}
+            </div>
         </>
     );
 }

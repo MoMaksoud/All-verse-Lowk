@@ -1,15 +1,13 @@
-import { SkeletonCard } from '@/components/SkeletonLoader';
+import { ListingCardSkeleton } from '@/components/ListingCard';
 
 export default function Loading() {
   return (
-    <div className="min-h-screen" style={{ background: '#020617' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="h-12 rounded-lg mb-8 max-w-md animate-pulse" style={{ background: '#1e293b' }} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
+    <div className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 md:pt-12 lg:px-8">
+      <div className="mb-10 h-9 w-48 animate-pulse rounded bg-zinc-100" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <ListingCardSkeleton key={i} />
+        ))}
       </div>
     </div>
   );

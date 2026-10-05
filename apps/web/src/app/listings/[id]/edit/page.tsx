@@ -163,7 +163,7 @@ export default function EditListingPage() {
       <div className="min-h-screen bg-dark-900">
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="text-white">Loading...</div>
+            <div className="text-dark-50">Loading...</div>
           </div>
         </div>
       </div>
@@ -181,10 +181,10 @@ export default function EditListingPage() {
               onClick={() => router.back()}
               className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-white" />
+              <ArrowLeft className="w-5 h-5 text-dark-50" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-white">Edit Listing</h1>
+              <h1 className="text-2xl font-bold text-dark-50">Edit Listing</h1>
               <p className="text-gray-400">Update your listing details</p>
             </div>
           </div>
@@ -197,30 +197,30 @@ export default function EditListingPage() {
             onChangeUrls={handlePhotoChange}
             onBusyChange={setBusy}
           />
-          {errors.photos && <p className="text-red-400 text-sm mt-2">{errors.photos}</p>}
+          {errors.photos && <p className="text-red-700 text-sm mt-2">{errors.photos}</p>}
 
           <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-8">
 
             {/* Basic Info */}
             <div className="card p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Basic Information</h3>
+              <h3 className="text-lg font-semibold text-dark-50 mb-4">Basic Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-dark-50 mb-2">
                     Title *
                   </label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                    className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                     placeholder="Enter listing title"
                   />
-                  {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
+                  {errors.title && <p className="text-red-700 text-sm mt-1">{errors.title}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-dark-50 mb-2">
                     Price *
                   </label>
                   <div className="relative">
@@ -231,15 +231,15 @@ export default function EditListingPage() {
                       min="0"
                       value={formData.price}
                       onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                      className="w-full pl-8 pr-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                      className="w-full pl-8 pr-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                       placeholder="0.00"
                     />
                   </div>
-                  {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
+                  {errors.price && <p className="text-red-700 text-sm mt-1">{errors.price}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-dark-50 mb-2">
                     Category *
                   </label>
                   <Select
@@ -257,11 +257,11 @@ export default function EditListingPage() {
                     ]}
                     placeholder="Select category"
                   />
-                  {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
+                  {errors.category && <p className="text-red-700 text-sm mt-1">{errors.category}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-dark-50 mb-2">
                     Condition
                   </label>
                   <Select
@@ -279,17 +279,17 @@ export default function EditListingPage() {
               </div>
 
               <div className="mt-6">
-                <label className="block text-sm font-medium text-white mb-2">
+                <label className="block text-sm font-medium text-dark-50 mb-2">
                   Description *
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={6}
-                  className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-4 py-3 bg-dark-700 border border-gray-600 rounded-lg text-dark-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
                   placeholder="Describe your item..."
                 />
-                {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
+                {errors.description && <p className="text-red-700 text-sm mt-1">{errors.description}</p>}
               </div>
             </div>
 
@@ -315,7 +315,7 @@ export default function EditListingPage() {
             </div>
 
             {errors.submit && (
-              <div className="text-red-400 text-sm">{errors.submit}</div>
+              <div className="text-red-700 text-sm">{errors.submit}</div>
             )}
           </form>
         </div>

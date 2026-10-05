@@ -69,12 +69,12 @@ export default function ListingGalleryEditor(props: Props) {
                 0
               </span>
             </div>
-            <h2 className="text-base sm:text-lg font-semibold text-white">Photos</h2>
-            <span className="text-sm text-white/60">0 photos</span>
+            <h2 className="text-base sm:text-lg font-semibold text-dark-50">Photos</h2>
+            <span className="text-sm text-dark-50/60">0 photos</span>
           </div>
         </div>
         <div className="p-4 sm:p-6">
-          <div className="text-center py-8 text-white/50">
+          <div className="text-center py-8 text-dark-50/50">
             No photos to edit
           </div>
         </div>
@@ -92,10 +92,10 @@ export default function ListingGalleryEditor(props: Props) {
               {urls.length}
             </span>
           </div>
-          <h2 className="text-base sm:text-lg font-semibold text-white">Photos</h2>
-          <span className="text-sm text-white/60">{urls.length} {urls.length === 1 ? "photo" : "photos"}</span>
+          <h2 className="text-base sm:text-lg font-semibold text-dark-50">Photos</h2>
+          <span className="text-sm text-dark-50/60">{urls.length} {urls.length === 1 ? "photo" : "photos"}</span>
         </div>
-        <span className="hidden sm:block text-xs text-white/40 select-none">Drag to reorder</span>
+        <span className="hidden sm:block text-xs text-dark-50/40 select-none">Drag to reorder</span>
       </div>
 
       {/* Body */}
@@ -110,7 +110,7 @@ export default function ListingGalleryEditor(props: Props) {
               draggable={false}
             />
           ) : (
-            <div className="text-white/50">No image</div>
+            <div className="text-dark-50/50">No image</div>
           )}
         </div>
 
@@ -156,7 +156,7 @@ export default function ListingGalleryEditor(props: Props) {
             >
               <img src={u} alt="" className="h-full w-full object-cover" loading="lazy" draggable={false} />
               {/* index badge */}
-              <span className="absolute top-1 left-1 rounded-md bg-black/60 text-white text-[10px] font-medium px-1.5 py-0.5">
+              <span className="absolute top-1 left-1 rounded-md bg-black/60 text-dark-50 text-[10px] font-medium px-1.5 py-0.5">
                 {idx + 1}
               </span>
             </button>
@@ -169,7 +169,7 @@ export default function ListingGalleryEditor(props: Props) {
             <button
               type="button"
               onClick={setAsCover}
-              className="px-3 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-white text-sm"
+              className="px-3 py-2 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-dark-50 text-sm"
             >
               Set as cover
             </button>

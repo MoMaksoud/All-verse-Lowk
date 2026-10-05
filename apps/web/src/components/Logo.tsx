@@ -28,8 +28,8 @@ export function Logo({ size = 'md', className = '' }: LogoProps) {
       />
       {showText && (
         <span
-          className={`font-bold leading-tight text-white ${text}`}
-          style={{ fontFamily: 'var(--font-display, var(--font-inter))' }}
+          className={`font-bold leading-tight text-dark-50 ${text}`}
+          style={{ fontFamily: 'var(--font-sans)' }}
         >
           All Verse
         </span>
