@@ -16,17 +16,17 @@ export function ListingSkeleton({ count = 12, view = "comfortable" }: Props) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden animate-pulse"
+          className="rounded-2xl border border-zinc-200 dark:border-zinc-200 bg-white dark:bg-white overflow-hidden animate-pulse"
         >
           {/* Image skeleton */}
-          <div className="relative w-full aspect-[4/3] bg-zinc-200 dark:bg-zinc-800" />
+          <div className="relative w-full aspect-[4/3] bg-zinc-200 dark:bg-zinc-100" />
           
           {/* Content skeleton */}
           <div className={`${padding} space-y-2`}>
-            <div className="h-5 bg-zinc-200 dark:bg-zinc-800 rounded w-3/4" />
+            <div className="h-5 bg-zinc-200 dark:bg-zinc-100 rounded w-3/4" />
             <div className="flex items-baseline justify-between gap-2">
-              <div className="h-6 bg-zinc-200 dark:bg-zinc-800 rounded w-20" />
-              <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-16" />
+              <div className="h-6 bg-zinc-200 dark:bg-zinc-100 rounded w-20" />
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-100 rounded w-16" />
             </div>
           </div>
         </div>

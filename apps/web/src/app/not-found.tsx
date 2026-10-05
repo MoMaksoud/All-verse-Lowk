@@ -43,7 +43,7 @@ export default function NotFound() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-150 hover:brightness-110"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-dark-50 transition-all duration-150 hover:brightness-110"
               style={{ background: 'var(--accent)' }}
             >
               Go home

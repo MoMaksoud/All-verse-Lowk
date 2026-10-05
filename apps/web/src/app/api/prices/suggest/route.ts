@@ -23,41 +23,6 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-function generateFallbackPriceSuggestion(title: string, description: string, category: string, condition: string = 'Good'): string {
-  // Simple fallback pricing logic based on category and condition
-  const categoryBasePrices: Record<string, number> = {
-    'electronics': 150,
-    'fashion': 25,
-    'home': 50,
-    'sports': 40,
-    'books': 10,
-    'automotive': 200,
-    'other': 30
-  };
-
-  const conditionMultipliers: Record<string, number> = {
-    'new': 1.0,
-    'like-new': 0.9,
-    'like new': 0.9,
-    'excellent': 0.9,
-    'good': 0.75,
-    'fair': 0.6,
-    'poor': 0.4
-  };
-
-  const basePrice = categoryBasePrices[category.toLowerCase()] || categoryBasePrices['other'];
-  const conditionMultiplier = conditionMultipliers[condition.toLowerCase()] || conditionMultipliers['good'];
-  
-  // Add some randomness based on title length (proxy for complexity)
-  const complexityFactor = Math.min(1.5, Math.max(0.5, title.length / 20));
-  
-  const suggestedPrice = Math.round(basePrice * conditionMultiplier * complexityFactor);
-  const minPrice = Math.round(suggestedPrice * 0.8);
-  const maxPrice = Math.round(suggestedPrice * 1.2);
-
-  return `Great product!\n\nSuggested price: $${minPrice}-$${maxPrice}\nBased on ${category} market rates\n\nPro tip: Check competitor prices weekly\n\nReady to list?`;
-}
-
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -133,34 +98,15 @@ Provide a concise price suggestion with a recommended price range and brief reas
           source: 'ai'
         });
       }
-    } catch (aiError: any) {
+    } catch (aiError) {
       console.error('AI service error:', aiError);
-      
-      // Check if it's a quota error
-      if (aiError.message?.includes('quota') || aiError.message?.includes('429')) {
-        console.log('🔄 AI quota exceeded, using fallback pricing');
-        
-        const fallbackSuggestion = generateFallbackPriceSuggestion(title, description, category, condition);
-        
-        return NextResponse.json({
-          suggestion: fallbackSuggestion,
-          success: true,
-          source: 'fallback',
-          warning: 'AI service temporarily unavailable. Using market-based pricing.'
-        });
-      }
     }
 
-    // If AI fails for other reasons, use fallback
-    console.log('🔄 AI service failed, using fallback pricing');
-    const fallbackSuggestion = generateFallbackPriceSuggestion(title, description, category, condition);
-    
-    return NextResponse.json({
-      suggestion: fallbackSuggestion,
-      success: true,
-      source: 'fallback',
-      warning: 'AI service temporarily unavailable. Using market-based pricing.'
-    });
+    // No made-up numbers: if the model is unreachable, say so.
+    return NextResponse.json(
+      { error: 'AI pricing is unavailable right now.' },
+      { status: 503 }
+    );
 
   } catch (error) {
     console.error('Price suggestion error:', error);

@@ -1,33 +1,33 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Heart, Search, Filter, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { Heart, Search, AlertCircle } from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 import ListingCard from '@/components/ListingCard';
+import { loadFavoriteIds, setFavorite } from '@/lib/favorites';
+import { useAuth } from '@/contexts/AuthContext';
+import { CATEGORIES } from '@/lib/categories';
 
 export default function FavoritesPage() {
+  const { currentUser } = useAuth();
   const [favorites, setFavorites] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  // Get favorites from localStorage
-  const getFavorites = useCallback(() => {
-    try {
-      const stored = localStorage.getItem('favorites');
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error('Error loading favorites:', error);
-      return [];
-    }
-  }, []);
-
-  // Load favorites on component mount
+  // Load favorites once the signed-in user is known (the token isn't ready on first render)
   useEffect(() => {
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
     const loadFavorites = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const favoriteIds = getFavorites();
+        const favoriteIds = [...(await loadFavoriteIds())];
         if (favoriteIds.length === 0) {
           setFavorites([]);
           setLoading(false);
@@ -56,160 +56,132 @@ export default function FavoritesPage() {
         setFavorites(validFavorites);
       } catch (error) {
         console.error('Error loading favorites:', error);
+        setError('We couldn’t load your favorites. Try again in a moment.');
       } finally {
         setLoading(false);
       }
     };
 
     loadFavorites();
-  }, [getFavorites]);
+  }, [currentUser]);
 
   // Filter favorites based on search and category
   const filteredFavorites = favorites.filter(listing => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCategory = !selectedCategory || listing.category === selectedCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
 
-  const removeFavorite = useCallback((listingId: string) => {
+  const removeFavorite = useCallback(async (listingId: string) => {
     try {
-      const currentFavorites = getFavorites();
-      const updatedFavorites = currentFavorites.filter((id: string) => id !== listingId);
-      localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
-      
-      // Update local state
+      await setFavorite(listingId, false);
       setFavorites(prev => prev.filter(listing => listing.id !== listingId));
-      
-      // Show toast
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 bg-red-500 text-white';
-      toast.textContent = 'Removed from favorites';
-      document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        if (toast.parentNode) {
-          toast.remove();
-        }
-      }, 3000);
     } catch (error) {
       console.error('Error removing favorite:', error);
+      setError('Couldn’t remove that item. Try again.');
     }
-  }, [getFavorites]);
+  }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-dark-950">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
-        </div>
-      </div>
-    );
-  }
+  const hasFilters = Boolean(searchQuery || selectedCategory);
 
   return (
-    <div className="min-h-screen bg-dark-950">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-5xl font-bold text-white mb-2">
-            My Favorites
-          </h1>
-          <p className="text-lg text-gray-400">
-            {favorites.length === 0 
-              ? "You haven't favorited any items yet" 
-              : `${favorites.length} favorite${favorites.length === 1 ? '' : 's'} saved`
-            }
+    <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Saved items</h1>
+        {!loading && (
+          <p className="mt-2 text-zinc-600">
+            {favorites.length === 0
+              ? 'Tap the heart on anything you want to come back to.'
+              : `${favorites.length} saved ${favorites.length === 1 ? 'item' : 'items'}`}
           </p>
+        )}
+      </header>
+
+      {error && (
+        <p role="alert" className="mt-6 flex gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle strokeWidth={1.75} className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </p>
+      )}
+
+      {loading ? (
+        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" aria-busy="true" aria-label="Loading saved items">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="space-y-3">
+              <div className="aspect-square animate-pulse rounded-xl bg-zinc-100" />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-100" />
+              <div className="h-4 w-1/3 animate-pulse rounded bg-zinc-100" />
+            </div>
+          ))}
         </div>
-        {favorites.length === 0 ? (
-          <div className="text-center py-16">
-            <Heart className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-white mb-2">No Favorites Yet</h2>
-            <p className="text-gray-400 mb-6">
-              Start exploring and click the heart icon on items you like to add them here.
-            </p>
-            <a
-              href="/listings"
-              className="inline-block bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-            >
-              Browse Listings
-            </a>
+      ) : favorites.length === 0 ? (
+        <div className="mt-10 flex flex-col items-start rounded-2xl border border-dashed border-zinc-300 p-8 sm:p-10">
+          <Heart strokeWidth={1.5} className="h-8 w-8 text-zinc-500" />
+          <h2 className="mt-4 font-semibold text-zinc-950">Nothing saved yet</h2>
+          <p className="mt-1 max-w-[44ch] text-sm text-zinc-600">
+            Saved items stay here so you can compare them later.
+          </p>
+          <Link href="/listings" className="btn btn-primary mt-6">Browse listings</Link>
+        </div>
+      ) : (
+        <>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <label className="relative flex-1">
+              <span className="sr-only">Search saved items</span>
+              <Search strokeWidth={1.75} className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search saved items"
+                className="input pl-9"
+              />
+            </label>
+            <label className="sm:w-56">
+              <span className="sr-only">Filter by category</span>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="input"
+              >
+                <option value="">All categories</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </select>
+            </label>
           </div>
-        ) : (
-          <>
-            {/* Filters */}
-            <div className="mb-8">
-              <div className="bg-dark-800 rounded-xl border border-dark-700 p-6">
-                <div className="flex flex-col md:flex-row gap-4">
-                  {/* Search */}
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search favorites..."
-                        className="w-full pl-10 pr-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                      />
-                    </div>
-                  </div>
 
-                  {/* Category Filter */}
-                  <div className="md:w-48">
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                    >
-                      <option value="">All Categories</option>
-                      <option value="electronics">Electronics</option>
-                      <option value="fashion">Fashion</option>
-                      <option value="home">Home</option>
-                      <option value="sports">Sports</option>
-                      <option value="automotive">Automotive</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+          {filteredFavorites.length === 0 ? (
+            <div className="mt-10 flex flex-col items-start">
+              <h2 className="font-semibold text-zinc-950">No saved items match</h2>
+              <p className="mt-1 text-sm text-zinc-600">Try a different search or category.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('');
+                }}
+                className="btn btn-outline mt-4"
+              >
+                Clear filters
+              </button>
             </div>
-
-            {/* Results */}
-            <div className="mb-6">
-              <p className="text-gray-400">
-                {filteredFavorites.length} of {favorites.length} favorites
-                {(searchQuery || selectedCategory) && ' match your filters'}
-              </p>
-            </div>
-
-            {/* Favorites Grid */}
-            {filteredFavorites.length === 0 ? (
-              <div className="text-center py-16">
-                <Filter className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <h2 className="text-2xl font-semibold text-white mb-2">No Matches</h2>
-                <p className="text-gray-400 mb-6">
-                  Try adjusting your search or filter criteria.
+          ) : (
+            <>
+              {hasFilters && (
+                <p className="mt-6 text-sm text-zinc-500">
+                  Showing {filteredFavorites.length} of {favorites.length}
                 </p>
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('');
-                  }}
-                  className="btn btn-outline"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              )}
+              <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {filteredFavorites.map((listing) => (
-                  <div key={listing.id} className="relative group">
-                    <ListingCard 
+                  <div key={listing.id} className="relative">
+                    <ListingCard
                       variant="grid"
                       id={listing.id}
                       title={listing.title}
@@ -221,19 +193,20 @@ export default function FavoritesPage() {
                       sellerId={listing.sellerId}
                     />
                     <button
+                      type="button"
                       onClick={() => removeFavorite(listing.id)}
-                      className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
-                      title="Remove from favorites"
+                      aria-label={`Remove ${listing.title} from saved items`}
+                      className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-primary-700 shadow-sm transition hover:bg-white"
                     >
-                      <Heart className="w-4 h-4 fill-current" />
+                      <Heart strokeWidth={1.75} className="h-4 w-4 fill-current" />
                     </button>
                   </div>
                 ))}
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

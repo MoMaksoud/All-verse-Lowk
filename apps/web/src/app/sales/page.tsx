@@ -2,23 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card } from '@/components/ui/Card';
 import {
   Package,
   Calendar,
-  DollarSign,
   MapPin,
-  CheckCircle,
+  CheckCircle2,
   Clock,
   XCircle,
-  Eye,
   Loader2,
-  TrendingUp,
-  CreditCard,
-  AlertCircle,
   Truck,
   Download,
-  ExternalLink
+  ExternalLink,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
@@ -86,33 +81,33 @@ function getApiErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  paid: 'Paid',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+};
+
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'paid':
-      return <CheckCircle className="w-5 h-5 text-green-500" />;
-    case 'shipped':
-      return <Package className="w-5 h-5 text-blue-500" />;
     case 'delivered':
-      return <CheckCircle className="w-5 h-5 text-green-600" />;
-    case 'cancelled':
-      return <XCircle className="w-5 h-5 text-red-500" />;
+      return <CheckCircle2 strokeWidth={1.75} className="h-4 w-4" />;
+    case 'shipped':
+      return <Truck strokeWidth={1.75} className="h-4 w-4" />;
     default:
-      return <Clock className="w-5 h-5 text-yellow-500" />;
+      return <Clock strokeWidth={1.75} className="h-4 w-4" />;
   }
 };
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'paid':
-      return 'text-green-400 bg-green-900/20 border-green-500/20';
-    case 'shipped':
-      return 'text-blue-400 bg-blue-900/20 border-blue-500/20';
     case 'delivered':
-      return 'text-green-600 bg-green-900/20 border-green-600/20';
-    case 'cancelled':
-      return 'text-red-400 bg-red-900/20 border-red-500/20';
+      return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    case 'shipped':
+      return 'border-primary-200 bg-primary-50 text-primary-700';
     default:
-      return 'text-yellow-400 bg-yellow-900/20 border-yellow-500/20';
+      return 'border-zinc-200 bg-zinc-50 text-zinc-700';
   }
 };
 
@@ -367,24 +362,21 @@ export default function SalesPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
+      <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6" aria-busy="true" aria-label="Loading">
+        <div className="h-8 w-40 animate-pulse rounded bg-zinc-100" />
+        <div className="mt-8 h-24 animate-pulse rounded-2xl bg-zinc-100" />
       </div>
     );
   }
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to view your sales</h1>
-          <Link
-            href="/signin?redirect=/sales&reason=sales"
-            className="bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-          >
-            Sign In
-          </Link>
-        </div>
+      <div className="mx-auto flex min-h-[70dvh] w-full max-w-2xl flex-col justify-center px-4 py-16 sm:px-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Your sales</h1>
+        <p className="mt-2 text-zinc-600">Sign in to see what you’ve sold and set up payouts.</p>
+        <Link href="/signin?redirect=/sales&reason=sales" className="btn btn-primary mt-8 self-start">
+          Sign in
+        </Link>
       </div>
     );
   }
@@ -395,372 +387,275 @@ export default function SalesPage() {
     .reduce((sum, sale) => sum + sale.total, 0);
 
   return (
-    <div className="min-h-screen bg-[#020617]">
-      <div className="px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-white mb-2">My Sales</h1>
-            <p className="text-gray-400">Track your sold items and earnings</p>
+    <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Your sales</h1>
+        <p className="mt-2 text-zinc-600">What you’ve sold, what to ship, and when payouts arrive.</p>
+      </header>
+
+      {error && (
+        <p role="alert" className="mt-6 flex gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle strokeWidth={1.75} className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </p>
+      )}
+
+      {/* Payout setup */}
+      {!loadingAccount && (!stripeAccount?.hasAccount || !stripeAccount?.payoutsEnabled) && (
+        <div className="mt-8 flex flex-col gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="min-w-0">
+            <h2 className="font-semibold text-zinc-950">Connect Stripe to get paid</h2>
+            <p className="mt-1 text-sm text-amber-900">
+              {!stripeAccount?.hasAccount
+                ? 'Payouts go to a Stripe account. Set one up before your first sale.'
+                : 'Finish Stripe onboarding to turn on payouts.'}
+            </p>
           </div>
-          {error && (
-            <div className="mb-6 rounded-lg border border-red-500/30 bg-red-900/20 p-4 text-red-300">
-              {error}
-            </div>
-          )}
-
-          {/* Stripe Connect Setup */}
-          {!loadingAccount && (!stripeAccount?.hasAccount || !stripeAccount?.payoutsEnabled) && (
-            <Card className="mb-8 border-yellow-500/20 bg-yellow-500/5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <AlertCircle className="w-6 h-6 text-yellow-400" />
-                  <div>
-                    <h3 className="text-white font-semibold mb-1">Connect Stripe to Receive Payouts</h3>
-                    <p className="text-gray-400 text-sm">
-                      {!stripeAccount?.hasAccount
-                        ? 'Set up your Stripe account to receive payments from sales'
-                        : 'Complete your Stripe onboarding to enable payouts'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleConnectStripe}
-                  disabled={loadingAccount}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  {loadingAccount ? 'Loading...' : 'Connect Stripe'}
-                </button>
-              </div>
-            </Card>
-          )}
-
-          {/* Earnings Summary */}
-          {sales.length > 0 && (
-            <Card className="mb-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-8 h-8 text-green-400" />
-                  <div>
-                    <p className="text-gray-400 text-sm">Total Earnings</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalEarnings)}</p>
-                    {stripeAccount?.payoutsEnabled && (
-                      <p className="text-green-400 text-xs mt-1">✓ Payouts enabled</p>
-                    )}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-gray-400 text-sm">Total Sales</p>
-                  <p className="text-xl font-semibold text-accent-400">{sales.length}</p>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-accent-500 animate-spin" />
-            </div>
-          ) : sales.length === 0 ? (
-            <Card>
-              <div className="text-center py-12">
-                <Package className="w-16 h-16 text-zinc-500 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold text-white mb-2">No sales yet</h2>
-                <p className="text-zinc-400 mb-6">You haven't sold any items yet.</p>
-                <Link
-                  href="/sell"
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-                >
-                  Create Listing
-                </Link>
-              </div>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {sales.map((sale) => (
-                <Card key={sale.id}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-white">
-                        Sale #{sale.id.slice(-8).toUpperCase()}
-                      </h3>
-                      <div className={`px-3 py-1 rounded-full border text-sm font-medium flex items-center gap-2 ${getStatusColor(sale.status)}`}>
-                        {getStatusIcon(sale.status)}
-                        {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-accent-500 font-semibold text-lg">
-                        {formatCurrency(sale.total)}
-                      </p>
-                      <p className="text-gray-400 text-sm">
-                        {formatDate(sale.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Sold Items */}
-                    <div>
-                      <h4 className="text-white font-medium mb-3">Items Sold ({sale.items.length})</h4>
-                      <div className="space-y-2">
-                        {sale.items.map((item, index) => (
-                          <div key={index} className="flex items-center justify-between text-sm">
-                            <div className="flex-1">
-                              <p className="text-white">{item.title}</p>
-                              <p className="text-gray-400">Qty: {item.qty}</p>
-                            </div>
-                            <p className="text-gray-300">
-                              {formatCurrency(item.unitPrice * item.qty)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Shipping Address */}
-                    <div>
-                      <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        Shipping Address
-                      </h4>
-                      <div className="text-sm text-gray-300">
-                        <p>{sale.shippingAddress.name}</p>
-                        <p>{sale.shippingAddress.street}</p>
-                        <p>
-                          {sale.shippingAddress.city}, {sale.shippingAddress.state} {sale.shippingAddress.zip}
-                        </p>
-                        <p>{sale.shippingAddress.country}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sale Summary + Actions */}
-                  <div className="mt-6 pt-6 border-t border-white/[0.08]">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="text-sm text-[#94a3b8]">
-                        <p>Subtotal: {formatCurrency(sale.subtotal)}</p>
-                        <p>Tax: {formatCurrency(sale.tax)}</p>
-                        <p>Fees: {formatCurrency(sale.fees)}</p>
-                      </div>
-                      <div className="text-right flex flex-col items-end gap-2">
-                        <p className="text-white font-semibold text-lg">
-                          Total: {formatCurrency(sale.total)}
-                        </p>
-                        {sale.status === 'paid' && (sale as any).shipping?.rateId && (
-                          <button
-                            onClick={() => { setSelectedSale(sale); }}
-                            className="inline-flex items-center gap-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white text-sm font-medium py-1.5 px-3 rounded-lg transition-colors"
-                          >
-                            <Truck className="w-3.5 h-3.5" />
-                            Generate Label
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setSelectedSale(sale)}
-                          className="text-[#3b82f6] hover:text-[#60a5fa] text-sm flex items-center gap-1"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={handleConnectStripe}
+            disabled={loadingAccount}
+            className="btn btn-primary shrink-0"
+          >
+            {loadingAccount ? 'Loading…' : 'Connect Stripe'}
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Sale Details Modal */}
+      {/* Summary */}
+      {!loading && sales.length > 0 && (
+        <dl className="mt-8 grid grid-cols-2 gap-6 border-y border-zinc-200 py-6 sm:max-w-md">
+          <div>
+            <dt className="text-sm text-zinc-500">Earned so far</dt>
+            <dd className="mt-1 text-2xl font-semibold tabular-nums text-zinc-950">{formatCurrency(totalEarnings)}</dd>
+            {stripeAccount?.payoutsEnabled && (
+              <dd className="mt-1 text-xs text-emerald-700">Payouts are on</dd>
+            )}
+          </div>
+          <div>
+            <dt className="text-sm text-zinc-500">Sales</dt>
+            <dd className="mt-1 text-2xl font-semibold tabular-nums text-zinc-950">{sales.length}</dd>
+          </div>
+        </dl>
+      )}
+
+      {loading ? (
+        <div className="mt-8 divide-y divide-zinc-200 border-y border-zinc-200" aria-busy="true" aria-label="Loading sales">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="grid gap-4 py-6 sm:grid-cols-[1fr_auto]">
+              <div className="space-y-3">
+                <div className="h-4 w-40 animate-pulse rounded bg-zinc-100" />
+                <div className="h-4 w-64 animate-pulse rounded bg-zinc-100" />
+              </div>
+              <div className="h-4 w-20 animate-pulse rounded bg-zinc-100" />
+            </div>
+          ))}
+        </div>
+      ) : sales.length === 0 ? (
+        <div className="mt-10 flex flex-col items-start rounded-2xl border border-dashed border-zinc-300 p-8 sm:p-10">
+          <Package strokeWidth={1.5} className="h-8 w-8 text-zinc-500" />
+          <h2 className="mt-4 font-semibold text-zinc-950">No sales yet</h2>
+          <p className="mt-1 max-w-[44ch] text-sm text-zinc-600">
+            Once a buyer pays for one of your listings, it will show up here with its shipping details.
+          </p>
+          <Link href="/sell" className="btn btn-primary mt-6">List an item</Link>
+        </div>
+      ) : (
+        <ul className="mt-8 divide-y divide-zinc-200 border-y border-zinc-200">
+          {sales.map((sale, i) => (
+            <li key={sale.id} className="reveal py-6" style={{ '--i': i } as React.CSSProperties}>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="font-semibold text-zinc-950">Sale #{sale.id.slice(-8).toUpperCase()}</h2>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${getStatusColor(sale.status)}`}>
+                      {getStatusIcon(sale.status)}
+                      {STATUS_LABEL[sale.status] ?? sale.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-zinc-500">{formatDate(sale.createdAt)}</p>
+                  <p className="mt-3 text-sm text-zinc-600">
+                    {sale.items.map((item) => item.title).join(', ') || 'No items'}
+                  </p>
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500">
+                    <MapPin strokeWidth={1.75} className="h-3.5 w-3.5" />
+                    {sale.shippingAddress.city ? `${sale.shippingAddress.city}, ${sale.shippingAddress.state}` : sale.shippingAddress.country}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center justify-between gap-6 sm:flex-col sm:items-end">
+                  <div className="text-right">
+                    <p className="font-semibold tabular-nums text-zinc-950">{formatCurrency(sale.total)}</p>
+                    <p className="text-xs text-zinc-500">after fees</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    {sale.status === 'paid' && (sale as any).shipping?.rateId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSale(sale)}
+                        className="btn btn-primary gap-1.5 px-3 py-2 text-sm"
+                      >
+                        <Truck strokeWidth={1.75} className="h-3.5 w-3.5" />
+                        Generate label
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSale(sale)}
+                      className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                    >
+                      View details
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {selectedSale && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0f172a] rounded-2xl border border-white/[0.08] p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-white">
-                Sale Details #{selectedSale.id.slice(-8).toUpperCase()}
-              </h3>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/40 p-0 sm:items-center sm:p-4"
+          onClick={() => setSelectedSale(null)}
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sale-details-title"
+            className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 sm:max-w-xl sm:rounded-2xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="sale-details-title" className="text-lg font-semibold text-zinc-950">
+                  Sale #{selectedSale.id.slice(-8).toUpperCase()}
+                </h2>
+                <p className="mt-1 text-sm text-zinc-500">{formatDate(selectedSale.createdAt)}</p>
+              </div>
               <button
+                type="button"
                 onClick={() => setSelectedSale(null)}
-                className="text-zinc-400 hover:text-white"
+                aria-label="Close"
+                className="rounded-md p-1 text-zinc-500 hover:text-zinc-950"
               >
-                <XCircle className="w-6 h-6" />
+                <XCircle strokeWidth={1.75} className="h-6 w-6" />
               </button>
             </div>
 
-            <div className="space-y-6">
-              {/* Status */}
-              <div className="flex items-center gap-3">
-                <span className="text-zinc-400">Status:</span>
-                <div className={`px-3 py-1 rounded-full border text-sm font-medium flex items-center gap-2 ${getStatusColor(selectedSale.status)}`}>
-                  {getStatusIcon(selectedSale.status)}
-                  {selectedSale.status.charAt(0).toUpperCase() + selectedSale.status.slice(1)}
-                </div>
-              </div>
+            <span className={`mt-4 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${getStatusColor(selectedSale.status)}`}>
+              {getStatusIcon(selectedSale.status)}
+              {STATUS_LABEL[selectedSale.status] ?? selectedSale.status}
+            </span>
 
-              {/* Items */}
-              <div>
-                <h4 className="text-white font-medium mb-3">Items Sold</h4>
-                <div className="space-y-3">
-                  {selectedSale.items.map((item, index) => (
-                    <div key={index} className="bg-[#1e293b] rounded-xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h5 className="text-white font-medium">{item.title}</h5>
-                          <p className="text-zinc-400 text-sm">Listing ID: {item.listingId}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-white font-medium">
-                            {formatCurrency(item.unitPrice)} × {item.qty}
-                          </p>
-                          <p className="text-accent-500 font-semibold">
-                            {formatCurrency(item.unitPrice * item.qty)}
-                          </p>
-                        </div>
-                      </div>
+            <section className="mt-6">
+              <h3 className="text-sm font-semibold text-zinc-950">Items sold</h3>
+              <ul className="mt-2 divide-y divide-zinc-200 border-y border-zinc-200">
+                {selectedSale.items.map((item, index) => (
+                  <li key={index} className="flex items-start justify-between gap-4 py-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-medium text-zinc-950">{item.title}</p>
+                      <p className="text-zinc-500">
+                        {formatCurrency(item.unitPrice)} × {item.qty}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <p className="font-medium tabular-nums text-zinc-950">{formatCurrency(item.unitPrice * item.qty)}</p>
+                  </li>
+                ))}
+              </ul>
+              <dl className="mt-4 space-y-1.5 text-sm">
+                <div className="flex justify-between"><dt className="text-zinc-500">Subtotal</dt><dd className="tabular-nums text-zinc-900">{formatCurrency(selectedSale.subtotal)}</dd></div>
+                <div className="flex justify-between"><dt className="text-zinc-500">Tax</dt><dd className="tabular-nums text-zinc-900">{formatCurrency(selectedSale.tax)}</dd></div>
+                <div className="flex justify-between"><dt className="text-zinc-500">Fees</dt><dd className="tabular-nums text-zinc-900">{formatCurrency(selectedSale.fees)}</dd></div>
+                <div className="flex justify-between border-t border-zinc-200 pt-2 text-base font-semibold"><dt className="text-zinc-950">You receive</dt><dd className="tabular-nums text-zinc-950">{formatCurrency(selectedSale.total)}</dd></div>
+              </dl>
+            </section>
 
-              {/* Shipping Address */}
-              <div>
-                <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Shipping Address
-                </h4>
-                <div className="bg-[#1e293b] rounded-xl p-4">
-                  <div className="text-zinc-300">
-                    <p className="font-medium">{selectedSale.shippingAddress.name}</p>
-                    <p>{selectedSale.shippingAddress.street}</p>
-                    <p>
-                      {selectedSale.shippingAddress.city}, {selectedSale.shippingAddress.state} {selectedSale.shippingAddress.zip}
-                    </p>
-                    <p>{selectedSale.shippingAddress.country}</p>
-                  </div>
-                </div>
+            <section className="mt-6">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
+                <MapPin strokeWidth={1.75} className="h-4 w-4" />
+                Ship to
+              </h3>
+              <div className="mt-2 text-sm text-zinc-700">
+                <p className="font-medium text-zinc-950">{selectedSale.shippingAddress.name}</p>
+                <p>{selectedSale.shippingAddress.street}</p>
+                <p>
+                  {selectedSale.shippingAddress.city}, {selectedSale.shippingAddress.state} {selectedSale.shippingAddress.zip}
+                </p>
+                <p>{selectedSale.shippingAddress.country}</p>
               </div>
+            </section>
 
-              {/* Sale Summary */}
-              <div>
-                <h4 className="text-white font-medium mb-3">Sale Summary</h4>
-                <div className="bg-zinc-800 rounded-xl p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-400">Subtotal:</span>
-                    <span className="text-white">{formatCurrency(selectedSale.subtotal)}</span>
+            <section className="mt-6">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
+                <Truck strokeWidth={1.75} className="h-4 w-4" />
+                Shipping label
+              </h3>
+              <div className="mt-2 rounded-xl bg-zinc-50 p-4 text-sm">
+                {loadingShipping ? (
+                  <div className="space-y-2" aria-busy="true">
+                    <div className="h-4 w-48 animate-pulse rounded bg-zinc-200" />
+                    <div className="h-4 w-32 animate-pulse rounded bg-zinc-200" />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-400">Tax:</span>
-                    <span className="text-white">{formatCurrency(selectedSale.tax)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-400">Fees:</span>
-                    <span className="text-white">{formatCurrency(selectedSale.fees)}</span>
-                  </div>
-                  <div className="border-t border-white/[0.08] pt-2">
-                    <div className="flex justify-between">
-                      <span className="text-white font-semibold">Total:</span>
-                      <span className="text-accent-500 font-semibold text-lg">
-                        {formatCurrency(selectedSale.total)}
-                      </span>
+                ) : shippingInfo?.trackingNumber ? (
+                  <dl className="space-y-3">
+                    <div>
+                      <dt className="text-zinc-500">Tracking number</dt>
+                      <dd className="font-medium tabular-nums text-zinc-950">{shippingInfo.trackingNumber}</dd>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Shipping Section */}
-              <div>
-                <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                  <Truck className="w-4 h-4" />
-                  Shipping Information
-                </h4>
-                <div className="bg-[#1e293b] rounded-xl p-4">
-                  {loadingShipping ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="w-5 h-5 animate-spin text-accent-500 mr-2" />
-                      <span className="text-zinc-400">Loading shipping info...</span>
-                    </div>
-                  ) : shippingInfo?.trackingNumber ? (
-                    <div className="space-y-3">
+                    {shippingInfo.carrier && (
                       <div>
-                        <span className="text-zinc-400 text-sm">Tracking Number:</span>
-                        <p className="text-white font-medium">{shippingInfo.trackingNumber}</p>
+                        <dt className="text-zinc-500">Carrier</dt>
+                        <dd className="text-zinc-950">{shippingInfo.carrier}{shippingInfo.service ? ` · ${shippingInfo.service}` : ''}</dd>
                       </div>
-                      {shippingInfo.carrier && (
-                        <div>
-                          <span className="text-zinc-400 text-sm">Carrier:</span>
-                          <p className="text-white">{shippingInfo.carrier}</p>
-                        </div>
-                      )}
-                      {shippingInfo.service && (
-                        <div>
-                          <span className="text-zinc-400 text-sm">Service:</span>
-                          <p className="text-white">{shippingInfo.service}</p>
-                        </div>
-                      )}
-                      {shippingInfo.labelUrl && (
-                        <div>
-                          <a
-                            href={shippingInfo.labelUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-accent-400 hover:text-accent-300 transition-colors"
-                          >
-                            <Download className="w-4 h-4" />
-                            Download Shipping Label
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-zinc-400 text-sm">Delivery Status:</span>
-                        <p className="text-white">In Transit</p>
-                        <p className="text-zinc-400 text-xs mt-1">Tracking updates will appear here</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-zinc-400 text-sm">No shipping label has been generated yet.</p>
-                      {(selectedSale as any).shipping?.rateId && (selectedSale as any).shipping?.shipmentId ? (
-                        <button
-                          onClick={handleGenerateLabel}
-                          disabled={generatingLabel}
-                          className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:bg-zinc-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                        >
-                          {generatingLabel ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <Truck className="w-4 h-4" />
-                              Generate Shipping Label
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <p className="text-zinc-500 text-xs">Shipping rate information not available. Please contact support.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                    )}
+                    {shippingInfo.labelUrl && (
+                      <a
+                        href={shippingInfo.labelUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        <Download strokeWidth={1.75} className="h-4 w-4" />
+                        Download label
+                        <ExternalLink strokeWidth={1.75} className="h-3 w-3" />
+                      </a>
+                    )}
+                  </dl>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-zinc-950">No label yet.</p>
+                    {(selectedSale as any).shipping?.rateId && (selectedSale as any).shipping?.shipmentId ? (
+                      <button
+                        type="button"
+                        onClick={handleGenerateLabel}
+                        disabled={generatingLabel}
+                        className="btn btn-primary gap-1.5 px-3 py-2 text-sm"
+                      >
+                        {generatingLabel ? (
+                          <>
+                            <Loader2 strokeWidth={1.75} className="h-3.5 w-3.5 animate-spin" />
+                            Generating…
+                          </>
+                        ) : (
+                          <>
+                            <Truck strokeWidth={1.75} className="h-3.5 w-3.5" />
+                            Generate shipping label
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <p className="text-zinc-500">Shipping details are missing for this sale. Contact info@allversegpt.com.</p>
+                    )}
+                  </div>
+                )}
               </div>
+            </section>
 
-              {/* Dates */}
-              <div className="flex items-center gap-4 text-sm text-zinc-400">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>Sold: {formatDate(selectedSale.createdAt)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>Updated: {formatDate(selectedSale.updatedAt)}</span>
-                </div>
-              </div>
-            </div>
+            <p className="mt-6 flex items-center gap-2 text-xs text-zinc-500">
+              <Calendar strokeWidth={1.75} className="h-3.5 w-3.5" />
+              Last updated {formatDate(selectedSale.updatedAt)}
+            </p>
           </div>
         </div>
       )}

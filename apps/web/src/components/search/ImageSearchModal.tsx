@@ -106,19 +106,19 @@ export function ImageSearchModal({ isOpen, onClose }: ImageSearchModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="relative bg-dark-900 border border-white/20 rounded-2xl shadow-2xl max-w-md w-full p-6">
+      <div className="relative bg-dark-900 border border-zinc-300 rounded-2xl shadow-2xl max-w-md w-full p-6">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
+          className="absolute top-4 right-4 p-2 hover:bg-zinc-900/5 rounded-lg transition-colors"
           aria-label="Close"
         >
-          <X className="w-5 h-5 text-white" />
+          <X className="w-5 h-5 text-dark-50" />
         </button>
 
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white mb-2">Search with Image</h2>
+          <h2 className="text-2xl font-bold text-dark-50 mb-2">Search with Image</h2>
           <p className="text-gray-400 text-sm">
             Take a photo or upload an image to find matching products
           </p>
@@ -141,7 +141,7 @@ export function ImageSearchModal({ isOpen, onClose }: ImageSearchModalProps) {
               className="absolute top-2 right-2 p-2 bg-red-500/90 hover:bg-red-600 rounded-full transition-colors"
               aria-label="Remove image"
             >
-              <X className="w-4 h-4 text-white" />
+              <X className="w-4 h-4 text-dark-50" />
             </button>
           </div>
         )}
@@ -150,10 +150,10 @@ export function ImageSearchModal({ isOpen, onClose }: ImageSearchModalProps) {
         {!selectedImage && (
           <div className="space-y-3 mb-6">
             {/* Camera Option */}
-            <label className="flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer transition-all">
-              <Camera className="w-6 h-6 text-accent-400" />
+            <label className="flex items-center gap-3 p-4 bg-zinc-900/5 hover:bg-zinc-900/5 border border-zinc-200 rounded-xl cursor-pointer transition-all">
+              <Camera className="w-6 h-6 text-accent-700" />
               <div className="flex-1">
-                <div className="text-white font-medium">Take Photo</div>
+                <div className="text-dark-50 font-medium">Take Photo</div>
                 <div className="text-gray-400 text-sm">Use your camera</div>
               </div>
               <input
@@ -167,10 +167,10 @@ export function ImageSearchModal({ isOpen, onClose }: ImageSearchModalProps) {
             </label>
 
             {/* Upload Option */}
-            <label className="flex items-center gap-3 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer transition-all">
-              <Upload className="w-6 h-6 text-accent-400" />
+            <label className="flex items-center gap-3 p-4 bg-zinc-900/5 hover:bg-zinc-900/5 border border-zinc-200 rounded-xl cursor-pointer transition-all">
+              <Upload className="w-6 h-6 text-accent-700" />
               <div className="flex-1">
-                <div className="text-white font-medium">Upload Image</div>
+                <div className="text-dark-50 font-medium">Upload Image</div>
                 <div className="text-gray-400 text-sm">Choose from device</div>
               </div>
               <input
@@ -187,7 +187,7 @@ export function ImageSearchModal({ isOpen, onClose }: ImageSearchModalProps) {
         {/* Error Message */}
         {error && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <p className="text-red-400 text-sm">{error}</p>
+            <p className="text-red-700 text-sm">{error}</p>
           </div>
         )}
 
@@ -195,7 +195,7 @@ export function ImageSearchModal({ isOpen, onClose }: ImageSearchModalProps) {
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl transition-colors"
+            className="flex-1 px-4 py-3 bg-zinc-900/5 hover:bg-zinc-900/5 border border-zinc-200 text-dark-50 rounded-xl transition-colors"
           >
             Cancel
           </button>

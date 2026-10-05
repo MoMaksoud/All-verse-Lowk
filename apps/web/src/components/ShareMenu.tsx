@@ -70,7 +70,7 @@ export default function ShareMenu({ listing, align = "right" }: Props) {
           <button
       type="button"
       onClick={handleShareClick}
-      className="w-full rounded-full border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2 px-5 text-sm font-medium transition flex items-center justify-center gap-2 leading-none"
+      className="w-full rounded-full border border-zinc-200 bg-zinc-100 hover:bg-zinc-700 text-zinc-800 py-2 px-5 text-sm font-medium transition flex items-center justify-center gap-2 leading-none"
       aria-haspopup="menu"
       aria-expanded={open}
     >
@@ -85,7 +85,7 @@ export default function ShareMenu({ listing, align = "right" }: Props) {
           ref={boxRef}
           role="menu"
           className={[
-            "absolute z-[60] mt-2 min-w-[220px] rounded-xl border border-white/10 bg-[#1b2230] p-2 shadow-xl",
+            "absolute z-[60] mt-2 min-w-[220px] rounded-xl border border-zinc-200 bg-[#1b2230] p-2 shadow-xl",
             align === "right" ? "right-0" : "left-0"
           ].join(" ")}
           style={{ animation: "fadeIn 120ms ease-out" }}
@@ -100,7 +100,7 @@ export default function ShareMenu({ listing, align = "right" }: Props) {
           <button
             type="button"
             onClick={() => copy(shareUrl, "link")}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5 transition"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-dark-50 hover:bg-zinc-900/5 transition"
           >
             <Link2 className="h-4 w-4" />
             {copied === "link" ? "Copied Link!" : "Copy Link"}
@@ -109,7 +109,7 @@ export default function ShareMenu({ listing, align = "right" }: Props) {
           <button
             type="button"
             onClick={() => copy(`${title} - ${shareUrl}`, "title")}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5 transition"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-dark-50 hover:bg-zinc-900/5 transition"
           >
             <Clipboard className="h-4 w-4" />
             {copied === "title" ? "Copied!" : "Copy Title & Price"}
@@ -119,7 +119,7 @@ export default function ShareMenu({ listing, align = "right" }: Props) {
             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${title} ${shareUrl}`)}`}
             target="_blank"
             rel="noreferrer"
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5 transition"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-dark-50 hover:bg-zinc-900/5 transition"
             role="menuitem"
             onClick={onClose}
           >
@@ -131,7 +131,7 @@ export default function ShareMenu({ listing, align = "right" }: Props) {
             href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${title} ${shareUrl}`)}`}
             target="_blank"
             rel="noreferrer"
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-white hover:bg-white/5 transition"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-dark-50 hover:bg-zinc-900/5 transition"
             role="menuitem"
             onClick={onClose}
           >

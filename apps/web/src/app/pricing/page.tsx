@@ -1,51 +1,41 @@
-'use client';
-
-import React from 'react';
-import { Brain, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen home-page">
-      
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-        <Link 
-          href="/"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-accent-400 transition-colors mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Home</span>
-        </Link>
+    <div className="mx-auto w-full max-w-3xl px-4 pb-20 pt-10 sm:px-6">
+      <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Pricing</h1>
+      <p className="mt-3 max-w-[60ch] text-zinc-600">
+        Listing is free. AllVerse takes a fee only when an item sells.
+      </p>
 
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl flex items-center justify-center mb-4">
-            <Brain className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-            Smart Pricing
-          </h1>
-          <p className="text-gray-400 text-lg">
-            AI-suggested fair prices
+      <section className="mt-10 grid gap-10 border-t border-zinc-200 pt-10 sm:grid-cols-2">
+        <div>
+          <h2 className="font-semibold text-zinc-950">If you sell</h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            AllVerse keeps 4.5% of the item price. The rest goes to your connected Stripe account.
           </p>
+          <dl className="mt-5 divide-y divide-zinc-200 border-y border-zinc-200 text-sm">
+            <div className="flex justify-between py-2.5"><dt className="text-zinc-600">Item price</dt><dd className="tabular-nums text-zinc-950">$80.00</dd></div>
+            <div className="flex justify-between py-2.5"><dt className="text-zinc-600">AllVerse fee (4.5%)</dt><dd className="tabular-nums text-zinc-950">−$3.60</dd></div>
+            <div className="flex justify-between py-2.5 font-medium"><dt className="text-zinc-950">You receive</dt><dd className="tabular-nums text-zinc-950">$76.40</dd></div>
+          </dl>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-8 text-center">
-          <p className="text-gray-300 mb-6 text-lg">
-            Get intelligent pricing recommendations based on market data and AI analysis.
+        <div>
+          <h2 className="font-semibold text-zinc-950">If you buy</h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            You pay the item price, shipping, sales tax, and a card processing fee. The total is shown before you pay.
           </p>
-          <p className="text-gray-400 mb-6">
-            This feature is coming soon. Start selling to list your items on the marketplace.
+          <p className="mt-5 text-sm text-zinc-600">
+            Payments are processed by Stripe.
           </p>
-          <Link 
-            href="/sell"
-            className="inline-flex items-center justify-center gap-2 bg-gradient-to-br from-accent-500 to-primary-500 hover:from-accent-600 hover:to-primary-600 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg shadow-accent-500/20 hover:shadow-xl hover:shadow-accent-500/30 hover:scale-105 active:scale-95 text-lg"
-          >
-            <Brain className="w-5 h-5" />
-            Start Selling
-          </Link>
         </div>
+      </section>
+
+      <div className="mt-12 flex flex-col gap-3 sm:flex-row">
+        <Link href="/sell" className="btn btn-primary">List an item</Link>
+        <Link href="/listings" className="btn btn-outline">Browse listings</Link>
       </div>
     </div>
   );
 }
-

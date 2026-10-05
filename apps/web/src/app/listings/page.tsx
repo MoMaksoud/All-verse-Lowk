@@ -1,12 +1,15 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Grid, List, Loader2 } from 'lucide-react';
-import { SimpleListing, ListingFilters, Category } from '@marketplace/types';
-import ListingCard from '@/components/ListingCard';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import clsx from 'clsx';
+import { LayoutGrid, List, SlidersHorizontal, X, SearchX } from 'lucide-react';
+import { SimpleListing, ListingFilters } from '@marketplace/types';
+import { ListingCardSkeleton } from '@/components/ListingCard';
 import { ListingFilters as ListingFiltersComponent } from '@/components/ListingFilters';
-import { Logo } from '@/components/Logo';
+import { categoryLabel } from '@/lib/categories';
 import Select from '@/components/Select';
 import ListingCollection from '@/components/ListingCollection';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,18 +20,21 @@ import { OtherMarketplacesFeed } from '@/components/OtherMarketplacesFeed';
 function ListingsContent() {
   const pageSize = 24;
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const [showFilters, setShowFilters] = useState(false);
   const { currentUser, userProfile } = useAuth();
   const { showSuccess, showError } = useToast();
   const { startChat } = useStartChatFromListing();
   const [listings, setListings] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [nextPage, setNextPage] = useState(2);
   const [hasMoreListings, setHasMoreListings] = useState(false);
   const [totalListings, setTotalListings] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
+  // Filters arrive from the URL after mount, so an older unfiltered request can resolve last; drop stale responses
+  const requestIdRef = useRef(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [appliedFilters, setAppliedFilters] = useState<ListingFilters>({});
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
@@ -36,6 +42,7 @@ function ListingsContent() {
 
   const fetchData = useCallback(async (page = 1, append = false) => {
     if (append && loadingMoreRef.current) return;
+    const requestId = ++requestIdRef.current;
     try {
       if (append) {
         loadingMoreRef.current = true;
@@ -69,13 +76,10 @@ function ListingsContent() {
 
       const { apiGet } = await import('@/lib/api-client');
 
-      // Fetch listings and categories in parallel
-      const [response, categoriesResponse] = await Promise.all([
-        apiGet(`/api/listings?${params.toString()}`, { requireAuth: false }),
-        apiGet('/api/categories', { requireAuth: false }),
-      ]);
+      const response = await apiGet(`/api/listings?${params.toString()}`, { requireAuth: false });
 
       const data = await response.json();
+      if (requestId !== requestIdRef.current) return;
       if (response.ok) {
         const incoming = Array.isArray(data.data) ? data.data : [];
         setListings((current) => {
@@ -90,13 +94,9 @@ function ListingsContent() {
         if (!append) setListings([]);
         setHasMoreListings(false);
       }
-
-      if (categoriesResponse.ok) {
-        const categoriesData = await categoriesResponse.json();
-        setCategories(categoriesData);
-      }
     } catch (error) {
       console.error('Error fetching listings:', error);
+      if (requestId !== requestIdRef.current) return;
       if (!append) setListings([]);
       setHasMoreListings(false);
     } finally {
@@ -104,7 +104,7 @@ function ListingsContent() {
         loadingMoreRef.current = false;
         setLoadingMore(false);
       }
-      else setLoading(false);
+      else if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [appliedFilters, pageSize, sortBy]);
 
@@ -207,188 +207,196 @@ function ListingsContent() {
     }
   }, [currentUser, showSuccess, showError]);
 
-  const SkeletonCard = () => (
-    <div className="bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden animate-pulse">
-      <div className="h-48 bg-dark-700" />
-      <div className="p-4 space-y-3">
-        <div className="h-4 bg-dark-700 rounded w-3/4" />
-        <div className="h-3 bg-dark-700 rounded w-1/2" />
-        <div className="h-5 bg-dark-700 rounded w-1/3" />
-      </div>
-    </div>
+  // Keep the URL in sync so filtered views can be shared and survive reloads
+  const applyFilters = useCallback((next: ListingFilters) => {
+    const params = new URLSearchParams();
+    if (next.keyword?.trim()) params.set('q', next.keyword.trim());
+    if (next.category) params.set('category', next.category);
+    if (next.condition) params.set('condition', next.condition);
+    if (next.minPrice !== undefined) params.set('min', String(next.minPrice));
+    if (next.maxPrice !== undefined) params.set('max', String(next.maxPrice));
+    const qs = params.toString();
+    router.replace(qs ? `/listings?${qs}` : '/listings', { scroll: false });
+    setShowFilters(false);
+  }, [router]);
+
+  const chips = [
+    appliedFilters.keyword && { key: 'keyword', label: `“${appliedFilters.keyword}”` },
+    appliedFilters.category && { key: 'category', label: categoryLabel(appliedFilters.category) },
+    appliedFilters.condition && { key: 'condition', label: appliedFilters.condition.replace('-', ' ') },
+    (appliedFilters.minPrice !== undefined || appliedFilters.maxPrice !== undefined) && {
+      key: 'price',
+      label: `$${appliedFilters.minPrice ?? 0} to ${appliedFilters.maxPrice !== undefined ? `$${appliedFilters.maxPrice}` : 'any'}`,
+    },
+  ].filter(Boolean) as { key: string; label: string }[];
+
+  const removeChip = (key: string) => {
+    const next = { ...appliedFilters };
+    if (key === 'price') {
+      delete next.minPrice;
+      delete next.maxPrice;
+    } else {
+      delete next[key as keyof ListingFilters];
+    }
+    applyFilters(next);
+  };
+
+  const heading = appliedFilters.category ? categoryLabel(appliedFilters.category) : 'Marketplace';
+  const items = listings.map((listing) => ({
+    id: listing.id,
+    title: listing.title,
+    description: listing.description,
+    price: listing.price,
+    category: listing.category,
+    condition: listing.condition,
+    imageUrl: listing.photos?.[0] || null,
+    sellerId: listing.sellerId,
+    sellerProfile: (listing as any).sellerProfile,
+    sold: (listing as any).sold,
+    soldThroughAllVerse: (listing as any).soldThroughAllVerse,
+  }));
+  const externalFeed = (
+    <OtherMarketplacesFeed
+      key={JSON.stringify(appliedFilters)}
+      keyword={appliedFilters.keyword}
+      category={appliedFilters.category}
+      condition={appliedFilters.condition}
+      minPrice={appliedFilters.minPrice}
+      maxPrice={appliedFilters.maxPrice}
+      interestCategories={userProfile?.interestCategories}
+    />
   );
 
   return (
-    <div className="min-h-screen bg-dark-950">
-
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8 text-center">
-          <div className="flex justify-center mb-3 sm:mb-4">
-            <Logo size="md" />
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 px-2 break-words">
-            Browse Listings
-          </h1>
-          <p className="text-base sm:text-lg text-gray-400 px-4">
-            Discover amazing items with AI-powered recommendations
+    <div className="min-h-screen bg-white">
+      <div className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 md:pt-12 lg:px-8">
+        <header className="mb-8 flex flex-col gap-1 md:mb-10">
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 md:text-4xl">{heading}</h1>
+          <p className="text-sm text-zinc-500">
+            {loading ? 'Loading items…' : `${totalListings.toLocaleString('en-US')} ${totalListings === 1 ? 'item' : 'items'} on AllVerse`}
           </p>
-        </div>
+        </header>
 
-        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
-          {/* Filters Sidebar */}
-          <div className="w-full lg:w-80 shrink-0">
-            <ListingFiltersComponent
-              filters={appliedFilters}
-              categories={categories}
-              onFiltersChange={setAppliedFilters}
-            />
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[15rem_1fr] lg:gap-12">
+          <div className={clsx(showFilters ? 'block' : 'hidden', 'lg:block')}>
+            <div>
+              <ListingFiltersComponent filters={appliedFilters} onFiltersChange={applyFilters} />
+            </div>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0">
             {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-              <div className="text-xs sm:text-sm text-gray-400">
-                Showing {listings.length} of {totalListings} listings
-              </div>
-              
-              <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                {/* Sort Dropdown */}
-                <div className="flex items-center flex-1 sm:flex-initial min-w-0">
-                  <Select
-                    value={sortBy}
-                    onChange={(value) => setSortBy(value as typeof sortBy)}
-                    options={[
-                      { value: 'newest', label: 'Newest' },
-                      { value: 'price-low', label: 'Price: Low to High' },
-                      { value: 'price-high', label: 'Price: High to Low' }
-                    ]}
-                    placeholder="Sort by"
-                    className="w-full sm:min-w-[180px]"
-                  />
-                </div>
+            <div className="mb-6 flex flex-wrap items-center gap-3 border-b border-zinc-200 pb-4">
+              <button
+                type="button"
+                onClick={() => setShowFilters((v) => !v)}
+                aria-expanded={showFilters}
+                className="btn btn-outline gap-2 py-2 lg:hidden"
+              >
+                <SlidersHorizontal strokeWidth={1.75} className="h-4 w-4" />
+                Filters{chips.length ? ` (${chips.length})` : ''}
+              </button>
 
-                {/* View Mode Toggle */}
-                <div className="flex items-center border border-dark-600 rounded-xl bg-dark-800 shrink-0">
+              {chips.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {chips.map((chip) => (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => removeChip(chip.key)}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 py-1.5 pl-3 pr-2 text-sm capitalize text-zinc-800 transition hover:bg-zinc-200"
+                      aria-label={`Remove filter ${chip.label}`}
+                    >
+                      {chip.label}
+                      <X strokeWidth={2} className="h-3.5 w-3.5 text-zinc-500" />
+                    </button>
+                  ))}
                   <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-l-xl transition-all duration-200 ${
-                      viewMode === 'grid'
-                        ? 'bg-accent-500 text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-dark-700'
-                    }`}
+                    type="button"
+                    onClick={() => applyFilters({})}
+                    className="px-1 text-sm font-medium text-primary-700 hover:text-primary-800"
                   >
-                    <Grid className="w-4 h-4" />
+                    Clear all
                   </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-r-xl transition-all duration-200 ${
-                      viewMode === 'list'
-                        ? 'bg-accent-500 text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-dark-700'
-                    }`}
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
+                </div>
+              )}
+
+              <div className="ml-auto flex items-center gap-2">
+                <Select
+                  value={sortBy}
+                  onChange={(value) => setSortBy(value as typeof sortBy)}
+                  options={[
+                    { value: 'newest', label: 'Newest first' },
+                    { value: 'price-low', label: 'Price: low to high' },
+                    { value: 'price-high', label: 'Price: high to low' },
+                  ]}
+                  placeholder="Sort by"
+                  className="w-[180px]"
+                />
+                <div className="hidden items-center rounded-lg border border-zinc-300 p-0.5 sm:flex" role="group" aria-label="Layout">
+                  {([['grid', LayoutGrid], ['list', List]] as const).map(([mode, Icon]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setViewMode(mode)}
+                      aria-pressed={viewMode === mode}
+                      aria-label={`${mode} view`}
+                      className={clsx(
+                        'grid h-9 w-9 place-items-center rounded-md transition',
+                        viewMode === mode ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900'
+                      )}
+                    >
+                      <Icon strokeWidth={1.75} className="h-4 w-4" />
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Listings Grid */}
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                {Array.from({ length: 9 }).map((_, i) => <SkeletonCard key={i} />)}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:gap-x-6">
+                {Array.from({ length: 9 }).map((_, i) => <ListingCardSkeleton key={i} />)}
               </div>
             ) : listings.length > 0 ? (
               <>
-                {viewMode === 'grid' ? (
-                  <ListingCollection 
-                    items={listings.map(listing => ({
-                      id: listing.id,
-                      title: listing.title,
-                      description: listing.description,
-                      price: listing.price,
-                      category: listing.category,
-                      condition: listing.condition,
-                      imageUrl: listing.photos?.[0] || null,
-                      sellerId: listing.sellerId,
-                      sellerProfile: (listing as any).sellerProfile,
-                      sold: (listing as any).sold,
-                      soldThroughAllVerse: (listing as any).soldThroughAllVerse
-                    }))}
-                    view="grid"
-                  />
-                ) : (
-                  <ListingCollection 
-                    items={listings.map(listing => ({
-                      id: listing.id,
-                      title: listing.title,
-                      description: listing.description,
-                      price: listing.price,
-                      category: listing.category,
-                      condition: listing.condition,
-                      imageUrl: listing.photos?.[0] || null,
-                      sellerId: listing.sellerId,
-                      sellerProfile: (listing as any).sellerProfile,
-                      sold: (listing as any).sold,
-                      soldThroughAllVerse: (listing as any).soldThroughAllVerse
-                    }))}
-                    view="list"
-                  />
-                )}
+                <ListingCollection items={items} view={viewMode} />
 
                 {hasMoreListings ? (
-                  <div ref={loadMoreSentinelRef} className="mt-6 min-h-[18rem]" aria-live="polite">
-                    {loadingMore ? (
-                      <>
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-                          {Array.from({ length: 6 }).map((_, index) => (
-                            <SkeletonCard key={`more-${index}`} />
-                          ))}
-                        </div>
-                        <div className="mt-5 flex items-center justify-center gap-2 text-sm text-gray-400">
-                          <Loader2 className="h-5 w-5 animate-spin text-accent-400" />
-                          Loading more AllVerse listings…
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-gray-500">
-                        More listings will load as you continue.
+                  <div ref={loadMoreSentinelRef} className="mt-8" aria-live="polite">
+                    {loadingMore && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:gap-x-6">
+                        {Array.from({ length: 6 }).map((_, i) => <ListingCardSkeleton key={`more-${i}`} />)}
                       </div>
                     )}
+                    {!loadingMore && <div className="h-24" />}
                   </div>
                 ) : (
-                  <OtherMarketplacesFeed
-                    key={JSON.stringify(appliedFilters)}
-                    keyword={appliedFilters.keyword}
-                    category={appliedFilters.category}
-                    condition={appliedFilters.condition}
-                    minPrice={appliedFilters.minPrice}
-                    maxPrice={appliedFilters.maxPrice}
-                    interestCategories={userProfile?.interestCategories}
-                  />
+                  externalFeed
                 )}
               </>
             ) : (
-              <div className="text-center py-8 sm:py-12 px-4">
-                <div className="text-gray-400 text-4xl sm:text-6xl mb-3 sm:mb-4">🔍</div>
-                <h3 className="text-base sm:text-lg font-medium text-white mb-1 sm:mb-2">
-                  No listings found
-                </h3>
-                <p className="text-sm sm:text-base text-gray-400">
-                  Try adjusting your filters or search terms
-                </p>
-                <OtherMarketplacesFeed
-                  key={JSON.stringify(appliedFilters)}
-                  keyword={appliedFilters.keyword}
-                  category={appliedFilters.category}
-                  condition={appliedFilters.condition}
-                  minPrice={appliedFilters.minPrice}
-                  maxPrice={appliedFilters.maxPrice}
-                  interestCategories={userProfile?.interestCategories}
-                />
-              </div>
+              <>
+                <div className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-zinc-300 px-6 py-10">
+                  <SearchX strokeWidth={1.5} className="h-8 w-8 text-zinc-400" />
+                  <div>
+                    <p className="font-medium text-zinc-950">No items match these filters</p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Try removing a filter, or check what&apos;s listed elsewhere below.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {chips.length > 0 && (
+                      <button type="button" onClick={() => applyFilters({})} className="btn btn-outline py-2">
+                        Clear filters
+                      </button>
+                    )}
+                    <Link href="/sell" className="btn btn-primary py-2">
+                      Sell one like it
+                    </Link>
+                  </div>
+                </div>
+                {externalFeed}
+              </>
             )}
           </div>
         </div>
@@ -397,13 +405,20 @@ function ListingsContent() {
   );
 }
 
+function ListingsLoading() {
+  return (
+    <div className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 md:pt-12 lg:px-8">
+      <div className="mb-10 h-9 w-48 animate-pulse rounded bg-zinc-100" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        {Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />)}
+      </div>
+    </div>
+  );
+}
+
 export default function ListingsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-500"></div>
-      </div>
-    }>
+    <Suspense fallback={<ListingsLoading />}>
       <ListingsContent />
     </Suspense>
   );

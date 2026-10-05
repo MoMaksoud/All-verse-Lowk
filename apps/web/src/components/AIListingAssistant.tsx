@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Bot, Loader2, Send } from "lucide-react";
-import Select from "./Select";
+import React, { useEffect, useMemo, useState } from "react";
+import clsx from "clsx";
+import { Sparkles } from "lucide-react";
 
 interface MissingInfo {
   field: string;
@@ -35,6 +35,7 @@ interface AIListingAssistantProps {
     suggestedPrice: number;
   }) => void;
   onComplete: (userAnswers?: Record<string, AnswerValue>) => void;
+  onSkip: () => void;
 }
 
 function normalizeField(value: string) {
@@ -192,29 +193,21 @@ function shouldSkipQuestion(question: MissingInfo, answers: Record<string, Answe
   return condition === "new";
 }
 
-export function AIListingAssistant({ initialAnalysis, onComplete }: AIListingAssistantProps) {
+export function AIListingAssistant({ initialAnalysis, onComplete, onSkip }: AIListingAssistantProps) {
   const questions = useMemo(() => normalizeQuestions(initialAnalysis), [initialAnalysis]);
   const [currentStep, setCurrentStep] = useState(0);
   const [userInputs, setUserInputs] = useState<Record<string, AnswerValue>>({});
   const [currentAnswer, setCurrentAnswer] = useState("");
-  const [isComplete, setIsComplete] = useState(false);
 
   const currentQuestion = questions[currentStep];
+  const isLast = currentStep === questions.length - 1;
 
-  const complete = (answers: Record<string, AnswerValue>) => {
-    setIsComplete(true);
-    onComplete(answers);
-  };
-
-  const handleSubmitAnswer = () => {
-    if (!currentQuestion || !currentAnswer.trim()) return;
+  const submit = (answer: string) => {
+    if (!currentQuestion || !answer.trim()) return;
 
     const newInputs = {
       ...userInputs,
-      [currentQuestion.field]: {
-        question: currentQuestion.question,
-        answer: currentAnswer.trim(),
-      },
+      [currentQuestion.field]: { question: currentQuestion.question, answer: answer.trim() },
     };
     setUserInputs(newInputs);
 
@@ -225,105 +218,100 @@ export function AIListingAssistant({ initialAnalysis, onComplete }: AIListingAss
 
     if (nextStep < questions.length) {
       setCurrentStep(nextStep);
-      setCurrentAnswer("");
+      setCurrentAnswer(newInputs[questions[nextStep].field]?.answer ?? "");
       return;
     }
 
-    complete(newInputs);
+    onComplete(newInputs);
   };
 
-  if (questions.length === 0) {
-    return (
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
-        <div className="flex items-center gap-3">
-          <Bot className="w-6 h-6 text-blue-400" />
-          <p className="text-zinc-100">No follow-up questions are needed.</p>
-        </div>
-      </div>
-    );
-  }
+  // Every question was filtered out: nothing to ask.
+  useEffect(() => {
+    if (!currentQuestion) onSkip();
+  }, [currentQuestion, onSkip]);
 
-  if (isComplete) {
-    return (
-      <div className="rounded-2xl border border-blue-500/30 bg-blue-950/20 p-6 text-center shadow-lg">
-        <Loader2 className="w-12 h-12 text-blue-300 mx-auto mb-4 animate-spin" />
-        <h3 className="text-xl font-semibold text-zinc-100 mb-2">Generating Final Listing</h3>
-        <p className="text-zinc-300">
-          AI is combining your answers with the uploaded photos. The listing is not ready yet.
-        </p>
-      </div>
-    );
-  }
+  if (!currentQuestion) return null;
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Bot className="w-6 h-6 text-blue-400" />
-        <h3 className="text-xl sm:text-2xl font-semibold text-zinc-100">AI Listing Assistant</h3>
-        <div className="ml-auto text-sm text-zinc-400">
-          Step {currentStep + 1} of {questions.length}
-        </div>
-      </div>
+    <div className="max-w-xl">
+      <p className="flex items-center gap-2 text-sm font-medium text-primary-700">
+        <Sparkles strokeWidth={1.75} className="h-4 w-4" />
+        A few details the photos can’t show
+      </p>
+      <p className="mt-1 text-sm tabular-nums text-zinc-500">
+        Question {currentStep + 1} of {questions.length}
+      </p>
 
-      <div className="mb-6">
-        <h4 className="text-lg font-medium text-zinc-100 mb-4">{currentQuestion.question}</h4>
+      <div key={currentQuestion.field} className="animate-fade-in">
+        <h2 className="mt-6 text-xl font-semibold tracking-tight text-zinc-950">{currentQuestion.question}</h2>
 
-        {currentQuestion.type === "select" ? (
-          <Select
-            value={currentAnswer || null}
-            onChange={(value) => setCurrentAnswer(value)}
-            options={[
-              { value: "", label: "Select an option..." },
-              ...(currentQuestion.options?.map((option) => ({ value: option, label: option })) || []),
-            ]}
-            placeholder="Select an option..."
-          />
+        {currentQuestion.type === "select" && currentQuestion.options?.length ? (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {currentQuestion.options.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => submit(option)}
+                className={clsx(
+                  "rounded-full border px-4 py-2 text-sm font-medium transition active:scale-[0.98]",
+                  currentAnswer === option
+                    ? "border-primary-600 bg-primary-600 text-white"
+                    : "border-zinc-300 bg-white text-zinc-800 hover:border-zinc-500"
+                )}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
         ) : (
-          <input
-            type={currentQuestion.type}
-            value={currentAnswer}
-            onChange={(e) => setCurrentAnswer(e.target.value)}
-            placeholder={currentQuestion.placeholder || "Please provide details"}
-            className="w-full px-4 py-3 bg-zinc-900/60 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSubmitAnswer();
+          <form
+            className="mt-5 flex flex-col gap-3 sm:flex-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit(currentAnswer);
             }}
-          />
+          >
+            <input
+              autoFocus
+              type={currentQuestion.type}
+              inputMode={currentQuestion.type === "number" ? "decimal" : undefined}
+              value={currentAnswer}
+              onChange={(e) => setCurrentAnswer(e.target.value)}
+              placeholder={currentQuestion.placeholder || "Type your answer"}
+              aria-label={currentQuestion.question}
+              className="input sm:flex-1"
+            />
+            <button type="submit" disabled={!currentAnswer.trim()} className="btn btn-primary">
+              {isLast ? "Finish listing" : "Next"}
+            </button>
+          </form>
         )}
       </div>
 
-      <div className="flex justify-between items-center">
-        <div className="text-sm text-zinc-400">
-          {currentStep > 0 && (
-            <button
-              onClick={() => {
-                setCurrentStep((prev) => prev - 1);
-                setCurrentAnswer("");
-              }}
-              className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors"
-            >
-              Previous
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={handleSubmitAnswer}
-          disabled={!currentAnswer.trim()}
-          className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
-        >
-          <Send className="w-4 h-4" />
-          {currentStep === questions.length - 1 ? "Generate Listing" : "Next"}
+      <div className="mt-8 flex items-center gap-5 text-sm">
+        {currentStep > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              const prev = currentStep - 1;
+              setCurrentStep(prev);
+              setCurrentAnswer(userInputs[questions[prev].field]?.answer ?? "");
+            }}
+            className="font-medium text-zinc-700 hover:text-zinc-950"
+          >
+            Back
+          </button>
+        )}
+        <button type="button" onClick={onSkip} className="text-zinc-500 underline-offset-4 hover:text-zinc-800 hover:underline">
+          Skip questions and edit the draft
         </button>
       </div>
 
-      <div className="mt-6">
-        <div className="w-full bg-zinc-800 rounded-full h-2">
-          <div
-            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
-          />
-        </div>
+      <div className="mt-6 h-1 w-full overflow-hidden rounded-full bg-zinc-100">
+        <div
+          className="h-full rounded-full bg-primary-600 transition-[width] duration-300"
+          style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
+        />
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import { ProfilePicture } from '@/components/ProfilePicture';
 import { normalizeImageSrc } from '@marketplace/shared-logic';
 import { formatPrice as formatPriceUtil } from '@/lib/format';
 import { recordDiscoveryClick } from '@/lib/discoveryHistory';
+import { loadFavoriteIds, setFavorite } from '@/lib/favorites';
 
 type SellerProfile = { username?: string; profilePicture?: string; createdAt?: string | Date | { toDate?: () => Date } };
 
@@ -56,17 +57,11 @@ function ListingCard({
   const { showSuccess, showError } = useToast();
   const { startChat } = useStartChatFromListing();
   const [showMessageModal, setShowMessageModal] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        return favorites.includes(id);
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
+  const [isFavorited, setIsFavorited] = useState(false);
+  useEffect(() => {
+    if (!currentUser) return;
+    loadFavoriteIds().then((ids) => setIsFavorited(ids.has(id)));
+  }, [currentUser, id]);
   const [addingToCart, setAddingToCart] = useState(false);
   const [imageError, setImageError] = useState(false);
   
@@ -229,28 +224,18 @@ function ListingCard({
       return;
     }
 
+    const next = !isFavorited;
+    setIsFavorited(next);
     try {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      const isCurrentlyFavorited = favorites.includes(id);
-      
-      let updatedFavorites;
-      if (isCurrentlyFavorited) {
-        updatedFavorites = favorites.filter((favId: string) => favId !== id);
-        setIsFavorited(false);
-        showSuccess('Removed from favorites');
-      } else {
-        updatedFavorites = [...favorites, id];
-        setIsFavorited(true);
-        showSuccess('Added to favorites');
-      }
-      
-      localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+      await setFavorite(id, next);
+      showSuccess(next ? 'Added to favorites' : 'Removed from favorites');
       onFav?.();
     } catch (error) {
       console.error('Error updating favorites:', error);
+      setIsFavorited(!next);
       showError('Failed to update favorites');
     }
-  }, [currentUser, id, showSuccess, showError, onFav]);
+  }, [currentUser, id, isFavorited, showSuccess, showError, onFav]);
 
   const listingImageSrc =
     imageError || !normalizeImageSrc(imageUrl || '')
@@ -261,138 +246,79 @@ function ListingCard({
     <>
       <Link
         href={`/listings/${id}`}
-        className="block h-full w-30"
+        className="block h-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-4"
         onClick={() => recordDiscoveryClick({ query: title, category, source: 'AllVerse' })}
       >
         <article
         className={clsx(
-          "rounded-xl border border-white/10 bg-[#0B1220] shadow-[0_10px_30px_rgba(0,0,0,0.25)]",
-          variant === "grid" ? "h-full overflow-hidden" : "p-4 md:p-5"
+          variant === "grid"
+            ? "group h-full"
+            : "rounded-2xl border border-zinc-200 bg-white p-4 md:p-5 transition-colors hover:border-zinc-300"
         )}
       >
         {variant === "grid" ? (
-          <div className="flex flex-col h-full">
-            {/* Image */}
-            <div className="aspect-square w-full overflow-hidden rounded-xl bg-[#0E1526] relative">
+          <div className="flex h-full flex-col">
+            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-zinc-100">
               <Image
                 src={listingImageSrc}
                 alt={title}
                 fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 quality={75}
-                className="object-cover"
+                className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                 onError={() => setImageError(true)}
               />
+
+              {sold || inventory === 0 ? (
+                <span className="absolute left-2.5 top-2.5 rounded-md bg-zinc-900/85 px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-white">
+                  {soldThroughAllVerse ? "Sold on AllVerse" : "Sold"}
+                </span>
+              ) : null}
+
+              <button
+                onClick={handleFavoriteClick}
+                aria-label={isFavorited ? "Remove from favorites" : "Save to favorites"}
+                aria-pressed={isFavorited}
+                className="absolute right-2.5 top-2.5 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-zinc-700 shadow-sm backdrop-blur transition hover:bg-white hover:text-zinc-950 active:scale-95"
+              >
+                <Heart
+                  strokeWidth={1.75}
+                  className={clsx("h-[18px] w-[18px]", isFavorited && "fill-red-500 text-red-500")}
+                />
+              </button>
+
+              {!(sold || inventory === 0) && (
+                <div className="absolute inset-x-2.5 bottom-2.5 flex gap-2 transition duration-300 ease-out sm:translate-y-2 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:group-focus-within:translate-y-0 sm:group-focus-within:opacity-100">
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={addingToCart}
+                    aria-label="Add to cart"
+                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/95 text-[13px] font-medium text-zinc-900 shadow-sm backdrop-blur transition hover:bg-white active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <ShoppingCart strokeWidth={1.75} className="h-4 w-4" />
+                    <span className="hidden sm:inline">{addingToCart ? "Adding..." : "Add to cart"}</span>
+                  </button>
+                  <button
+                    onClick={handleChatClick}
+                    aria-label="Message seller"
+                    className="grid h-9 w-9 place-items-center rounded-lg bg-white/95 text-zinc-900 shadow-sm backdrop-blur transition hover:bg-white active:scale-[0.98]"
+                  >
+                    <MessageSquare strokeWidth={1.75} className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Content */}
-            <div className="p-4 lg:p-5 space-y-1 sm:space-y-2 flex-1 flex flex-col">
-              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-zinc-100 min-h-[2.5rem] sm:min-h-[3rem] lg:min-h-[3.5rem]" style={{
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
-              }}>
+            <div className="flex flex-1 flex-col gap-1 pt-3">
+              <h3 className="line-clamp-2 text-sm font-medium leading-snug text-zinc-800 transition-colors group-hover:text-zinc-950">
                 {title}
               </h3>
-              <p className="hidden text-xs sm:text-sm text-zinc-300/90">
-                {description}
+              <p className="text-xs capitalize text-zinc-500">
+                {[category, condition].filter(Boolean).join(" · ")}
               </p>
-
-              {/* Seller Info Section - Fixed height */}
-              <div className="hidden flex items-center gap-2 sm:gap-3 py-2 border-t border-white/5 mt-1 min-h-[3.5rem]">
-                {sellerId ? (
-                  <>
-                  <div className="shrink-0">
-                    {sellerProfile?.profilePicture && sellerProfile.profilePicture.trim().length > 0 && (sellerProfile.profilePicture.startsWith('http') || sellerProfile.profilePicture.startsWith('/uploads')) ? (
-                      <ProfilePicture
-                        src={sellerProfile.profilePicture}
-                        alt={sellerProfile?.username || 'Seller'}
-                        name={sellerProfile?.username}
-                        size="sm"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-white text-xs font-semibold">
-                          {sellerProfile?.username?.slice(0, 2).toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm font-medium text-zinc-100 truncate">
-                      {sellerProfile?.username || 'Marketplace User'}
-                    </p>
-                    <p className="text-xs text-zinc-400">
-                      {formatMemberSince(sellerProfile?.createdAt)}
-                    </p>
-                  </div>
-                  </>
-                ) : null}
-                </div>
-
-              <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 text-lg min-h-[1.5rem] overflow-hidden">
-                <span className="text-blue-400 font-semibold shrink-0">
-                  {formatPriceDisplay(price)}
-                </span>
-                <span className="invisible sm:inline text-zinc-400 shrink-0">•</span>
-                <span className="invisible sm:inline text-zinc-300/90 text-xs truncate min-w-0">{category}</span>
-                {condition ? (
-                  <>
-                    <span className="hidden lg:inline text-zinc-400 shrink-0">•</span>
-                    <span className="hidden lg:inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-300 px-2 py-0.5 text-xs shrink-0">
-                      {condition}
-                    </span>
-                  </>
-                ) : null}
-              </div>
-
-              {/* Actions - Fixed height */}
-              <div className="mt-auto pt-2 sm:pt-3">
-                {sold || inventory === 0 ? (
-                  <div className={clsx(
-                    "flex items-center justify-center rounded-xl sm:rounded-2xl px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3",
-                    soldThroughAllVerse
-                      ? "border border-emerald-500/30 bg-emerald-500/10"
-                      : "border border-red-500/30 bg-red-500/10"
-                  )}>
-                    <span className={clsx(
-                      "text-sm sm:text-base font-semibold",
-                      soldThroughAllVerse ? "text-emerald-400" : "text-red-400"
-                    )}>
-                      {soldThroughAllVerse ? "Sold through AllVerse" : "Sold"}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-[#0E1526] px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
-                    <button 
-                      onClick={handleAddToCart}
-                      disabled={addingToCart}
-                      className="p-1 sm:p-1.5 lg:p-2 hover:opacity-80 disabled:opacity-50"
-                    >
-                      <ShoppingCart className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-zinc-200" />
-                    </button>
-                    <button 
-                      onClick={handleChatClick}
-                      className="p-1 sm:p-1.5 lg:p-2 hover:opacity-80"
-                    >
-                      <MessageSquare className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-zinc-200" />
-                    </button>
-                    <button 
-                      onClick={handleFavoriteClick}
-                      className={clsx(
-                        "p-1 sm:p-1.5 lg:p-2 hover:opacity-80",
-                        isFavorited ? "text-red-500" : "text-zinc-200"
-                      )}
-                    >
-                      <Heart className={clsx(
-                        "h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5",
-                        isFavorited ? "fill-current" : ""
-                      )} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              <p className="mt-auto pt-1 text-base font-semibold tabular-nums text-zinc-950">
+                {formatPriceDisplay(price)}
+              </p>
             </div>
           </div>
         ) : (
@@ -400,7 +326,7 @@ function ListingCard({
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-5">
             {/* Image */}
             <div className="w-full sm:w-32 md:w-44 lg:w-56 shrink-0">
-              <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#0E1526] relative">
+              <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl bg-white relative">
                 <Image
                   src={listingImageSrc}
                   alt={title}
@@ -415,16 +341,16 @@ function ListingCard({
 
             {/* Content */}
             <div className="flex min-w-0 flex-1 flex-col">
-              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-zinc-100 line-clamp-2 break-words">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-zinc-900 line-clamp-2 break-words">
                 {title}
               </h3>
-              <p className="mt-1 text-xs sm:text-sm text-zinc-300/90 break-words">
+              <p className="mt-1 text-xs sm:text-sm text-zinc-500 break-words">
                 {truncateWords(description, 22)}
               </p>
 
               {/* Seller Info Section for List Variant */}
               {sellerId && (
-                <div className="flex items-center gap-3 mt-2 py-2 border-t border-white/5">
+                <div className="flex items-center gap-3 mt-2 py-2 border-t border-zinc-100">
                   <div className="shrink-0">
                     <ProfilePicture
                       src={sellerProfile?.profilePicture}
@@ -434,10 +360,10 @@ function ListingCard({
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-zinc-100 truncate">
+                    <p className="text-sm font-medium text-zinc-900 truncate">
                       {sellerProfile?.username || 'Marketplace User'}
                     </p>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-zinc-600">
                       {formatMemberSince(sellerProfile?.createdAt)}
                     </p>
                   </div>
@@ -445,15 +371,15 @@ function ListingCard({
               )}
 
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-                <span className="text-blue-400 font-semibold">
+                <span className="text-blue-700 font-semibold">
                   {formatPriceDisplay(price)}
                 </span>
-                <span className="text-zinc-400">•</span>
-                <span className="text-zinc-300/90">{category}</span>
+                <span className="text-zinc-600">•</span>
+                <span className="text-zinc-500">{category}</span>
                 {condition ? (
                   <>
-                    <span className="text-zinc-400">•</span>
-                    <span className="inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-300 px-2 py-0.5 text-xs">
+                    <span className="text-zinc-600">•</span>
+                    <span className="inline-flex items-center rounded-full bg-emerald-600/15 text-emerald-700 px-2 py-0.5 text-xs">
                       {condition}
                     </span>
                   </>
@@ -462,30 +388,32 @@ function ListingCard({
 
               {/* Actions */}
               <div className="mt-4">
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0E1526] px-4 py-3">
+                <div className="flex items-center gap-2">
                   <button 
                     onClick={handleAddToCart}
                     disabled={addingToCart}
-                    className="p-2 hover:opacity-80 disabled:opacity-50"
+                    aria-label="Add to cart"
+                    className="btn btn-primary gap-2 py-2"
                   >
-                    <ShoppingCart className="h-5 w-5 text-zinc-200" />
+                    <ShoppingCart strokeWidth={1.75} className="h-4 w-4" />
+                    Add to cart
                   </button>
                   <button 
                     onClick={handleChatClick}
-                    className="p-2 hover:opacity-80"
+                    aria-label="Message seller"
+                    className="btn btn-outline p-2.5"
                   >
-                    <MessageSquare className="h-5 w-5 text-zinc-200" />
+                    <MessageSquare strokeWidth={1.75} className="h-4 w-4" />
                   </button>
                   <button 
                     onClick={handleFavoriteClick}
-                    className={clsx(
-                      "p-2 hover:opacity-80",
-                      isFavorited ? "text-red-500" : "text-zinc-200"
-                    )}
+                    aria-label={isFavorited ? "Remove from favorites" : "Save to favorites"}
+                    aria-pressed={isFavorited}
+                    className="btn btn-outline p-2.5"
                   >
-                    <Heart className={clsx(
-                      "h-5 w-5",
-                      isFavorited ? "fill-current" : ""
+                    <Heart strokeWidth={1.75} className={clsx(
+                      "h-4 w-4",
+                      isFavorited && "fill-red-500 text-red-500"
                     )} />
                   </button>
                 </div>
@@ -506,6 +434,17 @@ function ListingCard({
         />
       )}
     </>
+  );
+}
+
+export function ListingCardSkeleton() {
+  return (
+    <div className="flex flex-col gap-2" aria-hidden>
+      <div className="aspect-[4/5] w-full animate-pulse rounded-xl bg-zinc-100" />
+      <div className="mt-1 h-4 w-4/5 animate-pulse rounded bg-zinc-100" />
+      <div className="h-3 w-1/3 animate-pulse rounded bg-zinc-100" />
+      <div className="h-5 w-1/4 animate-pulse rounded bg-zinc-100" />
+    </div>
   );
 }
 

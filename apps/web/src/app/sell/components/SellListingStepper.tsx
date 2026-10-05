@@ -1,108 +1,38 @@
 'use client';
 
 import React from 'react';
-
-export type SellStepConfig = {
-  id: number;
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-};
+import clsx from 'clsx';
+import { Check } from 'lucide-react';
 
 type Props = {
-  steps: SellStepConfig[];
-  currentStep: number;
+  steps: string[];
+  current: number;
 };
 
-export function SellListingStepper({ steps, currentStep }: Props) {
+export function SellListingStepper({ steps, current }: Props) {
   return (
-    <div className="mb-8 sm:mb-10">
-      <div className="lg:hidden space-y-3 max-w-sm mx-auto">
-        {steps.slice(0, 3).map((step) => {
-          const Icon = step.icon;
-          const isActive = currentStep === step.id;
-          const isCompleted = currentStep > step.id;
-
-          return (
-            <div
-              key={step.id}
-              className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? 'bg-blue-600/20 border-2 border-blue-500'
-                  : isCompleted
-                    ? 'bg-zinc-800/40 border border-blue-500/30'
-                    : 'bg-zinc-800/20 border border-zinc-700'
-              }`}
-            >
-              <div
-                className={`flex items-center justify-center w-12 h-12 rounded-full shrink-0 ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50'
-                    : isCompleted
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-zinc-700 text-zinc-400'
-                }`}
-              >
-                <Icon className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div
-                  className={`text-base font-semibold ${
-                    isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-400'
-                  }`}
-                >
-                  {step.title}
-                </div>
-                <div className="text-sm text-zinc-400">{step.description}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="hidden lg:flex items-center justify-center gap-2">
-        {steps.map((step, index) => {
-          const Icon = step.icon;
-          const isActive = currentStep === step.id;
-          const isCompleted = currentStep > step.id;
-
-          return (
-            <div key={step.id} className="flex items-center">
-              <div className="flex flex-row items-center gap-3">
-                <div
-                  className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : isCompleted
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-zinc-800 text-zinc-300'
-                  }`}
-                  aria-current={isActive ? 'step' : undefined}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="text-left">
-                  <div
-                    className={`text-sm font-medium ${
-                      isActive || isCompleted ? 'text-zinc-100' : 'text-zinc-500'
-                    }`}
-                  >
-                    {step.title}
-                  </div>
-                  <div className="text-xs text-zinc-500">{step.description}</div>
-                </div>
-              </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={`w-12 h-0.5 mx-4 transition-all duration-200 ${
-                    isCompleted ? 'bg-blue-500' : 'bg-zinc-800'
-                  }`}
-                />
+    <ol className="flex items-center gap-2 text-sm sm:gap-3" aria-label="Listing progress">
+      {steps.map((label, i) => {
+        const done = i < current;
+        const active = i === current;
+        return (
+          <li key={label} className="flex items-center gap-2 sm:gap-3">
+            <span
+              aria-current={active ? 'step' : undefined}
+              className={clsx(
+                'grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold tabular-nums transition-colors',
+                done || active ? 'bg-primary-600 text-white' : 'bg-zinc-100 text-zinc-500'
               )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+            >
+              {done ? <Check strokeWidth={2.5} className="h-3.5 w-3.5" /> : i + 1}
+            </span>
+            <span className={clsx('whitespace-nowrap', active ? 'font-medium text-zinc-950' : 'text-zinc-500', !active && 'hidden sm:inline')}>
+              {label}
+            </span>
+            {i < steps.length - 1 && <span className="h-px w-6 bg-zinc-200 sm:w-10" aria-hidden />}
+          </li>
+        );
+      })}
+    </ol>
   );
 }

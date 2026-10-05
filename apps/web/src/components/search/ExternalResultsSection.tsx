@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { DollarSign, Star } from 'lucide-react';
+import { ArrowUpRight, ImageOff, Star } from 'lucide-react';
 import { formatPrice } from '@/lib/format';
 import { recordDiscoveryClick } from '@/lib/discoveryHistory';
 
@@ -30,28 +30,18 @@ export function ExternalResultsSection({ results, loading }: ExternalResultsSect
   }
 
   return (
-    <section className="py-4 sm:py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-          {results.map((result, index) => {
-            const hasPrice = typeof result.price === 'number' && !Number.isNaN(result.price) && result.price > 0;
-            return <ProductCard key={`${result.url}-${index}`} result={result} hasPrice={hasPrice} />;
-          })}
-        </div>
-      </div>
-    </section>
+    <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+      {results.map((result, index) => {
+        const hasPrice = typeof result.price === 'number' && !Number.isNaN(result.price) && result.price > 0;
+        return <ProductCard key={`${result.url}-${index}`} result={result} hasPrice={hasPrice} />;
+      })}
+    </div>
   );
 }
 
 function ProductCard({ result, hasPrice }: { result: ExternalResult; hasPrice: boolean }) {
-  const [imageError, setImageError] = useState(false);
-  const [imageSrc, setImageSrc] = useState(() => {
-    // Use actual product image if available
-    if (result.image && typeof result.image === 'string' && result.image.startsWith('http')) {
-      return result.image;
-    }
-    return '/fallback-product.png';
-  });
+  const hasImage = typeof result.image === 'string' && result.image.startsWith('http');
+  const [failed, setFailed] = useState(false);
 
   return (
     <a
@@ -59,53 +49,45 @@ function ProductCard({ result, hasPrice }: { result: ExternalResult; hasPrice: b
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => recordDiscoveryClick({ query: result.title, source: result.source })}
-      className="group bg-white/5 backdrop-blur-lg border border-white/10 rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:border-accent-500/50 hover:shadow-xl hover:shadow-accent-500/10"
+      className="group flex h-full flex-col rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-4"
     >
-      <div className="aspect-square sm:aspect-square bg-dark-900/50 overflow-hidden relative">
-        <img
-          src={imageSrc}
-          alt={result.title}
-          onError={(e) => {
-            if (!imageError && imageSrc !== '/fallback-product.png') {
-              setImageError(true);
-              setImageSrc('/fallback-product.png');
-            }
-          }}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
-        <div className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3">
-          <span className="text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-black/60 backdrop-blur-sm text-white rounded-full border border-white/10">
-            {result.source}
-          </span>
-        </div>
+      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-zinc-100">
+        {hasImage && !failed ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={result.image!}
+            alt={result.title}
+            onError={() => setFailed(true)}
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center text-zinc-300">
+            <ImageOff strokeWidth={1.25} className="h-10 w-10" />
+          </div>
+        )}
+        <span className="absolute left-2.5 top-2.5 rounded-md bg-white/90 px-2 py-1 text-[11px] font-medium text-zinc-800 shadow-sm backdrop-blur">
+          {result.source}
+        </span>
+        <span className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-zinc-700 opacity-0 shadow-sm backdrop-blur transition group-hover:opacity-100">
+          <ArrowUpRight strokeWidth={1.75} className="h-4 w-4" />
+        </span>
       </div>
 
-      <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
-        <h3 className="text-xs sm:text-sm font-semibold text-white line-clamp-2 group-hover:text-accent-400 transition-colors">
+      <div className="flex flex-1 flex-col gap-1 pt-3">
+        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-zinc-800 transition-colors group-hover:text-zinc-950">
           {result.title}
         </h3>
-
-        <div className="flex items-center justify-between">
-          <span className="text-sm sm:text-lg font-bold text-accent-400 flex items-center gap-0.5 sm:gap-1">
-            <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="text-xs sm:text-base">{hasPrice ? formatPrice(result.price) : 'N/A'}</span>
-          </span>
-
-          {result.rating ? (
-            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-gray-300">
-              <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-yellow-400" />
-              <span>{result.rating.toFixed(1)}</span>
-              {result.reviewsCount && result.reviewsCount < 100000 ? (
-                <span className="text-gray-400 hidden sm:inline">({result.reviewsCount})</span>
-              ) : null}
-            </div>
-          ) : (
-            <div className="text-[10px] sm:text-xs text-gray-500">
-              No rating
-            </div>
-          )}
-        </div>
+        {result.rating ? (
+          <p className="flex items-center gap-1 text-xs text-zinc-500">
+            <Star strokeWidth={0} className="h-3.5 w-3.5 fill-amber-400" />
+            {result.rating.toFixed(1)}
+            {result.reviewsCount && result.reviewsCount < 100000 ? ` (${result.reviewsCount})` : ''}
+          </p>
+        ) : null}
+        <p className="mt-auto pt-1 text-base font-semibold tabular-nums text-zinc-950">
+          {hasPrice ? formatPrice(result.price) : <span className="text-sm font-medium text-zinc-500">See price</span>}
+        </p>
       </div>
     </a>
   );

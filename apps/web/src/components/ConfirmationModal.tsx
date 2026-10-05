@@ -31,15 +31,15 @@ export function ConfirmationModal({
   const getIcon = () => {
     switch (type) {
       case 'danger':
-        return <AlertTriangle className="w-6 h-6 text-red-400" />;
+        return <AlertTriangle className="w-6 h-6 text-red-700" />;
       case 'warning':
-        return <AlertCircle className="w-6 h-6 text-yellow-400" />;
+        return <AlertCircle className="w-6 h-6 text-yellow-700" />;
       case 'info':
-        return <Info className="w-6 h-6 text-blue-400" />;
+        return <Info className="w-6 h-6 text-blue-700" />;
       case 'success':
-        return <CheckCircle className="w-6 h-6 text-green-400" />;
+        return <CheckCircle className="w-6 h-6 text-green-700" />;
       default:
-        return <AlertTriangle className="w-6 h-6 text-red-400" />;
+        return <AlertTriangle className="w-6 h-6 text-red-700" />;
     }
   };
 
@@ -70,17 +70,17 @@ export function ConfirmationModal({
       onClick={handleBackdropClick}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative bg-dark-800 border border-dark-700 rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
-        <div className="flex items-center justify-between p-6 border-b border-dark-700">
+      <div className="relative bg-white border border-zinc-200 rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+        <div className="flex items-center justify-between p-6 border-b border-zinc-200">
           <div className="flex items-center space-x-3">
             {getIcon()}
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-lg font-semibold text-dark-50">
               {title}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-dark-700"
+            className="text-zinc-500 hover:text-zinc-950 transition-colors p-1 rounded-lg hover:bg-zinc-100"
             disabled={isLoading}
           >
             <X className="w-5 h-5" />
@@ -88,23 +88,23 @@ export function ConfirmationModal({
         </div>
 
         <div className="p-6">
-          <p className="text-gray-300 leading-relaxed">
+          <p className="text-zinc-600 leading-relaxed">
             {message}
           </p>
         </div>
 
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-dark-700">
+        <div className="flex items-center justify-end space-x-3 p-6 border-t border-zinc-200">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-gray-300 hover:text-white transition-colors rounded-lg hover:bg-dark-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-zinc-600 hover:text-dark-50 transition-colors rounded-lg hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
             disabled={isLoading}
-            className={`px-6 py-2 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-800 disabled:opacity-50 disabled:cursor-not-allowed ${getButtonStyles()}`}
+            className={`px-6 py-2 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed ${getButtonStyles()}`}
           >
             {isLoading ? (
               <div className="flex items-center space-x-2">

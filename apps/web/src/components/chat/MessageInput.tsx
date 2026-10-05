@@ -86,9 +86,9 @@ export function MessageInput({
   const canSend = !!text.trim() && !sending && !disabled;
 
   return (
-    <div className="px-4 py-3 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: '#020617' }}>
+    <div className="px-4 py-3 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: '#ffffff' }}>
       <div className="flex items-end gap-2.5 rounded-2xl px-4 py-2.5"
-        style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ background: '#fafafa', border: '1px solid rgba(255,255,255,0.08)' }}>
         <textarea
           ref={textareaRef}
           value={text}
@@ -99,7 +99,7 @@ export function MessageInput({
           rows={1}
           className="flex-1 bg-transparent text-sm leading-relaxed resize-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            color: '#f1f5f9',
+            color: '#27272a',
             minHeight: '22px',
             maxHeight: '120px',
             caretColor: '#3b82f6',
@@ -119,8 +119,8 @@ export function MessageInput({
           aria-label="Send"
           className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all"
           style={{
-            background: canSend ? '#3b82f6' : '#1e293b',
-            color: canSend ? '#fff' : '#475569',
+            background: canSend ? '#3b82f6' : '#f4f4f5',
+            color: canSend ? '#fff' : '#d4d4d8',
           }}
           onMouseEnter={e => { if (canSend) e.currentTarget.style.background = '#2563eb'; }}
           onMouseLeave={e => { if (canSend) e.currentTarget.style.background = '#3b82f6'; }}
@@ -131,7 +131,7 @@ export function MessageInput({
           }
         </button>
       </div>
-      <p className="text-[10px] text-center mt-2" style={{ color: '#334155' }}>
+      <p className="text-[10px] text-center mt-2" style={{ color: '#e4e4e7' }}>
         Enter to send · Shift+Enter for new line
       </p>
     </div>

@@ -89,7 +89,7 @@ export default function Select({
   return (
     <div className={clsx("w-full", className)}>
       {label && (
-        <div className="mb-2 text-sm font-medium text-zinc-100">
+        <div className="mb-2 text-sm font-medium text-zinc-900">
           {label}
         </div>
       )}
@@ -112,9 +112,9 @@ export default function Select({
               savedScrollY.current = window.scrollY;
             }}
             className={clsx(
-              "h-12 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3",
-              "text-left text-sm text-zinc-100",
-              "shadow-sm hover:bg-zinc-800/60 focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+              "h-12 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3",
+              "text-left text-sm text-zinc-900",
+              "shadow-sm hover:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
               "outline-none transition-all duration-200 inline-flex items-center justify-between",
               "backdrop-blur-sm"
             )}
@@ -122,7 +122,7 @@ export default function Select({
             <span className={clsx("truncate", !selected && "text-zinc-500")}>
               {selected ? selected.label : placeholder}
             </span>
-            <ChevronDown className="ml-2 h-5 w-5 text-zinc-400 transition-transform duration-200 ui-open:rotate-180" />
+            <ChevronDown className="ml-2 h-5 w-5 text-zinc-600 transition-transform duration-200 ui-open:rotate-180" />
           </Listbox.Button>
 
           <Transition
@@ -137,7 +137,7 @@ export default function Select({
             <Listbox.Options
               ref={optionsRef}
               static
-              className="absolute left-0 right-0 mt-2 z-50 rounded-xl border border-zinc-800 bg-zinc-900/95 backdrop-blur shadow-xl p-1 max-h-72 overflow-y-auto overscroll-contain focus:outline-none"
+              className="absolute left-0 right-0 mt-2 z-50 rounded-xl border border-zinc-200 bg-white backdrop-blur shadow-xl p-1 max-h-72 overflow-y-auto overscroll-contain focus:outline-none"
               style={{ scrollMargin: 0 }}
             >
               {options.map((opt) => (
@@ -147,9 +147,9 @@ export default function Select({
                   className={({ active, selected }) =>
                     clsx(
                       "relative cursor-pointer select-none rounded-lg px-3 py-2 text-sm",
-                      "text-zinc-200 outline-none transition-all duration-150",
-                      "hover:bg-zinc-800/70 focus:bg-zinc-800/70",
-                      active && "bg-zinc-800/70 text-zinc-100",
+                      "text-zinc-800 outline-none transition-all duration-150",
+                      "hover:bg-white focus:bg-white",
+                      active && "bg-white text-zinc-900",
                       selected && "bg-blue-600 text-white font-medium"
                     )
                   }
@@ -160,7 +160,7 @@ export default function Select({
                       <span className={clsx("truncate", selected && "font-medium")}>
                         {opt.label}
                       </span>
-                      {selected && <Check className="h-4 w-4 text-white" />}
+                      {selected && <Check className="h-4 w-4 text-dark-50" />}
                     </div>
                   )}
                 </Listbox.Option>

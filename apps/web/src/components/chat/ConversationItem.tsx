@@ -44,7 +44,7 @@ export function ConversationItem({
       className={`p-2 rounded-lg mb-1 transition-colors cursor-pointer group relative ${
         isActive 
           ? 'bg-blue-600 text-white' 
-          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white'
+          : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-950'
       }`}
       onClick={onClick}
     >
@@ -64,14 +64,14 @@ export function ConversationItem({
             <div className="flex items-center gap-2">
               <p className="text-sm font-medium truncate">{conversation.title}</p>
               {conversation.isDraft && (
-                <span className="px-1.5 py-0.5 text-xs bg-blue-600/20 text-blue-400 rounded-full">
+                <span className="px-1.5 py-0.5 text-xs bg-blue-600/20 text-blue-700 rounded-full">
                   Draft
                 </span>
               )}
             </div>
           )}
           {conversation.lastMessagePreview && (
-            <p className="text-xs text-zinc-400 truncate mt-0.5">
+            <p className="text-xs text-zinc-600 truncate mt-0.5">
               {conversation.lastMessagePreview}
             </p>
           )}
@@ -90,14 +90,14 @@ export function ConversationItem({
             </button>
             
             {showMenu && (
-              <div className="absolute right-0 top-6 bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg z-10 min-w-[120px]">
+              <div className="absolute right-0 top-6 bg-zinc-100 border border-zinc-200 rounded-lg shadow-lg z-10 min-w-[120px]">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsEditing(true);
                     setShowMenu(false);
                   }}
-                  className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:text-white hover:bg-zinc-700 flex items-center gap-2"
+                  className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 flex items-center gap-2"
                 >
                   <Edit2 className="w-3 h-3" />
                   Rename
@@ -108,7 +108,7 @@ export function ConversationItem({
                     onDelete();
                     setShowMenu(false);
                   }}
-                  className="w-full px-3 py-2 text-left text-sm text-red-400 hover:text-red-300 hover:bg-zinc-700 flex items-center gap-2"
+                  className="w-full px-3 py-2 text-left text-sm text-red-700 hover:text-red-700 hover:bg-zinc-700 flex items-center gap-2"
                 >
                   <Trash2 className="w-3 h-3" />
                   Delete

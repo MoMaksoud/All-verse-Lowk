@@ -160,7 +160,7 @@ export function FileUpload({
         <p className="text-sm text-gray-300 mb-1">
           {dragActive ? 'Drop files here' : 'Click to upload or drag and drop'}
         </p>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-400">
           {accept.includes('image/') && 'Images'} {accept.includes('video/') && 'Videos'} 
           up to {formatFileSize(maxSize)}
         </p>
@@ -184,12 +184,12 @@ export function FileUpload({
 
       {/* Error Message */}
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-700 text-sm">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
           <button
             onClick={clearError}
-            className="ml-auto text-red-400 hover:text-red-300"
+            className="ml-auto text-red-700 hover:text-red-700"
           >
             <X className="w-4 h-4" />
           </button>
@@ -205,11 +205,11 @@ export function FileUpload({
               {getFileIcon(file)}
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-300 truncate">{file.name}</p>
-                <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
               </div>
               <button
                 onClick={() => removeFile(index)}
-                className="text-gray-400 hover:text-red-400 transition-colors"
+                className="text-gray-400 hover:text-red-700 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

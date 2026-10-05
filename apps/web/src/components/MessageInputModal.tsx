@@ -99,24 +99,24 @@ export function MessageInputModal({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl max-w-lg w-full transform transition-all"
+        className="relative bg-white border border-zinc-200 rounded-2xl shadow-2xl max-w-lg w-full transform transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-zinc-800">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-zinc-200">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Send className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Message Seller</h3>
-              <p className="text-sm text-zinc-400">About: {listingTitle}</p>
+              <h3 className="text-lg font-semibold text-dark-50">Message Seller</h3>
+              <p className="text-sm text-zinc-600">About: {listingTitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={sending || loading}
-            className="text-zinc-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-zinc-800 disabled:opacity-50"
+            className="text-zinc-600 hover:text-dark-50 transition-colors p-1 rounded-lg hover:bg-zinc-100 disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -124,10 +124,10 @@ export function MessageInputModal({
 
         {/* Quick Suggestions */}
         {quickSuggestions.length > 0 && (
-          <div className="p-4 border-b border-zinc-800">
+          <div className="p-4 border-b border-zinc-200">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-accent-400" />
-              <p className="text-xs text-zinc-400">Quick suggestions:</p>
+              <Sparkles className="w-4 h-4 text-accent-700" />
+              <p className="text-xs text-zinc-600">Quick suggestions:</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {quickSuggestions.map((suggestion, index) => (
@@ -135,7 +135,7 @@ export function MessageInputModal({
                   key={index}
                   onClick={() => handleSuggestionClick(suggestion)}
                   disabled={sending || loading}
-                  className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 text-xs bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-lg text-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {suggestion}
                 </button>
@@ -155,7 +155,7 @@ export function MessageInputModal({
               placeholder="Type your message..."
               disabled={sending || loading}
               rows={4}
-              className="w-full px-4 py-3 border border-zinc-700 rounded-xl bg-zinc-950 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed scrollbar-thin"
+              className="w-full px-4 py-3 border border-zinc-200 rounded-xl bg-white text-dark-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed scrollbar-thin"
               style={{ minHeight: '100px', maxHeight: '200px' }}
             />
 
@@ -164,7 +164,7 @@ export function MessageInputModal({
                 type="button"
                 onClick={onClose}
                 disabled={sending || loading}
-                className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-zinc-700 hover:text-dark-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>

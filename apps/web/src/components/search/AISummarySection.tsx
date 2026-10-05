@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Brain, DollarSign, TrendingUp } from 'lucide-react';
-import { formatPrice, formatNumber } from '@/lib/format';
+import { Sparkles } from 'lucide-react';
+import { formatPrice } from '@/lib/format';
 
 interface AISummary {
   overview: string;
@@ -26,7 +26,8 @@ export function AISummarySection({ summary, query, hasResults }: AISummarySectio
     return null;
   }
 
-  const hasPrice = summary.priceRange && summary.priceRange.min !== undefined;
+  const range = summary.priceRange;
+  const hasPrice = range && range.min !== undefined && range.max > 0;
   const showRecommendations = summary.topRecommendations && summary.topRecommendations.length > 0;
   const showInsights = summary.marketInsights && summary.marketInsights.length > 0;
 
@@ -34,85 +35,69 @@ export function AISummarySection({ summary, query, hasResults }: AISummarySectio
     return null;
   }
 
+  // Position of the average along the min..max bar
+  const avgPos = hasPrice && range!.max > range!.min
+    ? ((range!.average - range!.min) / (range!.max - range!.min)) * 100
+    : 50;
+
   return (
-    <section className="py-8 sm:py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-accent-500/10 to-primary-500/10 backdrop-blur-xl border border-accent-500/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-accent-500 to-primary-500 rounded-xl flex items-center justify-center">
-              <Brain className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white">
-                Insights for “{query}”
-              </h2>
-              <p className="text-sm text-gray-300">
-                Based on live results across the web
-              </p>
-            </div>
+    <section className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 sm:p-7">
+      <div className="flex items-center gap-2 text-sm font-medium text-primary-700">
+        <Sparkles strokeWidth={1.75} className="h-4 w-4" />
+        AI price check
+      </div>
+      <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-950">
+        What “{query}” goes for right now
+      </h2>
+
+      {hasPrice && (
+        <div className="mt-6 max-w-2xl">
+          <div className="flex items-baseline justify-between text-sm">
+            <span className="text-zinc-500">Typical price</span>
+            <span className="text-2xl font-semibold tabular-nums text-zinc-950">{formatPrice(range!.average)}</span>
           </div>
+          <div className="relative mt-4 h-1.5 rounded-full bg-gradient-to-r from-primary-200 via-primary-500 to-primary-200">
+            <span
+              className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary-700 shadow"
+              style={{ left: `${Math.min(100, Math.max(0, avgPos))}%` }}
+            />
+          </div>
+          <div className="mt-2 flex justify-between text-xs tabular-nums text-zinc-500">
+            <span>Low {formatPrice(range!.min)}</span>
+            <span>High {formatPrice(range!.max)}</span>
+          </div>
+        </div>
+      )}
 
-          {hasPrice && (
-            <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-xl border border-white/10 bg-white/5">
-                <p className="text-xs text-gray-400 mb-1">Minimum</p>
-                <p className="text-lg font-bold text-green-400 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  {formatNumber(summary.priceRange!.min, 2)}
-                </p>
-              </div>
-              <div className="p-4 rounded-xl border border-white/10 bg-white/5">
-                <p className="text-xs text-gray-400 mb-1">Average</p>
-                <p className="text-lg font-bold text-accent-400 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  {formatNumber(summary.priceRange!.average, 2)}
-                </p>
-              </div>
-              <div className="p-4 rounded-xl border border-white/10 bg-white/5">
-                <p className="text-xs text-gray-400 mb-1">Maximum</p>
-                <p className="text-lg font-bold text-red-400 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  {formatNumber(summary.priceRange!.max, 2)}
-                </p>
-              </div>
-            </div>
-          )}
-
+      {(showRecommendations || showInsights) && (
+        <div className="mt-7 grid grid-cols-1 gap-6 border-t border-zinc-200 pt-6 md:grid-cols-2 md:gap-10">
           {showRecommendations && (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-5 h-5 text-accent-400" />
-                <h3 className="text-lg font-semibold text-white">Recommendations</h3>
-              </div>
-              <ul className="space-y-2">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-950">What to look for</h3>
+              <ol className="mt-3 space-y-2.5">
                 {summary.topRecommendations!.map((rec, index) => (
-                  <li key={index} className="flex items-start gap-3 text-sm text-gray-200">
-                    <span className="w-6 h-6 flex items-center justify-center bg-accent-500/20 text-accent-300 rounded-full text-xs font-semibold shrink-0">
-                      {index + 1}
-                    </span>
+                  <li key={index} className="grid grid-cols-[1.5rem_1fr] text-sm leading-relaxed text-zinc-700">
+                    <span className="tabular-nums text-primary-600">{index + 1}.</span>
                     <span>{rec}</span>
                   </li>
                 ))}
-              </ul>
+              </ol>
             </div>
           )}
-
           {showInsights && (
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-white">Market Insights</h3>
-              <ul className="space-y-2">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-950">Market notes</h3>
+              <ul className="mt-3 space-y-2.5">
                 {summary.marketInsights!.map((insight, index) => (
-                  <li key={index} className="flex items-start gap-3 text-sm text-gray-200">
-                    <span className="text-accent-300 mt-1">•</span>
-                    <span>{insight}</span>
+                  <li key={index} className="border-l-2 border-zinc-200 pl-3 text-sm leading-relaxed text-zinc-700">
+                    {insight}
                   </li>
                 ))}
               </ul>
             </div>
           )}
         </div>
-      </div>
+      )}
     </section>
   );
 }
-

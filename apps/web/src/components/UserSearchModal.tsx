@@ -86,10 +86,10 @@ export function UserSearchModal({ isOpen, onClose, onSelectUser }: UserSearchMod
       <div className="bg-dark-surface rounded-lg border border-dark-border w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-dark-border">
-          <h2 className="text-lg font-semibold text-white">New Message</h2>
+          <h2 className="text-lg font-semibold text-dark-50">New Message</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-white/10 transition-colors"
+            className="p-1 rounded-lg hover:bg-zinc-900/5 transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5 text-gray-400" />
@@ -106,7 +106,7 @@ export function UserSearchModal({ isOpen, onClose, onSelectUser }: UserSearchMod
               placeholder="Search by @username"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-dark-950 border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 bg-dark-950 border border-dark-border rounded-lg text-dark-50 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -118,7 +118,7 @@ export function UserSearchModal({ isOpen, onClose, onSelectUser }: UserSearchMod
           )}
           
           {error && (
-            <div className="p-8 text-center text-red-400">{error}</div>
+            <div className="p-8 text-center text-red-700">{error}</div>
           )}
 
           {!loading && !error && users.length === 0 && searchTerm.length >= 2 && (
@@ -137,7 +137,7 @@ export function UserSearchModal({ isOpen, onClose, onSelectUser }: UserSearchMod
             <button
               key={user.userId}
               onClick={() => handleSelectUser(user)}
-              className="w-full p-4 hover:bg-white/5 transition-colors flex items-center gap-3 border-b border-dark-border last:border-0"
+              className="w-full p-4 hover:bg-zinc-900/5 transition-colors flex items-center gap-3 border-b border-dark-border last:border-0"
             >
               <ProfilePicture
                 src={user.profilePicture}
@@ -147,12 +147,12 @@ export function UserSearchModal({ isOpen, onClose, onSelectUser }: UserSearchMod
                 className="w-10 h-10"
               />
               <div className="flex-1 text-left">
-                <div className="text-white font-medium">@{user.username}</div>
+                <div className="text-dark-50 font-medium">@{user.username}</div>
                 {user.displayName !== user.username && (
                   <div className="text-sm text-gray-400">{user.displayName}</div>
                 )}
                 {user.bio && (
-                  <div className="text-xs text-gray-500 mt-1 line-clamp-1">{user.bio}</div>
+                  <div className="text-xs text-gray-400 mt-1 line-clamp-1">{user.bio}</div>
                 )}
               </div>
             </button>

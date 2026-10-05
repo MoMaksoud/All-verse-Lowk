@@ -48,7 +48,7 @@ function Avatar({ name, photoURL, size = 'md' }: { name: string; photoURL?: stri
 
   return (
     <div className={`${dim} rounded-full shrink-0 flex items-center justify-center font-semibold select-none`}
-      style={{ background: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)', color: '#e0f2fe' }}>
+      style={{ background: '#0063e1', color: '#ffffff' }}>
       {letters}
     </div>
   );
@@ -63,10 +63,10 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId, 
       <div className="p-3 space-y-1">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="flex items-center gap-3 px-3 py-3 animate-pulse rounded-xl">
-            <div className="w-11 h-11 rounded-full shrink-0" style={{ background: '#1e293b' }} />
+            <div className="w-11 h-11 rounded-full shrink-0" style={{ background: '#f4f4f5' }} />
             <div className="flex-1 space-y-2">
-              <div className="h-3.5 rounded w-2/5" style={{ background: '#1e293b' }} />
-              <div className="h-3 rounded w-3/5" style={{ background: '#1e293b' }} />
+              <div className="h-3.5 rounded w-2/5" style={{ background: '#f4f4f5' }} />
+              <div className="h-3 rounded w-3/5" style={{ background: '#f4f4f5' }} />
             </div>
           </div>
         ))}
@@ -78,11 +78,11 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId, 
     return (
       <div className="flex flex-col items-center justify-center flex-1 px-6 py-12 text-center">
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.06)' }}>
+          style={{ background: '#f4f4f5', border: '1px solid #e4e4e7' }}>
           <MessageSquare className="w-6 h-6" style={{ color: '#3b82f6' }} />
         </div>
-        <p className="text-sm font-semibold mb-1" style={{ color: '#f1f5f9' }}>No conversations yet</p>
-        <p className="text-xs mb-5" style={{ color: '#64748b' }}>
+        <p className="text-sm font-semibold mb-1" style={{ color: '#27272a' }}>No conversations yet</p>
+        <p className="text-xs mb-5" style={{ color: '#a1a1aa' }}>
           Message a seller or buyer to start dealing
         </p>
         {onNewMessage && (
@@ -153,7 +153,7 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId, 
               <Avatar name={name} photoURL={chat.otherUser?.photoURL} />
               {hasUnread && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center"
-                  style={{ background: '#3b82f6', border: '2px solid #020617' }} />
+                  style={{ background: '#3b82f6', border: '2px solid #ffffff' }} />
               )}
             </div>
 
@@ -161,22 +161,22 @@ export function ChatList({ chats, loading, error, onChatSelect, selectedChatId, 
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2">
                 <span className={`text-sm truncate ${hasUnread ? 'font-semibold' : 'font-medium'}`}
-                  style={{ color: hasUnread ? '#f1f5f9' : '#cbd5e1' }}>
+                  style={{ color: hasUnread ? '#27272a' : '#52525b' }}>
                   {name}
                 </span>
                 {chat.lastMessage?.timestamp && (
-                  <span className="text-[11px] shrink-0 tabular-nums" style={{ color: '#475569' }}>
+                  <span className="text-[11px] shrink-0 tabular-nums" style={{ color: '#d4d4d8' }}>
                     {formatTimestamp(chat.lastMessage.timestamp)}
                   </span>
                 )}
               </div>
               {chat.lastMessage ? (
                 <p className="text-xs truncate mt-0.5"
-                  style={{ color: hasUnread ? '#94a3b8' : '#475569', fontWeight: hasUnread ? 500 : 400 }}>
+                  style={{ color: hasUnread ? '#71717a' : '#d4d4d8', fontWeight: hasUnread ? 500 : 400 }}>
                   {chat.lastMessage.text}
                 </p>
               ) : (
-                <p className="text-xs mt-0.5 italic" style={{ color: '#334155' }}>No messages yet</p>
+                <p className="text-xs mt-0.5 italic" style={{ color: '#e4e4e7' }}>No messages yet</p>
               )}
             </div>
           </button>

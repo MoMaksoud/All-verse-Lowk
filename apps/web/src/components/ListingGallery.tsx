@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import clsx from 'clsx';
+import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
 import { normalizeImageSrc } from '@marketplace/shared-logic';
 
 interface ListingGalleryProps {
@@ -16,133 +17,92 @@ export const ListingGallery: React.FC<ListingGalleryProps> = ({
   title = 'Listing photo',
   className = '',
 }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const safePhotos = photos?.length ? photos : ['/default-avatar.png'];
+  const [active, setActive] = useState(0);
+  const touchX = useRef<number | null>(null);
+  const srcs = (photos || []).map((p) => normalizeImageSrc(p)).filter(Boolean) as string[];
+  const count = srcs.length;
 
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        setActiveIndex(prev => (prev > 0 ? prev - 1 : safePhotos.length - 1));
-      } else if (e.key === 'ArrowRight') {
-        setActiveIndex(prev => (prev < safePhotos.length - 1 ? prev + 1 : 0));
-      }
-    };
+  const go = (delta: number) => setActive((i) => (i + delta + count) % count);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [safePhotos.length]);
-
-  // Handle touch/swipe gestures
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    const startX = touch.clientX;
-    
-    const handleTouchEnd = (e: TouchEvent) => {
-      const touch = e.changedTouches[0];
-      const endX = touch.clientX;
-      const diff = startX - endX;
-      
-      if (Math.abs(diff) > 50) { // Minimum swipe distance
-        if (diff > 0) {
-          // Swipe left - next image
-          setActiveIndex(prev => (prev < safePhotos.length - 1 ? prev + 1 : 0));
-        } else {
-          // Swipe right - previous image
-          setActiveIndex(prev => (prev > 0 ? prev - 1 : safePhotos.length - 1));
-        }
-      }
-      
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-    
-    document.addEventListener('touchend', handleTouchEnd);
-  };
-
-  if (safePhotos.length === 0) {
+  if (count === 0) {
     return (
-      <div className={`aspect-video bg-zinc-800 rounded-xl flex items-center justify-center ${className}`}>
-        <div className="text-center text-zinc-400">
-          <div className="text-5xl mb-3">📦</div>
-          <div className="text-base">No Images Available</div>
-        </div>
+      <div className={clsx('flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-2xl bg-zinc-100 text-zinc-400', className)}>
+        <ImageOff strokeWidth={1.5} className="h-8 w-8" />
+        <span className="text-sm">No photos</span>
       </div>
     );
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Main Image */}
-      <div className="relative aspect-[4/3] w-full bg-zinc-900 rounded-xl overflow-hidden">
+    <div className={clsx('space-y-3', className)}>
+      <div
+        className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-zinc-100 outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        tabIndex={count > 1 ? 0 : undefined}
+        aria-roledescription="carousel"
+        aria-label={`${title} photos`}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowLeft') go(-1);
+          if (e.key === 'ArrowRight') go(1);
+        }}
+        onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+        onTouchEnd={(e) => {
+          if (touchX.current === null) return;
+          const diff = touchX.current - e.changedTouches[0].clientX;
+          if (Math.abs(diff) > 50) go(diff > 0 ? 1 : -1);
+          touchX.current = null;
+        }}
+      >
         <Image
-          src={normalizeImageSrc(safePhotos[activeIndex]) || '/default-avatar.png'}
-          alt={`${title} - Image ${activeIndex + 1}`}
+          key={srcs[active]}
+          src={srcs[active]}
+          alt={`${title}, photo ${active + 1} of ${count}`}
           fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover rounded-lg"
-          priority={activeIndex === 0}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = '/default-avatar.png';
-          }}
+          sizes="(max-width: 1024px) 100vw, 60vw"
+          className="animate-fade-in object-contain"
+          priority={active === 0}
         />
-        
-        {/* Navigation Arrows */}
-        {safePhotos.length > 1 && (
+
+        {count > 1 && (
           <>
-            <button
-              onClick={() => setActiveIndex(prev => (prev > 0 ? prev - 1 : safePhotos.length - 1))}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
-              aria-label="Previous image"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setActiveIndex(prev => (prev < safePhotos.length - 1 ? prev + 1 : 0))}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
-              aria-label="Next image"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            {[
+              { d: -1, Icon: ChevronLeft, label: 'Previous photo', pos: 'left-3' },
+              { d: 1, Icon: ChevronRight, label: 'Next photo', pos: 'right-3' },
+            ].map(({ d, Icon, label, pos }) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => go(d)}
+                aria-label={label}
+                className={clsx(
+                  'absolute top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-zinc-900 shadow-sm transition hover:bg-white active:scale-95 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100',
+                  pos
+                )}
+              >
+                <Icon strokeWidth={1.75} className="h-5 w-5" />
+              </button>
+            ))}
+            <span className="absolute bottom-3 right-3 rounded-full bg-zinc-950/70 px-2.5 py-1 text-xs tabular-nums text-white">
+              {active + 1} / {count}
+            </span>
           </>
         )}
-        
-        {/* Image Counter */}
-        {safePhotos.length > 1 && (
-          <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
-            {activeIndex + 1} / {safePhotos.length}
-          </div>
-        )}
       </div>
-      
-      {/* Thumbnail Strip */}
-      {safePhotos.length > 1 && (
-        <div 
-          className="flex gap-2 overflow-x-auto pb-2"
-          onTouchStart={handleTouchStart}
-        >
-          {safePhotos.map((photo, index) => (
+
+      {count > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {srcs.map((src, i) => (
             <button
-              key={`${photo}-${index}`}
-              onClick={() => setActiveIndex(index)}
-              className={`shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                index === activeIndex 
-                  ? 'border-accent-500 ring-2 ring-accent-500/50' 
-                  : 'border-zinc-700 hover:border-zinc-600'
-              }`}
-              aria-label={`View image ${index + 1}`}
+              key={`${src}-${i}`}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={`Show photo ${i + 1}`}
+              aria-current={i === active}
+              className={clsx(
+                'relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-zinc-100 ring-offset-2 transition sm:h-20 sm:w-20',
+                i === active ? 'ring-2 ring-primary-600' : 'opacity-70 hover:opacity-100'
+              )}
             >
-              <Image
-                src={normalizeImageSrc(photo) || '/default-avatar.png'}
-                alt={`${title} thumbnail ${index + 1}`}
-                width={80}
-                height={80}
-                className="object-cover rounded-lg"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/default-avatar.png';
-                }}
-              />
+              <Image src={src} alt="" fill sizes="80px" className="object-cover" />
             </button>
           ))}
         </div>

@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, User, Camera, Heart, DollarSign, ShoppingBag } from 'lucide-react';
-import { CreateProfileInput, Gender, ShoppingFrequency, UserActivity, ItemConditionPreference } from '@marketplace/types';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { CreateProfileInput, UserActivity, ItemConditionPreference } from '@marketplace/types';
 import { FileUpload } from '@/components/FileUpload';
 import { useAuth } from '@/contexts/AuthContext';
-import Select from './Select';
 import { formatPhoneNumber } from '@/lib/utils';
 
 interface ProfileSetupFormProps {
@@ -15,17 +14,21 @@ interface ProfileSetupFormProps {
 }
 
 const INTEREST_CATEGORIES = [
-  { id: 'electronics', name: 'Electronics', icon: '📱' },
-  { id: 'fashion', name: 'Fashion', icon: '👕' },
-  { id: 'home', name: 'Home & Garden', icon: '🏠' },
-  { id: 'books', name: 'Books', icon: '📚' },
-  { id: 'sports', name: 'Sports', icon: '⚽' },
-  { id: 'automotive', name: 'Automotive', icon: '🚗' },
-  { id: 'furniture', name: 'Furniture', icon: '🪑' },
-  { id: 'beauty', name: 'Beauty & Health', icon: '💄' },
-  { id: 'toys', name: 'Toys & Games', icon: '🎮' },
-  { id: 'music', name: 'Music & Instruments', icon: '🎵' },
+  { id: 'electronics', name: 'Electronics' },
+  { id: 'fashion', name: 'Fashion' },
+  { id: 'home', name: 'Home & garden' },
+  { id: 'books', name: 'Books' },
+  { id: 'sports', name: 'Sports' },
+  { id: 'automotive', name: 'Automotive' },
+  { id: 'furniture', name: 'Furniture' },
+  { id: 'beauty', name: 'Beauty & health' },
+  { id: 'toys', name: 'Toys & games' },
+  { id: 'music', name: 'Music & instruments' },
 ];
+
+const STEP_TITLES = ['The basics', 'What you’re into', 'How you shop', 'Your budget', 'A photo'];
+
+const RADIO = 'h-4 w-4 accent-primary-600';
 
 export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: ProfileSetupFormProps) {
   const { currentUser } = useAuth();
@@ -118,315 +121,251 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
   };
 
   const renderStep1 = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <User className="w-12 h-12 mx-auto mb-4 text-accent-500" />
-        <h2 className="text-2xl font-bold text-white mb-2">Basic Information</h2>
-        <p className="text-gray-400">Tell us a bit about yourself</p>
+    <div className="space-y-5">
+      <div className="grid gap-2">
+        <label htmlFor="profile-username" className="text-sm font-medium text-zinc-950">Username</label>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">@</span>
+          <input
+            id="profile-username"
+            type="text"
+            value={formData.username}
+            onChange={(e) => {
+              // Normalize: lowercase, remove spaces, remove @, only allow alphanumeric, underscore, period
+              const value = e.target.value.toLowerCase().replace(/^@/, '').replace(/\s+/g, '').replace(/[^a-z0-9._]/g, '');
+              handleInputChange('username', value);
+            }}
+            placeholder="username"
+            className="input pl-8"
+            maxLength={30}
+            aria-describedby="profile-username-help"
+          />
+        </div>
+        <p id="profile-username-help" className="text-xs text-zinc-500">
+          At least 3 characters. Letters, numbers, dots and underscores. {formData.username.length}/30
+        </p>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Username *
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">@</span>
-            <input
-              type="text"
-              value={formData.username}
-              onChange={(e) => {
-                // Normalize: lowercase, remove spaces, remove @, only allow alphanumeric, underscore, period
-                const value = e.target.value.toLowerCase().replace(/^@/, '').replace(/\s+/g, '').replace(/[^a-z0-9._]/g, '');
-                handleInputChange('username', value);
-              }}
-              placeholder="username"
-              className="w-full pl-8 pr-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-              maxLength={30}
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            {formData.username.length}/30 characters • Only letters, numbers, underscores, and periods
-          </p>
+      <div className="grid gap-2">
+        <label htmlFor="profile-bio" className="text-sm font-medium text-zinc-950">Bio <span className="font-normal text-zinc-500">(optional)</span></label>
+        <textarea
+          id="profile-bio"
+          value={formData.bio || ''}
+          onChange={(e) => handleInputChange('bio', e.target.value)}
+          placeholder="A line or two about what you buy and sell"
+          className="input resize-none"
+          rows={3}
+          maxLength={280}
+        />
+        <p className="text-xs text-zinc-500">{(formData.bio || '').length}/280</p>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <label htmlFor="profile-gender" className="text-sm font-medium text-zinc-950">Gender <span className="font-normal text-zinc-500">(optional)</span></label>
+          <select
+            id="profile-gender"
+            value={formData.gender || ''}
+            onChange={(e) => handleInputChange('gender', e.target.value || undefined)}
+            className="input"
+          >
+            <option value="">Prefer not to say</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="non-binary">Non-binary</option>
+          </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Bio
-          </label>
-          <textarea
-            value={formData.bio || ''}
-            onChange={(e) => handleInputChange('bio', e.target.value)}
-            placeholder="Tell us about yourself..."
-            className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 resize-none"
-            rows={3}
-            maxLength={280}
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            {(formData.bio || '').length}/280 characters
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Select
-              label="Gender"
-              value={formData.gender || ''}
-              onChange={(value) => handleInputChange('gender', value || undefined)}
-              placeholder="Prefer not to say"
-              options={[
-                { value: '', label: 'Prefer not to say' },
-                { value: 'male', label: 'Male' },
-                { value: 'female', label: 'Female' },
-                { value: 'non-binary', label: 'Non-binary' },
-                { value: 'prefer-not-to-say', label: 'Prefer not to say' },
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Age
-            </label>
-            <input
-              type="number"
-              value={formData.age || ''}
-              onChange={(e) => handleInputChange('age', e.target.value ? parseInt(e.target.value) : undefined)}
-              onBlur={() => setShowAgeValidation(true)}
-              onClick={() => setShowAgeValidation(true)}
-              placeholder="Age"
-              min="13"
-              max="120"
-              className={`w-full px-4 py-3 bg-dark-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 ${
-                showAgeValidation && isAgeInvalid()
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-dark-600 focus:ring-accent-500'
-              }`}
-            />
-            {showAgeValidation && isAgeInvalid() && (
-              <p className="text-xs text-red-400 mt-1">
-                Age must be between 13-120
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Phone Number
-          </label>
+        <div className="grid gap-2">
+          <label htmlFor="profile-age" className="text-sm font-medium text-zinc-950">Age <span className="font-normal text-zinc-500">(optional)</span></label>
           <input
-            type="tel"
-            value={formData.phoneNumber || ''}
-            onChange={(e) => {
-              const formatted = formatPhoneNumber(e.target.value);
-              handleInputChange('phoneNumber', formatted);
-            }}
-            placeholder="(555) 123-4567"
-            className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
+            id="profile-age"
+            type="number"
+            value={formData.age || ''}
+            onChange={(e) => handleInputChange('age', e.target.value ? parseInt(e.target.value) : undefined)}
+            onBlur={() => setShowAgeValidation(true)}
+            onClick={() => setShowAgeValidation(true)}
+            placeholder="Age"
+            min="13"
+            max="120"
+            aria-invalid={showAgeValidation && isAgeInvalid()}
+            className={`input ${showAgeValidation && isAgeInvalid() ? 'border-red-600 focus:border-red-600 focus:ring-red-600' : ''}`}
           />
+          {showAgeValidation && isAgeInvalid() && (
+            <p className="text-sm text-red-700">Age must be between 13 and 120.</p>
+          )}
         </div>
+      </div>
+
+      <div className="grid gap-2">
+        <label htmlFor="profile-phone" className="text-sm font-medium text-zinc-950">Phone <span className="font-normal text-zinc-500">(optional)</span></label>
+        <input
+          id="profile-phone"
+          type="tel"
+          value={formData.phoneNumber || ''}
+          onChange={(e) => {
+            const formatted = formatPhoneNumber(e.target.value);
+            handleInputChange('phoneNumber', formatted);
+          }}
+          placeholder="(555) 123-4567"
+          className="input"
+        />
+        <p className="text-xs text-zinc-500">Used for account recovery. Never shown to buyers.</p>
       </div>
     </div>
   );
 
   const renderStep2 = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <Heart className="w-12 h-12 mx-auto mb-4 text-accent-500" />
-        <h2 className="text-2xl font-bold text-white mb-2">Interest Categories</h2>
-        <p className="text-gray-400">What are you interested in? Select all that apply</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {INTEREST_CATEGORIES.map((category) => (
-          <button
-            key={category.id}
-            type="button"
-            onClick={() => handleCategoryToggle(category.id)}
-            className={`p-4 rounded-lg border-2 transition-all ${
-              formData.interestCategories.includes(category.id)
-                ? 'border-accent-500 bg-accent-500/10 text-accent-400'
-                : 'border-dark-600 bg-dark-700 text-gray-300 hover:border-dark-500'
-            }`}
-          >
-            <div className="text-2xl mb-2">{category.icon}</div>
-            <div className="text-sm font-medium">{category.name}</div>
-          </button>
-        ))}
+    <div>
+      <p className="text-sm text-zinc-600">Pick the kinds of things you look for. You can change this later.</p>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {INTEREST_CATEGORIES.map((category) => {
+          const selected = formData.interestCategories.includes(category.id);
+          return (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => handleCategoryToggle(category.id)}
+              aria-pressed={selected}
+              className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                selected
+                  ? 'border-primary-600 bg-primary-50 font-medium text-primary-700'
+                  : 'border-zinc-300 text-zinc-700 hover:border-zinc-500'
+              }`}
+            >
+              {category.name}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 
   const renderStep3 = () => (
     <div className="space-y-6">
-      <div className="text-center">
-        <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-accent-500" />
-        <h2 className="text-2xl font-bold text-white mb-2">Shopping Preferences</h2>
-        <p className="text-gray-400">How do you like to shop?</p>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-zinc-950">What will you use AllVerse for?</legend>
+        {[
+          { value: 'browse-only', label: 'Browsing and buying' },
+          { value: 'buy-only', label: 'Only buying' },
+          { value: 'sell-only', label: 'Only selling' },
+          { value: 'both-buy-sell', label: 'Buying and selling' },
+        ].map((option) => (
+          <label key={option.value} className="flex cursor-pointer items-center gap-3 text-sm text-zinc-800">
+            <input
+              type="radio"
+              name="userActivity"
+              value={option.value}
+              checked={formData.userActivity === option.value}
+              onChange={(e) => handleInputChange('userActivity', e.target.value as UserActivity)}
+              className={RADIO}
+            />
+            {option.label}
+          </label>
+        ))}
+      </fieldset>
+
+      <div className="grid gap-2">
+        <label htmlFor="profile-frequency" className="text-sm font-medium text-zinc-950">How often do you shop? <span className="font-normal text-zinc-500">(optional)</span></label>
+        <select
+          id="profile-frequency"
+          value={formData.shoppingFrequency || ''}
+          onChange={(e) => handleInputChange('shoppingFrequency', e.target.value || undefined)}
+          className="input"
+        >
+          <option value="">Choose one</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="occasionally">Occasionally</option>
+          <option value="rarely">Rarely</option>
+        </select>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            What do you want to do on our platform?
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-zinc-950">Condition you’re open to</legend>
+        {[
+          { value: 'new-only', label: 'New only' },
+          { value: 'second-hand-only', label: 'Secondhand only' },
+          { value: 'both', label: 'New or secondhand' },
+        ].map((option) => (
+          <label key={option.value} className="flex cursor-pointer items-center gap-3 text-sm text-zinc-800">
+            <input
+              type="radio"
+              name="itemConditionPreference"
+              value={option.value}
+              checked={formData.itemConditionPreference === option.value}
+              onChange={(e) => handleInputChange('itemConditionPreference', e.target.value as ItemConditionPreference)}
+              className={RADIO}
+            />
+            {option.label}
           </label>
-          <div className="space-y-2">
-            {[
-              { value: 'browse-only', label: 'Just browse and buy items' },
-              { value: 'buy-only', label: 'Only buy items' },
-              { value: 'sell-only', label: 'Only sell items' },
-              { value: 'both-buy-sell', label: 'Both buy and sell items' },
-            ].map((option) => (
-              <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="userActivity"
-                  value={option.value}
-                  checked={formData.userActivity === option.value}
-                  onChange={(e) => handleInputChange('userActivity', e.target.value as UserActivity)}
-                  className="w-4 h-4 text-accent-500 bg-dark-700 border-dark-600 focus:ring-accent-500"
-                />
-                <span className="text-gray-300">{option.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <Select
-            label="How often do you shop?"
-            value={formData.shoppingFrequency || ''}
-            onChange={(value) => handleInputChange('shoppingFrequency', value || undefined)}
-            placeholder="Select frequency"
-            options={[
-              { value: '', label: 'Select frequency' },
-              { value: 'daily', label: 'Daily' },
-              { value: 'weekly', label: 'Weekly' },
-              { value: 'monthly', label: 'Monthly' },
-              { value: 'occasionally', label: 'Occasionally' },
-              { value: 'rarely', label: 'Rarely' },
-            ]}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Item condition preference
-          </label>
-          <div className="space-y-2">
-            {[
-              { value: 'new-only', label: 'New items only' },
-              { value: 'second-hand-only', label: 'Second-hand items only' },
-              { value: 'both', label: 'Both new and second-hand' },
-            ].map((option) => (
-              <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="itemConditionPreference"
-                  value={option.value}
-                  checked={formData.itemConditionPreference === option.value}
-                  onChange={(e) => handleInputChange('itemConditionPreference', e.target.value as ItemConditionPreference)}
-                  className="w-4 h-4 text-accent-500 bg-dark-700 border-dark-600 focus:ring-accent-500"
-                />
-                <span className="text-gray-300">{option.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
+        ))}
+      </fieldset>
     </div>
   );
 
   const renderStep4 = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <DollarSign className="w-12 h-12 mx-auto mb-4 text-accent-500" />
-        <h2 className="text-2xl font-bold text-white mb-2">Budget Preferences</h2>
-        <p className="text-gray-400">Help us show you relevant items</p>
-      </div>
-
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Minimum Budget ($)
-            </label>
-            <input
-              type="number"
-              value={formData.budget?.min || ''}
-              onChange={(e) => handleBudgetChange('min', e.target.value ? parseFloat(e.target.value) : undefined)}
-              placeholder="0"
-              min="0"
-              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Maximum Budget ($)
-            </label>
-            <input
-              type="number"
-              value={formData.budget?.max || ''}
-              onChange={(e) => handleBudgetChange('max', e.target.value ? parseFloat(e.target.value) : undefined)}
-              placeholder="1000"
-              min="0"
-              className="w-full px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500"
-            />
-          </div>
+    <div className="space-y-5">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <label htmlFor="budget-min" className="text-sm font-medium text-zinc-950">Minimum ($)</label>
+          <input
+            id="budget-min"
+            type="number"
+            value={formData.budget?.min || ''}
+            onChange={(e) => handleBudgetChange('min', e.target.value ? parseFloat(e.target.value) : undefined)}
+            placeholder="0"
+            min="0"
+            className="input"
+          />
         </div>
-
-        <div className="text-center text-sm text-gray-400">
-          <p>This helps us show you items within your price range</p>
+        <div className="grid gap-2">
+          <label htmlFor="budget-max" className="text-sm font-medium text-zinc-950">Maximum ($)</label>
+          <input
+            id="budget-max"
+            type="number"
+            value={formData.budget?.max || ''}
+            onChange={(e) => handleBudgetChange('max', e.target.value ? parseFloat(e.target.value) : undefined)}
+            placeholder="1000"
+            min="0"
+            className="input"
+          />
         </div>
       </div>
+      <p className="text-sm text-zinc-500">Optional. Used to show you items in your range first.</p>
     </div>
   );
 
   const renderStep5 = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <Camera className="w-12 h-12 mx-auto mb-4 text-accent-500" />
-        <h2 className="text-2xl font-bold text-white mb-2">Profile Picture</h2>
-        <p className="text-gray-400">Add a profile picture to personalize your account</p>
-      </div>
-
-      <div className="space-y-4">
-        {/* Profile Picture Preview */}
-        {formData.profilePicture && (
-          <div className="flex justify-center">
-            <div className="w-32 h-32 bg-dark-700 border-2 border-dark-600 rounded-full flex items-center justify-center overflow-hidden">
-              <img
-                src={formData.profilePicture}
-                alt="Profile preview"
-                className="w-full h-full rounded-full object-cover"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* File Upload Component */}
-        <FileUpload
-          onUploadComplete={(result) => {
-            handleInputChange('profilePicture', result.url);
-          }}
-          onUploadError={(error) => {
-            console.error('Profile picture upload error:', error);
-          }}
-          accept="image/*"
-          maxSize={5 * 1024 * 1024} // 5MB
-          maxFiles={1}
-          uploadType="profile-picture"
-          userId={currentUser?.uid}
-          userEmail={currentUser?.email ?? undefined}
-          className="max-w-md mx-auto"
-        />
-
-        <div className="text-center text-sm text-gray-400">
-          <p>You can skip this and add a picture later</p>
+    <div className="space-y-5">
+      {formData.profilePicture && (
+        <div className="flex items-center gap-4">
+          <img
+            src={formData.profilePicture}
+            alt="Your profile photo"
+            className="h-20 w-20 rounded-full object-cover"
+          />
+          <p className="text-sm text-zinc-600">Looking good. You can change this later in Settings.</p>
         </div>
-      </div>
+      )}
+
+      <FileUpload
+        onUploadComplete={(result) => {
+          handleInputChange('profilePicture', result.url);
+        }}
+        onUploadError={(error) => {
+          console.error('Profile picture upload error:', error);
+        }}
+        accept="image/*"
+        maxSize={5 * 1024 * 1024} // 5MB
+        maxFiles={1}
+        uploadType="profile-picture"
+        userId={currentUser?.uid}
+        userEmail={currentUser?.email ?? undefined}
+      />
+
+      <p className="text-sm text-zinc-500">Optional. You can add one later.</p>
     </div>
   );
 
@@ -442,35 +381,34 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-dark-800 rounded-2xl p-8 border border-dark-700">
-      {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="flex justify-between text-sm text-gray-400 mb-2">
+    <div>
+      <div>
+        <div className="flex items-center justify-between text-sm text-zinc-500">
           <span>Step {currentStep} of {totalSteps}</span>
-          <span>{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
+          <span className="tabular-nums">{Math.round((currentStep / totalSteps) * 100)}%</span>
         </div>
-        <div className="w-full bg-dark-700 rounded-full h-2">
+        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-zinc-100">
           <div
-            className="bg-accent-500 h-2 rounded-full transition-all duration-300"
+            className="h-full rounded-full bg-primary-600 transition-[width] duration-300"
             style={{ width: `${(currentStep / totalSteps) * 100}%` }}
           />
         </div>
       </div>
 
-      {/* Step Content */}
-      <div className="mb-8">
+      <h2 className="mt-8 text-xl font-semibold tracking-tight text-zinc-950">{STEP_TITLES[currentStep - 1]}</h2>
+
+      <div className="mt-6">
         {renderCurrentStep()}
       </div>
 
-      {/* Navigation */}
-      <div className="flex justify-between">
+      <div className="mt-10 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={currentStep === 1 ? onCancel : prevStep}
-          className="flex items-center px-6 py-3 text-gray-400 hover:text-white transition-colors"
+          className="btn btn-ghost gap-1.5"
         >
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          {currentStep === 1 ? 'Cancel' : 'Back'}
+          <ChevronLeft strokeWidth={1.75} className="h-4 w-4" />
+          {currentStep === 1 ? 'Skip for now' : 'Back'}
         </button>
 
         {currentStep < totalSteps ? (
@@ -478,19 +416,20 @@ export function ProfileSetupForm({ onSubmit, onCancel, isLoading = false }: Prof
             type="button"
             onClick={nextStep}
             disabled={!isStepValid()}
-            className="flex items-center px-6 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            className="btn btn-primary gap-1.5"
           >
             Next
-            <ChevronRight className="w-4 h-4 ml-2" />
+            <ChevronRight strokeWidth={1.75} className="h-4 w-4" />
           </button>
         ) : (
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isLoading}
-            className="flex items-center px-6 py-3 bg-accent-500 hover:bg-accent-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            className="btn btn-primary"
           >
-            {isLoading ? 'Creating Profile...' : 'Complete Setup'}
+            {isLoading && <Loader2 strokeWidth={1.75} className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoading ? 'Saving…' : 'Finish setup'}
           </button>
         )}
       </div>

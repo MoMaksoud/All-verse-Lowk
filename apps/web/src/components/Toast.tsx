@@ -21,32 +21,32 @@ const toastIcons = {
 
 const toastStyles = {
   success: {
-    bg: 'bg-zinc-900',
-    border: 'border border-zinc-800',
-    icon: 'text-green-400',
-    title: 'text-zinc-100',
-    message: 'text-zinc-400',
+    bg: 'bg-white',
+    border: 'border border-zinc-200',
+    icon: 'text-green-700',
+    title: 'text-zinc-900',
+    message: 'text-zinc-600',
   },
   error: {
-    bg: 'bg-zinc-900',
-    border: 'border border-zinc-800',
-    icon: 'text-red-400',
-    title: 'text-zinc-100',
-    message: 'text-zinc-400',
+    bg: 'bg-white',
+    border: 'border border-zinc-200',
+    icon: 'text-red-700',
+    title: 'text-zinc-900',
+    message: 'text-zinc-600',
   },
   warning: {
-    bg: 'bg-zinc-900',
-    border: 'border border-zinc-800',
-    icon: 'text-yellow-400',
-    title: 'text-zinc-100',
-    message: 'text-zinc-400',
+    bg: 'bg-white',
+    border: 'border border-zinc-200',
+    icon: 'text-yellow-700',
+    title: 'text-zinc-900',
+    message: 'text-zinc-600',
   },
   info: {
-    bg: 'bg-zinc-900',
-    border: 'border border-zinc-800',
-    icon: 'text-blue-400',
-    title: 'text-zinc-100',
-    message: 'text-zinc-400',
+    bg: 'bg-white',
+    border: 'border border-zinc-200',
+    icon: 'text-blue-700',
+    title: 'text-zinc-900',
+    message: 'text-zinc-600',
   },
 };
 
@@ -113,7 +113,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="shrink-0 text-zinc-400 hover:text-white transition-colors"
+          className="shrink-0 text-zinc-600 hover:text-dark-50 transition-colors"
         >
           <X className="h-4 w-4" />
         </button>

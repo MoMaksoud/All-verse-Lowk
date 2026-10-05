@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ListingService } from '@/lib/firestore';
+import { getAdminFirestore } from '@/lib/firebase-admin';
 import { withApi } from '@/lib/withApi';
 
 export const runtime = "nodejs";
@@ -7,7 +7,12 @@ export const dynamic = "force-dynamic";
 
 export const GET = withApi(async (request: NextRequest & { userId: string }) => {
   try {
-    const listings = await ListingService.getUserListings(request.userId);
+    // Admin SDK: the client SDK here has no user token, so Firestore rules hide the owner's inactive listings.
+    const snap = await getAdminFirestore()
+      .collection('listings')
+      .where('sellerId', '==', request.userId)
+      .get();
+    const listings = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     
     const transformedListings = listings.map((listing: any) => {
       const isSold = (listing.sold ?? false) === true || listing.inventory === 0;

@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { X, Image as ImageIcon, Camera, Upload, AlertCircle } from 'lucide-react';
+import { X, ImagePlus, Camera, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { uploadListingPhotoFile } from '@/lib/storage';
 import { PhotoItem, UploadStatus, isCloudUrl } from '@/types/photos';
@@ -147,17 +147,33 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   }, []);
 
   const remainingSlots = max - items.length;
-  const hasUploadingItems = items.some(i => i.status === 'uploading');
-  const hasErrorItems = items.some(i => i.status === 'error');
+    const hasErrorItems = items.some(i => i.status === 'error');
+
+  // Listings: once a photo exists, adding more is a tile in the grid.
+  const asTile = type === 'listing' && items.length > 0;
+  const dropProps = { onDrop: handleDrop, onDragOver: handleDragOver, onDragLeave: handleDragLeave };
 
   return (
     <div className={`space-y-4 ${className}`}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        multiple={type === 'listing'}
+        onChange={(e) => {
+          handleFiles(e.target.files);
+          e.target.value = '';
+        }}
+        className="hidden"
+        disabled={isUploading}
+      />
+
       {/* Upload Area */}
-      {remainingSlots > 0 && (
+      {remainingSlots > 0 && !asTile && (
         <div
           className={`
-            relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
-            ${dragOver ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-700 hover:border-zinc-500'}
+            relative border border-dashed rounded-2xl px-8 ${type === 'listing' ? 'py-12' : 'py-8'} text-center cursor-pointer transition-colors
+            ${dragOver ? 'border-primary-600 bg-primary-50' : 'border-zinc-300 hover:border-zinc-500 hover:bg-zinc-50'}
             ${isUploading ? 'opacity-60 cursor-not-allowed' : ''}
           `}
           onDrop={handleDrop}
@@ -165,38 +181,28 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
           onDragLeave={handleDragLeave}
           onClick={handleClick}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            multiple={type === 'listing'}
-            onChange={(e) => handleFiles(e.target.files)}
-            className="hidden"
-            disabled={isUploading}
-          />
-
           <div className="flex flex-col items-center space-y-3">
             {type === 'profile' ? (
-              <Camera className="w-10 h-10 text-zinc-400" />
+              <Camera strokeWidth={1.5} className="w-8 h-8 text-zinc-500" />
             ) : (
-              <ImageIcon className="w-10 h-10 text-zinc-400" />
+              <ImagePlus strokeWidth={1.5} className="w-8 h-8 text-zinc-500" />
             )}
             
             <div className="space-y-1">
-              <div className="text-sm font-medium text-zinc-100">
+              <div className="text-sm font-medium text-zinc-900">
                 {isUploading ? (
-                  <span className="text-blue-400">Uploading photos...</span>
+                  <span className="text-primary-700">Uploading…</span>
                 ) : (
                   <>
-                    <span className="text-blue-400">Click to upload</span>
+                    <span className="text-primary-700">Choose photos</span>
                     {' '}or drag and drop
                   </>
                 )}
               </div>
               
               <div className="text-xs text-zinc-500">
-                {type === 'profile' ? 'Profile picture' : `Up to ${remainingSlots} photos`}
-                {' '}(PNG, JPG, WebP up to 5MB each)
+                {type === 'profile' ? 'Profile picture' : `${remainingSlots} more allowed`}
+                {' '}· PNG, JPG or WebP, up to 5MB each
               </div>
             </div>
           </div>
@@ -205,10 +211,10 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
       {/* Error Messages */}
       {hasErrorItems && (
-        <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+        <div className="text-sm text-red-800 bg-red-50 rounded-lg p-3">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
-            <span>Some photos failed to upload. Please try again.</span>
+            <span>Some photos didn’t upload. Remove them and try again.</span>
           </div>
         </div>
       )}
@@ -221,7 +227,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
               <div className="relative aspect-square">
                 <Image
                   src={item.preview}
-                  alt={`Upload ${index + 1}`}
+                  alt={`Photo ${index + 1}`}
                   width={200}
                   height={200}
                   className="w-full h-full object-cover rounded-xl overflow-hidden"
@@ -230,31 +236,25 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                   blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
                 />
                 
-                {/* Status Badge */}
-                <div className="absolute top-2 left-2">
-                  {item.status === 'uploading' && (
-                    <div className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
-                      <Upload className="w-3 h-3 animate-spin" />
-                      Uploading
-                    </div>
-                  )}
-                  {item.status === 'uploaded' && (
-                    <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs">
-                      ✓ Uploaded
-                    </div>
-                  )}
-                  {item.status === 'error' && (
-                    <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      Error
-                    </div>
-                  )}
-                </div>
+                {item.status === 'uploading' && (
+                  <div className="absolute inset-0 grid place-items-center rounded-xl bg-white/60">
+                    <Loader2 className="w-5 h-5 animate-spin text-zinc-700" aria-label="Uploading" />
+                  </div>
+                )}
+                {item.status === 'error' && (
+                  <div className="absolute inset-0 grid place-items-center rounded-xl bg-red-50/80">
+                    <AlertCircle className="w-5 h-5 text-red-700" aria-label="Upload failed" />
+                  </div>
+                )}
+                {index === 0 && item.status === 'uploaded' && type === 'listing' && (
+                  <span className="absolute bottom-2 left-2 rounded-full bg-zinc-950/70 px-2 py-0.5 text-xs text-white">Cover</span>
+                )}
 
                 {/* Remove Button */}
                 <button
+                  type="button"
                   onClick={() => handleRemovePhoto(index)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                  className="absolute top-2 right-2 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-zinc-900 shadow-sm transition hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
                   aria-label="Remove photo"
                 >
                   <X className="w-4 h-4" />
@@ -263,24 +263,27 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
 
               {/* Error Message */}
               {item.status === 'error' && item.error && (
-                <div className="text-xs text-red-400 mt-1 truncate" title={item.error}>
+                <div className="text-xs text-red-700 mt-1 truncate" title={item.error}>
                   {item.error}
                 </div>
               )}
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Upload Progress */}
-      {hasUploadingItems && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-zinc-300">
-            <span>Uploading photos to cloud storage...</span>
-          </div>
-          <div className="w-full bg-zinc-700 rounded-full h-2">
-            <div className="bg-blue-500 h-2 rounded-full transition-all duration-300 animate-pulse" />
-          </div>
+          {asTile && remainingSlots > 0 && (
+            <button
+              type="button"
+              onClick={handleClick}
+              disabled={isUploading}
+              {...dropProps}
+              className={`flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed text-sm font-medium transition-colors disabled:opacity-60 ${
+                dragOver ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-zinc-300 text-zinc-600 hover:border-zinc-500 hover:bg-zinc-50'
+              }`}
+            >
+              {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus strokeWidth={1.5} className="h-6 w-6" />}
+              {isUploading ? 'Uploading…' : 'Add photo'}
+              <span className="text-xs font-normal text-zinc-500">{remainingSlots} left</span>
+            </button>
+          )}
         </div>
       )}
     </div>

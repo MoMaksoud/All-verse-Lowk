@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Logo } from '@/components/Logo';
+import { AuthShell } from '@/components/AuthShell';
 import { CreateProfileInput } from '@marketplace/types';
 import { auth } from '@/lib/firebase';
 
@@ -14,16 +14,31 @@ import { auth } from '@/lib/firebase';
 // This significantly improves initial page load time (~5s -> ~1-2s)
 const ProfileSetupForm = dynamic(
   () => import('@/components/ProfileSetupForm').then(mod => ({ default: mod.ProfileSetupForm })),
-  { 
+  {
     loading: () => (
-      <div className="max-w-md mx-auto bg-dark-800 rounded-2xl p-8 border border-dark-700 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto"></div>
-        <p className="text-gray-400 mt-4">Loading profile setup...</p>
-      </div>
+      <p className="flex items-center gap-2 text-sm text-zinc-600">
+        <Loader2 strokeWidth={1.75} className="h-4 w-4 animate-spin" /> Loading profile setup…
+      </p>
     ),
     ssr: false // Component is 'use client' and only shown after client-side signup
   }
 );
+
+function PasswordToggle({ shown, onToggle, label }: { shown: boolean; onToggle: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={shown ? `Hide ${label}` : `Show ${label}`}
+      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-zinc-500 transition-colors hover:text-zinc-950"
+    >
+      {shown
+        ? <EyeOff strokeWidth={1.75} className="h-4 w-4" />
+        : <Eye strokeWidth={1.75} className="h-4 w-4" />}
+    </button>
+  );
+}
+
 
 export default function SignUp() {
   const [formData, setFormData] = useState({
@@ -296,385 +311,231 @@ export default function SignUp() {
     }
   }
 
+
   if (!isConfigured) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: '#020617' }}>
-        <Link
-          href="/"
-          className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 text-sm font-medium transition-colors"
-          style={{ color: '#64748b' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back
-        </Link>
-          <div className="min-h-screen flex items-center justify-center px-4">
-            <div className="max-w-md w-full space-y-8">
-              <div className="text-center">
-                <Logo size="lg" className="justify-center mb-8" />
-                <h2 className="text-3xl font-bold text-white mb-2">Firebase Setup Required</h2>
-                <p className="text-gray-400">Please configure Firebase to enable authentication</p>
-              </div>
-
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-                <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-4 py-3 rounded-lg">
-                  <p className="font-medium mb-2">Firebase Authentication is not configured.</p>
-                  <p className="text-sm">To enable user authentication, you need to:</p>
-                  <ol className="text-sm mt-2 ml-4 list-decimal">
-                    <li>Create a Firebase project at <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" className="text-accent-400 hover:text-accent-300 underline">console.firebase.google.com</a></li>
-                    <li>Enable Authentication → Sign-in method → Email/Password</li>
-                    <li>Get your Firebase config from Project Settings</li>
-                    <li>Create a <code className="bg-gray-700 px-1 rounded">.env.local</code> file with your Firebase credentials</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-          </div>
-      </div>
+      <AuthShell>
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Sign-up isn’t set up yet</h1>
+        <p className="mt-2 text-zinc-600">Firebase Authentication is not configured for this environment.</p>
+        <ol className="mt-6 list-decimal space-y-1.5 rounded-lg bg-amber-50 p-4 pl-8 text-sm text-amber-900">
+          <li>Create a Firebase project at console.firebase.google.com</li>
+          <li>Enable Authentication, then the Email/Password sign-in method</li>
+          <li>Copy the web config from Project Settings</li>
+          <li>Add it to <code className="rounded bg-amber-100 px-1">.env.local</code></li>
+        </ol>
+      </AuthShell>
     );
   }
 
-  // Show email verification after signup
   if (showVerification && currentUser) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: '#020617' }}>
-        <Link
-          href="/"
-          className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 text-sm font-medium transition-colors"
-          style={{ color: '#64748b' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back
-        </Link>
-          <div className="min-h-screen flex items-center justify-center px-4">
-            <div className="max-w-md mx-auto bg-dark-800 rounded-2xl p-8 border border-dark-700">
-              <div className="text-center mb-6">
-                <div className="inline-block bg-accent-500/20 rounded-full p-4 mb-4">
-                  <svg className="w-12 h-12 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Check Your Email</h2>
-                <p className="text-gray-400 mb-4">
-                  We've sent a verification link to <strong className="text-white">{currentUser.email}</strong>
-                </p>
-                <p className="text-gray-400 text-sm mb-6">
-                  Please click the link in the email to verify your account before continuing.
-                </p>
-              </div>
-              
-              <div className="bg-dark-700/50 rounded-lg p-4 mb-6">
-                <p className="text-gray-300 text-sm">
-                  <strong className="text-white">Note:</strong> You must verify your email before you can create your profile and use the platform.
-                </p>
-              </div>
+      <AuthShell>
+        <div role="status">
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Check your email</h1>
+          <p className="mt-2 text-zinc-600">
+            We sent a verification link to <span className="font-medium text-zinc-950">{currentUser.email}</span>.
+            Open it to verify your account, then come back here.
+          </p>
+          <p className="mt-3 text-sm text-zinc-500">
+            You need to verify before you can create your profile. Check your spam folder if it doesn’t arrive.
+          </p>
+        </div>
 
-              <div className="space-y-3">
-                <button
-                  onClick={async () => {
-                    try {
-                      const response = await fetch('/api/auth/send-verification-email', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          email: currentUser.email,
-                          userId: currentUser.uid,
-                        }),
-                      });
-                      if (response.ok) {
-                        alert('Verification email resent!');
-                      } else {
-                        const data = await response.json();
-                        alert(data.error || 'Failed to resend email. Please try again.');
-                      }
-                    } catch (error) {
-                      alert('Failed to resend email. Please try again.');
-                    }
-                  }}
-                  className="w-full px-4 py-3 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors"
-                >
-                  Resend Verification Email
-                </button>
-                
-                <button
-                  onClick={async () => {
-                    // Check if email is verified
-                    await currentUser.reload();
-                    if (currentUser.emailVerified) {
-                      setShowVerification(false);
-                      setShowProfileSetup(true);
-                    } else {
-                      alert('Please verify your email first by clicking the link we sent you.');
-                    }
-                  }}
-                  className="w-full px-4 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors"
-                >
-                  I've Verified My Email
-                </button>
-              </div>
-            </div>
-          </div>
-      </div>
+        <div className="mt-8 flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/auth/send-verification-email', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: currentUser.email,
+                    userId: currentUser.uid,
+                  }),
+                });
+                if (response.ok) {
+                  alert('Verification email sent again.');
+                } else {
+                  const data = await response.json();
+                  alert(data.error || 'Couldn’t resend the email. Try again in a moment.');
+                }
+              } catch (error) {
+                alert('Couldn’t resend the email. Try again in a moment.');
+              }
+            }}
+            className="btn btn-outline gap-2"
+          >
+            <Mail strokeWidth={1.75} className="h-4 w-4" />
+            Resend verification email
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              await currentUser.reload();
+              if (currentUser.emailVerified) {
+                setShowVerification(false);
+                setShowProfileSetup(true);
+              } else {
+                alert('Your email isn’t verified yet. Open the link we sent you first.');
+              }
+            }}
+            className="btn btn-primary"
+          >
+            I’ve verified my email
+          </button>
+        </div>
+      </AuthShell>
     );
   }
 
-  // Show profile setup form after successful signup
   if (showProfileSetup) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: '#020617' }}>
-        <Link
-          href="/"
-          className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 text-sm font-medium transition-colors"
-          style={{ color: '#64748b' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back
-        </Link>
-          <div className="min-h-screen flex items-center justify-center px-4 py-8">
-            {profileSuccess ? (
-              <div className="max-w-md mx-auto bg-dark-800 rounded-2xl p-8 border border-dark-700 text-center">
-                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Profile Created Successfully!</h2>
-                <p className="text-gray-400 mb-4">Your profile has been saved and you'll be redirected shortly.</p>
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto"></div>
-              </div>
-            ) : (
-              <div className="max-w-md mx-auto">
-              
-              {/* Error display for profile creation */}
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6">
-                  {error}
-                </div>
-              )}
-              
+      <AuthShell>
+        {profileSuccess ? (
+          <div role="status">
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Profile created</h1>
+            <p className="mt-2 text-zinc-600">Taking you to AllVerse…</p>
+            <Loader2 strokeWidth={1.75} className="mt-6 h-5 w-5 animate-spin text-primary-600" aria-hidden="true" />
+          </div>
+        ) : (
+          <>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Set up your profile</h1>
+            <p className="mt-2 text-zinc-600">This is how buyers and sellers will see you.</p>
+
+            {error && (
+              <p role="alert" className="mt-6 flex gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                <AlertCircle strokeWidth={1.75} className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </p>
+            )}
+
+            <div className="mt-8">
               <ProfileSetupForm
                 onSubmit={handleProfileSubmit}
                 onCancel={handleProfileCancel}
                 isLoading={profileLoading}
               />
-              </div>
-            )}
-          </div>
-      </div>
+            </div>
+          </>
+        )}
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#020617' }}>
-      <Link
-        href="/"
-        className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 text-sm font-medium transition-colors"
-        style={{ color: '#64748b' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#f1f5f9')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}
-      >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back
-        </Link>
-        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-16">
-          <div className="max-w-md w-full space-y-6">
-            <div className="text-center">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Create account</h2>
-              <p className="text-sm" style={{ color: '#64748b' }}>Join AllVerse today</p>
-            </div>
+    <AuthShell>
+      <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Create your account</h1>
+      <p className="mt-2 text-zinc-600">Free to join. Listing is free too.</p>
 
-            <div className="rounded-xl sm:rounded-2xl p-6 sm:p-8" style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)' }}>
-              {error && (
-                <div className="px-4 py-3 rounded-lg mb-6 text-sm" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}>
-                  {error}
-                </div>
-              )}
+      {error && (
+        <p role="alert" className="mt-6 flex gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle strokeWidth={1.75} className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </p>
+      )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    id="displayName"
-                    name="displayName"
-                    type="text"
-                    required
-                    value={formData.displayName}
-                    onChange={handleChange}
-                    className="w-full px-3 sm:px-4 py-3 rounded-lg text-white text-sm sm:text-base focus:outline-none transition-all"
-                    style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', caretColor: '#3b82f6' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)')}
-                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
-                    placeholder="Enter your full name"
-                  />
-                </div>
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate={false}>
+        <div>
+          <label htmlFor="displayName" className="mb-1.5 block text-sm font-medium text-zinc-950">Full name</label>
+          <input
+            id="displayName"
+            name="displayName"
+            type="text"
+            autoComplete="name"
+            required
+            value={formData.displayName}
+            onChange={handleChange}
+            className="input"
+            placeholder="Jordan Reyes"
+          />
+        </div>
 
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-3 sm:px-4 py-3 rounded-lg text-white text-sm sm:text-base focus:outline-none transition-all"
-                    style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', caretColor: '#3b82f6' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)')}
-                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
-                    placeholder="Enter your email"
-                  />
-                </div>
+        <div>
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-zinc-950">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={formData.email}
+            onChange={handleChange}
+            className="input"
+            placeholder="you@example.com"
+          />
+        </div>
 
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="w-full px-3 sm:px-4 py-3 pr-10 sm:pr-12 rounded-lg text-white text-sm sm:text-base focus:outline-none transition-all"
-                      style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', caretColor: '#3b82f6' }}
-                      onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)')}
-                      onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
-                      placeholder="Create a password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-all duration-200 ease-in-out group p-1"
-                    >
-                      <div className="relative">
-                        <Eye 
-                          className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ease-in-out ${
-                            showPassword 
-                              ? 'opacity-0 rotate-90 scale-75' 
-                              : 'opacity-100 rotate-0 scale-100'
-                          }`}
-                        />
-                        <EyeOff 
-                          className={`w-4 h-4 sm:w-5 sm:h-5 absolute top-0 left-0 transition-all duration-300 ease-in-out ${
-                            showPassword 
-                              ? 'opacity-100 rotate-0 scale-100' 
-                              : 'opacity-0 -rotate-90 scale-75'
-                          }`}
-                        />
-                      </div>
-                    </button>
-                  </div>
-                </div>
+        <div>
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-zinc-950">Password</label>
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              required
+              value={formData.password}
+              onChange={handleChange}
+              className="input pr-11"
+              aria-describedby="password-help"
+            />
+            <PasswordToggle shown={showPassword} onToggle={() => setShowPassword(!showPassword)} label="password" />
+          </div>
+          <p id="password-help" className="mt-1.5 text-xs text-zinc-500">At least 6 characters.</p>
+        </div>
 
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      required
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      className="w-full px-3 sm:px-4 py-3 pr-10 sm:pr-12 rounded-lg text-white text-sm sm:text-base focus:outline-none transition-all"
-                      style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', caretColor: '#3b82f6' }}
-                      onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)')}
-                      onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
-                      placeholder="Confirm your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-all duration-200 ease-in-out group p-1"
-                    >
-                      <div className="relative">
-                        <Eye 
-                          className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ease-in-out ${
-                            showConfirmPassword 
-                              ? 'opacity-0 rotate-90 scale-75' 
-                              : 'opacity-100 rotate-0 scale-100'
-                          }`}
-                        />
-                        <EyeOff 
-                          className={`w-4 h-4 sm:w-5 sm:h-5 absolute top-0 left-0 transition-all duration-300 ease-in-out ${
-                            showConfirmPassword 
-                              ? 'opacity-100 rotate-0 scale-100' 
-                              : 'opacity-0 -rotate-90 scale-75'
-                          }`}
-                        />
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: '#3b82f6' }}
-                  onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#2563eb'; }}
-                  onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#3b82f6'; }}
-                >
-                  {loading ? 'Creating account…' : 'Create account'}
-                </button>
-              </form>
-
-              <div className="mt-6">
-                <div className="relative flex items-center gap-3 mb-4">
-                  <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-                  <span className="text-xs" style={{ color: '#475569' }}>or</span>
-                  <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-gray-100 text-gray-900 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  <span>Continue with Google</span>
-                </button>
-              </div>
-
-              <p className="mt-6 text-center text-sm" style={{ color: '#64748b' }}>
-                Already have an account?{' '}
-                <Link href="/signin" className="font-medium transition-colors" style={{ color: '#60a5fa' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = '#93c5fd')}
-                  onMouseLeave={e => (e.currentTarget.style.color = '#60a5fa')}
-                >
-                  Sign in
-                </Link>
-              </p>
-            </div>
+        <div>
+          <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-zinc-950">Confirm password</label>
+          <div className="relative">
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              required
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="input pr-11"
+            />
+            <PasswordToggle shown={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} label="password" />
           </div>
         </div>
-    </div>
+
+        <button type="submit" disabled={loading} className="btn btn-primary w-full">
+          {loading && <Loader2 strokeWidth={1.75} className="mr-2 h-4 w-4 animate-spin" />}
+          {loading ? 'Creating account…' : 'Create account'}
+        </button>
+      </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-zinc-200" />
+        <span className="text-xs text-zinc-500">or</span>
+        <div className="h-px flex-1 bg-zinc-200" />
+      </div>
+
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        disabled={loading}
+        className="btn btn-outline w-full gap-3"
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <p className="mt-8 text-sm text-zinc-600">
+        Already have an account?{' '}
+        <Link href="/signin" className="font-medium text-primary-600 hover:text-primary-700">
+          Sign in
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

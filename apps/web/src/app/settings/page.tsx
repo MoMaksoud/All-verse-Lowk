@@ -1,31 +1,71 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProfilePicture } from '@/components/ProfilePicture';
-import { 
-  ArrowLeft, 
-  User, 
-  Shield, 
-  CreditCard, 
-  Lock,
-  Smartphone,
-  Mail,
-  Trash2,
-  ChevronRight,
-  X,
-  Camera
-} from 'lucide-react';
-import { 
-  updatePassword, 
-  reauthenticateWithCredential, 
+import { X, Trash2, Camera, ArrowLeft } from 'lucide-react';
+import {
+  updatePassword,
+  reauthenticateWithCredential,
   EmailAuthProvider,
   updateProfile as updateFirebaseProfile,
   updateEmail
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { formatPhoneNumber } from '@/lib/utils';
+
+const INPUT = 'input w-full sm:w-64';
+const SECTIONS: { id: SettingsSection; name: string }[] = [
+  { id: 'account', name: 'Account' },
+  { id: 'security', name: 'Security' },
+  { id: 'billing', name: 'Payments' },
+];
+
+function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <div className="min-w-0">
+        <h3 className="text-sm font-medium text-zinc-950">{title}</h3>
+        {hint && <p className="mt-0.5 text-sm text-zinc-500">{hint}</p>}
+      </div>
+      <div className="flex min-w-0 items-center gap-3 sm:shrink-0 sm:justify-end">{children}</div>
+    </div>
+  );
+}
+
+function Notice({ tone, children }: { tone: 'error' | 'success'; children: React.ReactNode }) {
+  const cls = tone === 'error' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800';
+  return <p role={tone === 'error' ? 'alert' : 'status'} className={`rounded-lg p-3 text-sm ${cls}`}>{children}</p>;
+}
+
+function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/40 p-0 sm:items-center sm:p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 sm:max-w-md sm:rounded-2xl sm:p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-zinc-950">{title}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-md p-1 text-zinc-500 hover:text-zinc-950">
+            <X strokeWidth={1.75} className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="mt-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+const DANGER_BUTTON = 'inline-flex items-center justify-center rounded-lg bg-red-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-800 disabled:opacity-50';
 
 type SettingsSection = 'account' | 'security' | 'billing';
 
@@ -63,27 +103,6 @@ export default function SettingsPage() {
   const [emailReauthPassword, setEmailReauthPassword] = useState('');
   const [emailReauthError, setEmailReauthError] = useState('');
   const [changingEmail, setChangingEmail] = useState(false);
-
-  const settingsSections = [
-    {
-      id: 'account' as SettingsSection,
-      name: 'Account Management',
-      icon: User,
-      description: 'Manage your personal information and profile'
-    },
-    {
-      id: 'security' as SettingsSection,
-      name: 'Security & Login',
-      icon: Shield,
-      description: 'Password, 2FA, and device management'
-    },
-    {
-      id: 'billing' as SettingsSection,
-      name: 'Billing & Payments',
-      icon: CreditCard,
-      description: 'View your earnings and spending'
-    }
-  ];
 
   useEffect(() => {
     if (!authLoading && !currentUser) {
@@ -341,684 +360,414 @@ export default function SettingsPage() {
     }
   };
 
-  const renderAccountManagement = () => (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Personal Details</h2>
-        <p className="text-sm sm:text-base text-[#94a3b8] mb-4">Manage your personal information and profile details</p>
-      </div>
-
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-lg">
-          {success}
-        </div>
-      )}
-
-      <div className="space-y-3 sm:space-y-4">
-        {/* Username */}
-        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Username</h3>
-                <p className="text-[#94a3b8] text-xs sm:text-sm">Your unique username (like @username)</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {editingField === 'username' ? (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                  <div className="flex flex-col flex-1 sm:flex-initial">
-                    <input
-                      type="text"
-                      value={editValues.username || ''}
-                      onChange={(e) => {
-                        const value = e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, '');
-                        setEditValues({ username: value });
-                      }}
-                      className="bg-[#0f172a] border border-white/[0.10] text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:border-[#3b82f6]"
-                      placeholder="username"
-                      maxLength={30}
-                      autoFocus
-                    />
-                    <span className="text-xs text-gray-500 mt-1">@{editValues.username || 'username'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleSaveField('username')}
-                      disabled={saving}
-                      className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm px-2 py-1"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={saving}
-                      className="text-gray-400 hover:text-gray-300 disabled:opacity-50 p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <span className="text-white text-sm sm:text-base mr-2 truncate">@{profile?.username || 'not set'}</span>
-                  <button 
-                    onClick={() => handleEditField('username', profile?.username || '')}
-                    className="text-accent-500 hover:text-accent-400 shrink-0"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Display Name */}
-        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Display Name</h3>
-                <p className="text-[#94a3b8] text-xs sm:text-sm">Your public display name (can be reused)</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {editingField === 'displayName' ? (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                  <input
-                    type="text"
-                    value={editValues.displayName || ''}
-                    onChange={(e) => setEditValues({ displayName: e.target.value })}
-                    className="bg-[#0f172a] border border-white/[0.10] text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:border-[#3b82f6]"
-                    placeholder="Your name"
-                    maxLength={100}
-                    autoFocus
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleSaveField('displayName')}
-                      disabled={saving}
-                      className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm px-2 py-1"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={saving}
-                      className="text-gray-400 hover:text-gray-300 disabled:opacity-50 p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <span className="text-white text-sm sm:text-base mr-2 truncate">{profile?.displayName || currentUser?.displayName || 'Not set'}</span>
-                  <button 
-                    onClick={() => handleEditField('displayName', profile?.displayName || currentUser?.displayName || '')}
-                    className="text-accent-500 hover:text-accent-400 shrink-0"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Email */}
-        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <Mail className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Email Address</h3>
-                <p className="text-[#94a3b8] text-xs sm:text-sm">Your account email address</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {editingField === 'email' ? (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                  <input
-                    type="email"
-                    value={editValues.email || ''}
-                    onChange={(e) => setEditValues({ email: e.target.value })}
-                    className="bg-[#0f172a] border border-white/[0.10] text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:border-[#3b82f6]"
-                    autoFocus
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleSaveField('email')}
-                      disabled={saving}
-                      className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm px-2 py-1"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={saving}
-                      className="text-gray-400 hover:text-gray-300 disabled:opacity-50 p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <span className="text-white text-sm sm:text-base mr-2 truncate">{currentUser?.email || 'Not set'}</span>
-                  <button 
-                    onClick={() => handleEditField('email', currentUser?.email || '')}
-                    className="text-accent-500 hover:text-accent-400 shrink-0"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Phone Number */}
-        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <Smartphone className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Phone Number</h3>
-                <p className="text-[#94a3b8] text-xs sm:text-sm">Add a phone number for account recovery</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {editingField === 'phoneNumber' ? (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                  <input
-                    type="tel"
-                    value={editValues.phoneNumber || ''}
-                    onChange={(e) => {
-                      const formatted = formatPhoneNumber(e.target.value);
-                      setEditValues({ phoneNumber: formatted });
-                    }}
-                    placeholder="(555) 123-4567"
-                    className="bg-[#0f172a] border border-white/[0.10] text-white px-3 py-1.5 rounded-lg text-sm w-full sm:w-48 focus:outline-none focus:border-[#3b82f6]"
-                    autoFocus
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleSaveField('phoneNumber')}
-                      disabled={saving}
-                      className="text-green-400 hover:text-green-300 disabled:opacity-50 text-sm px-2 py-1"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={saving}
-                      className="text-gray-400 hover:text-gray-300 disabled:opacity-50 p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <span className="text-white text-sm sm:text-base mr-2 truncate">{profile?.phoneNumber || 'Not set'}</span>
-                  <button 
-                    onClick={() => handleEditField('phoneNumber', profile?.phoneNumber || '')}
-                    className="text-accent-500 hover:text-accent-400 shrink-0"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Profile Picture */}
-        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <User className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Profile Picture</h3>
-                <p className="text-[#94a3b8] text-xs sm:text-sm">Update your profile photo</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <ProfilePicture
-                src={profile?.profilePicture || userProfile?.profilePicture}
-                alt="Profile"
-                name={currentUser?.displayName || undefined}
-                email={currentUser?.email || undefined}
-                size="md"
-                className="w-10 h-10"
-                currentUser={currentUser}
-                userProfilePic={userProfilePic}
-              />
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={saving}
-                className="text-accent-500 hover:text-accent-400 disabled:opacity-50 flex items-center gap-2 text-sm sm:text-base"
-              >
-                <Camera className="w-4 h-4" />
-                {saving ? 'Uploading...' : 'Change'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+  const editor = (field: string, input: React.ReactNode) => (
+    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      {input}
+      <button type="button" onClick={() => handleSaveField(field)} disabled={saving} className="btn btn-primary px-3 py-2 text-sm">
+        {saving ? 'Saving…' : 'Save'}
+      </button>
+      <button type="button" onClick={handleCancelEdit} disabled={saving} className="btn btn-ghost px-3 py-2 text-sm">
+        Cancel
+      </button>
     </div>
   );
 
-  const renderSecurityLogin = () => (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Security & Login</h2>
-        <p className="text-sm sm:text-base text-[#94a3b8] mb-4">Manage your account security and login settings</p>
-      </div>
+  const editButton = (field: string, value: string) => (
+    <button
+      type="button"
+      onClick={() => handleEditField(field, value)}
+      className="text-sm font-medium text-primary-600 hover:text-primary-700"
+    >
+      Edit
+    </button>
+  );
 
-      {passwordError && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
-          {passwordError}
+  const renderAccount = () => (
+    <div>
+      <h2 className="text-xl font-semibold tracking-tight text-zinc-950">Account</h2>
+      <p className="mt-1 text-sm text-zinc-600">How you appear and how we reach you.</p>
+
+      {error && <div className="mt-6"><Notice tone="error">{error}</Notice></div>}
+      {success && <div className="mt-6"><Notice tone="success">{success}</Notice></div>}
+
+      {loadingProfile ? (
+        <div className="mt-8 space-y-6" aria-busy="true" aria-label="Loading account">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded-lg bg-zinc-100" />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
+          <Row title="Username" hint="Letters, numbers, dots and underscores.">
+            {editingField === 'username' ? (
+              editor('username',
+                <input
+                  type="text"
+                  value={editValues.username || ''}
+                  onChange={(e) => setEditValues({ username: e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, '') })}
+                  className={INPUT}
+                  placeholder="username"
+                  maxLength={30}
+                  aria-label="Username"
+                  autoFocus
+                />
+              )
+            ) : (
+              <>
+                <span className="truncate text-sm text-zinc-950">@{profile?.username || 'not set'}</span>
+                {editButton('username', profile?.username || '')}
+              </>
+            )}
+          </Row>
+
+          <Row title="Display name" hint="Shown on your listings and messages. Doesn’t need to be unique.">
+            {editingField === 'displayName' ? (
+              editor('displayName',
+                <input
+                  type="text"
+                  value={editValues.displayName || ''}
+                  onChange={(e) => setEditValues({ displayName: e.target.value })}
+                  className={INPUT}
+                  placeholder="Your name"
+                  maxLength={100}
+                  aria-label="Display name"
+                  autoFocus
+                />
+              )
+            ) : (
+              <>
+                <span className="truncate text-sm text-zinc-950">{profile?.displayName || currentUser?.displayName || 'Not set'}</span>
+                {editButton('displayName', profile?.displayName || currentUser?.displayName || '')}
+              </>
+            )}
+          </Row>
+
+          <Row title="Email" hint="Changing it needs your password.">
+            {editingField === 'email' ? (
+              editor('email',
+                <input
+                  type="email"
+                  value={editValues.email || ''}
+                  onChange={(e) => setEditValues({ email: e.target.value })}
+                  className={INPUT}
+                  aria-label="Email address"
+                  autoFocus
+                />
+              )
+            ) : (
+              <>
+                <span className="truncate text-sm text-zinc-950">{currentUser?.email || 'Not set'}</span>
+                {editButton('email', currentUser?.email || '')}
+              </>
+            )}
+          </Row>
+
+          <Row title="Phone" hint="Used for account recovery. Never shown to buyers.">
+            {editingField === 'phoneNumber' ? (
+              editor('phoneNumber',
+                <input
+                  type="tel"
+                  value={editValues.phoneNumber || ''}
+                  onChange={(e) => setEditValues({ phoneNumber: formatPhoneNumber(e.target.value) })}
+                  placeholder="(555) 123-4567"
+                  className={INPUT}
+                  aria-label="Phone number"
+                  autoFocus
+                />
+              )
+            ) : (
+              <>
+                <span className="truncate text-sm text-zinc-950">{profile?.phoneNumber || 'Not set'}</span>
+                {editButton('phoneNumber', profile?.phoneNumber || '')}
+              </>
+            )}
+          </Row>
+
+          <Row title="Profile photo" hint="JPG, PNG or WebP.">
+            <ProfilePicture
+              src={profile?.profilePicture || userProfile?.profilePicture}
+              alt="Profile"
+              name={currentUser?.displayName || undefined}
+              email={currentUser?.email || undefined}
+              size="md"
+              className="h-10 w-10"
+              currentUser={currentUser}
+              userProfilePic={userProfilePic}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={saving}
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 disabled:opacity-50"
+            >
+              <Camera strokeWidth={1.75} className="h-4 w-4" />
+              {saving ? 'Uploading…' : 'Change'}
+            </button>
+          </Row>
         </div>
       )}
+    </div>
+  );
 
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-lg">
-          {success}
-        </div>
-      )}
+  const renderSecurity = () => (
+    <div>
+      <h2 className="text-xl font-semibold tracking-tight text-zinc-950">Security</h2>
+      <p className="mt-1 text-sm text-zinc-600">Sign-in and account access.</p>
 
-      <div className="space-y-3 sm:space-y-4">
-        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <Lock className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Password</h3>
-                <p className="text-[#94a3b8] text-xs sm:text-sm">Change your account password</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setShowPasswordModal(true)}
-              className="text-accent-500 hover:text-accent-400 shrink-0 self-start sm:self-auto"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      {passwordError && !showPasswordModal && <div className="mt-6"><Notice tone="error">{passwordError}</Notice></div>}
+      {success && <div className="mt-6"><Notice tone="success">{success}</Notice></div>}
 
-        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <Shield className="w-5 h-5 text-accent-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Two-Factor Authentication</h3>
-                <p className="text-[#94a3b8] text-xs sm:text-sm">Add an extra layer of security</p>
-              </div>
-            </div>
-            <div className="flex items-center shrink-0">
-              <span className="text-yellow-400 text-xs sm:text-sm mr-2">Coming Soon</span>
-              <button className="text-accent-500 hover:text-accent-400 opacity-50 cursor-not-allowed">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-[#1e293b] rounded-xl p-3 sm:p-4 border border-white/[0.05]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center min-w-0 flex-1">
-              <Trash2 className="w-5 h-5 text-red-500 mr-2 sm:mr-3 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h3 className="text-white font-medium text-sm sm:text-base">Delete Account</h3>
-                <p className="text-[#94a3b8] text-xs sm:text-sm">Permanently delete your account and data</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setShowDeleteConfirm(true)}
-              className="text-red-500 hover:text-red-400 shrink-0 self-start sm:self-auto"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-        
-        {deleteError && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mt-4">
-            {deleteError}
-          </div>
-        )}
+      <div className="mt-6 divide-y divide-zinc-200 border-y border-zinc-200">
+        <Row title="Password" hint="You’ll confirm your current password first.">
+          <button type="button" onClick={() => setShowPasswordModal(true)} className="btn btn-outline px-3 py-2 text-sm">
+            Change password
+          </button>
+        </Row>
+        <Row title="Two-step verification" hint="Not available yet.">
+          <span className="text-sm text-zinc-500">Not available</span>
+        </Row>
+        <Row title="Delete account" hint="Removes your listings, photos and profile. This can’t be undone.">
+          <button type="button" onClick={() => setShowDeleteConfirm(true)} className="text-sm font-medium text-red-700 hover:text-red-800">
+            Delete account
+          </button>
+        </Row>
       </div>
+      {deleteError && !showDeleteConfirm && <div className="mt-6"><Notice tone="error">{deleteError}</Notice></div>}
     </div>
   );
 
   const renderBilling = () => (
-    <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Billing & Payments</h2>
-        <p className="text-sm sm:text-base text-[#94a3b8] mb-4">View your earnings and spending</p>
-      </div>
-
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-[#1e293b] border border-white/[0.07] flex items-center justify-center mb-4">
-          <CreditCard className="w-7 h-7 text-[#3b82f6]" />
-        </div>
-        <h3 className="text-white font-semibold text-base mb-2">Coming Soon</h3>
-        <p className="text-[#94a3b8] text-sm max-w-xs">
-          Earnings, spending, and payment history will be available here once billing is live.
+    <div>
+      <h2 className="text-xl font-semibold tracking-tight text-zinc-950">Payments</h2>
+      <p className="mt-1 text-sm text-zinc-600">Payouts go to the Stripe account you connect when you sell.</p>
+      <div className="mt-6 rounded-2xl border border-dashed border-zinc-300 p-6">
+        <p className="text-sm text-zinc-700">
+          Earnings and payout status are on your Sales page. Card billing for buyers isn’t shown here yet.
         </p>
+        <Link href="/sales" className="btn btn-outline mt-4">Go to sales</Link>
       </div>
     </div>
   );
 
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'account':
-        return renderAccountManagement();
-      case 'security':
-        return renderSecurityLogin();
-      case 'billing':
-        return renderBilling();
-      default:
-        return renderAccountManagement();
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#020617]">
+    <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-950"
+      >
+        <ArrowLeft strokeWidth={1.75} className="h-4 w-4" />
+        Back
+      </button>
 
-      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Header */}
-        <div className="flex items-center mb-6 sm:mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-[#94a3b8] hover:text-white transition-colors text-sm"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1.5" />
-            Back
-          </button>
-        </div>
+      <div className="mt-8 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-16">
+        <nav aria-label="Settings sections">
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Settings</h1>
+          <ul className="mt-6 flex gap-1 overflow-x-auto lg:flex-col">
+            {SECTIONS.map((section) => {
+              const active = activeSection === section.id;
+              return (
+                <li key={section.id}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection(section.id)}
+                    aria-current={active ? 'page' : undefined}
+                    className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
+                      active ? 'bg-zinc-100 font-medium text-zinc-950' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950'
+                    }`}
+                  >
+                    {section.name}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
-        {/* Main Content */}
-        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
-          {/* Sidebar */}
-          <div className="w-full lg:w-72 shrink-0">
-            <div className="bg-[#0f172a] rounded-2xl p-4 sm:p-6 border border-white/[0.07]">
-              <div className="mb-5 sm:mb-6">
-                <h1 className="text-3xl sm:text-4xl font-bold text-white">Settings</h1>
-              </div>
-
-              <nav className="space-y-1">
-                {settingsSections.map((section) => {
-                  const Icon = section.icon;
-                  return (
-                    <button
-                      key={section.id}
-                      onClick={() => setActiveSection(section.id)}
-                      className={`w-full flex items-center px-3 py-2.5 rounded-xl transition-colors text-left ${
-                        activeSection === section.id
-                          ? 'bg-[#3b82f6]/10 text-[#60a5fa] border border-[#3b82f6]/20'
-                          : 'text-[#94a3b8] hover:text-white hover:bg-white/[0.05]'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 mr-3 shrink-0" />
-                      <div className="min-w-0">
-                        <div className="font-medium text-sm truncate">{section.name}</div>
-                        <div className="text-xs text-[#64748b] hidden sm:block mt-0.5">{section.description}</div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </div>
-
-          {/* Content Area */}
-          <div className="flex-1 min-w-0">
-            <div className="bg-[#0f172a] rounded-2xl p-4 sm:p-6 lg:p-8 border border-white/[0.07]">
-              {loadingProfile && activeSection === 'account' ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-[#94a3b8] text-sm">Loading...</div>
-                </div>
-              ) : (
-                renderContent()
-              )}
-            </div>
-          </div>
-        </div>
+        <main className="min-w-0 animate-fade-in">
+          {activeSection === 'account' && renderAccount()}
+          {activeSection === 'security' && renderSecurity()}
+          {activeSection === 'billing' && renderBilling()}
+        </main>
       </div>
 
-      {/* Password Change Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] rounded-2xl p-6 border border-white/[0.10] max-w-md w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Change Password</h2>
-              <button
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                  setPasswordError('');
-                }}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {passwordError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4">
-                {passwordError}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-gray-300 text-sm mb-2">Current Password</label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  className="w-full bg-[#1e293b] border border-white/[0.10] text-white px-4 py-2 rounded-lg focus:outline-none focus:border-[#3b82f6]"
-                  placeholder="Enter current password"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-300 text-sm mb-2">New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  className="w-full bg-[#1e293b] border border-white/[0.10] text-white px-4 py-2 rounded-lg focus:outline-none focus:border-[#3b82f6]"
-                  placeholder="Enter new password"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-300 text-sm mb-2">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  className="w-full bg-[#1e293b] border border-white/[0.10] text-white px-4 py-2 rounded-lg focus:outline-none focus:border-[#3b82f6]"
-                  placeholder="Confirm new password"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                  setPasswordError('');
-                }}
-                disabled={changingPassword}
-                className="flex-1 px-4 py-2 bg-[#1e293b] hover:bg-[#243352] text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handlePasswordChange}
-                disabled={changingPassword}
-                className="flex-1 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {changingPassword ? 'Changing...' : 'Change Password'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Account Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] rounded-2xl p-6 border border-white/[0.10] max-w-md w-full">
-            <div className="flex items-center mb-4">
-              <Trash2 className="w-6 h-6 text-red-500 mr-3" />
-              <h2 className="text-xl font-bold text-white">Delete Account</h2>
-            </div>
-            
-            <p className="text-gray-300 mb-4">
-              Are you sure you want to delete your account? This action cannot be undone.
-            </p>
-            
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
-              <p className="text-red-400 text-sm">
-                <strong>This will permanently:</strong>
-              </p>
-              <ul className="text-red-300 text-sm mt-2 list-disc list-inside space-y-1">
-                <li>Delete your account and all your data</li>
-                <li>Delete all your listings and photos</li>
-                <li>Remove your profile from search results</li>
-                <li>Prevent others from messaging you</li>
-                <li>Archive your chat history (others can still see it)</li>
-              </ul>
-            </div>
-
-            {deleteError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4">
-                {deleteError}
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteError('');
-                }}
-                disabled={deleting}
-                className="flex-1 px-4 py-2 bg-[#1e293b] hover:bg-[#243352] text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    setDeleting(true);
-                    setDeleteError('');
-                    
-                    const { apiDelete } = await import('@/lib/api-client');
-                    const response = await apiDelete('/api/account/delete');
-                    
-                    if (!response.ok) {
-                      const errorData = await response.json();
-                      throw new Error(errorData.error || errorData.details || 'Failed to delete account');
-                    }
-                    
-                    // Logout and redirect
-                    await logout();
-                    router.push('/');
-                  } catch (error: any) {
-                    console.error('Account deletion error:', error);
-                    setDeleteError(error?.message || 'Failed to delete account. Please try again.');
-                  } finally {
-                    setDeleting(false);
-                  }
-                }}
-                disabled={deleting}
-                className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deleting ? 'Deleting...' : 'Delete Account'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Email re-auth modal */}
-      {showEmailReauthModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] rounded-2xl p-6 border border-white/[0.10] max-w-md w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Confirm Password</h2>
-              <button
-                onClick={() => { setShowEmailReauthModal(false); setEmailReauthPassword(''); setEmailReauthError(''); }}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-gray-400 text-sm mb-4">
-              Enter your current password to change your email to <strong className="text-white">{pendingNewEmail}</strong>.
-            </p>
-
-            {emailReauthError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
-                {emailReauthError}
-              </div>
-            )}
-
-            <div className="mb-4">
-              <label className="block text-gray-300 text-sm mb-2">Current Password</label>
+        <Dialog
+          title="Change password"
+          onClose={() => {
+            setShowPasswordModal(false);
+            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            setPasswordError('');
+          }}
+        >
+          {passwordError && <div className="mb-4"><Notice tone="error">{passwordError}</Notice></div>}
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <label htmlFor="current-password" className="text-sm font-medium text-zinc-950">Current password</label>
               <input
+                id="current-password"
                 type="password"
-                value={emailReauthPassword}
-                onChange={(e) => setEmailReauthPassword(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleEmailChange(); }}
-                autoFocus
-                className="w-full bg-[#1e293b] border border-white/[0.10] text-white px-4 py-2 rounded-lg focus:outline-none focus:border-[#3b82f6]"
-                placeholder="Enter your password"
+                autoComplete="current-password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                className="input"
               />
             </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setShowEmailReauthModal(false); setEmailReauthPassword(''); setEmailReauthError(''); }}
-                disabled={changingEmail}
-                className="flex-1 px-4 py-2 bg-[#1e293b] hover:bg-[#243352] text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEmailChange}
-                disabled={changingEmail}
-                className="flex-1 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                {changingEmail ? 'Updating…' : 'Confirm'}
-              </button>
+            <div className="grid gap-2">
+              <label htmlFor="new-password" className="text-sm font-medium text-zinc-950">New password</label>
+              <input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                className="input"
+              />
+              <p className="text-xs text-zinc-500">At least 6 characters.</p>
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="confirm-password" className="text-sm font-medium text-zinc-950">Confirm new password</label>
+              <input
+                id="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                className="input"
+              />
             </div>
           </div>
-        </div>
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setShowPasswordModal(false);
+                setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                setPasswordError('');
+              }}
+              disabled={changingPassword}
+              className="btn btn-outline"
+            >
+              Cancel
+            </button>
+            <button type="button" onClick={handlePasswordChange} disabled={changingPassword} className="btn btn-primary">
+              {changingPassword ? 'Changing…' : 'Change password'}
+            </button>
+          </div>
+        </Dialog>
+      )}
+
+      {showDeleteConfirm && (
+        <Dialog
+          title="Delete your account?"
+          onClose={() => {
+            setShowDeleteConfirm(false);
+            setDeleteError('');
+          }}
+        >
+          <p className="text-sm text-zinc-700">This permanently removes:</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700">
+            <li>Your account and profile</li>
+            <li>Your listings and their photos</li>
+            <li>Your profile from search results</li>
+          </ul>
+          <p className="mt-3 text-sm text-zinc-700">Your chat history stays visible to the people you talked to. This can’t be undone.</p>
+
+          {deleteError && <div className="mt-4"><Notice tone="error">{deleteError}</Notice></div>}
+
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteError('');
+              }}
+              disabled={deleting}
+              className="btn btn-outline"
+            >
+              Keep my account
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  setDeleting(true);
+                  setDeleteError('');
+
+                  const { apiDelete } = await import('@/lib/api-client');
+                  const response = await apiDelete('/api/account/delete');
+
+                  if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || errorData.details || 'Failed to delete account');
+                  }
+
+                  // Logout and redirect
+                  await logout();
+                  router.push('/');
+                } catch (error: any) {
+                  console.error('Account deletion error:', error);
+                  setDeleteError(error?.message || 'Failed to delete account. Please try again.');
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+              disabled={deleting}
+              className={DANGER_BUTTON}
+            >
+              <Trash2 strokeWidth={1.75} className="mr-2 h-4 w-4" />
+              {deleting ? 'Deleting…' : 'Delete account'}
+            </button>
+          </div>
+        </Dialog>
+      )}
+
+      {showEmailReauthModal && (
+        <Dialog
+          title="Confirm your password"
+          onClose={() => { setShowEmailReauthModal(false); setEmailReauthPassword(''); setEmailReauthError(''); }}
+        >
+          <p className="text-sm text-zinc-600">
+            Enter your current password to change your email to <span className="font-medium text-zinc-950">{pendingNewEmail}</span>.
+          </p>
+
+          {emailReauthError && <div className="mt-4"><Notice tone="error">{emailReauthError}</Notice></div>}
+
+          <div className="mt-4 grid gap-2">
+            <label htmlFor="reauth-password" className="text-sm font-medium text-zinc-950">Current password</label>
+            <input
+              id="reauth-password"
+              type="password"
+              autoComplete="current-password"
+              value={emailReauthPassword}
+              onChange={(e) => setEmailReauthPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleEmailChange(); }}
+              autoFocus
+              className="input"
+            />
+          </div>
+
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => { setShowEmailReauthModal(false); setEmailReauthPassword(''); setEmailReauthError(''); }}
+              disabled={changingEmail}
+              className="btn btn-outline"
+            >
+              Cancel
+            </button>
+            <button type="button" onClick={handleEmailChange} disabled={changingEmail} className="btn btn-primary">
+              {changingEmail ? 'Updating…' : 'Confirm'}
+            </button>
+          </div>
+        </Dialog>
       )}
     </div>
   );

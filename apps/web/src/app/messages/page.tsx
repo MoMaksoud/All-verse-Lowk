@@ -73,97 +73,62 @@ function MessagesInner() {
       showError('Could not start conversation. Please try again.');
     }
   };
-
   if (!authLoading && !currentUser) {
     return (
-      <div className="flex flex-col items-center justify-center" style={{ background: '#020617', height: 'calc(100dvh - 56px)' }}>
-        <div className="text-center px-6 max-w-sm">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-            style={{ background: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)' }}>
-            <MessageSquare className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-xl font-bold mb-2" style={{ color: '#f1f5f9' }}>Sign in to see messages</h1>
-          <p className="text-sm mb-6" style={{ color: '#64748b' }}>
-            Talk directly with buyers and sellers on AllVerse.
-          </p>
-          <Link
-            href="/signin?redirect=/messages"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
-            style={{ background: '#3b82f6' }}
-          >
-            Sign In
-          </Link>
-        </div>
+      <div className="mx-auto flex min-h-[70dvh] w-full max-w-2xl flex-col justify-center px-4 py-16 sm:px-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">Messages</h1>
+        <p className="mt-2 text-zinc-600">Talk to buyers and sellers about a listing. Sign in to see your conversations.</p>
+        <Link href="/signin?redirect=/messages" className="btn btn-primary mt-8 self-start">
+          Sign in
+        </Link>
       </div>
     );
   }
 
   if (authLoading) {
     return (
-      <div className="flex flex-col items-center justify-center" style={{ background: '#020617', height: 'calc(100dvh - 56px)' }}>
-        <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#3b82f6' }} />
+      <div className="flex h-[calc(100dvh-56px)] items-center justify-center" aria-busy="true" aria-label="Loading messages">
+        <Loader2 strokeWidth={1.75} className="h-5 w-5 animate-spin text-primary-600" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col overflow-hidden" style={{ background: '#020617', height: 'calc(100dvh - 56px)' }}>
-
-      <div className="flex min-h-0" style={{ flex: '1 1 0', borderTop: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-
-        {/* ── Sidebar ── */}
-        <div
-          className={`w-full lg:w-[300px] xl:w-[340px] flex flex-col min-h-0 shrink-0 ${showMobileChat ? 'hidden lg:flex' : 'flex'}`}
-          style={{ borderRight: '1px solid rgba(255,255,255,0.07)', background: '#020617' }}
+    <div className="flex h-[calc(100dvh-56px)] flex-col overflow-hidden bg-white">
+      <div className="flex min-h-0 flex-1 overflow-hidden border-t border-zinc-200">
+        {/* Sidebar */}
+        <aside
+          className={`min-h-0 w-full shrink-0 flex-col border-r border-zinc-200 bg-white lg:flex lg:w-[300px] xl:w-[340px] ${
+            showMobileChat ? 'hidden' : 'flex'
+          }`}
         >
-          {/* Sidebar header */}
-          <div className="px-4 pt-5 pb-3 shrink-0">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-base font-bold" style={{ color: '#f1f5f9', letterSpacing: '-0.01em' }}>
-                Messages
-              </h1>
+          <div className="shrink-0 px-4 pb-3 pt-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h1 className="text-lg font-semibold tracking-tight text-zinc-950">Messages</h1>
               <button
+                type="button"
                 onClick={() => setShowUserSearch(true)}
                 aria-label="New message"
-                className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
-                style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.07)' }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = '#3b82f6';
-                  e.currentTarget.style.color = '#fff';
-                  e.currentTarget.style.borderColor = '#3b82f6';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = '#1e293b';
-                  e.currentTarget.style.color = '#94a3b8';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
-                }}
+                className="grid h-8 w-8 place-items-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:border-zinc-300 hover:text-zinc-950"
               >
-                <PenSquare className="w-3.5 h-3.5" />
+                <PenSquare strokeWidth={1.75} className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Search bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#475569' }} />
+            <label className="relative block">
+              <span className="sr-only">Search conversations</span>
+              <Search strokeWidth={1.75} className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
               <input
-                type="text"
+                type="search"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search conversations…"
-                className="w-full text-sm pl-9 pr-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: '#0f172a',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#f1f5f9',
-                }}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                placeholder="Search conversations"
+                className="input pl-9"
               />
-            </div>
+            </label>
           </div>
 
-          {/* Chat list */}
-          <div className="flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth: 'thin', scrollbarColor: '#1e293b transparent' }}>
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <ChatList
               chats={filteredChats}
               loading={chatsLoading}
@@ -173,31 +138,22 @@ function MessagesInner() {
               onNewMessage={() => setShowUserSearch(true)}
             />
           </div>
-        </div>
+        </aside>
 
-        {/* ── Chat pane ── */}
-        <div
-          className={`flex-1 flex flex-col min-h-0 min-w-0 ${showMobileChat ? 'flex' : 'hidden lg:flex'}`}
-          style={{ background: '#020617' }}
-        >
+        {/* Chat pane */}
+        <section className={`min-h-0 min-w-0 flex-1 flex-col bg-white ${showMobileChat ? 'flex' : 'hidden lg:flex'}`}>
           {selectedChatId ? (
             <>
-              {/* Mobile back button */}
-              <div
-                className="lg:hidden flex items-center gap-3 px-4 py-3 shrink-0"
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
-              >
+              <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 px-4 py-3 lg:hidden">
                 <button
+                  type="button"
                   onClick={() => setShowMobileChat(false)}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
-                  style={{ background: '#1e293b', color: '#94a3b8' }}
-                  aria-label="Back"
+                  aria-label="Back to conversations"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-zinc-200 text-zinc-700"
                 >
-                  <ArrowLeft className="w-4 h-4" />
+                  <ArrowLeft strokeWidth={1.75} className="h-4 w-4" />
                 </button>
-                <span className="font-semibold text-sm truncate" style={{ color: '#f1f5f9' }}>
-                  {otherUser?.name || 'Chat'}
-                </span>
+                <span className="truncate text-sm font-medium text-zinc-950">{otherUser?.name || 'Conversation'}</span>
               </div>
               <ChatView
                 chatId={selectedChatId}
@@ -210,42 +166,23 @@ function MessagesInner() {
               />
             </>
           ) : (
-            /* Empty state — no chat selected */
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-              <div
-                className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(29,78,216,0.2) 0%, rgba(59,130,246,0.2) 100%)',
-                  border: '1px solid rgba(59,130,246,0.20)',
-                }}
-              >
-                <MessageSquare className="w-9 h-9" style={{ color: '#3b82f6' }} />
-              </div>
-              <h2 className="text-lg font-bold mb-2" style={{ color: '#f1f5f9' }}>
-                Your conversations
+            <div className="flex flex-1 flex-col items-start justify-center px-8 py-12">
+              <MessageSquare strokeWidth={1.5} className="h-8 w-8 text-zinc-500" />
+              <h2 className="mt-4 font-semibold text-zinc-950">
+                {chats.length > 0 ? 'Pick a conversation' : 'No conversations yet'}
               </h2>
-              <p className="text-sm max-w-[260px] mb-8 leading-relaxed" style={{ color: '#64748b' }}>
-                Message sellers about listings, negotiate prices, and close deals.
+              <p className="mt-1 max-w-[44ch] text-sm text-zinc-600">
+                {chats.length > 0
+                  ? 'Choose one from the list to pick up where you left off.'
+                  : 'Start one from a listing, or message someone directly.'}
               </p>
-              <button
-                onClick={() => setShowUserSearch(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
-                style={{ background: '#3b82f6' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#3b82f6')}
-              >
-                <PenSquare className="w-4 h-4" />
-                New Message
+              <button type="button" onClick={() => setShowUserSearch(true)} className="btn btn-outline mt-6">
+                <PenSquare strokeWidth={1.75} className="h-4 w-4" />
+                New message
               </button>
-
-              {chats.length > 0 && (
-                <p className="text-xs mt-6" style={{ color: '#334155' }}>
-                  ← Select a conversation from the sidebar
-                </p>
-              )}
             </div>
           )}
-        </div>
+        </section>
       </div>
 
       <UserSearchModal
@@ -259,11 +196,13 @@ function MessagesInner() {
 
 export default function MessagesPage() {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col items-center justify-center" style={{ background: '#020617', height: 'calc(100dvh - 56px)' }}>
-        <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#3b82f6' }} />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex h-[calc(100dvh-56px)] items-center justify-center">
+          <Loader2 strokeWidth={1.75} className="h-5 w-5 animate-spin text-primary-600" />
+        </div>
+      }
+    >
       <MessagesInner />
     </Suspense>
   );

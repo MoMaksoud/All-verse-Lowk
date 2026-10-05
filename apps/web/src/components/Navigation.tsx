@@ -231,8 +231,8 @@ const Navigation = memo(function Navigation() {
                   prefetch={true}
                   className={`relative flex items-center gap-2 text-sm font-medium transition-all duration-150 rounded-xl px-3 py-2 whitespace-nowrap shrink-0 ${
                     resolvedPathname === item.href
-                      ? 'text-accent-400 bg-dark-700/50'
-                      : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
+                      ? 'text-accent-700 bg-dark-700/50'
+                      : 'text-gray-300 hover:text-dark-50 hover:bg-dark-700/30'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -315,7 +315,7 @@ const Navigation = memo(function Navigation() {
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">
+                            <p className="text-sm font-medium text-dark-50 truncate">
                               {currentUser.displayName || "User"}
                             </p>
                             <p className="text-sm text-gray-400 truncate">
@@ -329,7 +329,7 @@ const Navigation = memo(function Navigation() {
                       <div className="py-1">
                         <Link
                           href="/profile"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-dark-50 hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
                           <UserCircle className="w-4 h-4 mr-3 shrink-0" />
@@ -337,7 +337,7 @@ const Navigation = memo(function Navigation() {
                         </Link>
                         <Link
                           href="/settings"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-dark-50 hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
                           <Settings className="w-4 h-4 mr-3 shrink-0" />
@@ -345,7 +345,7 @@ const Navigation = memo(function Navigation() {
                         </Link>
                         <Link
                           href="/my-listings"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-dark-50 hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
                           <List className="w-4 h-4 mr-3 shrink-0" />
@@ -353,7 +353,7 @@ const Navigation = memo(function Navigation() {
                         </Link>
                         <Link
                           href="/orders"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-dark-50 hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
                           <Package className="w-4 h-4 mr-3 shrink-0" />
@@ -361,7 +361,7 @@ const Navigation = memo(function Navigation() {
                         </Link>
                         <Link
                           href="/sales"
-                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-dark-700/50 transition-colors"
+                          className="flex items-center px-4 py-2.5 text-sm text-gray-300 hover:text-dark-50 hover:bg-dark-700/50 transition-colors"
                           onClick={() => setShowProfileDropdown(false)}
                         >
                           <TrendingUp className="w-4 h-4 mr-3 shrink-0" />
@@ -376,7 +376,7 @@ const Navigation = memo(function Navigation() {
                             handleLogout();
                             setShowProfileDropdown(false);
                           }}
-                          className="flex items-center w-full px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                          className="flex items-center w-full px-4 py-2.5 text-sm text-red-700 hover:text-red-700 hover:bg-red-500/10 transition-colors"
                         >
                           <LogOut className="w-4 h-4 mr-3 shrink-0" />
                           Logout
@@ -407,7 +407,7 @@ const Navigation = memo(function Navigation() {
           {/* Tablet Actions - Show fewer items */}
           <div className="hidden md:flex lg:hidden items-center shrink-0 min-w-0">
             {currentUser ? (
-              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
+              <div className="flex items-center bg-zinc-900/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
                 <button 
                   onClick={() => router.push('/favorites')}
                   className="btn-ghost p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
@@ -437,7 +437,7 @@ const Navigation = memo(function Navigation() {
                 </Link>
               </div>
             ) : (
-              <div className="flex items-center bg-white/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
+              <div className="flex items-center bg-zinc-900/5 px-3 py-2 rounded-full gap-3 shrink-0 border border-white/5">
                 <Link
                   href="/signin"
                   className="btn-ghost px-3 py-2 text-sm rounded-xl hover:bg-dark-700/50"
@@ -501,8 +501,8 @@ const Navigation = memo(function Navigation() {
                     prefetch={true}
                     className={`relative flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
                       resolvedPathname === item.href
-                        ? 'text-accent-400 bg-dark-700/50'
-                        : 'text-gray-300 hover:text-white hover:bg-dark-700/30'
+                        ? 'text-accent-700 bg-dark-700/50'
+                        : 'text-gray-300 hover:text-dark-50 hover:bg-dark-700/30'
                     }`}
                     suppressHydrationWarning
                     onClick={() => {
@@ -533,7 +533,7 @@ const Navigation = memo(function Navigation() {
                           router.push('/favorites');
                           setMobileMenuOpen(false);
                         }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30 w-full text-left"
                       >
                         <Heart className="w-5 h-5" />
                         Favorites
@@ -544,7 +544,7 @@ const Navigation = memo(function Navigation() {
                           router.push('/cart');
                           setMobileMenuOpen(false);
                         }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30 w-full text-left"
                       >
                         <ShoppingCart className="w-5 h-5" />
                         Cart {isMounted && cartItemCount > 0 && `(${cartItemCount})`}
@@ -554,7 +554,7 @@ const Navigation = memo(function Navigation() {
                     <>
                       <Link
                         href="/signin"
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30 w-full text-left"
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30 w-full text-left"
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         <User className="w-5 h-5" />
@@ -587,7 +587,7 @@ const Navigation = memo(function Navigation() {
                       userProfilePic={userProfilePic}
                     />
                     <div className="ml-3">
-                      <div className="text-base font-medium text-white">
+                      <div className="text-base font-medium text-dark-50">
                         {currentUser.displayName || "User"}
                       </div>
                       <div className="text-sm font-medium text-gray-400">
@@ -598,42 +598,42 @@ const Navigation = memo(function Navigation() {
                   <div className="mt-3 space-y-1">
                     <Link
                       href="/profile"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
+                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Profile
                     </Link>
                     <Link
                       href="/settings"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
+                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Settings
                     </Link>
                     <Link
                       href="/my-listings"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
+                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       My Listings
                     </Link>
                     <Link
                       href="/orders"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
+                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       My Orders
                     </Link>
                     <Link
                       href="/sales"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
+                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       My Sales
                     </Link>
                     <Link
                       href="/sell"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-dark-700/30"
+                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-300 hover:text-dark-50 hover:bg-dark-700/30"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Sell Item
@@ -643,7 +643,7 @@ const Navigation = memo(function Navigation() {
                         handleLogout();
                         setMobileMenuOpen(false);
                       }}
-                      className="block w-full text-left px-3 py-2 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      className="block w-full text-left px-3 py-2 rounded-xl text-base font-medium text-red-700 hover:text-red-700 hover:bg-red-500/10"
                     >
                       Logout
                     </button>

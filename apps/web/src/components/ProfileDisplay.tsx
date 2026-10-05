@@ -66,7 +66,7 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
           size="xl"
         />
         <div className="flex-1">
-          <h2 className="text-2xl font-bold text-white mb-1">{profile.username}</h2>
+          <h2 className="text-2xl font-bold text-dark-50 mb-1">{profile.username}</h2>
           {profile.bio && (
             <p className="text-gray-300 mb-2">{profile.bio}</p>
           )}
@@ -82,14 +82,14 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Personal Information */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white mb-3">Personal Information</h3>
+          <h3 className="text-lg font-semibold text-dark-50 mb-3">Personal Information</h3>
           
           <div className="space-y-3">
             <div className="flex items-center space-x-3">
               <User className="w-5 h-5 text-gray-400" />
               <div>
                 <span className="text-sm text-gray-400">Gender:</span>
-                <span className="ml-2 text-white">{getGenderDisplay(profile.gender)}</span>
+                <span className="ml-2 text-dark-50">{getGenderDisplay(profile.gender)}</span>
               </div>
             </div>
 
@@ -98,7 +98,7 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
                 <Calendar className="w-5 h-5 text-gray-400" />
                 <div>
                   <span className="text-sm text-gray-400">Age:</span>
-                  <span className="ml-2 text-white">{profile.age} years old</span>
+                  <span className="ml-2 text-dark-50">{profile.age} years old</span>
                 </div>
               </div>
             )}
@@ -108,7 +108,7 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
                 <Phone className="w-5 h-5 text-gray-400" />
                 <div>
                   <span className="text-sm text-gray-400">Phone:</span>
-                  <span className="ml-2 text-white">{profile.phoneNumber}</span>
+                  <span className="ml-2 text-dark-50">{profile.phoneNumber}</span>
                 </div>
               </div>
             )}
@@ -117,14 +117,14 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
 
         {/* Shopping Preferences */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white mb-3">Shopping Preferences</h3>
+          <h3 className="text-lg font-semibold text-dark-50 mb-3">Shopping Preferences</h3>
           
           <div className="space-y-3">
             <div className="flex items-center space-x-3">
               <ShoppingBag className="w-5 h-5 text-gray-400" />
               <div>
                 <span className="text-sm text-gray-400">Activity:</span>
-                <span className="ml-2 text-white">{getActivityDisplay(profile.userActivity)}</span>
+                <span className="ml-2 text-dark-50">{getActivityDisplay(profile.userActivity)}</span>
               </div>
             </div>
 
@@ -133,7 +133,7 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
                 <Calendar className="w-5 h-5 text-gray-400" />
                 <div>
                   <span className="text-sm text-gray-400">Shopping Frequency:</span>
-                  <span className="ml-2 text-white">{getFrequencyDisplay(profile.shoppingFrequency)}</span>
+                  <span className="ml-2 text-dark-50">{getFrequencyDisplay(profile.shoppingFrequency)}</span>
                 </div>
               </div>
             )}
@@ -142,7 +142,7 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
               <Heart className="w-5 h-5 text-gray-400" />
               <div>
                 <span className="text-sm text-gray-400">Item Preference:</span>
-                <span className="ml-2 text-white">{getConditionPreferenceDisplay(profile.itemConditionPreference)}</span>
+                <span className="ml-2 text-dark-50">{getConditionPreferenceDisplay(profile.itemConditionPreference)}</span>
               </div>
             </div>
 
@@ -151,7 +151,7 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
                 <DollarSign className="w-5 h-5 text-gray-400" />
                 <div>
                   <span className="text-sm text-gray-400">Budget:</span>
-                  <span className="ml-2 text-white">
+                  <span className="ml-2 text-dark-50">
                     {profile.budget.min ? `$${profile.budget.min}` : '$0'} - {profile.budget.max ? `$${profile.budget.max}` : 'No limit'}
                   </span>
                 </div>
@@ -164,12 +164,12 @@ export function ProfileDisplay({ profile, className = '' }: ProfileDisplayProps)
       {/* Interest Categories */}
       {profile.interestCategories.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-lg font-semibold text-white mb-3">Interest Categories</h3>
+          <h3 className="text-lg font-semibold text-dark-50 mb-3">Interest Categories</h3>
           <div className="flex flex-wrap gap-2">
             {profile.interestCategories.map((category) => (
               <span
                 key={category}
-                className="px-3 py-1 bg-accent-500/20 text-accent-400 rounded-full text-sm"
+                className="px-3 py-1 bg-accent-500/20 text-accent-700 rounded-full text-sm"
               >
                 {category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}
               </span>

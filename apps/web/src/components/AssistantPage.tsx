@@ -311,7 +311,7 @@ export default function AssistantPage() {
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg)' }}>
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: 'var(--accent)' }}>
-            <Bot className="w-8 h-8 text-white" />
+            <Bot className="w-8 h-8 text-dark-50" />
           </div>
           <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text)' }}>AI Assistant</h2>
           <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
@@ -319,7 +319,7 @@ export default function AssistantPage() {
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-dark-50 transition-colors"
             style={{ background: 'var(--accent)' }}
           >
             Get started
@@ -339,10 +339,10 @@ export default function AssistantPage() {
         <div className="flex items-center justify-between mb-3 gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--accent)' }}>
-              <Sparkles className="w-4 h-4 text-white" />
+              <Sparkles className="w-4 h-4 text-dark-50" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base font-bold leading-tight" style={{ color: 'var(--text)', fontFamily: 'var(--font-display)' }}>AI Assistant</h1>
+              <h1 className="text-base font-bold leading-tight" style={{ color: 'var(--text)', fontFamily: 'var(--font-sans)' }}>AI Assistant</h1>
               <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
                 {mode === 'buyer' ? 'Find anything on the marketplace' : 'Optimize your listings & pricing'}
               </p>
@@ -583,7 +583,7 @@ export default function AssistantPage() {
               <button
                 type="submit"
                 disabled={isLoading || (!input.trim() && !pendingMedia) || !currentUser}
-                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-dark-50 transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ background: 'var(--accent)' }}
                 onMouseEnter={e => { if (!isLoading) (e.currentTarget as HTMLElement).style.background = '#2563eb'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent)'; }}
