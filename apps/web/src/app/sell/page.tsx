@@ -5,1632 +5,715 @@ import React, { useState, useEffect, useCallback } from 'react';
 // Prevent static generation - this page requires authentication
 export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Upload, X, Brain, Zap, Edit, Send } from 'lucide-react';
-import { SimpleListingCreate } from '@marketplace/types';
-import { Logo } from '@/components/Logo';
+import clsx from 'clsx';
+import { AlertCircle, HelpCircle, ImageOff, Sparkles, X } from 'lucide-react';
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { AIListingAssistant } from '@/components/AIListingAssistant';
-import Select from '@/components/Select';
 import { useAuth } from '@/contexts/AuthContext';
-import { Toast } from '@/components/Toast';
 import { SellListingStepper } from '@/app/sell/components/SellListingStepper';
-import { useSellToasts } from '@/app/sell/hooks/useSellToasts';
 import { buildSellListingPayload } from '@/app/sell/mapListingSubmit';
 import { isCloudUrl } from '@/types/photos';
-import { uploadListingPhotoFile } from '@/lib/storage';
 import { formatPrice } from '@/lib/format';
+import { CATEGORIES, CONDITIONS, categoryLabel } from '@/lib/categories';
 
-const steps = [
-  { id: 1, title: 'Photo Upload', description: 'Upload your item photo', icon: Upload },
-  { id: 2, title: 'AI Analysis', description: 'AI analyzes your item', icon: Brain },
-  { id: 3, title: 'Complete Info', description: 'AI asks for missing details', icon: Zap },
-  { id: 4, title: 'Review & Edit', description: 'Review and edit your listing', icon: Edit },
-  { id: 5, title: 'Publish', description: 'Final review and publish', icon: Send },
+type Stage = 'photos' | 'analyzing' | 'questions' | 'details';
+const STEPS = ['Photos', 'AI draft', 'Review & publish'];
+const STEP_OF: Record<Stage, number> = { photos: 0, analyzing: 1, questions: 1, details: 2 };
+
+// What buyers are paying for comparable items, from either AI endpoint.
+type Market = { price: number; min: number; max: number; count: number; demand?: string; note?: string };
+
+const EMPTY_FORM = {
+  title: '',
+  description: '',
+  category: '',
+  condition: '',
+  price: '',
+  shipping: { weight: '', length: '', width: '', height: '' },
+};
+
+const AI_STEPS = ['Identifying the item', 'Writing the title and description', 'Checking what similar items sell for'];
+
+const AI_HELP = [
+  ['Identifies the item', 'Brand, model and details, read from the photos and labels.'],
+  ['Writes the listing', 'A clear title and a description buyers can trust.'],
+  ['Suggests a price', 'Based on what similar listings are going for.'],
 ];
+
+const isCategory = (v?: string) => CATEGORIES.some((c) => c.id === v);
+const isCondition = (v?: string) => CONDITIONS.some((c) => c.id === v);
+
+function marketFromResearch(r: any): Market | null {
+  if (!r) return null;
+  return {
+    price: r.averagePrice || 0,
+    min: r.priceRange?.min || 0,
+    max: r.priceRange?.max || 0,
+    count: r.comparableCount ?? r.competitorCount ?? 0,
+    demand: r.marketDemand,
+    note: r.notes,
+  };
+}
 
 export default function SellPage() {
   const router = useRouter();
   const { currentUser, loading: authLoading } = useAuth();
-  const { toasts, addToast, removeToast } = useSellToasts();
 
-  // Photo state management
+  const [stage, setStage] = useState<Stage>('photos');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
-  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
-  const [listingId, setListingId] = useState<string | undefined>(undefined);
-
-  // Photo change handler - memoized to prevent infinite re-renders
-  const handlePhotoChange = useCallback((urls: string[]) => {
-    setPhotoUrls(urls);
-    // Update formData.photos to maintain compatibility
-    setFormData(prev => ({ ...prev, photos: urls }));
-  }, []);
-
-  // Create temporary listing ID for photo uploads
-  useEffect(() => {
-    if (!listingId && currentUser?.uid) {
-      // Generate a temporary listing ID for photo uploads
-      const tempId = `temp-${currentUser.uid}-${Date.now()}`;
-      setListingId(tempId);
-    }
-  }, [currentUser, listingId]);
-
-  const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [uploadingLabel, setUploadingLabel] = useState(false);
-  const [aiAnalyzing, setAiAnalyzing] = useState(false);
-  const [priceSuggesting, setPriceSuggesting] = useState(false);
-  const [lastPriceSuggestionTime, setLastPriceSuggestionTime] = useState(0);
-  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
-  const [aiAssistantComplete, setAiAssistantComplete] = useState(false);
+  const [listingId, setListingId] = useState<string>();
+  const [analysis, setAnalysis] = useState<any>(null);
   const [initialEvidence, setInitialEvidence] = useState<any>(null);
-
-  const [formData, setFormData] = useState<Omit<SimpleListingCreate, 'price'> & {
-    price: string;
-    marketResearch?: {
-      averagePrice: number;
-      priceRange: { min: number; max: number };
-      marketDemand: 'high' | 'medium' | 'low';
-      competitorCount: number;
-    };
-    condition?: string;
-    size?: string;
-    sizeCategory?: 'clothing' | 'footwear';
-    shipping?: {
-      weight?: string;
-      length?: string;
-      width?: string;
-      height?: string;
-      labelScanUrl?: string;
-    };
-  }>({
-    title: '',
-    description: '',
-    price: '',
-    category: '',
-    photos: [],
-    condition: '',
-    size: '',
-    sizeCategory: undefined,
-    shipping: {
-      weight: '',
-      length: '',
-      width: '',
-      height: '',
-      labelScanUrl: undefined,
-    },
-  });
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [market, setMarket] = useState<Market | null>(null);
+  const [pricing, setPricing] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [publishing, setPublishing] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !currentUser) {
-      router.push('/signin?redirect=/sell&reason=sell');
-    }
+    if (!authLoading && !currentUser) router.push('/signin?redirect=/sell&reason=sell');
   }, [authLoading, currentUser, router]);
 
-  // Remove categories fetch since we'll use hardcoded categories
+  // Temporary id so photos can upload before the listing exists
+  useEffect(() => {
+    if (!listingId && currentUser?.uid) setListingId(`temp-${currentUser.uid}-${Date.now()}`);
+  }, [currentUser, listingId]);
 
-  const handleInputChange = (field: keyof typeof formData, value: string | number) => {
-    setFormData((prev) => {
-      const newData = { ...prev, [field]: value };
-
-      // Reset size category and size when changing main category
-      if (field === 'category') {
-        newData.sizeCategory = undefined;
-        newData.size = '';
-      }
-
-      return newData;
-    });
-
-    if (errors[field as string]) {
-      setErrors((prev: Record<string, string>) => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handlePhotoUpload = (urls: string[]) => {
-    console.log('📸 Photos uploaded locally:', urls.length);
-    setFormData((prev) => ({
-      ...prev,
-      photos: urls
-    }));
-  };
-
-  const handleRemovePhoto = useCallback((index: number) => {
-    setPhotoUrls(prev => prev.filter((_, i) => i !== index));
-    setFormData((prev) => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
-    }));
+  const handlePhotoChange = useCallback((urls: string[]) => {
+    setPhotoUrls(urls);
+    setErrors((e) => ({ ...e, photos: '' }));
   }, []);
 
-  const validateStep = (step: number): boolean => {
-    const stepErrors: Record<string, string> = {};
-
-    switch (step) {
-      case 1:
-        if (!photoUrls?.length) stepErrors.photos = 'At least one photo is required';
-        else if (!photoUrls.every(url => isCloudUrl(url))) stepErrors.photos = 'Photos must be uploaded to cloud storage';
-        break;
-      case 2:
-        // AI will fill this automatically, so we'll skip validation for now
-        break;
-      case 3:
-        if (!formData.title?.trim()) stepErrors.title = 'Title is required';
-        if (!formData.description?.trim()) stepErrors.description = 'Description is required';
-        if (!formData.category) stepErrors.category = 'Category is required';
-        if (!formData.price || parseFloat(formData.price) <= 0) stepErrors.price = 'Valid price is required';
-        break;
-    }
-
-    setErrors(stepErrors);
-    return Object.keys(stepErrors).length === 0;
+  const setField = (field: keyof typeof EMPTY_FORM, value: string) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    if (errors[field]) setErrors((e) => ({ ...e, [field]: '' }));
   };
 
-  const nextStep = async () => {
-    if (validateStep(currentStep)) {
-      if (currentStep === 1) {
-        // Just move to AI analysis step - no listing creation yet
-        setCurrentStep(2);
-        // Start AI analysis with uploaded photos
-        await performAIAnalysis();
-      } else {
-        setCurrentStep(prev => Math.min(prev + 1, steps.length));
-      }
-    }
-  };
-
-  // Removed legacy fallback analysis tester (no corresponding API route)
-
-  const performAIAnalysis = async () => {
-    console.log('🔥 PERFORM AI ANALYSIS FUNCTION CALLED!');
-    console.log('🔥 Current user:', currentUser);
-    console.log('🔥 Photo URLs:', photoUrls);
-
-    if (!currentUser || !photoUrls.length) {
-      console.error('❌ AI Analysis aborted: missing user or photos');
-      return;
-    }
-
-    // Block if photos are not cloud URLs
-    if (!photoUrls.every(url => isCloudUrl(url))) {
-      throw new Error('Photos must be uploaded to cloud storage before AI analysis');
-    }
-
-    try {
-      setAiAnalyzing(true);
-      console.log('🤖 Starting AI analysis for uploaded photos');
-      console.log('🤖 Current user:', currentUser.uid);
-      console.log('🤖 Photos to analyze:', photoUrls);
-
-      console.log('🤖 Valid photos for AI analysis:', photoUrls);
-
-      const { apiPost } = await import('@/lib/api-client');
-      const response = await apiPost('/api/ai/analyze-product', {
-        imageUrls: photoUrls, // Use only cloud URLs
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🤖 API error response:', errorText);
-        throw new Error(`AI analysis failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('🤖 API response result:', result);
-      const analysis = result.analysis;
-
-      // Store initial evidence for Phase 2 - use the full evidence object if available
-      setInitialEvidence(analysis._evidence || {
-        brand: analysis.brand,
-        model: analysis.model,
-        product_type: analysis.category,
-        visible_features: analysis.features,
-        model_exact: analysis.model,
-        model_range: analysis.model
-      });
-
-      // Store the analysis for the AI assistant
-      setAiAnalysis(analysis);
-
-      // Check if there's missing information that needs user input
-      if (analysis.missingInfo && analysis.missingInfo.length > 0) {
-        console.log('🤖 Missing information detected:', analysis.missingInfo);
-        setShowAIAssistant(true);
-        setCurrentStep(3); // Go to AI assistant step
-        addToast('info', 'Additional Info Needed', 'Please answer a few questions to complete your listing.');
-      } else {
-        // No missing info, use initial analysis
-        const aiData = {
-          title: analysis.title,
-          description: analysis.description,
-          category: analysis.category,
-          price: analysis.suggestedPrice ? analysis.suggestedPrice.toString() : '',
-          condition: analysis.condition,
-          marketResearch: analysis.marketResearch,
-        };
-        setFormData(prev => ({ ...prev, ...aiData }));
-        setCurrentStep(3); // Go to review step
-        addToast('success', 'AI Analysis Complete', 'Product details have been generated successfully!');
-      }
-
-    } catch (error) {
-      console.error('❌ Error in AI analysis:', error);
-
-      // Provide more specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('❌ AI Analysis error details:', errorMessage);
-
-      if (errorMessage.includes('cloud storage')) {
-        // Photo upload issue
-        addToast('error', 'Photo Upload Issue', 'Photos need to be properly uploaded before AI analysis. Please try uploading again.');
-        setCurrentStep(1); // Go back to photo upload step
-      } else {
-        // General AI analysis failure
-        setErrors({ submit: 'AI analysis failed. You can still edit manually.' });
-        setCurrentStep(3);
-        addToast('error', 'AI Analysis Failed', 'Using fallback analysis. You can edit the details manually.');
-      }
-    } finally {
-      setAiAnalyzing(false);
-    }
-  };
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
-
-  // AI Assistant handlers
-  const handleAIAssistantUpdate = (updatedData: {
-    title: string;
-    description: string;
-    category: string;
-    condition: string;
-    suggestedPrice: number;
-  }) => {
-    console.log('🤖 AI Assistant updated listing:', updatedData);
-    setFormData(prev => ({
-      ...prev,
-      title: updatedData.title,
-      description: updatedData.description,
-      category: updatedData.category,
-      condition: updatedData.condition,
-      price: updatedData.suggestedPrice.toString(),
+  const applyAnalysis = (a: any) => {
+    setForm((f) => ({
+      ...f,
+      title: a.title || f.title,
+      description: a.description || f.description,
+      category: isCategory(a.category) ? a.category : f.category,
+      condition: isCondition(a.condition) ? a.condition : f.condition,
+      price: a.suggestedPrice > 0 ? String(a.suggestedPrice) : f.price,
     }));
+    setMarket(marketFromResearch(a.marketResearch));
   };
 
-  const handleAIAssistantComplete = async (
-    userAnswers?: Record<string, { question: string; answer: string }>
-  ) => {
-    console.log('🤖 AI Assistant completed with answers:', userAnswers);
-    console.log('🤖 Initial evidence:', initialEvidence);
-    console.log('🤖 Photo URLs count:', photoUrls.length);
-
-    // If we have user answers and initial evidence, generate final listing
-    if (userAnswers && Object.keys(userAnswers).length > 0 && initialEvidence && photoUrls.length > 0) {
-      try {
-        setAiAnalyzing(true);
-        const { apiPost } = await import('@/lib/api-client');
-        const response = await apiPost('/api/ai/analyze-product', {
-          imageUrls: photoUrls,
-          phase: 'final',
-          userAnswers,
-          initialEvidence
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('🤖 Phase 2 API error:', errorText);
-          throw new Error(`Failed to generate final listing: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (!result.success || !result.analysis) {
-          console.error('🤖 Invalid Phase 2 response:', result);
-          throw new Error('Invalid response from Phase 2');
-        }
-
-        const finalAnalysis = result.analysis;
-        console.log('🤖 Final analysis received:', finalAnalysis);
-
-        // Update form with final, polished listing
-        setFormData(prev => ({
-          ...prev,
-          title: finalAnalysis.title,
-          description: finalAnalysis.description,
-          category: finalAnalysis.category,
-          price: finalAnalysis.suggestedPrice ? finalAnalysis.suggestedPrice.toString() : '',
-          condition: finalAnalysis.condition,
-          marketResearch: finalAnalysis.marketResearch,
-        }));
-        setAiAnalysis(finalAnalysis);
-        setShowAIAssistant(false);
-        setAiAssistantComplete(true);
-        setCurrentStep(4);
-        addToast('success', 'Listing Ready!', 'Your listing has been generated with all the details.');
-      } catch (error) {
-        console.error('❌ Error generating final listing:', error);
-        addToast('error', 'Generation Failed', error instanceof Error ? error.message : 'Could not generate final listing. Using initial analysis.');
-        setShowAIAssistant(false);
-        setAiAssistantComplete(true);
-        setCurrentStep(4);
-      } finally {
-        setAiAnalyzing(false);
-      }
-    } else {
-      console.warn('⚠️ Missing data for Phase 2:', {
-        hasUserAnswers: !!userAnswers,
-        userAnswersCount: userAnswers ? Object.keys(userAnswers).length : 0,
-        hasInitialEvidence: !!initialEvidence,
-        photoUrlsCount: photoUrls.length
-      });
-      setShowAIAssistant(false);
-      setAiAssistantComplete(true);
-      setCurrentStep(4);
-      addToast('success', 'Listing Complete!', 'All information has been gathered. Review and edit your listing before publishing!');
-    }
-  };
-
-  const suggestAIPrice = async () => {
-    if (!formData.title || !formData.category) {
-      addToast('error', 'Missing Information', 'Please fill in title and category before getting AI price suggestions');
+  const analyze = async () => {
+    if (!photoUrls.length) {
+      setErrors({ photos: 'Add at least one photo.' });
       return;
     }
-
-    // Rate limiting - prevent too frequent requests
-    const now = Date.now();
-    if (now - lastPriceSuggestionTime < 5000) { // 5 seconds cooldown
-      addToast('warning', 'Please Wait', 'Please wait a moment before requesting another price analysis');
-      return;
-    }
-
+    setAiNotice(null);
+    setStage('analyzing');
     try {
-      setPriceSuggesting(true);
-      setLastPriceSuggestionTime(now);
-
-      console.log('💰 Starting AI market analysis for pricing...');
-
       const { apiPost } = await import('@/lib/api-client');
-      const response = await apiPost('/api/ai/market-analysis', {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        condition: formData.condition,
-        brand: aiAnalysis?.brand || 'Unknown',
-        model: aiAnalysis?.model || 'Unknown'
-      }, { requireAuth: false });
+      const res = await apiPost('/api/ai/analyze-product', { imageUrls: photoUrls });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.analysis) throw new Error();
 
-      if (!response.ok) {
-        throw new Error('Market analysis failed');
-      }
-
-      const result = await response.json();
-      console.log('💰 AI market analysis result:', result);
-
-      if (result.success && result.data?.marketAnalysis) {
-        const marketData = result.data.marketAnalysis;
-
-        // Update form data with market research
-        setFormData(prev => ({
-          ...prev,
-          price: marketData.suggestedPrice.toString(),
-          marketResearch: {
-            averagePrice: marketData.suggestedPrice,
-            priceRange: marketData.priceRange,
-            marketDemand: marketData.marketDemand,
-            competitorCount: marketData.competitorCount
-          }
-        }));
-
-        addToast('success', 'AI Price Analysis Complete!',
-          `Price updated to ${formatPrice(marketData.suggestedPrice)} (${marketData.marketDemand} demand, range: ${formatPrice(marketData.priceRange.min)}-${formatPrice(marketData.priceRange.max)})`);
-      } else {
-        throw new Error('Invalid market analysis response');
-      }
-
-    } catch (error) {
-      console.error('💰 Error in AI price suggestion:', error);
-      addToast('error', 'Price Analysis Failed', 'Unable to get AI price suggestions. Please try again.');
-    } finally {
-      setPriceSuggesting(false);
+      const a = data.analysis;
+      setAnalysis(a);
+      setInitialEvidence(
+        a._evidence || { brand: a.brand, model: a.model, product_type: a.category, visible_features: a.features }
+      );
+      applyAnalysis(a);
+      setStage(a.missingInfo?.length ? 'questions' : 'details');
+    } catch {
+      setAiNotice('The AI couldn’t read these photos right now. You can fill in the details yourself.');
+      setStage('details');
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!currentUser) {
-      setErrors({ submit: 'User not authenticated' });
+  const finishWithAnswers = async (answers?: Record<string, { question: string; answer: string }>) => {
+    if (!answers || !Object.keys(answers).length || !initialEvidence) {
+      setStage('details');
       return;
     }
-
-    // Validation
-    const newErrors: Record<string, string> = {};
-    if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.description.trim()) newErrors.description = 'Description is required';
-    if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Price must be greater than 0';
-    if (!formData.category) newErrors.category = 'Category is required';
-    if (!photoUrls.length) newErrors.photos = 'At least one photo is required';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+    setStage('analyzing');
     try {
-      setLoading(true);
-
-      const listingData = buildSellListingPayload({
-        formData,
-        photoUrls,
-        sellerId: currentUser.uid,
-        aiAnalysis,
+      const { apiPost } = await import('@/lib/api-client');
+      const res = await apiPost('/api/ai/analyze-product', {
+        imageUrls: photoUrls,
+        phase: 'final',
+        userAnswers: answers,
         initialEvidence,
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.analysis) throw new Error();
+      setAnalysis(data.analysis);
+      applyAnalysis(data.analysis);
+    } catch {
+      setAiNotice('The AI couldn’t finish the listing, so you’re seeing its first draft. Check each field before publishing.');
+    }
+    setStage('details');
+  };
 
-      const { apiPost: apiPostListing } = await import('@/lib/api-client');
-      const response = await apiPostListing('/api/listings', listingData);
+  const skipQuestions = useCallback(() => setStage('details'), []);
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Failed to create listing: ${response.status} - ${errorData}`);
-      }
-
-      const result = await response.json();
-      const listingId = result.id;
-
-      // Photos are already uploaded via PhotoUpload component
-      console.log('📸 Listing created with photos:', photoUrls.length);
-
-      // Show success message
-      addToast('success', 'Listing Published!', 'Your listing has been successfully created and published.');
-      router.push(`/listings/${listingId}`);
-
-    } catch (error) {
-      console.error('Error creating listing:', error);
-      setErrors({ submit: 'Failed to publish listing. Please try again.' });
-    } finally {
-      setLoading(false);
+  const checkPrice = async () => {
+    if (!form.title.trim() || !form.category) {
+      setErrors((e) => ({ ...e, price: 'Add a title and category first so the AI knows what to compare.' }));
+      return;
+    }
+    setPricing('loading');
+    try {
+      const { apiPost } = await import('@/lib/api-client');
+      const res = await apiPost(
+        '/api/ai/market-analysis',
+        {
+          title: form.title,
+          description: form.description,
+          category: form.category,
+          condition: form.condition,
+          brand: analysis?.brand,
+          model: analysis?.model,
+        },
+        { requireAuth: false }
+      );
+      const data = await res.json().catch(() => ({}));
+      const m = data?.data?.marketAnalysis;
+      if (!res.ok || !m) throw new Error();
+      setMarket({
+        price: m.suggestedPrice || 0,
+        min: m.priceRange?.min || 0,
+        max: m.priceRange?.max || 0,
+        count: m.competitorCount || 0,
+        demand: m.marketDemand,
+        note: typeof data.data.reasoning?.priceJustification === 'string' ? data.data.reasoning.priceJustification : undefined,
+      });
+      setPricing('idle');
+    } catch {
+      setPricing('error');
     }
   };
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-4">Upload Your Item Photos</h2>
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
-                {currentUser ? (
-                  <PhotoUpload
-                    uid={currentUser.uid}
-                    listingId={listingId || ''}
-                    max={6}
-                    initial={[]}
-                    onChange={handlePhotoChange}
-                    className="max-w-2xl mx-auto"
-                  />
-                ) : (
-                  <div className="text-center p-8 text-zinc-400">
-                    <p>Please sign in to upload photos</p>
-                  </div>
-                )}
-                {errors.photos && <p className="text-red-400 text-sm mt-3">{errors.photos}</p>}
-              </div>
-            </div>
-          </div>
-        );
+  const publish = async () => {
+    if (!currentUser) return;
+    const next: Record<string, string> = {};
+    if (!photoUrls.length || !photoUrls.every(isCloudUrl)) next.photos = 'Add at least one photo.';
+    if (!form.title.trim()) next.title = 'Add a title.';
+    if (!form.description.trim()) next.description = 'Add a description.';
+    if (!form.category) next.category = 'Pick a category.';
+    if (!form.condition) next.condition = 'Pick a condition.';
+    if (!(parseFloat(form.price) > 0)) next.price = 'Enter a price above $0.';
+    setErrors(next);
+    if (Object.keys(next).length) return;
 
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <Brain className="mx-auto h-16 w-16 text-blue-400 mb-4" />
-              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-2">AI Analysis</h2>
-              <p className="text-sm sm:text-base text-zinc-300 leading-7 mb-6">Let our AI analyze your photos and generate product details</p>
-
-              {photoUrls.length === 0 ? (
-                <div className="p-6 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
-                  <p className="text-yellow-400">Please upload photos first to enable AI analysis</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {aiAnalyzing ? (
-                    <div className="space-y-4 max-w-md mx-auto">
-                      <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-                        <span className="text-zinc-400">Title</span>
-                        <span className="text-zinc-100 animate-pulse">Analyzing photos...</span>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-                        <span className="text-zinc-400">Category</span>
-                        <span className="text-zinc-100 animate-pulse">Identifying product...</span>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-                        <span className="text-zinc-400">Price</span>
-                        <span className="text-zinc-100 animate-pulse">Calculating market value...</span>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-                        <span className="text-zinc-400">Description</span>
-                        <span className="text-zinc-100 animate-pulse">Generating details...</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-                        <p className="text-zinc-400 text-sm mb-2">Photos uploaded: {photoUrls.length}</p>
-                        <p className="text-zinc-100 text-sm">Ready for AI analysis</p>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          onClick={() => {
-                            performAIAnalysis();
-                          }}
-                          disabled={aiAnalyzing || isUploadingPhotos || !photoUrls.every(url => isCloudUrl(url))}
-                          className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex-1"
-                        >
-                          {aiAnalyzing ? 'Analyzing...' :
-                           isUploadingPhotos ? 'Uploading Photos...' :
-                           !photoUrls.every(url => isCloudUrl(url)) ? 'Photos Must Be Uploaded' :
-                           'Analyze with AI'}
-                        </button>
-
-                        {/* Removed legacy Test Fallback Analysis button */}
-
-                        <button
-                          onClick={() => setCurrentStep(3)}
-                          className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors"
-                        >
-                          Skip AI Analysis
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            {showAIAssistant && aiAnalysis ? (
-              <AIListingAssistant
-                initialAnalysis={{
-                  title: formData.title,
-                  description: formData.description,
-                  category: formData.category,
-                  condition: formData.condition || 'good',
-                  suggestedPrice: parseFloat(formData.price),
-                  missingInfo: aiAnalysis.missingInfo || []
-                }}
-                onUpdate={handleAIAssistantUpdate}
-                onComplete={handleAIAssistantComplete}
-              />
-            ) : (
-              <>
-                <div className="mb-6">
-                  <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-2">Review & Edit AI Suggestions</h2>
-                  <p className="text-sm sm:text-base text-zinc-300 leading-7">Review the AI-generated details and make any adjustments</p>
-                  {formData.title && formData.description && formData.price && parseFloat(formData.price) > 0 && formData.category && (
-                    <div className="mt-4 p-4 bg-green-900/20 border border-green-500/30 rounded-xl">
-                      <div className="flex items-center gap-2 text-green-400">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium">✅ Ready to Post!</span>
-                      </div>
-                      <p className="text-green-300 text-xs mt-1">All required fields are filled. You can post your listing now.</p>
-                    </div>
-                  )}
-                </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-100 mb-2">
-                Title
-              </label>
-              <input
-                type="text"
-                value={formData.title || ''}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                placeholder="What are you selling?"
-                className={`rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full ${errors.title ? 'border-red-500' : ''}`}
-              />
-              {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-100 mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description || ''}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="Describe your item in detail..."
-                rows={4}
-                className={`rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full resize-none ${errors.description ? 'border-red-500' : ''}`}
-              />
-              {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-100 mb-2">
-                Category
-              </label>
-              <Select
-                value={formData.category || null}
-                onChange={(value) => handleInputChange('category', value)}
-                options={[
-                  { value: '', label: 'Select a category' },
-                  { value: 'electronics', label: 'Electronics' },
-                  { value: 'fashion', label: 'Fashion' },
-                  { value: 'home', label: 'Home' },
-                  { value: 'sports', label: 'Sports' },
-                  { value: 'automotive', label: 'Automotive' },
-                  { value: 'other', label: 'Other' }
-                ]}
-                placeholder="Select a category"
-                className={errors.category ? 'border-red-500' : ''}
-              />
-              {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
-            </div>
-
-            {/* Condition Field */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-100 mb-2">
-                Condition
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {['New', 'Like New', 'Excellent', 'Good', 'Fair', 'Poor'].map((condition) => (
-                  <button
-                    key={condition}
-                    type="button"
-                    onClick={() => handleInputChange('condition', condition)}
-                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      formData.condition === condition
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    }`}
-                  >
-                    {condition}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Size Field - Only show for relevant categories */}
-            {(formData.category === 'fashion' || formData.category === 'sports') && (
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Size <span className="text-gray-400 text-sm">(Optional)</span>
-                </label>
-
-                {formData.category === 'fashion' ? (
-                  // Fashion items - show size category selector
-                  <div className="space-y-4">
-                    {/* Size Category Selector */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-2">
-                        Item Type
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleInputChange('sizeCategory', 'clothing');
-                            handleInputChange('size', ''); // Reset size when changing category
-                          }}
-                          className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            formData.sizeCategory === 'clothing'
-                              ? 'bg-accent-500 text-white'
-                              : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                          }`}
-                        >
-                          👕 Top/Bottom
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleInputChange('sizeCategory', 'footwear');
-                            handleInputChange('size', ''); // Reset size when changing category
-                          }}
-                          className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            formData.sizeCategory === 'footwear'
-                              ? 'bg-accent-500 text-white'
-                              : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                          }`}
-                        >
-                          👟 Footwear
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Size Options based on category */}
-                    {formData.sizeCategory && (
-                      <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-2">
-                          {formData.sizeCategory === 'clothing' ? 'Clothing Size' : 'Shoe Size'}
-                        </label>
-                        {formData.sizeCategory === 'clothing' ? (
-                          // Clothing sizes - buttons
-                          <div className="grid grid-cols-4 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleInputChange('size', '')}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                formData.size === ''
-                                  ? 'bg-accent-500 text-white'
-                                  : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                              }`}
-                            >
-                              Any
-                            </button>
-                            {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map((size) => (
-                              <button
-                                key={size}
-                                type="button"
-                                onClick={() => handleInputChange('size', size)}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                  formData.size === size
-                                    ? 'bg-accent-500 text-white'
-                                    : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                                }`}
-                              >
-                                {size}
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          // Footwear sizes - buttons with common shoe sizes
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-4 gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleInputChange('size', '')}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                  formData.size === ''
-                                    ? 'bg-accent-500 text-white'
-                                    : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                                }`}
-                              >
-                                Any
-                              </button>
-                              {['6', '7', '8', '9', '10', '11', '12', '13'].map((size) => (
-                                <button
-                                  key={size}
-                                  type="button"
-                                  onClick={() => handleInputChange('size', size)}
-                                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    formData.size === size
-                                      ? 'bg-accent-500 text-white'
-                                      : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                                  }`}
-                                >
-                                  {size}
-                                </button>
-                              ))}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-400 text-sm">Custom size:</span>
-                              <input
-                                type="number"
-                                value={formData.size && !['6', '7', '8', '9', '10', '11', '12', '13'].includes(formData.size) ? formData.size : ''}
-                                onChange={(e) => handleInputChange('size', e.target.value)}
-                                placeholder="e.g., 8.5, 9.5"
-                                step="0.5"
-                                min="4"
-                                max="16"
-                                className="w-24 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-center focus:outline-none focus:ring-2 focus:ring-accent-500"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // Sports items - show general size options
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-4 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleInputChange('size', '')}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          formData.size === ''
-                            ? 'bg-accent-500 text-white'
-                            : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                        }`}
-                      >
-                        Any
-                      </button>
-                      {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => handleInputChange('size', size)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            formData.size === size
-                              ? 'bg-accent-500 text-white'
-                              : 'bg-dark-700 text-gray-300 hover:bg-dark-600'
-                          }`}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400 text-sm">Custom size:</span>
-                      <input
-                        type="text"
-                        value={formData.size && !['XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(formData.size) ? formData.size : ''}
-                        onChange={(e) => handleInputChange('size', e.target.value)}
-                        placeholder="e.g., 28, 30, 32"
-                        className="w-24 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white text-center focus:outline-none focus:ring-2 focus:ring-accent-500"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Price Field */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-100 mb-2">
-                Price
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-zinc-400">$</span>
-                  <input
-                    type="number"
-                    value={formData.price || ''}
-                    onChange={(e) => handleInputChange('price', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    className={`rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 pl-8 text-zinc-100 placeholder-zinc-500 w-full ${errors.price ? 'border-red-500' : ''}`}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!currentUser) {
-                      addToast('warning', 'Sign In Required', 'Please sign in to get price suggestions');
-                      return;
-                    }
-
-                    if (formData.photos.length === 0) {
-                      addToast('warning', 'Photos Required', 'Please upload photos first to get accurate price suggestions');
-                      return;
-                    }
-
-                    // Client-side rate limiting (5 seconds between requests)
-                    const now = Date.now();
-                    if (now - lastPriceSuggestionTime < 5000) {
-                      const remainingTime = Math.ceil((5000 - (now - lastPriceSuggestionTime)) / 1000);
-                      addToast('warning', 'Please Wait', `Please wait ${remainingTime} seconds before requesting another price suggestion.`);
-                      return;
-                    }
-
-                    setPriceSuggesting(true);
-                    setLastPriceSuggestionTime(now);
-
-                    try {
-                      console.log('💰 Getting price suggestion with parameters:', {
-                        title: formData.title,
-                        description: formData.description,
-                        category: formData.category,
-                        condition: formData.condition,
-                        size: formData.size
-                      });
-
-                      const { apiPost: apiPostPrice } = await import('@/lib/api-client');
-                      const response = await apiPostPrice('/api/prices/suggest', {
-                        title: formData.title,
-                        description: formData.description,
-                        category: formData.category,
-                        condition: formData.condition,
-                        size: formData.size || null
-                      }, { requireAuth: false });
-
-                      const result = await response.json();
-                      console.log('💰 Price suggestion result:', result);
-
-                      if (result.success && result.suggestion) {
-                        // Extract price from suggestion text
-                        const priceMatch = result.suggestion.match(/\$(\d+(?:\.\d{2})?)/);
-                        if (priceMatch) {
-                          const suggestedPrice = parseFloat(priceMatch[1]);
-                          handleInputChange('price', suggestedPrice);
-
-                          // Show warning if using fallback
-                          if (result.source === 'fallback' && result.warning) {
-                            console.log('⚠️ Using fallback pricing:', result.warning);
-                            addToast('info', 'Using Fallback Pricing', result.warning);
-                          } else {
-                            addToast('success', 'Price Suggestion Updated', 'AI has suggested a new price for your item');
-                          }
-                        }
-                      } else if (response.status === 429) {
-                        // Rate limit exceeded
-                        const retryAfter = result.retryAfter || 60;
-                        addToast('warning', 'Rate Limit Exceeded', `Too many requests. Please wait ${retryAfter} seconds before trying again.`);
-                      } else {
-                        console.error('❌ No price suggestion in response:', result);
-                        addToast('error', 'Price Suggestion Failed', result.error || 'Unable to get price suggestion. Please try again.');
-                      }
-                    } catch (error) {
-                      console.error('❌ Error getting price suggestion:', error);
-                      addToast('error', 'Price Suggestion Error', error instanceof Error ? error.message : 'Unknown error');
-                    } finally {
-                      setPriceSuggesting(false);
-                    }
-                  }}
-                  className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors whitespace-nowrap ${
-                    priceSuggesting ? 'opacity-60 cursor-not-allowed' : ''
-                  }`}
-                  disabled={!currentUser || formData.photos.length === 0 || priceSuggesting}
-                >
-                  {priceSuggesting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin"></div>
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <span>Suggest Price</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
-            </div>
-
-
-            {/* Price Validation Warning */}
-            {(formData.marketResearch || aiAnalysis) && formData.price && parseFloat(formData.price) > 0 && (
-              (() => {
-                const suggestedPrice = aiAnalysis?.suggestedPrice || formData.marketResearch?.averagePrice || 0;
-                const minPrice = aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0;
-                const maxPrice = aiAnalysis?.priceRange?.max || formData.marketResearch?.priceRange?.max || 0;
-                const currentPrice = parseFloat(formData.price);
-
-                if (currentPrice < minPrice || currentPrice > maxPrice) {
-                  return (
-                    <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
-                      <div className="flex items-start gap-3">
-                        <div className="h-5 w-5 rounded-full bg-yellow-500 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="text-xs text-black font-bold">!</span>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-yellow-400 mb-1">Price Outside Suggested Range</h4>
-                          <p className="text-sm text-yellow-200 mb-2">
-                            Your current price ({formatPrice(currentPrice)}) is outside the AI-suggested range of {formatPrice(minPrice)} - {formatPrice(maxPrice)}.
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, price: suggestedPrice.toString() }))}
-                              className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-md transition-colors"
-                            >
-                              Use AI Suggested Price ({formatPrice(suggestedPrice)})
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, price: minPrice.toString() }))}
-                              className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md transition-colors"
-                            >
-                              Use Min Price ({formatPrice(minPrice)})
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()
-            )}
-
-            {/* AI Market Research Display */}
-            {(formData.marketResearch || aiAnalysis) && (
-              <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-6">
-                <h4 className="text-sm font-medium text-zinc-100 mb-4">🤖 AI Market Analysis</h4>
-
-                {/* Basic Market Data */}
-                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                  <div>
-                    <span className="text-zinc-400">Market Price:</span>
-                    <span className="ml-2 text-zinc-100">
-                      {formatPrice(aiAnalysis?.suggestedPrice || formData.marketResearch?.averagePrice || 0)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400">Price Range:</span>
-                    <span className="ml-2 text-zinc-100">
-                      {formatPrice(aiAnalysis?.priceRange?.min || formData.marketResearch?.priceRange?.min || 0)} -
-                      {formatPrice(aiAnalysis?.priceRange?.max || formData.marketResearch?.priceRange?.max || 0)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400">Demand:</span>
-                    <span className={`ml-2 capitalize ${
-                      (aiAnalysis?.marketData?.demandLevel || formData.marketResearch?.marketDemand) === 'high' ? 'text-green-400' :
-                      (aiAnalysis?.marketData?.demandLevel || formData.marketResearch?.marketDemand) === 'medium' ? 'text-yellow-400' : 'text-red-400'
-                    }`}>
-                      {aiAnalysis?.marketData?.demandLevel || formData.marketResearch?.marketDemand || 'medium'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400">Competitors:</span>
-                    <span className="ml-2 text-zinc-100">
-                      {aiAnalysis?.marketData?.competitorCount || formData.marketResearch?.competitorCount || 0} listings
-                    </span>
-                  </div>
-                </div>
-
-                {/* Detailed Reasoning */}
-                {aiAnalysis?.reasoning && (
-                  <div className="mb-4">
-                    <h5 className="text-xs font-medium text-zinc-300 mb-2">💡 Price Reasoning:</h5>
-                    <p className="text-xs text-zinc-400 leading-relaxed">{aiAnalysis.reasoning}</p>
-                  </div>
-                )}
-
-                {/* Platform Research */}
-                {aiAnalysis?.platformResearch && (
-                  <div className="mb-4">
-                    <h5 className="text-xs font-medium text-zinc-300 mb-2">🔍 Platform Research:</h5>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {aiAnalysis.platformResearch.eBay && (
-                        <div className="text-zinc-400">
-                          <span className="font-medium">eBay:</span> {aiAnalysis.platformResearch.eBay}
-                        </div>
-                      )}
-                      {aiAnalysis.platformResearch.amazon && (
-                        <div className="text-zinc-400">
-                          <span className="font-medium">Amazon:</span> {aiAnalysis.platformResearch.amazon}
-                        </div>
-                      )}
-                      {aiAnalysis.platformResearch.facebookMarketplace && (
-                        <div className="text-zinc-400">
-                          <span className="font-medium">Facebook:</span> {aiAnalysis.platformResearch.facebookMarketplace}
-                        </div>
-                      )}
-                      {aiAnalysis.platformResearch.craigslist && (
-                        <div className="text-zinc-400">
-                          <span className="font-medium">Craigslist:</span> {aiAnalysis.platformResearch.craigslist}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Price Factors */}
-                {aiAnalysis?.priceFactors && (
-                  <div>
-                    <h5 className="text-xs font-medium text-zinc-300 mb-2">📊 Key Price Factors:</h5>
-                    <ul className="text-xs text-zinc-400 space-y-1">
-                      {aiAnalysis.priceFactors.map((factor: string, index: number) => (
-                        <li key={index} className="flex items-start">
-                          <span className="text-zinc-500 mr-2">•</span>
-                          <span>{factor}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Location field removed for MVP */}
-
-            {/* Shipping Information Section */}
-            <div className="mt-8 pt-6 border-t border-zinc-800">
-              <h3 className="text-lg font-semibold text-zinc-100 mb-4">Shipping Information</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-100 mb-2">
-                    Package Weight (lbs)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.shipping?.weight || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      shipping: {
-                        ...prev.shipping,
-                        weight: e.target.value,
-                      }
-                    }))}
-                    placeholder="0.0"
-                    step="0.1"
-                    min="0"
-                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-100 mb-2">
-                    Package Length (inches)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.shipping?.length || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      shipping: {
-                        ...prev.shipping,
-                        length: e.target.value,
-                      }
-                    }))}
-                    placeholder="0.0"
-                    step="0.1"
-                    min="0"
-                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-100 mb-2">
-                    Package Width (inches)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.shipping?.width || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      shipping: {
-                        ...prev.shipping,
-                        width: e.target.value,
-                      }
-                    }))}
-                    placeholder="0.0"
-                    step="0.1"
-                    min="0"
-                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-100 mb-2">
-                    Package Height (inches)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.shipping?.height || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      shipping: {
-                        ...prev.shipping,
-                        height: e.target.value,
-                      }
-                    }))}
-                    placeholder="0.0"
-                    step="0.1"
-                    min="0"
-                    className="rounded-xl bg-zinc-900/60 border border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 text-zinc-100 placeholder-zinc-500 w-full"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-zinc-100 mb-2">
-                  Shipping Label Scan
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="file"
-                    id="label-scan-upload"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file || !currentUser || !listingId) return;
-
-                      try {
-                        setUploadingLabel(true);
-                        const result = await uploadListingPhotoFile({
-                          uid: currentUser.uid,
-                          listingId,
-                          file,
-                        });
-                        setFormData(prev => ({
-                          ...prev,
-                          shipping: {
-                            ...prev.shipping,
-                            labelScanUrl: result.url,
-                          }
-                        }));
-                        addToast('success', 'Label Scan Uploaded', 'Shipping label scan has been uploaded successfully.');
-                      } catch (error) {
-                        console.error('Error uploading label scan:', error);
-                        addToast('error', 'Upload Failed', 'Failed to upload shipping label scan. Please try again.');
-                      } finally {
-                        setUploadingLabel(false);
-                        // Reset the input
-                        e.target.value = '';
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const input = document.getElementById('label-scan-upload');
-                      input?.click();
-                    }}
-                    disabled={uploadingLabel || loading || !currentUser || !listingId}
-                    className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    {formData.shipping?.labelScanUrl ? 'Replace Label Scan' : 'Scan Label'}
-                  </button>
-                  {formData.shipping?.labelScanUrl && (
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={formData.shipping.labelScanUrl}
-                        alt="Shipping label scan"
-                        className="w-16 h-16 object-cover rounded-lg border border-zinc-700"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({
-                          ...prev,
-                          shipping: {
-                            ...prev.shipping,
-                            labelScanUrl: undefined,
-                          }
-                        }))}
-                        className="text-red-400 hover:text-red-300 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-              </>
-            )}
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="mb-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-2">Review & Edit Your Listing</h2>
-              <p className="text-sm sm:text-base text-zinc-300 leading-7">Review all the details and make any final adjustments before publishing</p>
-            </div>
-
-            {/* Product Preview */}
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 mb-6">
-              <h4 className="text-md font-semibold text-zinc-100 mb-4">Product Preview</h4>
-
-              <div className="flex gap-6">
-                {photoUrls && photoUrls.length > 0 && (
-                  <div className="shrink-0">
-                    <img
-                      src={photoUrls[0]}
-                      alt="Item preview"
-                      className="w-32 h-32 object-cover rounded-xl"
-                    />
-                  </div>
-                )}
-
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h5 className="font-medium text-zinc-100 text-lg">{formData.title}</h5>
-                    <p className="text-zinc-400 text-sm mt-1">{formData.description}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-zinc-400">Category:</span>
-                      <span className="ml-2 text-zinc-100 capitalize">{formData.category}</span>
-                    </div>
-                    <div>
-                      <span className="text-zinc-400">Condition:</span>
-                      <span className="ml-2 text-zinc-100">{formData.condition}</span>
-                    </div>
-                    <div>
-                      <span className="text-zinc-400">Price:</span>
-                      <span className="ml-2 text-zinc-100 font-semibold">{formatPrice(formData.price)}</span>
-                    </div>
-                    {formData.size && (
-                      <div>
-                        <span className="text-zinc-400">Size:</span>
-                        <span className="ml-2 text-zinc-100">{formData.size}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Editable Fields */}
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={formData.title || ''}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  placeholder="What are you selling?"
-                  className={`input ${errors.title ? 'border-red-500' : ''}`}
-                />
-                {errors.title && <p className="text-red-400 text-sm mt-1">{errors.title}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description || ''}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Describe your item in detail..."
-                  rows={4}
-                  className={`input resize-none ${errors.description ? 'border-red-500' : ''}`}
-                />
-                {errors.description && <p className="text-red-400 text-sm mt-1">{errors.description}</p>}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Category
-                  </label>
-                  <Select
-                    value={formData.category || null}
-                    onChange={(value) => handleInputChange('category', value)}
-                    options={[
-                      { value: '', label: 'Select a category' },
-                      { value: 'electronics', label: 'Electronics' },
-                      { value: 'fashion', label: 'Fashion' },
-                      { value: 'home', label: 'Home' },
-                      { value: 'sports', label: 'Sports' },
-                      { value: 'automotive', label: 'Automotive' },
-                      { value: 'toys', label: 'Toys' },
-                      { value: 'beauty', label: 'Beauty' },
-                      { value: 'appliances', label: 'Appliances' },
-                      { value: 'books', label: 'Books' },
-                      { value: 'tools', label: 'Tools' },
-                      { value: 'other', label: 'Other' }
-                    ]}
-                    placeholder="Select a category"
-                    className={errors.category ? 'border-red-500' : ''}
-                  />
-                  {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Condition
-                  </label>
-                  <Select
-                    value={formData.condition || null}
-                    onChange={(value) => handleInputChange('condition', value)}
-                    options={[
-                      { value: '', label: 'Select condition' },
-                      { value: 'new', label: 'New' },
-                      { value: 'like-new', label: 'Like New' },
-                      { value: 'good', label: 'Good' },
-                      { value: 'fair', label: 'Fair' },
-                      { value: 'poor', label: 'Poor' }
-                    ]}
-                    placeholder="Select condition"
-                    className={errors.condition ? 'border-red-500' : ''}
-                  />
-                  {errors.condition && <p className="text-red-400 text-sm mt-1">{errors.condition}</p>}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Price ($)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={formData.price || ''}
-                    onChange={(e) => handleInputChange('price', e.target.value)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className={`input flex-1 ${errors.price ? 'border-red-500' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={suggestAIPrice}
-                    disabled={priceSuggesting || !formData.title || !formData.category}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
-                  >
-                    {priceSuggesting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Brain className="w-4 h-4" />
-                        AI Price
-                      </>
-                    )}
-                  </button>
-                </div>
-                {errors.price && <p className="text-red-400 text-sm mt-1">{errors.price}</p>}
-                {formData.marketResearch && (
-                  <div className="mt-2 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                    <div className="text-sm text-blue-400">
-                      <div className="flex justify-between items-center mb-1">
-                        <span>AI Suggested Price:</span>
-                        <span className="font-semibold">{formatPrice(formData.marketResearch.averagePrice)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-blue-300">
-                        <span>Market Range:</span>
-                        <span>{formatPrice(formData.marketResearch.priceRange.min)} - {formatPrice(formData.marketResearch.priceRange.max)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-blue-300">
-                        <span>Demand:</span>
-                        <span className="capitalize">{formData.marketResearch.marketDemand}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {formData.size && (
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Size
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.size || ''}
-                    onChange={(e) => handleInputChange('size', e.target.value)}
-                    placeholder="e.g., Large, 10, 32x34"
-                    className="input"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-4">Final Review & Publish</h2>
-
-              <div className="space-y-4">
-                {photoUrls && photoUrls.length > 0 && (
-                  <div className="flex justify-center mb-4">
-                    <img
-                      src={photoUrls[0]}
-                      alt="Item preview"
-                      className="w-32 h-32 object-cover rounded-xl"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <h4 className="font-medium text-zinc-100">{formData.title}</h4>
-                  <p className="text-zinc-400 text-sm">{formData.description}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-zinc-400">Category:</span>
-                    <span className="ml-2 text-zinc-100">{formData.category}</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400">Price:</span>
-                    <span className="ml-2 text-zinc-100">{formatPrice(formData.price)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {errors.submit && (
-              <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4">
-                <p className="text-red-400 text-sm">{errors.submit}</p>
-              </div>
-            )}
-          </div>
-        );
-
-      default:
-        return null;
+    setPublishing(true);
+    try {
+      const payload = buildSellListingPayload({
+        formData: form,
+        photoUrls,
+        sellerId: currentUser.uid,
+        aiAnalysis: analysis,
+        initialEvidence,
+      });
+      const { apiPost } = await import('@/lib/api-client');
+      const res = await apiPost('/api/listings', payload);
+      if (!res.ok) throw new Error();
+      const { id } = await res.json();
+      router.push(`/listings/${id}`);
+    } catch {
+      setErrors({ submit: 'Couldn’t publish the listing. Check your connection and try again.' });
+      setPublishing(false);
     }
   };
+
+  if (authLoading || !currentUser) {
+    return (
+      <div className="mx-auto min-h-[70dvh] w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 lg:px-8" aria-busy>
+        <div className="h-8 w-48 animate-pulse rounded bg-zinc-100" />
+        <div className="mt-3 h-4 w-80 max-w-full animate-pulse rounded bg-zinc-100" />
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="h-80 animate-pulse rounded-2xl bg-zinc-100" />
+          <div className="h-80 animate-pulse rounded-2xl bg-zinc-100" />
+        </div>
+      </div>
+    );
+  }
+
+  const price = parseFloat(form.price);
+  const outOfRange =
+    market && market.max > market.min && price > 0 && (price < market.min ? 'below' : price > market.max ? 'above' : null);
+  const editing = stage === 'photos' || stage === 'details';
 
   return (
-    <div className="min-h-screen bg-dark-950">
-            <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
-        {/* Header Hero */}
-        <header className="text-center space-y-4 sm:space-y-3 mb-8 sm:mb-10">
-          {/* Mobile: Large Logo */}
-          <div className="flex justify-center mb-4 sm:mb-0">
-            <div className="w-40 h-40 sm:w-32 sm:h-32 lg:hidden relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-2xl"></div>
-              <div className="relative w-full h-full rounded-full bg-dark-800/80 border border-dark-700/50 backdrop-blur-sm flex items-center justify-center">
-                <Logo size="xl" />
+    <div className="mx-auto min-h-[70dvh] w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 lg:px-8">
+      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl">Sell an item</h1>
+          <p className="mt-1 text-sm text-zinc-600 sm:text-base">
+            Add photos. The AI writes the listing and suggests a price, and you review it.{' '}
+            <button
+              type="button"
+              onClick={() => setHelpOpen((o) => !o)}
+              aria-expanded={helpOpen}
+              aria-controls="ai-help"
+              className="inline-flex items-center gap-1 font-medium text-primary-700 hover:text-primary-800"
+            >
+              <HelpCircle strokeWidth={1.75} className="h-4 w-4" />
+              How the AI works
+            </button>
+          </p>
+        </div>
+        <SellListingStepper steps={STEPS} current={STEP_OF[stage]} />
+      </header>
+
+      {helpOpen && (
+        <div id="ai-help" className="mt-6 animate-fade-in rounded-2xl bg-primary-50/70 p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
+              <Sparkles strokeWidth={1.75} className="h-4 w-4 text-primary-600" />
+              How the AI works
+            </p>
+            <button
+              type="button"
+              onClick={() => setHelpOpen(false)}
+              aria-label="Close help"
+              className="-m-1.5 grid h-8 w-8 place-items-center rounded-full text-zinc-500 hover:bg-primary-100 hover:text-zinc-900"
+            >
+              <X strokeWidth={1.75} className="h-4 w-4" />
+            </button>
+          </div>
+          <ol className="mt-4 grid gap-4 sm:grid-cols-3 sm:gap-6">
+            {AI_HELP.map(([title, body], i) => (
+              <li key={title} className="flex gap-3 text-sm">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white text-xs font-semibold tabular-nums text-primary-700">
+                  {i + 1}
+                </span>
+                <div>
+                  <p className="font-medium text-zinc-950">{title}</p>
+                  <p className="mt-0.5 text-zinc-600">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-4 text-xs text-zinc-500">Nothing goes live until you press Publish, and you can edit everything first.</p>
+        </div>
+      )}
+
+      <div
+        className={clsx(
+          'mt-8 grid items-start gap-x-8 gap-y-6',
+          stage === 'details' && 'lg:grid-cols-[minmax(0,1fr)_22rem]'
+        )}
+      >
+        <div className="min-w-0 space-y-6">
+          {stage === 'details' && aiNotice && (
+            <p role="status" className="flex gap-2 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+              <AlertCircle strokeWidth={1.75} className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {aiNotice}{' '}
+                {photoUrls.length > 0 && (
+                  <button type="button" onClick={analyze} className="font-medium underline underline-offset-2">
+                    Try the AI again
+                  </button>
+                )}
+              </span>
+            </p>
+          )}
+
+          {/* Kept mounted (hidden while the AI works) so uploads survive stage changes. */}
+          <Section
+            title="Photos"
+            description={
+              stage === 'photos'
+                ? 'Up to 6. The first one is the cover. A clear shot of any label or model number helps the AI most.'
+                : 'The first photo is the cover.'
+            }
+            className={clsx(!editing && 'hidden')}
+            footer={
+              stage === 'photos' && (
+                <>
+                  <button type="button" onClick={() => setStage('details')} className="btn btn-ghost">
+                    I’ll write it myself
+                  </button>
+                  <button type="button" onClick={analyze} disabled={!photoUrls.length} className="btn btn-primary gap-2 px-5">
+                    <Sparkles strokeWidth={1.75} className="h-4 w-4" />
+                    Write my listing
+                  </button>
+                </>
+              )
+            }
+          >
+            <PhotoUpload uid={currentUser.uid} listingId={listingId || ''} max={6} onChange={handlePhotoChange} />
+            {errors.photos && <p className="mt-2 text-sm text-red-700">{errors.photos}</p>}
+          </Section>
+
+          {stage === 'analyzing' && (
+            <Section title="Drafting your listing" description="This usually takes a few seconds.">
+              <ul className="divide-y divide-zinc-100" aria-busy aria-live="polite">
+                {AI_STEPS.map((label, i) => (
+                  <li key={label} className="reveal flex items-center gap-3 py-3" style={{ '--i': i * 2 } as React.CSSProperties}>
+                    <span
+                      className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary-600"
+                      style={{ animationDelay: `${i * 300}ms` }}
+                    />
+                    <span className="text-sm text-zinc-700">{label}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 space-y-3">
+                <div className="h-11 animate-pulse rounded-xl bg-zinc-100" />
+                <div className="h-28 animate-pulse rounded-xl bg-zinc-100" />
+              </div>
+            </Section>
+          )}
+
+          {stage === 'questions' && analysis && (
+            <Section>
+              <AIListingAssistant
+                initialAnalysis={{
+                  title: form.title,
+                  description: form.description,
+                  category: form.category,
+                  condition: form.condition,
+                  suggestedPrice: price || 0,
+                  missingInfo: analysis.missingInfo || [],
+                  questions: analysis.questions,
+                }}
+                onComplete={finishWithAnswers}
+                onSkip={skipQuestions}
+              />
+            </Section>
+          )}
+
+          {stage === 'details' && (
+            <>
+              <Section
+                title="Details"
+                description={
+                  analysis && !aiNotice ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Sparkles strokeWidth={1.75} className="h-3.5 w-3.5 text-primary-600" />
+                      Drafted by AI from your photos. Read it over before publishing.
+                    </span>
+                  ) : (
+                    'What buyers see first.'
+                  )
+                }
+              >
+                <div className="space-y-5">
+                  <Field label="Title" error={errors.title} htmlFor="title">
+                    <input
+                      id="title"
+                      value={form.title}
+                      onChange={(e) => setField('title', e.target.value)}
+                      placeholder="Brand, model and what it is"
+                      maxLength={120}
+                      className={clsx('input', errors.title && 'border-red-500')}
+                    />
+                  </Field>
+
+                  <Field label="Description" error={errors.description} htmlFor="description">
+                    <textarea
+                      id="description"
+                      value={form.description}
+                      onChange={(e) => setField('description', e.target.value)}
+                      placeholder="Condition, what’s included, any wear or flaws"
+                      rows={5}
+                      className={clsx('input resize-y', errors.description && 'border-red-500')}
+                    />
+                  </Field>
+
+                  <Field label="Category" error={errors.category} htmlFor="category">
+                    <select
+                      id="category"
+                      value={form.category}
+                      onChange={(e) => setField('category', e.target.value)}
+                      className={clsx('input', !form.category && 'text-zinc-500', errors.category && 'border-red-500')}
+                    >
+                      <option value="" disabled>
+                        Choose a category
+                      </option>
+                      {CATEGORIES.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <Field label="Condition" error={errors.condition}>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Condition">
+                      {CONDITIONS.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={form.condition === c.id}
+                          onClick={() => setField('condition', c.id)}
+                          className={clsx(
+                            'rounded-full border px-4 py-2 text-sm font-medium transition active:scale-[0.98]',
+                            form.condition === c.id
+                              ? 'border-primary-600 bg-primary-600 text-white'
+                              : 'border-zinc-300 bg-white text-zinc-800 hover:border-zinc-500'
+                          )}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                </div>
+              </Section>
+
+              <Section title="Price" description="Set your own, or have the AI compare similar listings.">
+                <div className="grid gap-5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:items-start">
+                  <Field label="Your price" error={errors.price} htmlFor="price">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
+                        $
+                      </span>
+                      <input
+                        id="price"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        value={form.price}
+                        onChange={(e) => setField('price', e.target.value)}
+                        placeholder="0.00"
+                        className={clsx('input pl-8 tabular-nums', errors.price && 'border-red-500')}
+                      />
+                    </div>
+                  </Field>
+
+                  <PriceCheck
+                    market={market}
+                    pricing={pricing}
+                    price={price}
+                    outOfRange={outOfRange || null}
+                    onCheck={checkPrice}
+                    onUse={(p) => setField('price', String(p))}
+                  />
+                </div>
+              </Section>
+
+              <Section title="Shipping" description="Optional. With the package size, buyers see exact shipping rates at checkout.">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  {(
+                    [
+                      ['weight', 'Weight (lb)'],
+                      ['length', 'Length (in)'],
+                      ['width', 'Width (in)'],
+                      ['height', 'Height (in)'],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="flex flex-col gap-2 text-sm font-medium text-zinc-950">
+                      {label}
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.1"
+                        value={form.shipping[key]}
+                        onChange={(e) => setForm((f) => ({ ...f, shipping: { ...f.shipping, [key]: e.target.value } }))}
+                        className="input font-normal tabular-nums"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </Section>
+            </>
+          )}
+        </div>
+
+        {stage === 'details' && (
+          <aside className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+              <CoverPreview src={photoUrls[0]} />
+              <div className="p-4">
+                <p className={clsx('line-clamp-2 font-medium', form.title ? 'text-zinc-950' : 'text-zinc-400')}>
+                  {form.title || 'Your title'}
+                </p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  {[CONDITIONS.find((c) => c.id === form.condition)?.label, categoryLabel(form.category)]
+                    .filter(Boolean)
+                    .join(' · ') || 'Condition · Category'}
+                </p>
+                <p className="mt-2 text-lg font-semibold tabular-nums text-zinc-950">{price > 0 ? formatPrice(price) : '$—'}</p>
               </div>
             </div>
-          </div>
+          </aside>
+        )}
 
-          {/* Desktop: Small Logo Badge */}
-          <div className="hidden lg:inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300">
-            <Logo size="sm" />
-            <span>ALL VERSE</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-100 px-4">Sell Your Item</h1>
-          <p className="text-base sm:text-sm lg:text-base text-zinc-300 leading-7 px-4">Upload a photo and let AI do the work for you</p>
-        </header>
-
-        <SellListingStepper steps={steps} currentStep={currentStep} />
-
-        {/* Form Content */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur shadow-lg p-6 sm:p-8">
-          {renderStepContent()}
-
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-zinc-800">
-            <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 disabled:opacity-60 disabled:cursor-not-allowed transition-colors gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
+        {stage === 'details' && (
+          <div className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="text-sm text-zinc-600">
+              {errors.submit ? (
+                <p role="alert" className="flex gap-2 text-red-800">
+                  <AlertCircle strokeWidth={1.75} className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{errors.submit}</span>
+                </p>
+              ) : (
+                <p className="max-w-md">
+                  Listing is free. When it sells, AllVerse keeps 4.5% of the item price and the rest goes to your
+                  connected Stripe account.
+                </p>
+              )}
+            </div>
+            <button type="button" onClick={publish} disabled={publishing} className="btn btn-primary shrink-0 px-6 py-3">
+              {publishing ? 'Publishing…' : 'Publish listing'}
             </button>
-
-            {currentStep < steps.length ? (
-              <button
-                onClick={nextStep}
-                disabled={loading || aiAnalyzing}
-                className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
-              >
-                {loading ? 'Creating...' : aiAnalyzing ? 'AI Scanning Photos...' :
-                 currentStep === 1 ? 'Analyze with AI' :
-                 currentStep === 2 ? 'Complete Info' :
-                 currentStep === 3 ? 'Review & Edit' :
-                 currentStep === 4 ? 'Publish' : 'Continue'}
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed gap-2"
-              >
-                {loading ? 'Publishing...' : 'Publish Listing'}
-              </button>
-            )}
           </div>
-        </div>
-      </section>
-
-      {/* Toast Container */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            id={toast.id}
-            type={toast.type}
-            title={toast.title}
-            message={toast.message}
-            onClose={removeToast}
-          />
-        ))}
+        )}
       </div>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  description,
+  footer,
+  className,
+  children,
+}: {
+  title?: string;
+  description?: React.ReactNode;
+  footer?: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={clsx('rounded-2xl border border-zinc-200 bg-white', className)}>
+      <div className="p-5 sm:p-6">
+        {title && <h2 className="text-base font-semibold text-zinc-950">{title}</h2>}
+        {description && <p className="mt-1 text-sm text-zinc-600">{description}</p>}
+        <div className={clsx(title && 'mt-5')}>{children}</div>
+      </div>
+      {footer && (
+        <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+          {footer}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PriceCheck({
+  market,
+  pricing,
+  price,
+  outOfRange,
+  onCheck,
+  onUse,
+}: {
+  market: Market | null;
+  pricing: 'idle' | 'loading' | 'error';
+  price: number;
+  outOfRange: 'below' | 'above' | null;
+  onCheck: () => void;
+  onUse: (price: number) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-4 sm:mt-7">
+      <div className="flex items-center justify-between gap-4">
+        <p className="flex items-center gap-2 text-sm font-semibold text-zinc-950">
+          <Sparkles strokeWidth={1.75} className="h-4 w-4 text-primary-600" />
+          AI price check
+        </p>
+        {pricing !== 'loading' && (
+          <button type="button" onClick={onCheck} className="text-sm font-medium text-primary-700 hover:text-primary-800">
+            {market ? 'Check again' : 'Check price'}
+          </button>
+        )}
+      </div>
+
+      {pricing === 'loading' ? (
+        <div className="mt-3 space-y-2" aria-busy>
+          <div className="h-7 w-32 animate-pulse rounded bg-primary-100" />
+          <div className="h-4 w-64 max-w-full animate-pulse rounded bg-primary-100" />
+        </div>
+      ) : pricing === 'error' ? (
+        <p className="mt-2 text-sm text-zinc-700">Couldn’t check prices right now. Try again in a moment.</p>
+      ) : market && market.price > 0 ? (
+        <div className="mt-2 animate-fade-in">
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-zinc-950">
+            {formatPrice(market.price)}
+            <span className="ml-2 text-sm font-normal text-zinc-600">suggested</span>
+          </p>
+          <p className="mt-1 text-sm text-zinc-600">
+            {market.max > market.min ? (
+              <>
+                Similar items go for{' '}
+                <span className="tabular-nums">
+                  {formatPrice(market.min)} to {formatPrice(market.max)}
+                </span>
+                {market.count > 0 && ` across ${market.count} comparable listings`}.
+              </>
+            ) : (
+              market.count > 0 && `Based on ${market.count} comparable listing${market.count === 1 ? '' : 's'}.`
+            )}
+            {market.demand && ` Demand looks ${market.demand}.`}
+          </p>
+          {market.note && <p className="mt-2 line-clamp-3 text-sm text-zinc-500">{market.note}</p>}
+          {(price !== market.price || outOfRange) && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {price !== market.price && (
+                <button type="button" onClick={() => onUse(market.price)} className="btn btn-primary py-2">
+                  Use {formatPrice(market.price)}
+                </button>
+              )}
+              {outOfRange && <span className="text-sm text-amber-800">Your price is {outOfRange} that range.</span>}
+            </div>
+          )}
+        </div>
+      ) : market ? (
+        <p className="mt-2 text-sm text-zinc-700">
+          Not enough comparable listings to suggest a price. Set your own, or add the brand and model to the title and
+          check again.
+        </p>
+      ) : (
+        <p className="mt-2 text-sm text-zinc-700">See what similar items are listed for before you set a price.</p>
+      )}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  error,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  error?: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-zinc-950">
+        {label}
+      </label>
+      {children}
+      {error && <p className="text-sm text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+function CoverPreview({ src }: { src?: string }) {
+  return (
+    <div className="relative aspect-[4/3] w-full overflow-hidden bg-zinc-100">
+      <span className="absolute left-3 top-3 z-[1] rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-medium text-zinc-700 shadow-sm">
+        Preview
+      </span>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="Cover photo" className="h-full w-full object-contain" />
+      ) : (
+        <div className="flex h-full flex-col items-center justify-center gap-2 text-zinc-400">
+          <ImageOff strokeWidth={1.5} className="h-7 w-7" />
+          <span className="text-sm">No photo yet</span>
+        </div>
+      )}
     </div>
   );
 }

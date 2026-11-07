@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import ListingCard from '@/components/ListingCard';
 import { ProfilePicture } from '@/components/ProfilePicture';
-import { normalizeImageSrc } from '@marketplace/shared-logic';
 import { SimpleListing } from '@marketplace/types';
 
 interface UserProfile {
@@ -28,14 +27,14 @@ export default function UserProfilePage() {
   useEffect(() => {
     const fetchData = async () => {
       if (!params.userId) return;
-      
+
       try {
         setLoading(true);
         const { apiGet } = await import('@/lib/api-client');
-        
+
         // Fetch user profile
         const profileResponse = await apiGet(`/api/profile?userId=${params.userId}`, { requireAuth: false });
-        
+
         if (profileResponse.ok) {
           const profileData = await profileResponse.json();
           setProfile({
@@ -53,10 +52,10 @@ export default function UserProfilePage() {
             username: 'User',
           });
         }
-        
+
         // Fetch user's listings - query listings collection where sellerId == userId
         const listingsResponse = await apiGet(`/api/listings?sellerId=${params.userId}&limit=100`, { requireAuth: false });
-        
+
         if (listingsResponse.ok) {
           const listingsData = await listingsResponse.json();
           // API returns { data: [...], pagination: {...} }
@@ -86,128 +85,106 @@ export default function UserProfilePage() {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return '';
-      return new Intl.DateTimeFormat("en-US", {
-        month: "short",
-        year: "numeric"
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        year: 'numeric',
       }).format(date);
     } catch {
       return '';
     }
   };
 
-  const handleProfileClick = () => {
-    router.push(`/profile/${params.userId}`);
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-500"></div>
+      <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6" aria-busy="true" aria-label="Loading profile">
+        <div className="flex items-center gap-5">
+          <div className="h-20 w-20 animate-pulse rounded-full bg-zinc-100" />
+          <div className="space-y-3">
+            <div className="h-5 w-40 animate-pulse rounded bg-zinc-100" />
+            <div className="h-4 w-28 animate-pulse rounded bg-zinc-100" />
+          </div>
+        </div>
+        <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="space-y-3">
+              <div className="aspect-square animate-pulse rounded-xl bg-zinc-100" />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-100" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Profile Not Found</h1>
-          <p className="text-gray-400">The user profile you're looking for doesn't exist.</p>
-        </div>
+      <div className="mx-auto flex min-h-[70dvh] w-full max-w-2xl flex-col justify-center px-4 py-16 sm:px-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">This profile isn’t available</h1>
+        <p className="mt-2 text-zinc-600">The link may be wrong, or the account may no longer exist.</p>
+        <Link href="/listings" className="btn btn-primary mt-8 self-start">Browse listings</Link>
       </div>
     );
   }
 
+  const memberSince = formatDate(profile.createdAt);
+
   return (
-    <div className="min-h-screen bg-dark-950">
-      
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          Back
-        </button>
+    <div className="mx-auto w-full max-w-[1150px] px-4 pb-20 pt-10 sm:px-6">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="inline-flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-950"
+      >
+        <ArrowLeft strokeWidth={1.75} className="h-4 w-4" />
+        Back
+      </button>
 
-        {/* Profile Header */}
-        <div className="bg-dark-800 rounded-2xl p-6 mb-8">
-          <div className="flex items-start space-x-6">
-            {/* Avatar - clickable */}
-            <button 
-              onClick={handleProfileClick}
-              className="shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-full"
-              type="button"
-              aria-label="View profile"
-            >
-              <ProfilePicture
-                src={profile.profilePicture}
-                alt={profile.username}
-                name={profile.username}
-                size="xl"
-              />
-            </button>
+      <header className="mt-8 flex flex-col gap-6 border-b border-zinc-200 pb-8 sm:flex-row sm:items-start">
+        <ProfilePicture
+          src={profile.profilePicture}
+          alt={profile.username}
+          name={profile.username}
+          size="xl"
+        />
+        <div className="min-w-0">
+          <h1 className="break-words text-3xl font-semibold tracking-tight text-zinc-950">
+            {profile.displayName || profile.username}
+          </h1>
+          {memberSince && <p className="mt-1 text-sm text-zinc-500">Member since {memberSince}</p>}
+          {profile.bio && <p className="mt-4 max-w-[65ch] leading-relaxed text-zinc-600">{profile.bio}</p>}
+        </div>
+      </header>
 
-            {/* Profile Info */}
-            <div className="flex-1 min-w-0">
-              {/* Name - clickable */}
-              <button
-                onClick={handleProfileClick}
-                className="cursor-pointer hover:text-accent-400 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
-                type="button"
-              >
-                <h1 className="text-2xl font-bold text-white mb-2">
-                  {profile.displayName || profile.username}
-                </h1>
-              </button>
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-zinc-950">
+          {listings.length === 1 ? '1 listing' : `${listings.length} listings`}
+        </h2>
 
-              {profile.createdAt && (
-                <div className="flex items-center space-x-1 text-gray-400 mb-3">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-sm">Member since {formatDate(profile.createdAt)}</span>
-                </div>
-              )}
-
-              {profile.bio && (
-                <p className="text-gray-300 mb-4">{profile.bio}</p>
-              )}
-            </div>
+        {listings.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 p-8">
+            <p className="text-zinc-600">Nothing listed right now. Check back later.</p>
           </div>
-        </div>
-
-        {/* Listings Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-white mb-4">
-            Listings ({listings.length})
-          </h2>
-          
-          {listings.length === 0 ? (
-            <div className="bg-dark-800 rounded-2xl p-8 text-center">
-              <p className="text-gray-400">No listings found.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {listings.map((listing) => (
-                <ListingCard
-                  key={listing.id}
-                  variant="grid"
-                  id={listing.id}
-                  title={listing.title}
-                  description=""
-                  price={listing.price}
-                  category={listing.category || ''}
-                  imageUrl={listing.photos?.[0] || '/default-avatar.png'}
-                  sellerId={listing.sellerId}
-                  sellerProfile={(listing as any).sellerProfile}
-                  sold={(listing as any).sold}
-                  soldThroughAllVerse={(listing as any).soldThroughAllVerse}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+        ) : (
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {listings.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                variant="grid"
+                id={listing.id}
+                title={listing.title}
+                description=""
+                price={listing.price}
+                category={listing.category || ''}
+                imageUrl={listing.photos?.[0] || '/default-avatar.png'}
+                sellerId={listing.sellerId}
+                sellerProfile={(listing as any).sellerProfile}
+                sold={(listing as any).sold}
+                soldThroughAllVerse={(listing as any).soldThroughAllVerse}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

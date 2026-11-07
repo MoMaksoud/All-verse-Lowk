@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { AnalyticsDeferred } from '@/components/AnalyticsDeferred';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Outfit } from 'next/font/google';
 import './globals.css';
 import './performance.css';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -12,22 +12,16 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteTransitionMonitor } from '@/lib/performance';
 import { WebVitalsReporter } from '@/components/WebVitalsReporter';
 import { ConditionalNavigation } from '@/components/ConditionalNavigation';
+import { SiteFooter } from '@/components/SiteFooter';
 import { RouteProgress } from '@/components/RouteProgress';
 
 const GA_MEASUREMENT_ID = 'G-1KVRME8D19';
 
-const inter = Inter({
+const outfit = Outfit({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   display: 'swap',
-  variable: '--font-inter',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
-  display: 'swap',
-  variable: '--font-display',
+  variable: '--font-sans',
 });
 
 export const metadata: Metadata = {
@@ -73,7 +67,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
-  colorScheme: 'dark',
+  colorScheme: 'light',
 };
 
 export default function RootLayout({
@@ -84,7 +78,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        <meta name="color-scheme" content="dark" />
+        <meta name="color-scheme" content="light" />
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
           strategy="afterInteractive"
@@ -98,7 +92,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans h-full overflow-x-hidden`} suppressHydrationWarning>
+      <body className={`${outfit.variable} font-sans antialiased text-zinc-900 h-full overflow-x-hidden`} suppressHydrationWarning>
         <div className="flex flex-col min-h-screen w-full max-w-screen">
           <ErrorBoundary>
             <AuthProvider>
@@ -112,6 +106,7 @@ export default function RootLayout({
                     {children}
                     <AnalyticsDeferred />
                   </div>
+                  <SiteFooter />
                 </ChatProvider>
               </ToastProvider>
             </AuthProvider>

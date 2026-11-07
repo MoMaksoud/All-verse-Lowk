@@ -1,34 +1,58 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { Heart, Star, MessageCircle, X, ArrowLeft, Clock, Tag } from 'lucide-react';
+import clsx from 'clsx';
+import {
+  Heart, MessageCircle, ChevronRight, ShieldCheck, Sparkles, Pencil, Trash2,
+  ShoppingBag, Check, PackageX, Loader2,
+} from 'lucide-react';
 import { SimpleListing } from '@marketplace/types';
 
-import ListingCard from '@/components/ListingCard';
-import { SellerInfo } from '@/components/SellerInfo';
-import { ListingActions } from '@/components/ListingActions';
-import { PriceSuggestionModal } from '@/components/PriceSuggestionModal';
+import ListingCard, { ListingCardSkeleton } from '@/components/ListingCard';
+import { ProfilePicture } from '@/components/ProfilePicture';
+import { loadFavoriteIds, setFavorite } from '@/lib/favorites';
 import ShareMenu from '@/components/ShareMenu';
-import { Card } from '@/components/ui/Card';
 import { ListingGallery } from '@/components/ListingGallery';
+import { MessageInputModal } from '@/components/MessageInputModal';
+import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useStartChatFromListing } from '@/lib/messaging';
 import { formatPrice } from '@/lib/format';
+import { categoryLabel } from '@/lib/categories';
+
+type Seller = { username: string; profilePicture: string | null; createdAt: unknown };
 
 const formatRelativeTime = (dateString: string) => {
   const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  return date.toLocaleDateString();
+  if (isNaN(date.getTime())) return null;
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  if (s < 2592000) return `${Math.floor(s / 86400)} days ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
+
+// createdAt may be a Firestore Timestamp, ISO string or Date
+const memberSince = (value: unknown) => {
+  const v = value as { toDate?: () => Date } | string | Date | null | undefined;
+  const date = typeof v === 'string' ? new Date(v) : v instanceof Date ? v : v?.toDate?.();
+  if (!date || isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(date);
+};
+
+const stripMarkdown = (text: string) =>
+  text
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/#{1,6}\s+/g, '')
+    .trim();
+
+const conditionLabel = (c?: string) => (c ? c.charAt(0).toUpperCase() + c.slice(1).replace('-', ' ') : null);
 
 export default function ListingDetailPage() {
   const params = useParams();
@@ -36,36 +60,27 @@ export default function ListingDetailPage() {
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
   const { startChat } = useStartChatFromListing();
+
   const [listing, setListing] = useState<SimpleListing | null>(null);
+  const [seller, setSeller] = useState<Seller | null>(null);
+  const [similar, setSimilar] = useState<SimpleListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sellerProfile, setSellerProfile] = useState<{
-    username?: string;
-    profilePicture?: string;
-    createdAt?: string;
-  } | null>(null);
-  
-  // Owner check
-  const isOwner = currentUser?.uid && listing?.sellerId && currentUser.uid === listing.sellerId;
-  const [isFavorited, setIsFavorited] = useState(() => {
-    if (typeof window !== 'undefined' && params.id) {
-      try {
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        return favorites.includes(params.id as string);
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
-  const [showMessageModal, setShowMessageModal] = useState(false);
-  const [message, setMessage] = useState('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showPriceSuggestionModal, setShowPriceSuggestionModal] = useState(false);
-  const [priceSuggestion, setPriceSuggestion] = useState('');
-  const [priceSuggestionLoading, setPriceSuggestionLoading] = useState(false);
-  const [addingToCart, setAddingToCart] = useState(false);
-  const [similarListings, setSimilarListings] = useState<SimpleListing[]>([]);
   const [pageError, setPageError] = useState<string | null>(null);
+
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [cartState, setCartState] = useState<'idle' | 'adding' | 'added'>('idle');
+  const [priceCheck, setPriceCheck] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; text?: string }>({ status: 'idle' });
+
+  const isOwner = !!currentUser?.uid && currentUser.uid === listing?.sellerId;
+  const isSold = listing?.sold === true || listing?.inventory === 0;
+
+  useEffect(() => {
+    if (!currentUser || !params.id) return;
+    loadFavoriteIds().then((ids) => setIsFavorited(ids.has(params.id as string)));
+  }, [currentUser, params.id]);
 
   const fetchData = useCallback(async () => {
     if (!params.id) return;
@@ -75,67 +90,36 @@ export default function ListingDetailPage() {
     try {
       const { apiGet } = await import('@/lib/api-client');
 
-      // Step 1: fetch listing
       const listingRes = await apiGet(`/api/listings/${params.id}`, { requireAuth: false });
       if (!listingRes.ok) {
+        if (listingRes.status === 404) throw new Error('not-found');
         const errorData = await listingRes.json().catch(() => ({}));
-        const msg =
-          errorData?.message || errorData?.error ||
-          (errorData?.code ? `Failed to fetch listing (${errorData.code})` : null);
-        throw new Error(msg || 'Failed to fetch listing');
+        throw new Error(errorData?.message || errorData?.error || 'We couldn’t load this listing.');
       }
       const raw = await listingRes.json();
-      const listingData = raw?.data || raw;
-      if (!listingData || typeof listingData !== 'object' || !listingData.id) {
-        throw new Error('Listing data was malformed');
-      }
+      const listingData: SimpleListing = raw?.data || raw;
+      if (!listingData?.id) throw new Error('not-found');
 
-      // Step 2: fetch seller profile + similar listings in parallel (no extra re-renders)
       const [sellerRes, similarRes] = await Promise.all([
         apiGet(`/api/profile?userId=${listingData.sellerId}`, { requireAuth: false }),
-        apiGet(
-          `/api/listings?category=${encodeURIComponent(listingData.category)}&limit=6`,
-          { requireAuth: false }
-        ),
+        apiGet(`/api/listings?category=${encodeURIComponent(listingData.category)}&limit=6`, { requireAuth: false }),
       ]);
 
-      let profile: { username?: string; profilePicture?: string | null; createdAt?: string | null } = {
-        username: 'Marketplace User',
-        profilePicture: null,
-        createdAt: null,
-      };
-      if (sellerRes.ok) {
-        const sd = await sellerRes.json();
-        profile = {
-          username: sd.data?.username || 'Marketplace User',
-          profilePicture: sd.data?.profilePicture || null,
-          createdAt: sd.data?.createdAt || null,
-        };
-      }
+      const sd = sellerRes.ok ? await sellerRes.json() : null;
+      const simd = similarRes.ok ? await similarRes.json() : null;
+      const items: SimpleListing[] = simd?.data ?? simd?.items ?? (Array.isArray(simd) ? simd : []);
 
-      let similar: SimpleListing[] = [];
-      if (similarRes.ok) {
-        const sd = await similarRes.json();
-        const items: SimpleListing[] = Array.isArray(sd?.data)
-          ? sd.data
-          : Array.isArray(sd?.items)
-          ? sd.items
-          : Array.isArray(sd)
-          ? sd
-          : [];
-        similar = items
-          .filter((l) => l.id !== listingData.id && !(l.sold ?? false))
-          .slice(0, 4);
-      }
-
-      // Set all state at once — single re-render
       setListing(listingData);
-      setSellerProfile(profile);
-      setSimilarListings(similar);
+      setSeller({
+        username: sd?.data?.username || 'AllVerse seller',
+        profilePicture: sd?.data?.profilePicture || null,
+        createdAt: sd?.data?.createdAt ?? null,
+      });
+      setSimilar(items.filter((l) => l.id !== listingData.id && !l.sold).slice(0, 4));
     } catch (error) {
       console.error('Error fetching listing:', error);
       setListing(null);
-      setPageError(error instanceof Error ? error.message : 'Failed to fetch listing');
+      setPageError(error instanceof Error ? error.message : 'We couldn’t load this listing.');
     } finally {
       setLoading(false);
     }
@@ -145,475 +129,409 @@ export default function ListingDetailPage() {
     fetchData();
   }, [fetchData]);
 
-  // Helper function to format member since date
-  const getMemberSince = () => {
-    if (!sellerProfile?.createdAt) return '2025';
+  const toggleFavorite = async () => {
+    if (!listing) return;
+    if (!currentUser) {
+      showError('Sign in to save items');
+      return;
+    }
+    const next = !isFavorited;
+    setIsFavorited(next);
     try {
-      // Handle Firestore Timestamp, ISO string, or Date object
-      const createdAt = sellerProfile.createdAt;
-      if (!createdAt) return '2025';
-      
-      // Safe date conversion: check for toDate method first, then Date instance, then string
-      const createdAtValue = createdAt as any;
-      let date: Date | null = null;
-      
-      if (createdAtValue && typeof createdAtValue === 'object') {
-        if (createdAtValue?.toDate && typeof createdAtValue.toDate === 'function') {
-          date = createdAtValue.toDate();
-        } else if (createdAtValue instanceof Date) {
-          date = createdAtValue;
-        }
-      } else if (typeof createdAtValue === 'string') {
-        date = new Date(createdAtValue);
-      }
-      
-      if (!date || isNaN(date.getTime())) {
-        return '2025';
-      }
-      
-      return new Intl.DateTimeFormat("en-US", {
-        month: "short",
-        year: "numeric"
-      }).format(date);
+      await setFavorite(listing.id, next);
     } catch {
-      return '2025';
+      setIsFavorited(!next);
+      showError('Couldn’t update saved items');
     }
   };
 
-  const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    
-    if (!listing) return;
-    
-    try {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      let updatedFavorites;
-      
-      if (isFavorited) {
-        updatedFavorites = favorites.filter((id: string) => id !== listing.id);
-        showSuccess('Removed from favorites');
-      } else {
-        updatedFavorites = [...favorites, listing.id];
-        showSuccess('Added to favorites');
-      }
-      
-      localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
-      setIsFavorited(!isFavorited);
-    } catch (error) {
-      console.error('Error updating favorites:', error);
-      showError('Failed to update favorites');
+  const openMessage = () => {
+    if (!currentUser) {
+      router.push(`/signin?redirect=/listings/${listing?.id}`);
+      return;
     }
-  }, [isFavorited, listing]);
-
-  const handleMessageClick = useCallback((e?: React.MouseEvent) => {
-    e?.preventDefault();
     setShowMessageModal(true);
-  }, []);
+  };
 
-  const handleSendMessage = useCallback(async () => {
-    if (!message.trim()) return;
-    
-    if (!listing) {
-      showError('Error', 'Listing information not available.');
+  const sendMessage = async (text: string) => {
+    if (!listing?.sellerId) {
+      showError('Unable to find seller information.');
       return;
     }
-
-    if (!listing.sellerId) {
-      showError('Error', 'Unable to find seller information.');
-      return;
-    }
-
     try {
       await startChat({
         listingId: listing.id,
         sellerId: listing.sellerId,
         listingTitle: listing.title,
         listingPrice: listing.price,
-        initialMessage: message.trim(),
+        initialMessage: text,
       });
-      
-      setMessage('');
-      setShowMessageModal(false);
     } catch (error) {
       console.error('Error sending message:', error);
-      showError('Failed to send message', 'Please try again later.');
+      showError('Message not sent', 'Please try again.');
+      throw error;
     }
-  }, [message, listing, startChat, showError]);
+  };
 
-  const handleSuggestPrice = useCallback(async () => {
+  const addToCart = async () => {
+    if (!listing || cartState === 'adding') return;
+    if (!currentUser) {
+      router.push(`/signin?redirect=/listings/${listing.id}`);
+      return;
+    }
+    setCartState('adding');
+    try {
+      const { apiPost } = await import('@/lib/api-client');
+      const response = await apiPost('/api/carts', {
+        listingId: listing.id,
+        sellerId: listing.sellerId,
+        qty: 1,
+        priceAtAdd: listing.price,
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Couldn’t add to cart');
+      }
+      setCartState('added');
+    } catch (error) {
+      setCartState('idle');
+      showError(error instanceof Error ? error.message : 'Couldn’t add to cart');
+    }
+  };
+
+  const runPriceCheck = async () => {
     if (!listing) return;
-    
-    setPriceSuggestionLoading(true);
-    setShowPriceSuggestionModal(true);
-    
+    setPriceCheck({ status: 'loading' });
     try {
       const { apiPost } = await import('@/lib/api-client');
       const response = await apiPost('/api/prices/suggest', {
         title: listing.title,
         description: listing.description,
         category: listing.category,
-        condition: (listing as any).condition || 'Good',
+        condition: listing.condition || 'good',
         currentPrice: listing.price,
       }, { requireAuth: false });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.suggestion) {
-          setPriceSuggestion(data.suggestion);
-        } else {
-          throw new Error('Invalid response format');
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get price suggestion');
-      }
-    } catch (error) {
-      console.error('Error getting price suggestion:', error);
-      setPriceSuggestion('Sorry, I was unable to generate a price suggestion at this time. Please try again later or consider researching similar listings manually.');
-      showError('Failed to get price suggestion');
-    } finally {
-      setPriceSuggestionLoading(false);
+      const data = await response.json().catch(() => ({}));
+      // 'fallback' is a canned guess from the API when Gemini is unreachable; don't present it as an AI price
+      if (!response.ok || !data.suggestion || data.source === 'fallback') throw new Error();
+      setPriceCheck({ status: 'done', text: stripMarkdown(data.suggestion) });
+    } catch {
+      setPriceCheck({ status: 'error' });
     }
-  }, [listing]);
+  };
 
-  const addToCart = useCallback(async () => {
+  const deleteListing = async () => {
     if (!listing) return;
-    if (addingToCart) return;
-    
-    if (!currentUser) {
-      showError('Please sign in to add items to cart');
-      return;
-    }
-    if (currentUser.uid === listing.sellerId) {
-      showError("You can't add your own listing to cart");
-      return;
-    }
-    if ((listing.sold ?? false) === true) {
-      showError('This item has already been sold');
-      return;
-    }
-
-    setAddingToCart(true);
-    try {
-      const { apiPost } = await import('@/lib/api-client');
-      const response = await apiPost('/api/carts', {
-        listingId: listing.id,
-        sellerId: listing.sellerId || 'test-seller',
-        qty: 1,
-        priceAtAdd: listing.price,
-      });
-
-      if (response.ok) {
-        showSuccess('Added to cart!');
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        showError(errorData.error || 'Failed to add to cart');
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      showError('Error adding to cart');
-    } finally {
-      setAddingToCart(false);
-    }
-  }, [listing, currentUser, addingToCart, showError, showSuccess]);
-
-  const handleDeleteListing = useCallback(async () => {
-    if (!listing || !currentUser) return;
-    
+    setDeleting(true);
     try {
       const { apiDelete } = await import('@/lib/api-client');
       const response = await apiDelete(`/api/listings/${listing.id}`);
-      
-      if (response.ok) {
-        showSuccess('Listing deleted successfully!');
-        router.push('/listings');
-      } else {
-        throw new Error('Failed to delete listing');
-      }
-    } catch (error) {
-      console.error('Error deleting listing:', error);
-      showError('Failed to delete listing');
+      if (!response.ok) throw new Error();
+      showSuccess('Listing deleted');
+      router.push('/my-listings');
+    } catch {
+      showError('Couldn’t delete listing');
+      setDeleting(false);
     }
-  }, [listing, currentUser, router]);
+  };
 
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-dark-950">
-
-        {/* Header bar skeleton */}
-        <div className="bg-dark-900 border-b border-dark-700">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="h-6 w-16 bg-dark-700 rounded animate-pulse" />
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex justify-center">
-            <div className="w-full max-w-5xl">
-              <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                  {/* Gallery skeleton */}
-                  <div className="lg:col-span-3 bg-dark-700 rounded-xl h-80 animate-pulse" />
-                  {/* Details skeleton */}
-                  <div className="lg:col-span-2 flex flex-col gap-4">
-                    <div className="h-4 w-20 bg-dark-700 rounded animate-pulse" />
-                    <div className="h-7 w-3/4 bg-dark-700 rounded animate-pulse" />
-                    <div className="space-y-2">
-                      <div className="h-4 w-full bg-dark-700 rounded animate-pulse" />
-                      <div className="h-4 w-5/6 bg-dark-700 rounded animate-pulse" />
-                      <div className="h-4 w-4/6 bg-dark-700 rounded animate-pulse" />
-                    </div>
-                    <div className="h-10 w-full bg-dark-700 rounded-xl animate-pulse mt-4" />
-                    <div className="h-10 w-full bg-dark-700 rounded-xl animate-pulse" />
-                    <div className="h-20 w-full bg-dark-700 rounded-xl animate-pulse mt-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <DetailSkeleton />;
 
   if (!listing) {
+    const notFound = pageError === 'not-found';
     return (
-      <div className="min-h-screen bg-dark-950">
-
-        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-white mb-2">Listing Not Found</h1>
-            <p className="text-gray-400">
-              {pageError || "The listing you're looking for doesn't exist."}
-            </p>
-            <button
-              onClick={() => router.push('/listings')}
-              className="mt-4 btn btn-primary"
-            >
-              Back to Listings
-            </button>
+      <div className="mx-auto flex min-h-[70dvh] w-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md">
+          <PackageX strokeWidth={1.5} className="h-10 w-10 text-zinc-400" />
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-950">
+            {notFound ? 'This listing is gone' : 'Something went wrong'}
+          </h1>
+          <p className="mt-2 text-zinc-600">
+            {notFound ? 'It may have sold or been removed by the seller.' : pageError}
+          </p>
+          <div className="mt-6 flex gap-3">
+            {!notFound && <button onClick={fetchData} className="btn btn-primary">Try again</button>}
+            <Link href="/listings" className={notFound ? 'btn btn-primary' : 'btn btn-outline'}>Browse marketplace</Link>
           </div>
         </div>
       </div>
     );
   }
 
+  const since = memberSince(seller?.createdAt);
+  const listed = formatRelativeTime(listing.createdAt);
+  const details = [
+    ['Condition', conditionLabel(listing.condition)],
+    ['Category', categoryLabel(listing.category)],
+    ['Listed', listed],
+  ].filter(([, v]) => v) as [string, string][];
+
   return (
-    <div className="min-h-screen bg-dark-950">
+    <div className="bg-white">
+      <div className="mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm text-zinc-500">
+          <Link href="/listings" className="shrink-0 hover:text-zinc-900">Marketplace</Link>
+          <ChevronRight aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5 shrink-0" />
+          <Link href={`/listings?category=${listing.category}`} className="shrink-0 hover:text-zinc-900">
+            {categoryLabel(listing.category)}
+          </Link>
+          <ChevronRight aria-hidden strokeWidth={1.75} className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate text-zinc-900">{listing.title}</span>
+        </nav>
 
-      
-      {/* Header */}
-      <div className="bg-dark-900 border-b border-dark-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back
-            </button>
-            <div className="flex items-center gap-4">
-              <ShareMenu
-                listing={listing}
-                align="right"
-              />
-              <button
-                onClick={handleFavoriteClick}
-                className={`p-2 rounded-lg transition-colors ${
-                  isFavorited ? 'bg-red-500 text-white' : 'bg-dark-800 hover:bg-dark-700 text-gray-300'
-                }`}
-              >
-                <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
-              </button>
-            </div>
+        <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[1.35fr_1fr] lg:gap-14">
+          {/* Left: photos + description */}
+          <div className="min-w-0">
+            <ListingGallery photos={listing.photos || []} title={listing.title} />
+
+            <section className="mt-10 hidden lg:block">
+              <Description listing={listing} details={details} />
+            </section>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-        <div className="flex justify-center">
-          <div className="w-full max-w-5xl">
-            {/* Single Card with Image, Description, and Actions */}
-            <Card>
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {/* Left Side - Image Gallery (60%) */}
-                <div className="lg:col-span-3">
-                  <ListingGallery photos={listing.photos || []} title={listing.title} />
-                </div>
-
-                {/* Right Side - Description and Actions (40%) */}
-                <div className="lg:col-span-2 flex flex-col space-y-6">
-                  {/* Listing Details */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Tag className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm text-zinc-400 capitalize">{listing.category}</span>
-                    </div>
-                    <h1 className="text-2xl font-semibold text-zinc-100 mb-4">
-                      {listing.title}
-                    </h1>
-                    <div>
-                      <h3 className="text-lg font-medium text-zinc-200 mb-3">Description</h3>
-                      <p className="text-zinc-300 leading-relaxed">{listing.description}</p>
-                    </div>
-                  </div>
-
-                  {/* Actions Box */}
-                  <div>
-                    {(listing.sold ?? false) === true && !isOwner ? (
-                      <div className="space-y-4">
-                        <h3 className="text-zinc-200 font-medium">Actions</h3>
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-zinc-100 mb-1">
-                            {formatPrice(listing.price)}
-                          </div>
-                          <div className={`text-lg font-semibold mt-4 ${(listing as SimpleListing & { soldThroughAllVerse?: boolean }).soldThroughAllVerse ? "text-emerald-400" : "text-red-400"}`}>
-                            {(listing as SimpleListing & { soldThroughAllVerse?: boolean }).soldThroughAllVerse ? "Sold through AllVerse" : "Sold"}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <ListingActions
-                        listing={listing}
-                        onBuyNow={() => addToCart()}
-                        onSuggestPrice={() => handleSuggestPrice()}
-                        onMessageSeller={() => handleMessageClick()}
-                        onEditListing={() => router.push(`/listings/${listing.id}/edit`)}
-                        onDeleteListing={() => setShowDeleteModal(true)}
-                        addingToCart={addingToCart}
-                        suggestingPrice={priceSuggestionLoading}
-                        isOwner={isOwner}
-                      />
-                    )}
-                  </div>
-
-                  {/* Seller Information */}
-                  {!isOwner && (
-                    <div>
-                      <SellerInfo
-                        seller={{
-                          name: sellerProfile?.username || "Marketplace User",
-                          since: getMemberSince(),
-                          id: listing.sellerId,
-                          profilePicture: sellerProfile?.profilePicture || null,
-                        }}
-                        onContactClick={() => handleMessageClick()}
-                        currentUserId={currentUser?.uid}
-                      />
-                    </div>
-                  )}
-                </div>
+          {/* Right: buy box */}
+          <div className="min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-2xl font-semibold leading-snug tracking-tight text-zinc-950 md:text-3xl">
+                {listing.title}
+              </h1>
+              <div className="flex shrink-0 items-center gap-1">
+                <ShareMenu listing={listing} align="right" />
+                {!isOwner && (
+                  <button
+                    type="button"
+                    onClick={toggleFavorite}
+                    aria-pressed={isFavorited}
+                    aria-label={isFavorited ? 'Remove from saved' : 'Save item'}
+                    className="grid h-10 w-10 place-items-center rounded-lg text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950 active:scale-95"
+                  >
+                    <Heart strokeWidth={1.75} className={clsx('h-5 w-5', isFavorited && 'fill-red-500 text-red-500')} />
+                  </button>
+                )}
               </div>
-            </Card>
+            </div>
+
+            <p className="mt-2 text-sm text-zinc-500">
+              {[conditionLabel(listing.condition), listed && `Listed ${listed}`].filter(Boolean).join(' · ')}
+            </p>
+
+            <div className="mt-6 flex items-baseline gap-3">
+              <span className="text-3xl font-semibold tabular-nums text-zinc-950">{formatPrice(listing.price)}</span>
+              {isSold && (
+                <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium uppercase tracking-wide text-zinc-600">
+                  {listing.soldThroughAllVerse ? 'Sold on AllVerse' : 'Sold'}
+                </span>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 space-y-3">
+              {isOwner ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <Link href={`/listings/${listing.id}/edit`} className="btn btn-primary gap-2">
+                    <Pencil strokeWidth={1.75} className="h-4 w-4" /> Edit listing
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(true)}
+                    className="btn btn-outline gap-2 text-red-600 hover:border-red-300 hover:bg-red-50"
+                  >
+                    <Trash2 strokeWidth={1.75} className="h-4 w-4" /> Delete
+                  </button>
+                </div>
+              ) : isSold ? (
+                <Link href={`/listings?category=${listing.category}`} className="btn btn-outline w-full">
+                  See similar items for sale
+                </Link>
+              ) : (
+                <>
+                  {cartState === 'added' ? (
+                    <Link href="/cart" className="btn btn-primary w-full gap-2 py-3">
+                      <Check strokeWidth={2} className="h-4 w-4" /> Added. View cart
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={addToCart}
+                      disabled={cartState === 'adding'}
+                      className="btn btn-primary w-full gap-2 py-3"
+                    >
+                      {cartState === 'adding'
+                        ? <Loader2 strokeWidth={2} className="h-4 w-4 animate-spin" />
+                        : <ShoppingBag strokeWidth={1.75} className="h-4 w-4" />}
+                      Add to cart
+                    </button>
+                  )}
+                  <button type="button" onClick={openMessage} className="btn btn-outline w-full gap-2 py-3">
+                    <MessageCircle strokeWidth={1.75} className="h-4 w-4" /> Message seller
+                  </button>
+                </>
+              )}
+            </div>
+
+            {!isSold && !isOwner && (
+              <p className="mt-4 flex gap-2.5 text-sm text-zinc-600">
+                <ShieldCheck strokeWidth={1.75} className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                Checkout is handled by Stripe. AllVerse never sees your card number.
+              </p>
+            )}
+
+            {/* AI price check */}
+            <section className="mt-8 rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary-700">
+                <Sparkles strokeWidth={1.75} className="h-4 w-4" />
+                AI price check
+              </div>
+              {priceCheck.status === 'idle' && (
+                <>
+                  <p className="mt-2 text-sm text-zinc-600">
+                    {isOwner
+                      ? 'Compare your asking price with recent sales on AllVerse and eBay.'
+                      : 'Is this a fair price? Compare it with recent sales on AllVerse and eBay.'}
+                  </p>
+                  <button type="button" onClick={runPriceCheck} className="btn btn-outline mt-4 bg-white py-2">
+                    Check the price
+                  </button>
+                </>
+              )}
+              {priceCheck.status === 'loading' && (
+                <div className="mt-3 space-y-2" aria-live="polite">
+                  <span className="sr-only">Checking recent sales</span>
+                  <div className="h-3.5 w-full animate-pulse rounded bg-zinc-200" />
+                  <div className="h-3.5 w-11/12 animate-pulse rounded bg-zinc-200" />
+                  <div className="h-3.5 w-2/3 animate-pulse rounded bg-zinc-200" />
+                </div>
+              )}
+              {priceCheck.status === 'done' && (
+                <p className="mt-3 animate-fade-in whitespace-pre-line text-sm leading-relaxed text-zinc-800" aria-live="polite">
+                  {priceCheck.text}
+                </p>
+              )}
+              {priceCheck.status === 'error' && (
+                <div className="mt-2 text-sm" role="alert">
+                  <p className="text-red-600">AI pricing isn’t available right now.</p>
+                  <button type="button" onClick={runPriceCheck} className="mt-2 font-medium text-primary-700 underline-offset-4 hover:underline">
+                    Try again
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* Seller */}
+            {!isOwner && (
+              <Link
+                href={`/profile/${listing.sellerId}`}
+                className="group mt-8 flex items-center gap-4 border-t border-zinc-200 pt-6"
+              >
+                <ProfilePicture src={seller?.profilePicture} alt={seller?.username || 'Seller'} name={seller?.username} size="md" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-zinc-950 group-hover:text-primary-700">{seller?.username}</p>
+                  {since && <p className="text-sm text-zinc-500">On AllVerse since {since}</p>}
+                </div>
+                <ChevronRight strokeWidth={1.75} className="h-4 w-4 text-zinc-400 transition group-hover:translate-x-0.5" />
+              </Link>
+            )}
+
+            <section className="mt-10 lg:hidden">
+              <Description listing={listing} details={details} />
+            </section>
           </div>
         </div>
 
         {/* Similar items */}
-        {similarListings.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-xl font-bold text-white mb-4">Similar items</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {similarListings.map((similar) => (
-                <ListingCard
-                  key={similar.id}
-                  variant="grid"
-                  id={similar.id}
-                  title={similar.title}
-                  description={similar.description ?? ''}
-                  price={similar.price}
-                  category={similar.category ?? ''}
-                  condition={similar.condition}
-                  imageUrl={similar.photos?.[0] ?? null}
-                  sellerId={similar.sellerId}
-                  sold={similar.sold}
-                  soldThroughAllVerse={(similar as SimpleListing & { soldThroughAllVerse?: boolean }).soldThroughAllVerse}
-                  inventory={similar.inventory}
-                />
+        {similar.length > 0 && (
+          <section className="mt-20 border-t border-zinc-200 pt-10">
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="text-xl font-semibold tracking-tight text-zinc-950">More in {categoryLabel(listing.category)}</h2>
+              <Link href={`/listings?category=${listing.category}`} className="text-sm font-medium text-primary-700 hover:underline">
+                See all
+              </Link>
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 lg:gap-x-6">
+              {similar.map((s, i) => (
+                <div key={s.id} className="reveal" style={{ '--i': i } as React.CSSProperties}>
+                  <ListingCard
+                    variant="grid"
+                    id={s.id}
+                    title={s.title}
+                    description={s.description ?? ''}
+                    price={s.price}
+                    category={s.category ?? ''}
+                    condition={s.condition}
+                    imageUrl={s.photos?.[0] ?? null}
+                    sellerId={s.sellerId}
+                    sold={s.sold}
+                    soldThroughAllVerse={s.soldThroughAllVerse}
+                    inventory={s.inventory}
+                  />
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
       </div>
 
-      {/* Modals */}
-      {showMessageModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl border border-dark-700 p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Send Message</h3>
-              <button
-                onClick={() => setShowMessageModal(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your message..."
-              className="w-full h-32 p-3 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-500 mb-4"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowMessageModal(false)}
-                className="btn btn-outline flex-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendMessage}
-                className="btn btn-primary flex-1"
-              >
-                Send Message
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl border border-dark-700 p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Delete Listing</h3>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-gray-300 mb-6">
-              Are you sure you want to delete this listing? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="btn btn-outline flex-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteListing}
-                className="btn bg-red-500 hover:bg-red-600 text-white flex-1"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Price Suggestion Modal */}
-      <PriceSuggestionModal
-        isOpen={showPriceSuggestionModal}
-        onClose={() => setShowPriceSuggestionModal(false)}
-        suggestion={priceSuggestion}
-        loading={priceSuggestionLoading}
-        listingTitle={listing?.title}
+      <MessageInputModal
+        isOpen={showMessageModal}
+        onClose={() => setShowMessageModal(false)}
+        onSubmit={sendMessage}
+        listingTitle={listing.title}
       />
+
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={deleteListing}
+        title="Delete this listing?"
+        message="Buyers will no longer be able to find it. This can’t be undone."
+        confirmText="Delete listing"
+        type="danger"
+        isLoading={deleting}
+      />
+    </div>
+  );
+}
+
+function Description({ listing, details }: { listing: SimpleListing; details: [string, string][] }) {
+  return (
+    <>
+      <h2 className="text-lg font-semibold tracking-tight text-zinc-950">About this item</h2>
+      <p className="mt-3 max-w-[65ch] whitespace-pre-line leading-relaxed text-zinc-700">
+        {listing.description || 'The seller didn’t add a description.'}
+      </p>
+      {details.length > 0 && (
+        <dl className="mt-6 divide-y divide-zinc-200 border-y border-zinc-200 text-sm">
+          {details.map(([k, v]) => (
+            <div key={k} className="grid grid-cols-[8rem_1fr] py-3">
+              <dt className="text-zinc-500">{k}</dt>
+              <dd className="text-zinc-900">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </>
+  );
+}
+
+function DetailSkeleton() {
+  return (
+    <div className="mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8" aria-busy="true">
+      <div className="h-4 w-64 max-w-full animate-pulse rounded bg-zinc-100" />
+      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[1.35fr_1fr] lg:gap-14">
+        <div className="aspect-[4/3] w-full animate-pulse rounded-2xl bg-zinc-100" />
+        <div className="space-y-4">
+          <div className="h-8 w-4/5 animate-pulse rounded bg-zinc-100" />
+          <div className="h-4 w-1/3 animate-pulse rounded bg-zinc-100" />
+          <div className="h-9 w-1/4 animate-pulse rounded bg-zinc-100" />
+          <div className="h-12 w-full animate-pulse rounded-lg bg-zinc-100" />
+          <div className="h-12 w-full animate-pulse rounded-lg bg-zinc-100" />
+          <div className="h-32 w-full animate-pulse rounded-2xl bg-zinc-100" />
+        </div>
+      </div>
+      <div className="mt-20 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => <ListingCardSkeleton key={i} />)}
+      </div>
     </div>
   );
 }

@@ -85,7 +85,7 @@ export function ListingPreviewCard({ listingId, className = '', onError }: Listi
 
   if (loading) {
     return (
-      <div className={`bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 ${className}`}>
+      <div className={`bg-white border border-zinc-200 rounded-lg p-3 ${className}`}>
         <div className="animate-pulse space-y-2">
           <div className="h-20 bg-zinc-700 rounded"></div>
           <div className="h-4 bg-zinc-700 rounded w-3/4"></div>
@@ -97,8 +97,8 @@ export function ListingPreviewCard({ listingId, className = '', onError }: Listi
 
   if (error || !listing) {
     return (
-      <div className={`bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 ${className}`}>
-        <p className="text-zinc-400 text-sm">Listing unavailable</p>
+      <div className={`bg-white border border-zinc-200 rounded-lg p-3 ${className}`}>
+        <p className="text-zinc-600 text-sm">Listing unavailable</p>
       </div>
     );
   }
@@ -106,11 +106,11 @@ export function ListingPreviewCard({ listingId, className = '', onError }: Listi
   return (
     <Link 
       href={`/listings/${listingId}`}
-      className={`block bg-zinc-800/50 border border-zinc-700 hover:border-accent-500/50 rounded-lg overflow-hidden transition-all duration-200 ${className}`}
+      className={`block bg-white border border-zinc-200 hover:border-accent-500/50 rounded-lg overflow-hidden transition-all duration-200 ${className}`}
     >
       <div className="flex gap-3 p-3">
         {/* Listing Image */}
-        <div className="shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-zinc-900 relative">
+        <div className="shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-white relative">
           {listing.photos?.[0] ? (
             <Image
               src={
@@ -132,21 +132,21 @@ export function ListingPreviewCard({ listingId, className = '', onError }: Listi
         {/* Listing Details */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h4 className="text-sm font-semibold text-white line-clamp-2 flex-1">
+            <h4 className="text-sm font-semibold text-dark-50 line-clamp-2 flex-1">
               {listing.title}
             </h4>
-            <ExternalLink className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+            <ExternalLink className="w-4 h-4 text-zinc-600 shrink-0 mt-0.5" />
           </div>
           
           <div className="flex items-center gap-2 mb-1">
-            <DollarSign className="w-3 h-3 text-accent-400" />
-            <span className="text-sm font-semibold text-accent-400">
+            <DollarSign className="w-3 h-3 text-accent-700" />
+            <span className="text-sm font-semibold text-accent-700">
               {formatPrice(listing.price)}
             </span>
           </div>
 
           {listing.category && (
-            <p className="text-xs text-zinc-400 truncate">
+            <p className="text-xs text-zinc-600 truncate">
               {listing.category}
             </p>
           )}

@@ -13,8 +13,11 @@ export function RouteProgress() {
   // Start the bar on internal link clicks
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
+      // Buttons inside a link (favorite, cart, chat) preventDefault, and modified clicks open a new tab:
+      // neither navigates this tab, so the bar would never complete.
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const anchor = (e.target as HTMLElement).closest('a');
-      if (!anchor) return;
+      if (!anchor || anchor.target === '_blank') return;
       const href = anchor.getAttribute('href');
       if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
       if (href === pathname) return;

@@ -149,7 +149,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
     <div ref={searchRef} className={`relative z-50 ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
-          <Bot className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-accent-400" />
+          <Bot className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-accent-700" />
           <input
             type="text"
             value={query}
@@ -159,14 +159,14 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             }}
             onFocus={() => setShowSuggestions(true)}
             placeholder="Ask our AI anything..."
-            className="w-full pl-12 pr-32 py-4 glass-clear-dark border border-white/20 rounded-2xl text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50 transition-all duration-200 placeholder-transition"
+            className="w-full pl-12 pr-32 py-4 glass-clear-dark border border-zinc-300 rounded-2xl text-glass placeholder:text-glass-muted focus:outline-none focus:ring-2 focus:ring-accent-500/50 focus:border-accent-500/50 transition-all duration-200 placeholder-transition"
           />
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
             {query && (
               <button
                 type="button"
                 onClick={clearSearch}
-                className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+                className="p-2 text-gray-400 hover:text-dark-50 transition-colors rounded-lg hover:bg-zinc-900/5"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -199,7 +199,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
             {query.length >= 2 && autocompleteSuggestions.length > 0 && (
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Bot className="w-4 h-4 text-accent-400" />
+                  <Bot className="w-4 h-4 text-accent-700" />
                   <span className="text-sm font-medium text-gray-300">
                     {isLoadingSuggestions ? 'Finding suggestions...' : `Suggestions (${autocompleteSuggestions.length})`}
                   </span>
@@ -217,8 +217,8 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                         className="w-full text-left px-3 py-2 rounded-lg bg-dark-700/50 hover:bg-dark-600 transition-all duration-200 group border border-transparent hover:border-dark-500"
                       >
                         <div className="flex items-center gap-3">
-                          <Search className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
-                          <span className="text-gray-300 group-hover:text-white transition-colors">{suggestion}</span>
+                          <Search className="w-4 h-4 text-gray-400 group-hover:text-accent-700 transition-colors" />
+                          <span className="text-gray-300 group-hover:text-dark-50 transition-colors">{suggestion}</span>
                         </div>
                       </button>
                     ))
@@ -247,7 +247,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                   </div>
                   <button
                     onClick={clearAllRecentSearches}
-                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
+                    className="text-xs text-gray-400 hover:text-gray-300 transition-colors flex items-center gap-1"
                   >
                     <Trash2 className="w-3 h-3" />
                     Clear all
@@ -262,14 +262,14 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Clock className="w-4 h-4 text-gray-400 group-hover:text-accent-400 transition-colors" />
-                          <span className="text-gray-300 group-hover:text-white transition-colors">{search}</span>
+                          <Clock className="w-4 h-4 text-gray-400 group-hover:text-accent-700 transition-colors" />
+                          <span className="text-gray-300 group-hover:text-dark-50 transition-colors">{search}</span>
                         </div>
                         <button
                           onClick={(e) => removeRecentSearch(search, e)}
                           className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-dark-600 transition-all"
                         >
-                          <X className="w-3 h-3 text-gray-400 hover:text-red-400" />
+                          <X className="w-3 h-3 text-gray-400 hover:text-red-700" />
                         </button>
                       </div>
                     </div>
@@ -289,7 +289,7 @@ export function SearchBar({ className = '' }: SearchBarProps) {
                       router.push(`/listings?category=${category.toLowerCase()}`);
                       setShowSuggestions(false);
                     }}
-                    className="px-3 py-2 text-sm bg-dark-700/50 hover:bg-dark-600 rounded-lg transition-all duration-200 text-gray-300 hover:text-white border border-transparent hover:border-dark-500"
+                    className="px-3 py-2 text-sm bg-dark-700/50 hover:bg-dark-600 rounded-lg transition-all duration-200 text-gray-300 hover:text-dark-50 border border-transparent hover:border-dark-500"
                   >
                     {category}
                   </button>

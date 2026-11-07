@@ -1,4 +1,36 @@
 /** @type {import('tailwindcss').Config} */
+
+// One blue (accent, 600 = brand blue used across globals.css) and one neutral gray.
+// primary and accent share the blue scale so existing classes stay consistent.
+const blue = {
+  50:  '#eff6ff',
+  100: '#dbeafe',
+  200: '#bfdbfe',
+  300: '#93c5fd',
+  400: '#60a5fa',
+  500: '#1a73e8',
+  600: '#0063e1',
+  700: '#0052b8',
+  800: '#00418f',
+  900: '#003066',
+};
+
+// Neutral dark scale (zinc). Replaces the slate scale; matches the zinc scrollbar colors.
+// Light theme: the 'dark' scale is inverted so existing bg-dark-950 / text-dark-* classes read as light surfaces and dark text.
+const neutral = {
+  50:  '#18181b',
+  100: '#27272a',
+  200: '#3f3f46',
+  300: '#52525b',
+  400: '#71717a',
+  500: '#a1a1aa',
+  600: '#d4d4d8',
+  700: '#e4e4e7',
+  800: '#f4f4f5',
+  900: '#fafafa',
+  950: '#ffffff',
+};
+
 module.exports = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,61 +41,25 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50:  '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        },
-        // Cool dark navy/slate palette
-        dark: {
-          50:  '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
-        },
-        // Blue accent
-        accent: {
-          50:  '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        },
+        primary: blue,
+        accent: blue,
+        dark: neutral,
         gray: {
-          50:  '#f9fafb',
-          100: '#f3f4f6',
-          200: '#e5e7eb',
-          300: '#d1d5db',
-          400: '#9ca3af',
-          500: '#6b7280',
-          600: '#4b5563',
-          700: '#374151',
-          800: '#1f2937',
-          900: '#111827',
+          50:  '#18181b',
+          100: '#27272a',
+          200: '#3f3f46',
+          300: '#52525b',
+          400: '#71717a',
+          500: '#a1a1aa',
+          600: '#d4d4d8',
+          700: '#e4e4e7',
+          800: '#f4f4f5',
+          900: '#fafafa',
         },
       },
       fontFamily: {
-        sans:    ['var(--font-inter)',    'Inter', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans:    ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       spacing: {
         '18': '4.5rem',
@@ -72,8 +68,13 @@ module.exports = {
       animation: {
         'fade-in':  'fadeIn 0.4s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
+        'scan':     'scan 1.1s ease-in-out infinite',
       },
       keyframes: {
+        scan: {
+          '0%':   { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(300%)' },
+        },
         fadeIn: {
           '0%':   { opacity: '0' },
           '100%': { opacity: '1' },
