@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { getConnectAccount } from '@/lib/stripe';
 import { getProfileDocumentAdmin, mergeProfileAdmin } from '@/lib/server/adminProfiles';
+import { assertStripeConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   try {
+    assertStripeConfig();
     const profile = await getProfileDocumentAdmin(req.userId);
     
     if (!profile?.stripeConnectAccountId) {

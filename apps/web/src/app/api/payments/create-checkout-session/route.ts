@@ -6,6 +6,7 @@ import { createCheckoutSnapshotAdmin } from '@/lib/server/adminCheckoutSnapshots
 import { assertStripeConfig } from '@/lib/config';
 import { prepareTrustedCheckout, getCheckoutBaseUrl } from '@/lib/payments/checkout';
 import { DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
+import { getStripeMode } from '@/lib/payments/environment';
 import { fail, ok } from '@/lib/api/responses';
 import { serverLogger } from '@/lib/server/logger';
 
@@ -86,6 +87,7 @@ export const POST = withApi(async (req: NextRequest & { userId: string }) => {
     // Persist the validated cart snapshot keyed by Stripe session ID.
     // The webhook reads this snapshot and creates the order atomically after payment.
     await createCheckoutSnapshotAdmin(result.sessionId, {
+      stripeMode: getStripeMode(),
       buyerId: req.userId,
       items: checkout.orderItems,
       subtotal: checkout.subtotal,

@@ -170,6 +170,8 @@ export interface PayoutTransferRecord {
 }
 
 export interface FirestoreOrder {
+  stripeMode?: 'test' | 'live';
+  paymentSourceChargeId?: string;
   buyerId: string;
   items: OrderItem[];
   sellerIds?: string[]; // Denormalized from items for efficient array-contains queries
@@ -413,6 +415,7 @@ export interface SellerShippingRate {
 }
 
 export interface CheckoutSnapshot {
+  stripeMode?: 'test' | 'live';
   buyerId: string;
   sessionId: string;
   items: CheckoutSnapshotItem[];

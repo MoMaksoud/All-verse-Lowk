@@ -1,0 +1,538 @@
+{
+  "basis": "User-provided roles: Fahdah UI/UX with some backend; Yengner receiving payments; Daniel remaining backend. Primary owners coordinate backend/UI support on cross-domain stories.",
+  "assignments": [
+    {
+      "audit_id": "AV-F001",
+      "jira_key": "DEV-8",
+      "summary": "Deny client writes to financial orders and fulfillment records",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F002",
+      "jira_key": "DEV-9",
+      "summary": "Separate public profiles from private addresses and contact data",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F003",
+      "jira_key": "DEV-10",
+      "summary": "Protect Connect account ownership and server-controlled profile fields",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F004",
+      "jira_key": "DEV-11",
+      "summary": "Bind email verification to the authenticated account email",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F005",
+      "jira_key": "DEV-12",
+      "summary": "Version and deploy Firestore and Storage security policies",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F006",
+      "jira_key": "DEV-13",
+      "summary": "Enforce one order per Checkout Session inside the transaction",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F007",
+      "jira_key": "DEV-14",
+      "summary": "Recover paid sessions when stock becomes unavailable",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F008",
+      "jira_key": "DEV-15",
+      "summary": "Resume settlement work after the order transaction commits",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F009",
+      "jira_key": "DEV-17",
+      "summary": "Make checkout creation retry-safe and bound to one cart attempt",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F010",
+      "jira_key": "DEV-18",
+      "summary": "Keep pending-Connect payout lines pending during retry",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F011",
+      "jira_key": "DEV-19",
+      "summary": "Tie seller transfers to funding and reconcile ambiguous outcomes",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F012",
+      "jira_key": "DEV-20",
+      "summary": "Manage seller onboarding and Connect capability changes",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F013",
+      "jira_key": "DEV-21",
+      "summary": "Show real seller earnings and bank payout status",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F014",
+      "jira_key": "DEV-22",
+      "summary": "Use integer minor units and versioned fee allocation",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F015",
+      "jira_key": "DEV-23",
+      "summary": "Replace flat estimated tax with an approved tax workflow",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F016",
+      "jira_key": "DEV-24",
+      "summary": "Implement paid-order cancellations, refunds and return resolution",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F017",
+      "jira_key": "DEV-25",
+      "summary": "Handle payment disputes and chargebacks with an operator workflow",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F018",
+      "jira_key": "DEV-26",
+      "summary": "Enforce the per-seller checkout contract on the server",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F019",
+      "jira_key": "DEV-27",
+      "summary": "Require a valid private seller ship-from and return address",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F020",
+      "jira_key": "DEV-28",
+      "summary": "Capture and quote the actual shipment package",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F021",
+      "jira_key": "DEV-29",
+      "summary": "Bind checkout to a server quote and confirm material changes",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F022",
+      "jira_key": "DEV-30",
+      "summary": "Keep label purchase separate from physical shipment",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F023",
+      "jira_key": "DEV-31",
+      "summary": "Ingest tracking events and expose delivery exceptions",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F024",
+      "jira_key": "DEV-32",
+      "summary": "Reconcile label purchase timeouts before buying another label",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F025",
+      "jira_key": "DEV-33",
+      "summary": "Use atomic audited order-state transitions",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F026",
+      "jira_key": "DEV-34",
+      "summary": "Validate cart ownership from listings and mutate carts atomically",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F027",
+      "jira_key": "DEV-35",
+      "summary": "Validate listing inputs and make ownership immutable",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F028",
+      "jira_key": "DEV-36",
+      "summary": "Unify sold flags, inventory and marketplace sale attribution",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F029",
+      "jira_key": "DEV-37",
+      "summary": "Enforce public listing visibility in Admin-backed read routes",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F030",
+      "jira_key": "DEV-38",
+      "summary": "Use authenticated server storage operations in upload and cleanup APIs",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F031",
+      "jira_key": "DEV-55",
+      "summary": "Track media ownership and clean abandoned or replaced uploads",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F032",
+      "jira_key": "DEV-39",
+      "summary": "Make username claims authoritative across API and SDK writers",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F033",
+      "jira_key": "DEV-40",
+      "summary": "Complete account recovery and enforce action eligibility on the server",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F034",
+      "jira_key": "DEV-41",
+      "summary": "Make account deletion safe for outstanding orders and funds",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F035",
+      "jira_key": "DEV-42",
+      "summary": "Repair web chat creation and lock chat participants",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F036",
+      "jira_key": "DEV-56",
+      "summary": "Make message sends atomic, retry-safe and paginated",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F037",
+      "jira_key": "DEV-43",
+      "summary": "Deliver transaction emails and push notifications from durable jobs",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F038",
+      "jira_key": "DEV-44",
+      "summary": "Provide mobile sellers with onboarding, sales and label access",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F039",
+      "jira_key": "DEV-45",
+      "summary": "Show verified payment confirmation and handle webhook delay",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F040",
+      "jira_key": "DEV-46",
+      "summary": "Expose complete buyer order details and tracking on mobile",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F041",
+      "jira_key": "DEV-57",
+      "summary": "Define offers and prevent chat negotiation from implying a payable offer",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F042",
+      "jira_key": "DEV-47",
+      "summary": "Add report, block and minimum marketplace moderation",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F043",
+      "jira_key": "DEV-58",
+      "summary": "Unify web and mobile search contracts and provider failures",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F044",
+      "jira_key": "DEV-48",
+      "summary": "Retrieve and paginate the full marketplace catalog",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F045",
+      "jira_key": "DEV-49",
+      "summary": "Bound public search and AI costs across server instances",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F046",
+      "jira_key": "DEV-50",
+      "summary": "Restrict server media fetching to approved owned assets",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F047",
+      "jira_key": "DEV-16",
+      "summary": "Add automated commerce and permission release gates",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F048",
+      "jira_key": "DEV-51",
+      "summary": "Build operator reconciliation and recovery queues",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F049",
+      "jira_key": "DEV-52",
+      "summary": "Make deployment and environment setup reproducible",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F050",
+      "jira_key": "DEV-53",
+      "summary": "Version migrations, retention and disaster recovery",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F051",
+      "jira_key": "DEV-54",
+      "summary": "Approve the baseline commerce policy and supported launch scope",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-F052",
+      "jira_key": "DEV-59",
+      "summary": "Keep seller reputation honest until verified reviews exist",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "issue"
+    },
+    {
+      "audit_id": "AV-E01",
+      "jira_key": "DEV-1",
+      "summary": "Secure identity and private marketplace data",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "epic"
+    },
+    {
+      "audit_id": "AV-E02",
+      "jira_key": "DEV-2",
+      "summary": "Make buyer payments and seller settlement recoverable",
+      "assignee": "Yengner Bermudez",
+      "account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760",
+      "kind": "epic"
+    },
+    {
+      "audit_id": "AV-E03",
+      "jira_key": "DEV-3",
+      "summary": "Complete shipping and order fulfillment",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "epic"
+    },
+    {
+      "audit_id": "AV-E04",
+      "jira_key": "DEV-4",
+      "summary": "Make catalog, cart, and media consistent",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "epic"
+    },
+    {
+      "audit_id": "AV-E05",
+      "jira_key": "DEV-5",
+      "summary": "Complete web and mobile transaction experiences",
+      "assignee": "Fahdah Alathel",
+      "account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91",
+      "kind": "epic"
+    },
+    {
+      "audit_id": "AV-E06",
+      "jira_key": "DEV-6",
+      "summary": "Make discovery and AI reliable and bounded",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "epic"
+    },
+    {
+      "audit_id": "AV-E07",
+      "jira_key": "DEV-7",
+      "summary": "Operate and verify a recoverable marketplace",
+      "assignee": "Daniel Misherky",
+      "account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6",
+      "kind": "epic"
+    }
+  ],
+  "applied": [
+    "DEV-8",
+    "DEV-9",
+    "DEV-10",
+    "DEV-11",
+    "DEV-12",
+    "DEV-13",
+    "DEV-14",
+    "DEV-15",
+    "DEV-17",
+    "DEV-18",
+    "DEV-19",
+    "DEV-20",
+    "DEV-21",
+    "DEV-22",
+    "DEV-23",
+    "DEV-24",
+    "DEV-25",
+    "DEV-26",
+    "DEV-27",
+    "DEV-28",
+    "DEV-29",
+    "DEV-30",
+    "DEV-31",
+    "DEV-32",
+    "DEV-33",
+    "DEV-34",
+    "DEV-35",
+    "DEV-36",
+    "DEV-37",
+    "DEV-38",
+    "DEV-55",
+    "DEV-39",
+    "DEV-40",
+    "DEV-41",
+    "DEV-42",
+    "DEV-56",
+    "DEV-43",
+    "DEV-44",
+    "DEV-45",
+    "DEV-46",
+    "DEV-57",
+    "DEV-47",
+    "DEV-58",
+    "DEV-48",
+    "DEV-49",
+    "DEV-50",
+    "DEV-16",
+    "DEV-51",
+    "DEV-52",
+    "DEV-53",
+    "DEV-54",
+    "DEV-59",
+    "DEV-1",
+    "DEV-2",
+    "DEV-3",
+    "DEV-4",
+    "DEV-5",
+    "DEV-6",
+    "DEV-7"
+  ]
+}

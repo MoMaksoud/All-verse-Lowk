@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { createAccountLink } from '@/lib/stripe';
 import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
+import { assertStripeConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
+    assertStripeConfig();
     // Get user's Connect account ID
     const profile = await getProfileDocumentAdmin(req.userId);
     

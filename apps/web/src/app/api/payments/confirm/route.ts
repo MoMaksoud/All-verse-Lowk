@@ -5,6 +5,8 @@ import { getCheckoutSnapshotAdmin } from '@/lib/server/adminCheckoutSnapshots';
 import { withApi } from '@/lib/withApi';
 import { fail, ok } from '@/lib/api/responses';
 import { serverLogger } from '@/lib/server/logger';
+import { assertStripeObjectMode } from '@/lib/payments/environment';
+import { assertStripeConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,8 +26,10 @@ export const GET = withApi(async (req: NextRequest & { userId: string }) => {
   }
 
   try {
+    assertStripeConfig();
     // Verify the session is real and paid (Stripe is the authority).
     const session = await stripe.checkout.sessions.retrieve(sessionId.trim(), { expand: [] });
+    assertStripeObjectMode(session.livemode);
 
     if (session.payment_status !== 'paid') {
       return fail({

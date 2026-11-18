@@ -1,5 +1,7 @@
 # Commerce System Contract
 
+> Historical contract: the active implementation now creates an order from a checkout snapshot after payment. Several retry/idempotency claims below require the fixes documented in the [2026-11-16 foundation audit](../../../docs/audits/2026-11-16-foundation-audit.md). Use the [current project guide](../../../docs/architecture/PROJECT_GUIDE.md) as the implementation map; this older contract is retained for legacy context.
+
 This document defines the current source-of-truth behavior for checkout, payment, inventory, payouts, and shipping labels.
 
 ## 1) Order creation

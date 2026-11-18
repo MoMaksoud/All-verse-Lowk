@@ -11,6 +11,7 @@ import { serverLogger } from '@/lib/server/logger';
 import { requoteShippingForPaidOrder } from '@/lib/payments/checkout';
 import { logEmail } from '@/lib/emailLog';
 import { sendBuyerTrackingEmail } from '@/lib/email';
+import { getStripeMode } from '@/lib/payments/environment';
 import {
   acquireShippingLabelLock,
   createAndResolveShippoLabel,
@@ -29,6 +30,7 @@ interface CreateLabelRequest {
 }
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
+  if (getStripeMode() === 'test') return fail({ status: 409, code: 'TEST_LABEL_DISABLED', message: 'Shipping labels are disabled during Stripe payment testing.' });
   let requestedOrderId: string | null = null;
   try {
     const ip = getIp(req as unknown as Request);

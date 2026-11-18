@@ -11,6 +11,7 @@ const SESSION_TTL_MS = 30 * 60 * 1000;
 export async function createCheckoutSnapshotAdmin(
   sessionId: string,
   data: {
+    stripeMode: 'test' | 'live';
     buyerId: string;
     items: CheckoutSnapshotItem[];
     subtotal: number;
@@ -49,10 +50,13 @@ export async function getCheckoutSnapshotAdmin(
 
 export async function markSnapshotExpiredAdmin(sessionId: string): Promise<void> {
   try {
-    await getAdminFirestore()
-      .collection(COL)
-      .doc(sessionId)
-      .update({ status: 'expired', updatedAt: FieldValue.serverTimestamp() });
+    const db = getAdminFirestore();
+    const ref = db.collection(COL).doc(sessionId);
+    await db.runTransaction(async tx => {
+      const snapshot = await tx.get(ref);
+      if (!snapshot.exists || snapshot.get('orderId')) return;
+      tx.update(ref, { status: 'expired', updatedAt: FieldValue.serverTimestamp() });
+    });
   } catch {
     // Snapshot may not exist for sessions created before this deploy — ignore.
   }

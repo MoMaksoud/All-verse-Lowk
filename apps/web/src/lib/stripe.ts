@@ -1,10 +1,28 @@
 import Stripe from 'stripe';
 import { calculateStripeFees as calculateStripeFeesBase } from '@/lib/payments/pricing';
+import { assertStripeConfig } from '@/lib/config';
+import { getStripeMode, isCommerceSandbox } from '@/lib/payments/environment';
 
 // Server-side Stripe instance
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-08-27.basil',
+let stripeClient: Stripe | undefined;
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, property) {
+    getStripeMode();
+    stripeClient ??= new Stripe(process.env.STRIPE_SECRET_KEY!.trim(), { apiVersion: '2025-08-27.basil' });
+    const value = Reflect.get(stripeClient, property);
+    return typeof value === 'function' ? value.bind(stripeClient) : value;
+  },
 });
+
+async function assertSandboxWebhookTargets() {
+  if (!isCommerceSandbox()) return;
+  // Forwarding with Stripe CLI does not disable an account's existing public webhooks.
+  for await (const endpoint of stripe.webhookEndpoints.list({ limit: 100 })) {
+    if (endpoint.status !== 'enabled') continue;
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(endpoint.url).hostname);
+    if (!local) throw new Error('Use an isolated Stripe sandbox: this account still forwards events to a public webhook.');
+  }
+}
 
 /**
  * Create a Stripe Checkout Session (mode: payment).
@@ -20,6 +38,8 @@ export async function createCheckoutSession(params: {
   description?: string;
 }) {
   try {
+    assertStripeConfig();
+    await assertSandboxWebhookTargets();
     const expiresAt = Math.floor(Date.now() / 1000) + 30 * 60;
 
     const session = await stripe.checkout.sessions.create({
@@ -118,6 +138,8 @@ export const PLATFORM_SERVICE_FEE_PERCENT = 4.5;
  */
 export async function createConnectAccount(email: string, userId: string) {
   try {
+    assertStripeConfig();
+    await assertSandboxWebhookTargets();
     const account = await stripe.accounts.create({
       type: 'express',
       country: 'US',
@@ -150,6 +172,8 @@ export async function createConnectAccount(email: string, userId: string) {
  */
 export async function createAccountLink(accountId: string, returnUrl: string, refreshUrl: string) {
   try {
+    assertStripeConfig();
+    await assertSandboxWebhookTargets();
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       return_url: returnUrl,
@@ -200,9 +224,13 @@ export async function transferToSeller(
   accountId: string,
   amount: number,
   orderId: string,
-  idempotencyKey?: string
+  idempotencyKey: string,
+  sourceChargeId: string
 ) {
   try {
+    assertStripeConfig();
+    if (!sourceChargeId?.startsWith('ch_')) throw new Error('Seller transfer requires the original source charge.');
+    await assertSandboxWebhookTargets();
     // Amount in cents
     const amountInCents = Math.round(amount * 100);
     
@@ -210,6 +238,8 @@ export async function transferToSeller(
       amount: amountInCents,
       currency: 'usd',
       destination: accountId,
+      source_transaction: sourceChargeId,
+      transfer_group: `order_${orderId}`,
       metadata: {
         orderId,
         type: 'seller_payout',

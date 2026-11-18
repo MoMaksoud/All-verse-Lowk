@@ -4,6 +4,7 @@ import { checkRateLimit, getIp } from '@/lib/rateLimit';
 import { shippo } from '@/lib/shippo';
 import { DistanceUnitEnum, WeightUnitEnum } from 'shippo';
 import { normalizeShippoRates } from '@/lib/payments/shippingRates';
+import { getSandboxShipping } from '@/lib/payments/environment';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,6 +48,9 @@ interface ShippingRate {
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
+    const simulated = getSandboxShipping();
+    if (simulated) return NextResponse.json({ success: true, shipmentId: simulated.shipmentId,
+      rates: [{ id: simulated.rateId, carrier: simulated.carrier, serviceName: simulated.serviceName, price: simulated.price, currency: 'USD' }] });
     const ip = getIp(req as unknown as Request);
     checkRateLimit(ip, 60);
 

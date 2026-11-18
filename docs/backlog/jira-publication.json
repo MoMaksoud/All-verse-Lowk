@@ -1,0 +1,774 @@
+{
+  "audit_date": "2026-11-16",
+  "source_commit": "c15398da9d152040d68309786d828ad37ef57ed6",
+  "jira_project": "DEV",
+  "jira_site": "https://allversegpt.atlassian.net",
+  "epics": {
+    "AV-E01": "DEV-1",
+    "AV-E02": "DEV-2",
+    "AV-E03": "DEV-3",
+    "AV-E04": "DEV-4",
+    "AV-E05": "DEV-5",
+    "AV-E06": "DEV-6",
+    "AV-E07": "DEV-7"
+  },
+  "issues": {
+    "AV-F001": "DEV-8",
+    "AV-F002": "DEV-9",
+    "AV-F003": "DEV-10",
+    "AV-F004": "DEV-11",
+    "AV-F005": "DEV-12",
+    "AV-F006": "DEV-13",
+    "AV-F007": "DEV-14",
+    "AV-F008": "DEV-15",
+    "AV-F047": "DEV-16",
+    "AV-F009": "DEV-17",
+    "AV-F010": "DEV-18",
+    "AV-F011": "DEV-19",
+    "AV-F012": "DEV-20",
+    "AV-F013": "DEV-21",
+    "AV-F014": "DEV-22",
+    "AV-F015": "DEV-23",
+    "AV-F016": "DEV-24",
+    "AV-F017": "DEV-25",
+    "AV-F018": "DEV-26",
+    "AV-F019": "DEV-27",
+    "AV-F020": "DEV-28",
+    "AV-F021": "DEV-29",
+    "AV-F022": "DEV-30",
+    "AV-F023": "DEV-31",
+    "AV-F024": "DEV-32",
+    "AV-F025": "DEV-33",
+    "AV-F026": "DEV-34",
+    "AV-F027": "DEV-35",
+    "AV-F028": "DEV-36",
+    "AV-F029": "DEV-37",
+    "AV-F030": "DEV-38",
+    "AV-F032": "DEV-39",
+    "AV-F033": "DEV-40",
+    "AV-F034": "DEV-41",
+    "AV-F035": "DEV-42",
+    "AV-F037": "DEV-43",
+    "AV-F038": "DEV-44",
+    "AV-F039": "DEV-45",
+    "AV-F040": "DEV-46",
+    "AV-F042": "DEV-47",
+    "AV-F044": "DEV-48",
+    "AV-F045": "DEV-49",
+    "AV-F046": "DEV-50",
+    "AV-F048": "DEV-51",
+    "AV-F049": "DEV-52",
+    "AV-F050": "DEV-53",
+    "AV-F051": "DEV-54",
+    "AV-F031": "DEV-55",
+    "AV-F036": "DEV-56",
+    "AV-F041": "DEV-57",
+    "AV-F043": "DEV-58",
+    "AV-F052": "DEV-59"
+  },
+  "links": [
+    {
+      "from": "AV-F001",
+      "to": "AV-F005",
+      "from_key": "DEV-8",
+      "to_key": "DEV-12"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F003",
+      "from_key": "DEV-9",
+      "to_key": "DEV-10"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F005",
+      "from_key": "DEV-9",
+      "to_key": "DEV-12"
+    },
+    {
+      "from": "AV-F003",
+      "to": "AV-F005",
+      "from_key": "DEV-10",
+      "to_key": "DEV-12"
+    },
+    {
+      "from": "AV-F006",
+      "to": "AV-F007",
+      "from_key": "DEV-13",
+      "to_key": "DEV-14"
+    },
+    {
+      "from": "AV-F006",
+      "to": "AV-F008",
+      "from_key": "DEV-13",
+      "to_key": "DEV-15"
+    },
+    {
+      "from": "AV-F006",
+      "to": "AV-F009",
+      "from_key": "DEV-13",
+      "to_key": "DEV-17"
+    },
+    {
+      "from": "AV-F007",
+      "to": "AV-F009",
+      "from_key": "DEV-14",
+      "to_key": "DEV-17"
+    },
+    {
+      "from": "AV-F003",
+      "to": "AV-F010",
+      "from_key": "DEV-10",
+      "to_key": "DEV-18"
+    },
+    {
+      "from": "AV-F008",
+      "to": "AV-F010",
+      "from_key": "DEV-15",
+      "to_key": "DEV-18"
+    },
+    {
+      "from": "AV-F003",
+      "to": "AV-F011",
+      "from_key": "DEV-10",
+      "to_key": "DEV-19"
+    },
+    {
+      "from": "AV-F008",
+      "to": "AV-F011",
+      "from_key": "DEV-15",
+      "to_key": "DEV-19"
+    },
+    {
+      "from": "AV-F010",
+      "to": "AV-F011",
+      "from_key": "DEV-18",
+      "to_key": "DEV-19"
+    },
+    {
+      "from": "AV-F003",
+      "to": "AV-F012",
+      "from_key": "DEV-10",
+      "to_key": "DEV-20"
+    },
+    {
+      "from": "AV-F010",
+      "to": "AV-F012",
+      "from_key": "DEV-18",
+      "to_key": "DEV-20"
+    },
+    {
+      "from": "AV-F011",
+      "to": "AV-F012",
+      "from_key": "DEV-19",
+      "to_key": "DEV-20"
+    },
+    {
+      "from": "AV-F011",
+      "to": "AV-F013",
+      "from_key": "DEV-19",
+      "to_key": "DEV-21"
+    },
+    {
+      "from": "AV-F012",
+      "to": "AV-F013",
+      "from_key": "DEV-20",
+      "to_key": "DEV-21"
+    },
+    {
+      "from": "AV-F014",
+      "to": "AV-F013",
+      "from_key": "DEV-22",
+      "to_key": "DEV-21"
+    },
+    {
+      "from": "AV-F014",
+      "to": "AV-F015",
+      "from_key": "DEV-22",
+      "to_key": "DEV-23"
+    },
+    {
+      "from": "AV-F051",
+      "to": "AV-F015",
+      "from_key": "DEV-54",
+      "to_key": "DEV-23"
+    },
+    {
+      "from": "AV-F007",
+      "to": "AV-F016",
+      "from_key": "DEV-14",
+      "to_key": "DEV-24"
+    },
+    {
+      "from": "AV-F008",
+      "to": "AV-F016",
+      "from_key": "DEV-15",
+      "to_key": "DEV-24"
+    },
+    {
+      "from": "AV-F011",
+      "to": "AV-F016",
+      "from_key": "DEV-19",
+      "to_key": "DEV-24"
+    },
+    {
+      "from": "AV-F014",
+      "to": "AV-F016",
+      "from_key": "DEV-22",
+      "to_key": "DEV-24"
+    },
+    {
+      "from": "AV-F025",
+      "to": "AV-F016",
+      "from_key": "DEV-33",
+      "to_key": "DEV-24"
+    },
+    {
+      "from": "AV-F051",
+      "to": "AV-F016",
+      "from_key": "DEV-54",
+      "to_key": "DEV-24"
+    },
+    {
+      "from": "AV-F011",
+      "to": "AV-F017",
+      "from_key": "DEV-19",
+      "to_key": "DEV-25"
+    },
+    {
+      "from": "AV-F013",
+      "to": "AV-F017",
+      "from_key": "DEV-21",
+      "to_key": "DEV-25"
+    },
+    {
+      "from": "AV-F016",
+      "to": "AV-F017",
+      "from_key": "DEV-24",
+      "to_key": "DEV-25"
+    },
+    {
+      "from": "AV-F048",
+      "to": "AV-F017",
+      "from_key": "DEV-51",
+      "to_key": "DEV-25"
+    },
+    {
+      "from": "AV-F006",
+      "to": "AV-F018",
+      "from_key": "DEV-13",
+      "to_key": "DEV-26"
+    },
+    {
+      "from": "AV-F026",
+      "to": "AV-F018",
+      "from_key": "DEV-34",
+      "to_key": "DEV-26"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F019",
+      "from_key": "DEV-9",
+      "to_key": "DEV-27"
+    },
+    {
+      "from": "AV-F012",
+      "to": "AV-F019",
+      "from_key": "DEV-20",
+      "to_key": "DEV-27"
+    },
+    {
+      "from": "AV-F019",
+      "to": "AV-F020",
+      "from_key": "DEV-27",
+      "to_key": "DEV-28"
+    },
+    {
+      "from": "AV-F027",
+      "to": "AV-F020",
+      "from_key": "DEV-35",
+      "to_key": "DEV-28"
+    },
+    {
+      "from": "AV-F014",
+      "to": "AV-F021",
+      "from_key": "DEV-22",
+      "to_key": "DEV-29"
+    },
+    {
+      "from": "AV-F018",
+      "to": "AV-F021",
+      "from_key": "DEV-26",
+      "to_key": "DEV-29"
+    },
+    {
+      "from": "AV-F019",
+      "to": "AV-F021",
+      "from_key": "DEV-27",
+      "to_key": "DEV-29"
+    },
+    {
+      "from": "AV-F020",
+      "to": "AV-F021",
+      "from_key": "DEV-28",
+      "to_key": "DEV-29"
+    },
+    {
+      "from": "AV-F025",
+      "to": "AV-F022",
+      "from_key": "DEV-33",
+      "to_key": "DEV-30"
+    },
+    {
+      "from": "AV-F022",
+      "to": "AV-F023",
+      "from_key": "DEV-30",
+      "to_key": "DEV-31"
+    },
+    {
+      "from": "AV-F024",
+      "to": "AV-F023",
+      "from_key": "DEV-32",
+      "to_key": "DEV-31"
+    },
+    {
+      "from": "AV-F025",
+      "to": "AV-F023",
+      "from_key": "DEV-33",
+      "to_key": "DEV-31"
+    },
+    {
+      "from": "AV-F008",
+      "to": "AV-F024",
+      "from_key": "DEV-15",
+      "to_key": "DEV-32"
+    },
+    {
+      "from": "AV-F021",
+      "to": "AV-F024",
+      "from_key": "DEV-29",
+      "to_key": "DEV-32"
+    },
+    {
+      "from": "AV-F001",
+      "to": "AV-F025",
+      "from_key": "DEV-8",
+      "to_key": "DEV-33"
+    },
+    {
+      "from": "AV-F006",
+      "to": "AV-F025",
+      "from_key": "DEV-13",
+      "to_key": "DEV-33"
+    },
+    {
+      "from": "AV-F001",
+      "to": "AV-F026",
+      "from_key": "DEV-8",
+      "to_key": "DEV-34"
+    },
+    {
+      "from": "AV-F027",
+      "to": "AV-F026",
+      "from_key": "DEV-35",
+      "to_key": "DEV-34"
+    },
+    {
+      "from": "AV-F001",
+      "to": "AV-F027",
+      "from_key": "DEV-8",
+      "to_key": "DEV-35"
+    },
+    {
+      "from": "AV-F006",
+      "to": "AV-F028",
+      "from_key": "DEV-13",
+      "to_key": "DEV-36"
+    },
+    {
+      "from": "AV-F027",
+      "to": "AV-F028",
+      "from_key": "DEV-35",
+      "to_key": "DEV-36"
+    },
+    {
+      "from": "AV-F027",
+      "to": "AV-F029",
+      "from_key": "DEV-35",
+      "to_key": "DEV-37"
+    },
+    {
+      "from": "AV-F028",
+      "to": "AV-F029",
+      "from_key": "DEV-36",
+      "to_key": "DEV-37"
+    },
+    {
+      "from": "AV-F005",
+      "to": "AV-F030",
+      "from_key": "DEV-12",
+      "to_key": "DEV-38"
+    },
+    {
+      "from": "AV-F027",
+      "to": "AV-F030",
+      "from_key": "DEV-35",
+      "to_key": "DEV-38"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F031",
+      "from_key": "DEV-9",
+      "to_key": "DEV-55"
+    },
+    {
+      "from": "AV-F030",
+      "to": "AV-F031",
+      "from_key": "DEV-38",
+      "to_key": "DEV-55"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F032",
+      "from_key": "DEV-9",
+      "to_key": "DEV-39"
+    },
+    {
+      "from": "AV-F003",
+      "to": "AV-F032",
+      "from_key": "DEV-10",
+      "to_key": "DEV-39"
+    },
+    {
+      "from": "AV-F004",
+      "to": "AV-F033",
+      "from_key": "DEV-11",
+      "to_key": "DEV-40"
+    },
+    {
+      "from": "AV-F051",
+      "to": "AV-F033",
+      "from_key": "DEV-54",
+      "to_key": "DEV-40"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F034",
+      "from_key": "DEV-9",
+      "to_key": "DEV-41"
+    },
+    {
+      "from": "AV-F003",
+      "to": "AV-F034",
+      "from_key": "DEV-10",
+      "to_key": "DEV-41"
+    },
+    {
+      "from": "AV-F016",
+      "to": "AV-F034",
+      "from_key": "DEV-24",
+      "to_key": "DEV-41"
+    },
+    {
+      "from": "AV-F032",
+      "to": "AV-F034",
+      "from_key": "DEV-39",
+      "to_key": "DEV-41"
+    },
+    {
+      "from": "AV-F051",
+      "to": "AV-F034",
+      "from_key": "DEV-54",
+      "to_key": "DEV-41"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F035",
+      "from_key": "DEV-9",
+      "to_key": "DEV-42"
+    },
+    {
+      "from": "AV-F005",
+      "to": "AV-F035",
+      "from_key": "DEV-12",
+      "to_key": "DEV-42"
+    },
+    {
+      "from": "AV-F033",
+      "to": "AV-F035",
+      "from_key": "DEV-40",
+      "to_key": "DEV-42"
+    },
+    {
+      "from": "AV-F035",
+      "to": "AV-F036",
+      "from_key": "DEV-42",
+      "to_key": "DEV-56"
+    },
+    {
+      "from": "AV-F037",
+      "to": "AV-F036",
+      "from_key": "DEV-43",
+      "to_key": "DEV-56"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F037",
+      "from_key": "DEV-9",
+      "to_key": "DEV-43"
+    },
+    {
+      "from": "AV-F008",
+      "to": "AV-F037",
+      "from_key": "DEV-15",
+      "to_key": "DEV-43"
+    },
+    {
+      "from": "AV-F012",
+      "to": "AV-F038",
+      "from_key": "DEV-20",
+      "to_key": "DEV-44"
+    },
+    {
+      "from": "AV-F013",
+      "to": "AV-F038",
+      "from_key": "DEV-21",
+      "to_key": "DEV-44"
+    },
+    {
+      "from": "AV-F019",
+      "to": "AV-F038",
+      "from_key": "DEV-27",
+      "to_key": "DEV-44"
+    },
+    {
+      "from": "AV-F024",
+      "to": "AV-F038",
+      "from_key": "DEV-32",
+      "to_key": "DEV-44"
+    },
+    {
+      "from": "AV-F006",
+      "to": "AV-F039",
+      "from_key": "DEV-13",
+      "to_key": "DEV-45"
+    },
+    {
+      "from": "AV-F007",
+      "to": "AV-F039",
+      "from_key": "DEV-14",
+      "to_key": "DEV-45"
+    },
+    {
+      "from": "AV-F009",
+      "to": "AV-F039",
+      "from_key": "DEV-17",
+      "to_key": "DEV-45"
+    },
+    {
+      "from": "AV-F018",
+      "to": "AV-F039",
+      "from_key": "DEV-26",
+      "to_key": "DEV-45"
+    },
+    {
+      "from": "AV-F023",
+      "to": "AV-F040",
+      "from_key": "DEV-31",
+      "to_key": "DEV-46"
+    },
+    {
+      "from": "AV-F025",
+      "to": "AV-F040",
+      "from_key": "DEV-33",
+      "to_key": "DEV-46"
+    },
+    {
+      "from": "AV-F039",
+      "to": "AV-F040",
+      "from_key": "DEV-45",
+      "to_key": "DEV-46"
+    },
+    {
+      "from": "AV-F007",
+      "to": "AV-F041",
+      "from_key": "DEV-14",
+      "to_key": "DEV-57"
+    },
+    {
+      "from": "AV-F009",
+      "to": "AV-F041",
+      "from_key": "DEV-17",
+      "to_key": "DEV-57"
+    },
+    {
+      "from": "AV-F027",
+      "to": "AV-F041",
+      "from_key": "DEV-35",
+      "to_key": "DEV-57"
+    },
+    {
+      "from": "AV-F051",
+      "to": "AV-F041",
+      "from_key": "DEV-54",
+      "to_key": "DEV-57"
+    },
+    {
+      "from": "AV-F029",
+      "to": "AV-F042",
+      "from_key": "DEV-37",
+      "to_key": "DEV-47"
+    },
+    {
+      "from": "AV-F033",
+      "to": "AV-F042",
+      "from_key": "DEV-40",
+      "to_key": "DEV-47"
+    },
+    {
+      "from": "AV-F035",
+      "to": "AV-F042",
+      "from_key": "DEV-42",
+      "to_key": "DEV-47"
+    },
+    {
+      "from": "AV-F048",
+      "to": "AV-F042",
+      "from_key": "DEV-51",
+      "to_key": "DEV-47"
+    },
+    {
+      "from": "AV-F051",
+      "to": "AV-F042",
+      "from_key": "DEV-54",
+      "to_key": "DEV-47"
+    },
+    {
+      "from": "AV-F044",
+      "to": "AV-F043",
+      "from_key": "DEV-48",
+      "to_key": "DEV-58"
+    },
+    {
+      "from": "AV-F045",
+      "to": "AV-F043",
+      "from_key": "DEV-49",
+      "to_key": "DEV-58"
+    },
+    {
+      "from": "AV-F028",
+      "to": "AV-F044",
+      "from_key": "DEV-36",
+      "to_key": "DEV-48"
+    },
+    {
+      "from": "AV-F029",
+      "to": "AV-F044",
+      "from_key": "DEV-37",
+      "to_key": "DEV-48"
+    },
+    {
+      "from": "AV-F002",
+      "to": "AV-F046",
+      "from_key": "DEV-9",
+      "to_key": "DEV-50"
+    },
+    {
+      "from": "AV-F030",
+      "to": "AV-F046",
+      "from_key": "DEV-38",
+      "to_key": "DEV-50"
+    },
+    {
+      "from": "AV-F008",
+      "to": "AV-F048",
+      "from_key": "DEV-15",
+      "to_key": "DEV-51"
+    },
+    {
+      "from": "AV-F011",
+      "to": "AV-F048",
+      "from_key": "DEV-19",
+      "to_key": "DEV-51"
+    },
+    {
+      "from": "AV-F024",
+      "to": "AV-F048",
+      "from_key": "DEV-32",
+      "to_key": "DEV-51"
+    },
+    {
+      "from": "AV-F025",
+      "to": "AV-F048",
+      "from_key": "DEV-33",
+      "to_key": "DEV-51"
+    },
+    {
+      "from": "AV-F005",
+      "to": "AV-F049",
+      "from_key": "DEV-12",
+      "to_key": "DEV-52"
+    },
+    {
+      "from": "AV-F047",
+      "to": "AV-F049",
+      "from_key": "DEV-16",
+      "to_key": "DEV-52"
+    },
+    {
+      "from": "AV-F005",
+      "to": "AV-F050",
+      "from_key": "DEV-12",
+      "to_key": "DEV-53"
+    },
+    {
+      "from": "AV-F006",
+      "to": "AV-F050",
+      "from_key": "DEV-13",
+      "to_key": "DEV-53"
+    },
+    {
+      "from": "AV-F032",
+      "to": "AV-F050",
+      "from_key": "DEV-39",
+      "to_key": "DEV-53"
+    },
+    {
+      "from": "AV-F049",
+      "to": "AV-F050",
+      "from_key": "DEV-52",
+      "to_key": "DEV-53"
+    },
+    {
+      "from": "AV-F025",
+      "to": "AV-F052",
+      "from_key": "DEV-33",
+      "to_key": "DEV-59"
+    },
+    {
+      "from": "AV-F028",
+      "to": "AV-F052",
+      "from_key": "DEV-36",
+      "to_key": "DEV-59"
+    },
+    {
+      "from": "AV-F042",
+      "to": "AV-F052",
+      "from_key": "DEV-47",
+      "to_key": "DEV-59"
+    }
+  ],
+  "status": "complete",
+  "completed_date": "2026-11-17",
+  "verification": {
+    "issues_read_back": 52,
+    "epics_read_back": 7,
+    "parent_priority_type_mismatches": 0,
+    "native_dependency_links_verified": 115,
+    "description_bodies_verified": 52,
+    "all_unassigned": true,
+    "statuses": [
+      "To Do"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -51,9 +51,16 @@ if (firebaseConfig.apiKey &&
       }),
     });
     storage = getStorage(app);
+    if (process.env.NEXT_PUBLIC_COMMERCE_SANDBOX === '1') {
+      if (firebaseConfig.projectId !== 'demo-allverse-sandbox') throw new Error('Sandbox must use the demo Firebase project.');
+      connectAuthEmulator(auth, 'http://127.0.0.1:9095', { disableWarnings: true });
+      connectFirestoreEmulator(db, '127.0.0.1', 8085);
+      // Storage intentionally has no running emulator in the payment-only harness: fail closed.
+      connectStorageEmulator(storage, '127.0.0.1', 9195);
+    }
     
     // Initialize Performance Monitoring (client-side only, non-blocking)
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_COMMERCE_SANDBOX !== '1') {
       import('firebase/performance').then(({ getPerformance }) => {
         try {
           getPerformance(app);

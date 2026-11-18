@@ -4,6 +4,7 @@ import { getListingAdmin } from '@/lib/server/adminListings';
 import { getProfileDocumentAdmin } from '@/lib/server/adminProfiles';
 import type { FirestoreOrder, OrderShippingSelection } from '@/lib/types/firestore';
 import { calculateCheckoutTotals, DEFAULT_TAX_RATE } from '@/lib/payments/pricing';
+import { getSandboxShipping } from './environment';
 import {
   findMatchingShippingRate,
   normalizeShippoRates,
@@ -112,6 +113,8 @@ export async function quoteTrustedShipping(params: {
   selectedShipping?: SelectedShippingInput | null;
   listings: Array<{ shipping?: ListingShippingShape | null }>;
 }): Promise<TrustedShippingRate> {
+  const simulated = getSandboxShipping();
+  if (simulated) return simulated;
   const packageDimensions = getPackageDimensions(params.listings);
   let fromZip = '10001';
 

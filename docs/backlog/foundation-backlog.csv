@@ -1,0 +1,1136 @@
+Audit ID,Jira Key,Jira URL,Issue Type,Summary,Priority,Epic Audit ID,Epic Key,Labels,Dependencies,Jira Dependencies,Description
+AV-F001,DEV-8,https://allversegpt.atlassian.net/browse/DEV-8,Bug,Deny client writes to financial orders and fulfillment records,Highest,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f001,security",,,"Audit ID: **AV-F001** | Severity: **P0** | Area: **Security**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+The checked-in rules allow any signed-in buyer to create an order and any order participant to update the entire order. Direct Firestore calls bypass the API status-only restriction, allowing forged paid states, participants, amounts, and settlement flags. Shipping rules evaluate resource.data on the shipping document rather than fetching the parent order.
+
+**Requested implementation**
+Make order creation and financial/fulfillment changes server-owned. Define safe participant reads against parent order data, including shipping subdocuments; preserve necessary realtime reads.
+
+**Acceptance criteria**
+- [ ] Emulator tests deny buyer/seller creation and edits to amounts, items, sellerIds, payment IDs, payout ledgers, and shipping state.
+- [ ] Only authorized server workflows create/settle orders; unrelated users cannot read orders or shipment documents.
+- [ ] Buyer and seller can read their own shipment tracking after the parent-order permission fix.
+
+**Evidence**
+- [apps/web/firestore.rules:66](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/firestore.rules#L66) — `match /orders/{orderId}`
+- [apps/web/src/app/api/orders/[id]/route.ts:47](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/orders/[id]/route.ts#L47) — `Only order status updates`
+
+**Dependencies:** None identified.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F002,DEV-9,https://allversegpt.atlassian.net/browse/DEV-9,Bug,Separate public profiles from private addresses and contact data,Highest,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f002,privacy",,,"Audit ID: **AV-F002** | Severity: **P0** | Area: **Privacy**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+GET /api/profile?userId=... returns the full profile without authentication and caches it publicly. profiles are also globally readable under Firestore rules. Saved shipping addresses, phone, demographic/preferences, Connect IDs, and push tokens share this document.
+
+**Requested implementation**
+Introduce an explicit public profile projection and private owner/server data. Move shipping quotes to a server endpoint so buyers need no seller address access. Migrate old documents and update all readers.
+
+**Acceptance criteria**
+- [ ] Guest API and direct SDK reads expose only approved public fields; automated tests cover address, phone, age, Connect and push-token exclusion.
+- [ ] Owner can read and edit permitted private fields; other users cannot.
+- [ ] Web/mobile listing profiles, chat display names, and shipping quotes still work after migration; old cached private responses are invalidated.
+
+**Evidence**
+- [apps/web/src/app/api/profile/route.ts:52](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/profile/route.ts#L52) — `const serializedProfile =`
+- [apps/web/firestore.rules:41](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/firestore.rules#L41) — `match /profiles/{userId}`
+- [apps/web/src/lib/firestore.ts:41](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/firestore.ts#L41) — `shippingAddress?:`
+
+**Dependencies:** None identified.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F003,DEV-10,https://allversegpt.atlassian.net/browse/DEV-10,Bug,Protect Connect account ownership and server-controlled profile fields,Highest,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f003,security",AV-F002,DEV-9,"Audit ID: **AV-F003** | Severity: **P0** | Area: **Security**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+saveProfileAdmin includes stripeConnectAccountId and stripeConnectOnboardingComplete in caller-writable fields. The same profile is writable through the client SDK. Account-status/account-link routes and payouts trust the stored account ID. users/{uid} also permits unrestricted owner writes, including role.
+
+**Requested implementation**
+Whitelist editable profile fields, store Connect/role/verification data under server-only control, and verify every connected account belongs to the requesting user/platform. Allowlist onboarding return URLs.
+
+**Acceptance criteria**
+- [ ] API and SDK attempts to set Connect IDs/completion, admin roles, or deleted/eligibility flags are rejected.
+- [ ] Connect link/status/transfer operations validate the user-to-account mapping and provider account metadata.
+- [ ] Concurrent onboarding requests reuse one account and approved application callback URLs only.
+
+**Evidence**
+- [apps/web/src/lib/server/adminProfiles.ts:95](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminProfiles.ts#L95) — `const optionalFields`
+- [apps/web/firestore.rules:35](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/firestore.rules#L35) — `match /users/{userId}`
+- [apps/web/src/app/api/stripe/connect/account-link/route.ts:22](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/stripe/connect/account-link/route.ts#L22) — `const returnUrl`
+
+**Dependencies:** AV-F002.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F004,DEV-11,https://allversegpt.atlassian.net/browse/DEV-11,Bug,Bind email verification to the authenticated account email,Highest,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f004,identity",,,"Audit ID: **AV-F004** | Severity: **P0** | Area: **Identity**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+The public send-verification-email route accepts arbitrary email and userId. The verification consumer marks tokenData.userId verified without checking that its Auth email matches tokenData.email. A requester can receive a verification token for another UID at an email they control. This is a verification bypass, not evidence of account takeover.
+
+**Requested implementation**
+Use Firebase verification consistently or issue server tokens bound to the authenticated UID and its current Auth email. Add expiry, one-time consumption, resend limits, and email-change invalidation.
+
+**Acceptance criteria**
+- [ ] A request cannot pair one user UID with another email or request verification for another account.
+- [ ] Consumed, expired, old-email, and concurrently consumed tokens fail safely; legitimate verification succeeds.
+- [ ] Resend endpoint has durable throttling and returns no sensitive account data.
+
+**Evidence**
+- [apps/web/src/app/api/auth/send-verification-email/route.ts:12](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/auth/send-verification-email/route.ts#L12) — `const { email, userId }`
+- [apps/web/src/app/api/auth/verify-token/route.ts:60](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/auth/verify-token/route.ts#L60) — `await auth.updateUser`
+
+**Dependencies:** None identified.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F005,DEV-12,https://allversegpt.atlassian.net/browse/DEV-12,Task,Version and deploy Firestore and Storage security policies,Highest,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f005,infrastructure","AV-F001,AV-F002,AV-F003","DEV-8,DEV-9,DEV-10","Audit ID: **AV-F005** | Severity: **P0** | Area: **Infrastructure**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+firebase.json only configures functions. Firestore rules/indexes exist under apps/web but are not referenced there; no tracked Storage rules or rule tests were found. Actual deployed policies are unknown, so checked-in rules cannot establish production safety.
+
+**Requested implementation**
+Add explicit deployment targets for Firestore rules/indexes and Storage rules; create isolated emulator/staging verification and drift checks. Inventory private/public media access before deploying changes.
+
+**Acceptance criteria**
+- [ ] A clean checkout can deploy reviewed rules/indexes/Storage policies to staging with a documented command.
+- [ ] CI tests unauthenticated, owner, participant, unrelated-user, and server access for every data domain.
+- [ ] Record deployed policy versions and verify production drift separately; no audit task automatically changes production.
+
+**Evidence**
+- [firebase.json:2](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/firebase.json#L2) — `""functions""`
+- [apps/web/firestore.rules:1](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/firestore.rules#L1) — `rules_version = '2'`
+- [apps/web/firestore.indexes.json:2](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/firestore.indexes.json#L2) — `""indexes""`
+
+**Dependencies:** AV-F001, AV-F002, AV-F003.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F006,DEV-13,https://allversegpt.atlassian.net/browse/DEV-13,Bug,Enforce one order per Checkout Session inside the transaction,Highest,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f006,payments",,,"Audit ID: **AV-F006** | Severity: **P0** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+The webhook checks snapshot.status before entering createOrderFromSnapshotAdmin. That transaction reads listings and cart but never rereads/claims the snapshot and creates a random order ID. Distinct event IDs or an expired event lease can enter with the same pending snapshot; with remaining inventory, transaction retry can create a second order and decrement stock again.
+
+**Requested implementation**
+Claim the session/snapshot atomically and return its existing order ID from within the transaction. Use a deterministic session/order uniqueness record and preserve the event lock as an additional guard.
+
+**Acceptance criteria**
+- [ ] Concurrent distinct Stripe event IDs for the same session produce exactly one order, payment identity, and stock decrement.
+- [ ] A Firestore transaction retry rereads session ownership/state and returns the existing order rather than creating another.
+- [ ] Test inventory 1 and inventory >1, legacy session handling, duplicate delivery, and expired leases.
+
+**Evidence**
+- [apps/web/src/lib/server/adminOrders.ts:48](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminOrders.ts#L48) — `export async function createOrderFromSnapshotAdmin`
+- [apps/web/src/lib/server/adminOrders.ts:82](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminOrders.ts#L82) — `const orderRef =`
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:538](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L538) — `snapshot.status === 'processed'`
+
+**Dependencies:** None identified.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F007,DEV-14,https://allversegpt.atlassian.net/browse/DEV-14,Bug,Recover paid sessions when stock becomes unavailable,Highest,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f007,payments",AV-F006,DEV-13,"Audit ID: **AV-F007** | Severity: **P0** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Stock is checked at checkout and again only after Stripe reports paid. Another buyer, seller edit/deletion, or sold flag can make the paid snapshot unfulfillable. The transaction then throws and the webhook returns 500 without an order, refund, or durable exception workflow. This prevents a negative stock count but leaves a charged buyer unresolved.
+
+**Requested implementation**
+Choose a reservation/authorization policy and implement paid-but-unfulfillable compensation. Always persist a recoverable payment exception and provide refund/support resolution without requiring stock to reappear.
+
+**Acceptance criteria**
+- [ ] Two buyers can complete checkout for the last item without leaving the losing payment invisible or permanently retrying.
+- [ ] Seller deletion/deactivation between checkout and payment yields a documented refund or fulfillment exception with an operator-visible record.
+- [ ] Reservation expiry/cancel/failure releases stock exactly once; compensation and late events cannot double-refund or transfer money.
+
+**Evidence**
+- [apps/web/src/lib/payments/checkout.ts:218](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L218) — `Availability check must match`
+- [apps/web/src/lib/server/adminOrders.ts:77](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminOrders.ts#L77) — `has insufficient stock`
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:668](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L668) — `return new Response('Webhook error'`
+
+**Dependencies:** AV-F006.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F008,DEV-15,https://allversegpt.atlassian.net/browse/DEV-15,Bug,Resume settlement work after the order transaction commits,Highest,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f008,payments",AV-F006,DEV-13,"Audit ID: **AV-F008** | Severity: **P0** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Order creation marks the snapshot processed before payment-record creation, seller transfers, email, and label work. On a crash afterward, the next webhook returns immediately for a processed snapshot. A retry therefore does not finish missing post-commit work; even the payout retry endpoint may reject an order whose payout state was never initialized.
+
+**Requested implementation**
+Persist independent durable settlement steps/outbox jobs atomically with the order and resume unfinished steps for any retry of the session. Distinguish order-created from fully-settled.
+
+**Acceptance criteria**
+- [ ] Inject a crash after each boundary: order commit, payment write, transfer success, transfer persistence, email send, and label purchase; retry completes remaining work.
+- [ ] Provider-side success followed by database failure reconciles the existing provider operation without duplication.
+- [ ] Missing/failed steps remain queryable and recoverable until terminal success or a recorded operator outcome.
+
+**Evidence**
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:537](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L537) — `Idempotency: snapshot already processed`
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:578](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L578) — `await ensurePaymentRecord`
+- [apps/web/src/lib/server/adminOrders.ts:134](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminOrders.ts#L134) — `Mark snapshot processed`
+
+**Dependencies:** AV-F006.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F009,DEV-17,https://allversegpt.atlassian.net/browse/DEV-17,Bug,Make checkout creation retry-safe and bound to one cart attempt,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f009,payments","AV-F006,AV-F007","DEV-13,DEV-14","Audit ID: **AV-F009** | Severity: **P1** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Every checkout POST creates a new Stripe Session without a request idempotency key, then stores the snapshot afterward. Network retries/double taps can create multiple payable sessions. A snapshot write failure leaves an orphan provider session; there is no recorded checkout-attempt lifecycle.
+
+**Requested implementation**
+Persist a checkout attempt/cart version before provider creation, use provider idempotency, and reconcile or expire orphan sessions. Reuse the current payable attempt for retries with the same buyer/seller/cart/address/quote.
+
+**Acceptance criteria**
+- [ ] Repeated and concurrent identical requests return one session; changed cart/quote creates a deliberate new attempt.
+- [ ] Stripe success followed by snapshot-write failure is reconciled or the session is expired with an operator-visible outcome.
+- [ ] Retry after a lost HTTP response cannot charge the same purchase twice.
+
+**Evidence**
+- [apps/web/src/app/api/payments/create-checkout-session/route.ts:70](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/payments/create-checkout-session/route.ts#L70) — `const result = await createCheckoutSession`
+- [apps/web/src/lib/stripe.ts:25](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/stripe.ts#L25) — `stripe.checkout.sessions.create`
+- [apps/web/src/lib/server/adminCheckoutSnapshots.ts:11](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminCheckoutSnapshots.ts#L11) — `createCheckoutSnapshotAdmin`
+
+**Dependencies:** AV-F006, AV-F007.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F010,DEV-18,https://allversegpt.atlassian.net/browse/DEV-18,Bug,Keep pending-Connect payout lines pending during retry,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f010,payouts","AV-F003,AV-F008","DEV-10,DEV-15","Audit ID: **AV-F010** | Severity: **P1** | Area: **Payouts**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+The internal payout retry skips sellers without a ready Connect account, then marks the entire order complete whenever failures.length is zero. An order with zero transfers can therefore become payoutsProcessed=true and payoutRetryable=false while the seller remains unpaid.
+
+**Requested implementation**
+Track every expected line as transferred, pending onboarding, or failed. Completion requires coverage of all payable lines; validate the order is paid and not refunded/cancelled before retry.
+
+**Acceptance criteria**
+- [ ] Retrying a pending_connect order without a ready account leaves pending_connect/retryable and zero claimed completed transfers.
+- [ ] Mixed ready/missing/failed lines preserve correct balances and status until all are resolved.
+- [ ] A completed retry requires an idempotent persisted transfer or explicitly approved zero-payable outcome for every line.
+
+**Evidence**
+- [apps/web/src/app/api/internal/payouts/retry/route.ts:63](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/internal/payouts/retry/route.ts#L63) — `if (!sellerProfile?.stripeConnectAccountId`
+- [apps/web/src/app/api/internal/payouts/retry/route.ts:101](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/internal/payouts/retry/route.ts#L101) — `if (failures.length === 0)`
+
+**Dependencies:** AV-F003, AV-F008.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F011,DEV-19,https://allversegpt.atlassian.net/browse/DEV-19,Story,Tie seller transfers to funding and reconcile ambiguous outcomes,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f011,payouts","AV-F003,AV-F008,AV-F010","DEV-10,DEV-15,DEV-18","Audit ID: **AV-F011** | Severity: **P1** | Area: **Payouts**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+transferToSeller creates standalone transfers without source_transaction or transfer_group and attempts them immediately after payment. Insufficient available platform balance can fail despite a successful customer charge. The ledger is persisted after all lines; a lost response/database write has no provider reconciliation path.
+
+**Requested implementation**
+Choose and document a supported charge/transfer funding strategy. Persist charge, balance transaction, transfer group and per-line operation state; use durable retries and provider lookup for ambiguous outcomes, including beyond Stripe idempotency retention.
+
+**Acceptance criteria**
+- [ ] A new paid order with unsettled platform funds follows a pending/charge-associated funding path and eventually transfers once.
+- [ ] Timeout after provider transfer success is reconciled without a second transfer; transfer keys remain stable across workers.
+- [ ] Tests cover partial success, rate limits, unavailable balance, reversed transfers, and legacy ledger migration.
+
+**Evidence**
+- [apps/web/src/lib/stripe.ts:209](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/stripe.ts#L209) — `stripe.transfers.create`
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:376](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L376) — `async function transferToSellersForOrder`
+
+**Dependencies:** AV-F003, AV-F008, AV-F010.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F012,DEV-20,https://allversegpt.atlassian.net/browse/DEV-20,Story,Manage seller onboarding and Connect capability changes,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f012,payouts","AV-F003,AV-F010,AV-F011","DEV-10,DEV-18,DEV-19","Audit ID: **AV-F012** | Severity: **P1** | Area: **Payouts**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Checkout does not require seller payout readiness. The stored onboarding flag only changes to true during account-status GET and never resets after restrictions. No account.updated handler or automatic pending_connect recovery exists in the webhook event allowlist.
+
+**Requested implementation**
+Decide whether sellers must onboard before publish or before purchase; otherwise expose held balances explicitly. Consume capability/requirements updates and trigger safe recovery when a seller becomes eligible.
+
+**Acceptance criteria**
+- [ ] A seller without required capabilities is gated or clearly enters the approved held-funds workflow before a buyer pays.
+- [ ] Restricting an already-onboarded account updates server eligibility and seller UI without waiting for a manual status GET.
+- [ ] Completing onboarding discovers pending liabilities and retries them once; duplicate account creation is prevented.
+
+**Evidence**
+- [apps/web/src/app/api/stripe/connect/account-status/route.ts:38](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/stripe/connect/account-status/route.ts#L38) — `if (result.chargesEnabled`
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:606](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L606) — `payoutStatus: 'pending_connect'`
+- [apps/web/src/lib/payments/checkout.ts:181](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L181) — `export async function prepareTrustedCheckout`
+
+**Dependencies:** AV-F003, AV-F010, AV-F011.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F013,DEV-21,https://allversegpt.atlassian.net/browse/DEV-21,Story,Show real seller earnings and bank payout status,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f013,payouts","AV-F011,AV-F012,AV-F014","DEV-19,DEV-20,DEV-22","Audit ID: **AV-F013** | Severity: **P1** | Area: **Payouts**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+The sales UI prorates buyer tax and processing fees into a displayed total rather than showing net seller earnings. payoutStatus=complete means Connect transfer creation; no bank-payout event handling, paid-out history, failed-bank-payout recovery, or seller statement exists.
+
+**Requested implementation**
+Create a seller-facing ledger for gross item value, platform fee, adjustments, net transfer, pending funds and provider bank payout state. Link to an approved Stripe account/dashboard management experience.
+
+**Acceptance criteria**
+- [ ] A $100 item shows the approved 4.5% commission and $95.50 item proceeds before separately disclosed adjustments.
+- [ ] Transfer-created, available, payout-pending, paid-to-bank, failed, and reversed states are distinguishable.
+- [ ] Seller can review order-linked statement totals and follow a failed payout recovery path without contacting developers to edit Firestore.
+
+**Evidence**
+- [apps/web/src/app/sales/page.tsx:206](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/sales/page.tsx#L206) — `const sellerTotal =`
+- [apps/web/src/lib/stripe.ts:236](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/stripe.ts#L236) — `calculateSellerPayout`
+- [apps/web/src/lib/types/firestore.ts:199](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/types/firestore.ts#L199) — `payoutStatus?:`
+
+**Dependencies:** AV-F011, AV-F012, AV-F014.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F014,DEV-22,https://allversegpt.atlassian.net/browse/DEV-22,Story,Use integer minor units and versioned fee allocation,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f014,payments",,,"Audit ID: **AV-F014** | Severity: **P1** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Pricing, tax, fees and seller commission use floating-point dollars; only the final Stripe amount and each transfer are rounded. No immutable fee-policy version or allocation ledger explains rounding, shipping spend, or later partial refunds.
+
+**Requested implementation**
+Use USD cents for authoritative amounts with explicit rounding and allocation rules. Snapshot the fee policy and reconcile customer charge to tax, shipping, provider cost, platform revenue and seller liability.
+
+**Acceptance criteria**
+- [ ] All persisted financial components use integers and reconcile exactly to the charged minor-unit total.
+- [ ] Golden examples cover low-value items, multiple lines, rounding remainders, and partial refunds/transfers.
+- [ ] Historical orders keep their original fee policy after a configuration change.
+
+**Evidence**
+- [apps/web/src/lib/payments/pricing.ts:9](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/pricing.ts#L9) — `calculateCheckoutTotals`
+- [apps/web/src/lib/stripe.ts:241](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/stripe.ts#L241) — `const platformFee =`
+- [apps/web/src/app/api/payments/create-checkout-session/route.ts:71](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/payments/create-checkout-session/route.ts#L71) — `Math.round(checkout.total * 100)`
+
+**Dependencies:** None identified.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F015,DEV-23,https://allversegpt.atlassian.net/browse/DEV-23,Story,Replace flat estimated tax with an approved tax workflow,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f015,payments","AV-F014,AV-F051","DEV-22,DEV-54","Audit ID: **AV-F015** | Severity: **P1** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+The server always uses DEFAULT_TAX_RATE=0.08. Checkout creates one generic Stripe line and has no tax calculation, registration configuration, tax evidence, reporting, refund adjustment, or remittance workflow in the repository. Tax responsibility and supported markets require business confirmation.
+
+**Requested implementation**
+Have the business/tax owner approve the launch scope and responsibility, then implement the chosen jurisdiction/product-aware calculation and reporting integration. Keep this decision separate from a claim that a specific rate or obligation applies.
+
+**Acceptance criteria**
+- [ ] Document who calculates/collects/remits tax and which jurisdictions/products are supported, with owner approval.
+- [ ] Checkout uses an authoritative tax quote with item/shipping treatment and retained calculation evidence, not a universal 8%.
+- [ ] Test different supported destinations, exemptions if supported, refunds, and provider failure; unsupported regions cannot silently proceed.
+
+**Evidence**
+- [apps/web/src/lib/payments/pricing.ts:1](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/pricing.ts#L1) — `DEFAULT_TAX_RATE = 0.08`
+- [apps/web/src/lib/stripe.ts:35](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/stripe.ts#L35) — `name: 'Order'`
+
+**Dependencies:** AV-F014, AV-F051.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F016,DEV-24,https://allversegpt.atlassian.net/browse/DEV-24,Story,"Implement paid-order cancellations, refunds and return resolution",High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f016,payments","AV-F007,AV-F008,AV-F011,AV-F014,AV-F025,AV-F051","DEV-14,DEV-15,DEV-19,DEV-22,DEV-33,DEV-54","Audit ID: **AV-F016** | Severity: **P1** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+The transition table only permits cancellation from pending, while the active checkout flow creates paid orders. There are no refund/return API routes, refund event consumers, transfer reversals, label refund handling, or compensating inventory actions. A refunded payment enum alone does not implement these workflows.
+
+**Requested implementation**
+Implement an approved pre-shipment cancellation and return/refund policy, beginning with operator-assisted full refunds and then partial refunds. Persist provider references, seller recovery, tax/fee adjustments and inventory decisions.
+
+**Acceptance criteria**
+- [ ] Buyer/support can request and resolve a paid-order cancellation under the approved policy with a visible outcome.
+- [ ] Full/partial refund is idempotent and reconciles charge, seller transfer reversal/recovery, label cost and tax.
+- [ ] Delayed/duplicate provider events cannot double-refund or restock an item; failed recovery remains visible to support.
+
+**Evidence**
+- [apps/web/src/lib/authz.ts:6](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/authz.ts#L6) — `ORDER_STATE_TRANSITIONS`
+- [apps/web/src/lib/types/firestore.ts:257](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/types/firestore.ts#L257) — `'pending' | 'succeeded' | 'failed' | 'refunded'`
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:490](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L490) — `event.type !== 'checkout.session.completed'`
+
+**Dependencies:** AV-F007, AV-F008, AV-F011, AV-F014, AV-F025, AV-F051.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F017,DEV-25,https://allversegpt.atlassian.net/browse/DEV-25,Story,Handle payment disputes and chargebacks with an operator workflow,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f017,payments","AV-F011,AV-F013,AV-F016,AV-F048","DEV-19,DEV-21,DEV-24,DEV-51","Audit ID: **AV-F017** | Severity: **P1** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+The webhook only handles Checkout completion/async/expiry events. There is no dispute lifecycle, evidence deadline, seller recovery, chargeback ledger adjustment, or support queue.
+
+**Requested implementation**
+Consume relevant dispute/refund/transfer events and create authenticated support actions for evidence and financial reconciliation. Record deadlines, outcomes, and recovery liabilities.
+
+**Acceptance criteria**
+- [ ] A test dispute creates one linked case with payment/order/seller references and an evidence deadline.
+- [ ] Duplicate or out-of-order dispute events update the same case and do not duplicate financial adjustments.
+- [ ] Won/lost disputes and failed seller recovery are reflected in statements and operator queues.
+
+**Evidence**
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:490](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L490) — `event.type !== 'checkout.session.completed'`
+- [apps/web/src/lib/stripe.ts:199](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/stripe.ts#L199) — `transferToSeller`
+
+**Dependencies:** AV-F011, AV-F013, AV-F016, AV-F048.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F018,DEV-26,https://allversegpt.atlassian.net/browse/DEV-26,Bug,Enforce the per-seller checkout contract on the server,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f018,payments","AV-F006,AV-F026","DEV-13,DEV-34","Audit ID: **AV-F018** | Severity: **P1** | Area: **Payments**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Web and mobile pay one seller per session, but sellerId is optional in the API. Omitting it permits multi-seller snapshots. prepareTrustedCheckout quotes multiple sellers, yet createOrderFromSnapshotAdmin drops sellerShippingRates and only one orders/{id}/shipping/primary label exists. A caller can pay shipping for sellers whose fulfillment records are lost.
+
+**Requested implementation**
+For the baseline, require or infer exactly one trusted seller per attempt and reject mixed carts without a seller scope. Treat full multi-seller orders as a separate future design requiring per-seller shipments and state.
+
+**Acceptance criteria**
+- [ ] Mixed-seller cart requests without valid seller scope are rejected before Stripe Session creation.
+- [ ] Seller scope is derived/validated against current listing ownership; one seller payment leaves other seller cart items intact.
+- [ ] Existing mixed-seller snapshots/orders are detected and assigned a migration/support outcome.
+
+**Evidence**
+- [apps/web/src/app/api/payments/create-checkout-session/route.ts:43](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/payments/create-checkout-session/route.ts#L43) — `if (typeof sellerId === 'string'`
+- [apps/web/src/lib/payments/checkout.ts:296](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L296) — `sellerShippingRates:`
+- [apps/web/src/lib/server/adminOrders.ts:94](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminOrders.ts#L94) — `shipping: snapshot.shippingRate`
+
+**Dependencies:** AV-F006, AV-F026.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F019,DEV-27,https://allversegpt.atlassian.net/browse/DEV-27,Bug,Require a valid private seller ship-from and return address,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f019,shipping","AV-F002,AV-F012","DEV-9,DEV-20","Audit ID: **AV-F019** | Severity: **P1** | Area: **Shipping**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Trusted checkout passes only seller name, ZIP and US country to Shippo, even when the profile has a full address, and falls back to ZIP 10001 when missing. This is not a reliable ship-from/return-address contract for purchasing real labels.
+
+**Requested implementation**
+Collect/validate a private ship-from/return address and use it server-side for quotes and labels. Prevent shipped checkout when no valid seller origin exists; remove invented ZIP fallback.
+
+**Acceptance criteria**
+- [ ] Quotes and labels use the seller-approved full origin and buyer destination, including names and address lines.
+- [ ] A seller without a valid origin receives an actionable setup requirement before a buyer is charged.
+- [ ] Address records remain private; address edits cannot mutate existing purchased shipment evidence.
+
+**Evidence**
+- [apps/web/src/lib/payments/checkout.ts:116](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L116) — `let fromZip = '10001'`
+- [apps/web/src/lib/payments/checkout.ts:129](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L129) — `addressFrom: {`
+
+**Dependencies:** AV-F002, AV-F012.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F020,DEV-28,https://allversegpt.atlassian.net/browse/DEV-28,Bug,Capture and quote the actual shipment package,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f020,shipping","AV-F019,AV-F027","DEV-27,DEV-35","Audit ID: **AV-F020** | Severity: **P1** | Area: **Shipping**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Package quoting takes dimensions from the first listing with shipping data or defaults to 2 lb/12x8x6. It ignores multiple items/quantities and packing. Mobile listing creation sends no package dimensions and mobile quote previews always use defaults.
+
+**Requested implementation**
+Define supported package types and units, require bounded validated dimensions/weight or an approved package preset, and calculate a real package plan for seller bundles.
+
+**Acceptance criteria**
+- [ ] Web/mobile sellers supply a valid package or approved preset with consistent units.
+- [ ] Two-item and quantity examples produce the approved aggregate/multiple-package plan rather than reusing the first item dimensions.
+- [ ] Missing, negative, non-finite and out-of-carrier-range values fail before charge; preview and purchased label use the same plan.
+
+**Evidence**
+- [apps/web/src/lib/payments/checkout.ts:95](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L95) — `function getPackageDimensions`
+- [apps/mobile/app/checkout.tsx:225](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/checkout.tsx#L225) — `weight: 2,`
+- [apps/mobile/app/(tabs)/sell.tsx:458](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/(tabs)/sell.tsx#L458) — `inventory: 1,`
+
+**Dependencies:** AV-F019, AV-F027.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F021,DEV-29,https://allversegpt.atlassian.net/browse/DEV-29,Bug,Bind checkout to a server quote and confirm material changes,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f021,shipping","AV-F014,AV-F018,AV-F019,AV-F020","DEV-22,DEV-26,DEV-27,DEV-28","Audit ID: **AV-F021** | Severity: **P1** | Area: **Shipping**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Clients preview rates independently. Trusted checkout creates a fresh shipment and falls back to rates[0] if the selected service no longer matches. Web preview only refreshes on ZIP/cart changes; mobile also omits full-address dependencies from its effect. An expired-rate label refresh overwrites order.shipping.price after payment without preserving charged-vs-actual cost.
+
+**Requested implementation**
+Return a server quote ID covering cart version, seller, addresses, package, service, currency and expiry. Require explicit confirmation of changed totals/service; preserve paid shipping and actual label cost separately.
+
+**Acceptance criteria**
+- [ ] Changing address, package, seller, cart or currency invalidates the quote on both clients and server.
+- [ ] Unavailable selected service or changed total is presented for confirmation instead of silently substituting the cheapest rate.
+- [ ] Post-payment requote records the original customer charge, new label cost, and approved party bearing any difference.
+
+**Evidence**
+- [apps/web/src/lib/payments/checkout.ts:166](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L166) — `findMatchingShippingRate(rates, params.selectedShipping) ?? rates[0]`
+- [apps/web/src/components/CheckoutForm.tsx:233](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/components/CheckoutForm.tsx#L233) — `[shippingAddress.zip, cartItems]`
+- [apps/web/src/app/api/shipping/create-label/route.ts:140](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/shipping/create-label/route.ts#L140) — `shipping: newShipping`
+
+**Dependencies:** AV-F014, AV-F018, AV-F019, AV-F020.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F022,DEV-30,https://allversegpt.atlassian.net/browse/DEV-30,Bug,Keep label purchase separate from physical shipment,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f022,shipping",AV-F025,DEV-33,"Audit ID: **AV-F022** | Severity: **P1** | Area: **Shipping**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Both automatic label purchase in the Stripe webhook and manual create-label set order.status=shipped and shippedAt immediately. Buyer notifications say the parcel is on its way even though the carrier may not have received it.
+
+**Requested implementation**
+Introduce label_created/awaiting_dropoff fulfillment state and truthful notifications. Mark in-transit only from carrier acceptance or an explicitly defined seller handoff step.
+
+**Acceptance criteria**
+- [ ] Successful label purchase leaves the order paid/label-created with a downloadable seller label, not shipped.
+- [ ] Buyer sees awaiting shipment until a verified handoff/acceptance event.
+- [ ] Existing auto-shipped records have a defined migration/display interpretation; labels are not repurchased during migration.
+
+**Evidence**
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:280](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L280) — `async function attemptAutoShippingLabel`
+- [apps/web/src/app/api/shipping/create-label/route.ts:179](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/shipping/create-label/route.ts#L179) — `// Auto-update order status to shipped`
+
+**Dependencies:** AV-F025.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F023,DEV-31,https://allversegpt.atlassian.net/browse/DEV-31,Story,Ingest tracking events and expose delivery exceptions,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f023,shipping","AV-F022,AV-F024,AV-F025","DEV-30,DEV-32,DEV-33","Audit ID: **AV-F023** | Severity: **P1** | Area: **Shipping**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+No inbound Shippo tracking webhook exists. Order delivery is a buyer status transition in authz.ts; the system cannot reconcile carrier acceptance, delivery, failure, loss, return-to-sender or stale tracking.
+
+**Requested implementation**
+Implement provider-authenticated tracking ingestion with replay/out-of-order handling, persisted history, and support escalation. Distinguish carrier-delivered from buyer-confirmed receipt.
+
+**Acceptance criteria**
+- [ ] Test PRE_TRANSIT, TRANSIT, DELIVERED, FAILURE and RETURNED events with duplicate/out-of-order delivery.
+- [ ] Only authenticated/matched provider data changes shipment state; stale events cannot regress delivered shipments.
+- [ ] Buyer/seller tracking views and support queues show status, ETA if provided, exceptions and next actions.
+
+**Evidence**
+- [apps/web/src/lib/authz.ts:18](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/authz.ts#L18) — `buyer: ['delivered']`
+- [apps/web/src/lib/types/firestore.ts:155](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/types/firestore.ts#L155) — `export interface OrderShippingSelection`
+
+**Dependencies:** AV-F022, AV-F024, AV-F025.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F024,DEV-32,https://allversegpt.atlassian.net/browse/DEV-32,Bug,Reconcile label purchase timeouts before buying another label,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f024,shipping","AV-F008,AV-F021","DEV-15,DEV-29","Audit ID: **AV-F024** | Severity: **P1** | Area: **Shipping**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+The label helper obtains a Shippo transaction ID but does not persist it. If label purchase succeeds remotely and the response/database write fails or polling times out, the lock is failed or expires and a later request can purchase again. The temporary lock does not prove exactly-once external purchase.
+
+**Requested implementation**
+Persist the provider transaction/attempt identity and reconcile pending/ambiguous purchases before retrying. Store transaction ID, actual cost, test mode, and final provider error details; provide void/refund recovery.
+
+**Acceptance criteria**
+- [ ] Timeout after remote success is recovered by retrieving the existing transaction rather than purchasing another.
+- [ ] Concurrent auto/manual attempts produce one usable label and one accounted shipping charge.
+- [ ] Pending/failed/voided/refunded labels are distinguishable; expired-rate retry is tested against real provider error shapes.
+
+**Evidence**
+- [apps/web/src/lib/payments/shippingLabel.ts:142](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/shippingLabel.ts#L142) — `shippo.transactions.create`
+- [apps/web/src/lib/payments/shippingLabel.ts:151](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/shippingLabel.ts#L151) — `const transactionId =`
+- [apps/web/src/lib/payments/shippingLabel.ts:15](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/shippingLabel.ts#L15) — `SHIPPING_LABEL_LOCK_TTL_MS`
+
+**Dependencies:** AV-F008, AV-F021.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F025,DEV-33,https://allversegpt.atlassian.net/browse/DEV-33,Story,Use atomic audited order-state transitions,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f025,orders","AV-F001,AV-F006","DEV-8,DEV-13","Audit ID: **AV-F025** | Severity: **P1** | Area: **Orders**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+API order PATCH reads status and then updates without a transaction or event history. Other webhook/label paths write status independently. The single status mixes payment, fulfillment, cancellation and receipt, and cannot express refunds, returns or exceptions.
+
+**Requested implementation**
+Define separate payment/fulfillment/refund/settlement state and a transactional transition service with actor, timestamp, reason and source event. Introduce compatibility mapping for existing clients.
+
+**Acceptance criteria**
+- [ ] Concurrent conflicting transitions are resolved by server preconditions and cannot overwrite a newer state.
+- [ ] Every state change has a durable actor/source/reason audit event.
+- [ ] Invalid runtime status values return stable 4xx responses, and migration preserves legacy pending/paid/shipped/delivered/cancelled records.
+
+**Evidence**
+- [apps/web/src/app/api/orders/[id]/route.ts:61](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/orders/[id]/route.ts#L61) — `await updateOrderAdmin(params.id, { status: updates.status })`
+- [apps/web/src/lib/authz.ts:6](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/authz.ts#L6) — `ORDER_STATE_TRANSITIONS`
+
+**Dependencies:** AV-F001, AV-F006.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F026,DEV-34,https://allversegpt.atlassian.net/browse/DEV-34,Bug,Validate cart ownership from listings and mutate carts atomically,High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f026,cart","AV-F001,AV-F027","DEV-8,DEV-35","Audit ID: **AV-F026** | Severity: **P1** | Area: **Cart**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Add-to-cart trusts caller sellerId/price and only blocks self-purchase using that sellerId. Admin cart operations read-modify-write the entire items array without a transaction, losing concurrent additions/removals. Direct SDK carts permit arbitrary arrays, duplicate lines and quantities despite the API unique-item rule.
+
+**Requested implementation**
+Resolve listing ownership/availability on the server, enforce the chosen unique-item/quantity contract, and use transactional versioned cart updates. Recheck buyer-vs-seller at checkout and normalize duplicate listing IDs.
+
+**Acceptance criteria**
+- [ ] Forged seller IDs, own listings, sold/deleted listings, duplicate IDs and unsupported quantities are rejected or normalized consistently.
+- [ ] Concurrent web/mobile add/remove operations preserve all intended updates, including payment cart cleanup.
+- [ ] Checkout cannot buy the buyer own listing via direct cart writes or a changed listing owner.
+
+**Evidence**
+- [apps/web/src/app/api/carts/route.ts:42](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/carts/route.ts#L42) — `parsed.data.sellerId === req.userId`
+- [apps/web/src/lib/server/adminCarts.ts:47](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminCarts.ts#L47) — `const updatedItems = [...cart.items`
+- [apps/web/firestore.rules:38](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/firestore.rules#L38) — `match /carts/{userId}`
+
+**Dependencies:** AV-F001, AV-F027.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F027,DEV-35,https://allversegpt.atlassian.net/browse/DEV-35,Bug,Validate listing inputs and make ownership immutable,High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f027,catalog",AV-F001,DEV-8,"Audit ID: **AV-F027** | Severity: **P1** | Area: **Catalog**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+POST only checks a few fields and spreads arbitrary body fields; PUT casts JSON to a TypeScript interface then forwards almost all keys to Admin Firestore. Runtime types, price bounds, dimensions, currency, inventory and ownership are not enforced. A seller can submit sellerId or financial/availability fields outside the intended contract.
+
+**Requested implementation**
+Use shared runtime create/update schemas, strip/reject unknown fields and server-own sellerId, sold attribution and timestamps. Validate images, condition/category enums, supported currency, finite positive prices and stock/package bounds.
+
+**Acceptance criteria**
+- [ ] PUT cannot change sellerId or server-owned sale/financial fields through API or SDK.
+- [ ] Negative/zero/non-finite/oversized prices, unsupported enums/currency and malformed images/packages fail with actionable 4xx errors.
+- [ ] Web/mobile create and edit payloads pass the same contract, including manual-sold actions and price changes.
+
+**Evidence**
+- [apps/web/src/app/api/listings/route.ts:282](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/listings/route.ts#L282) — `const listingData = {`
+- [apps/web/src/app/api/listings/[id]/route.ts:84](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/listings/[id]/route.ts#L84) — `const safeBody =`
+- [apps/web/src/lib/server/adminListings.ts:43](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminListings.ts#L43) — `const payload: Record`
+
+**Dependencies:** AV-F001.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F028,DEV-36,https://allversegpt.atlassian.net/browse/DEV-36,Bug,"Unify sold flags, inventory and marketplace sale attribution",High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f028,catalog","AV-F006,AV-F027","DEV-13,DEV-35","Audit ID: **AV-F028** | Severity: **P1** | Area: **Catalog**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+New snapshot settlement updates inventory/isActive/sold but omits soldCount, soldAt and soldThroughAllVerse. Legacy/manual helpers set different combinations, including keeping isActive=true for sold history. The detail DTO omits inventory, so clients cannot reliably apply inventory===0 checks for legacy records.
+
+**Requested implementation**
+Define one availability/sale-history projection and reuse it in settlement, manual sold, catalog/search/detail APIs and profile statistics. Backfill known legacy variants conservatively.
+
+**Acceptance criteria**
+- [ ] A platform sale updates stock, sale timestamp/count and platform attribution atomically once.
+- [ ] Manual sold and platform sold display correctly without offering unavailable items for purchase.
+- [ ] Web/mobile list/detail/search/cart projections agree for missing inventory, zero inventory, sold and inactive legacy examples.
+
+**Evidence**
+- [apps/web/src/lib/server/adminOrders.ts:108](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminOrders.ts#L108) — `// --- 3. Decrement inventory`
+- [apps/web/src/lib/server/adminListings.ts:67](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminListings.ts#L67) — `markAsSoldAdmin`
+- [apps/web/src/app/api/listings/[id]/route.ts:28](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/listings/[id]/route.ts#L28) — `const simpleListing =`
+
+**Dependencies:** AV-F006, AV-F027.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F029,DEV-37,https://allversegpt.atlassian.net/browse/DEV-37,Bug,Enforce public listing visibility in Admin-backed read routes,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f029,privacy","AV-F027,AV-F028","DEV-35,DEV-36","Audit ID: **AV-F029** | Severity: **P1** | Area: **Privacy**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Public GET /api/listings? sellerId removes the isActive filter, and GET /api/listings/{id} returns any existing listing through Admin SDK with no owner visibility check. This bypasses the checked-in SDK read restriction for inactive listings and blocks any trustworthy draft/moderation/private state.
+
+**Requested implementation**
+Define published/sold-history/hidden/deleted visibility explicitly; apply public projections to both collection and detail reads. Keep owner/manage views authenticated and separate.
+
+**Acceptance criteria**
+- [ ] Guests cannot read hidden/draft/deactivated listings by ID, seller filter, search or public profile.
+- [ ] Owners can manage their own inactive listings through authenticated endpoints.
+- [ ] Approved public sold history remains available without re-exposing hidden content.
+
+**Evidence**
+- [apps/web/src/app/api/listings/route.ts:60](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/listings/route.ts#L60) — `isActive: sellerId ? undefined : true`
+- [apps/web/src/app/api/listings/[id]/route.ts:19](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/listings/[id]/route.ts#L19) — `const listing = await getListingAdmin(params.id)`
+
+**Dependencies:** AV-F027, AV-F028.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F030,DEV-38,https://allversegpt.atlassian.net/browse/DEV-38,Bug,Use authenticated server storage operations in upload and cleanup APIs,High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f030,media","AV-F005,AV-F027","DEV-12,DEV-35","Audit ID: **AV-F030** | Severity: **P1** | Area: **Media**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+The listing-photo API calls storage.ts which uses the Firebase client SDK; verifying a bearer token in withApi does not sign that client SDK into Storage. Cleanup uses the same client SDK on the server. With owner-only Storage rules these server operations can fail; permissive deployed rules would mask the boundary problem.
+
+**Requested implementation**
+Use Admin Storage in server routes after explicit listing/user authorization, or issue narrowly scoped signed uploads. Keep direct browser uploads under tested Storage rules.
+
+**Acceptance criteria**
+- [ ] Authenticated upload/delete APIs succeed with restrictive owner-only client Storage rules.
+- [ ] Another user cannot upload/delete listing media; spoofed metadata does not grant access.
+- [ ] Partial upload failure cleans only owned new objects and reports failure without breaking existing listing images.
+
+**Evidence**
+- [apps/web/src/app/api/upload/listing-photos/route.ts:70](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/upload/listing-photos/route.ts#L70) — `await uploadListingPhotoFile`
+- [apps/web/src/lib/storage.ts:1](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/storage.ts#L1) — `import { storage } from './firebase'`
+- [apps/web/src/lib/firebaseCleanup.ts:42](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/firebaseCleanup.ts#L42) — `StorageService.deleteAllListingPhotos`
+
+**Dependencies:** AV-F005, AV-F027.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F031,DEV-55,https://allversegpt.atlassian.net/browse/DEV-55,Story,Track media ownership and clean abandoned or replaced uploads,Medium,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f031,media","AV-F002,AV-F030","DEV-9,DEV-38","Audit ID: **AV-F031** | Severity: **P2** | Area: **Media**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Web sell uploads into a temp listing ID but later creates a different Firestore listing ID. Mobile uploads to public ai-chat-uploads and publishes those URLs directly, sometimes uploading twice. Cleanup only lists listing-photos/{uid}/{realListingId}; there is no asset ownership/adoption/expiry record, so deletions and abandoned forms leave media behind.
+
+**Requested implementation**
+Persist asset records with owner, purpose, storage path, visibility, linked listing and lifecycle. Adopt draft assets on publish; delete replaced/abandoned assets safely and remove public AI media after its retention window.
+
+**Acceptance criteria**
+- [ ] Deleting a listing resolves and cleans its actual owned paths across web temp and mobile AI uploads.
+- [ ] Abandoned drafts and replaced photos expire after a documented retention window without deleting assets used by live listings/orders.
+- [ ] Retries do not duplicate uploads; byte/type limits and image decoding are enforced server-side.
+
+**Evidence**
+- [apps/web/src/app/sell/page.tsx:81](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/sell/page.tsx#L81) — `setListingId(`temp-`
+- [apps/mobile/app/(tabs)/sell.tsx:404](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/(tabs)/sell.tsx#L404) — `// Upload photos using ai-chat endpoint`
+- [apps/web/src/app/api/upload/ai-chat/route.ts:141](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/upload/ai-chat/route.ts#L141) — `await fileRef.makePublic()`
+
+**Dependencies:** AV-F002, AV-F030.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F032,DEV-39,https://allversegpt.atlassian.net/browse/DEV-39,Bug,Make username claims authoritative across API and SDK writers,High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f032,identity","AV-F002,AV-F003","DEV-9,DEV-10","Audit ID: **AV-F032** | Severity: **P1** | Area: **Identity**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+The Admin save path reserves usernames/{name}, but public client ProfileService still performs query-then-write and profiles are owner-writable. The availability endpoint checks only sentinels; existing profiles need not have sentinels. Deletion does not release/tombstone the sentinel, and web/mobile formats differ.
+
+**Requested implementation**
+Choose one normalized username contract and transactional server writer; migrate legacy profiles/sentinels with conflict handling and define rename/delete reuse policy.
+
+**Acceptance criteria**
+- [ ] Two concurrent claims yield one owner; SDK writes cannot bypass uniqueness or change identity fields directly.
+- [ ] Backfill detects existing duplicate/missing sentinels and produces reviewable conflict outcomes.
+- [ ] Web/mobile availability, allowed characters, renames and account deletion follow the same policy.
+
+**Evidence**
+- [apps/web/src/lib/server/adminProfiles.ts:67](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminProfiles.ts#L67) — `sentinelRef`
+- [apps/web/src/lib/firestore.ts:55](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/firestore.ts#L55) — `static async isUsernameAvailable`
+- [apps/web/src/app/api/users/check-username/route.ts:3](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/users/check-username/route.ts#L3) — `isUsernameAvailableAdmin`
+
+**Dependencies:** AV-F002, AV-F003.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F033,DEV-40,https://allversegpt.atlassian.net/browse/DEV-40,Story,Complete account recovery and enforce action eligibility on the server,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f033,identity","AV-F004,AV-F051","DEV-11,DEV-54","Audit ID: **AV-F033** | Severity: **P1** | Area: **Identity**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Sign-in screens have no password-reset workflow. Mobile AuthGate enforces verification/profile completion in navigation, while withApi only checks UID; protected buy/sell/message APIs do not enforce an approved verification/eligibility policy. Client age validation permits 13 although terms/privacy say 18.
+
+**Requested implementation**
+Implement password reset and provider-aware recovery. Agree on action eligibility, account suspension/deletion checks, minimum age and terms consent; enforce required checks on the server and consistent client prompts.
+
+**Acceptance criteria**
+- [ ] An email/password user can request and complete password reset without account enumeration.
+- [ ] Direct API calls cannot bypass the approved verified-email/profile/age/suspension requirements for transactional actions.
+- [ ] Web/mobile show consistent recovery and eligibility steps; guests can browse according to approved product policy.
+
+**Evidence**
+- [apps/web/src/lib/withApi.ts:31](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/withApi.ts#L31) — `return decodedToken.uid`
+- [apps/mobile/app/_layout.tsx:14](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/_layout.tsx#L14) — `function AuthGate`
+- [packages/types/src/index.ts:37](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/packages/types/src/index.ts#L37) — `age: z.number().min(13)`
+
+**Dependencies:** AV-F004, AV-F051.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F034,DEV-41,https://allversegpt.atlassian.net/browse/DEV-41,Bug,Make account deletion safe for outstanding orders and funds,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f034,privacy","AV-F002,AV-F003,AV-F016,AV-F032,AV-F051","DEV-9,DEV-10,DEV-24,DEV-39,DEV-54","Audit ID: **AV-F034** | Severity: **P1** | Area: **Privacy**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Deletion removes seller listings and profile/Connect mapping then deletes Firebase Auth even if cleanup partially fails. There is no check for paid orders, pending transfers/refunds or open disputes, and usernames/favorites/AI uploads/snapshots are not covered. Existing financial recovery may lose the seller mapping or buyer contact.
+
+**Requested implementation**
+Define staged deletion/anonymization with financial retention and outstanding-liability handling. Retain restricted transactional identity/Connect references, disable new actions, and make cleanup resumable with proof of deletion.
+
+**Acceptance criteria**
+- [ ] Deleting an account with an open order/pending transfer/refund keeps required fulfillment and financial recovery possible.
+- [ ] All owned data classes are inventoried; retained records are private, minimized and governed by approved retention policy.
+- [ ] Partial cleanup resumes safely, username/push tokens are handled, and expired/revoked sessions cannot initiate new commerce.
+
+**Evidence**
+- [apps/web/src/app/api/account/delete/route.ts:25](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/account/delete/route.ts#L25) — `Continue with auth deletion even if some cleanup failed`
+- [apps/web/src/lib/firebaseCleanup.ts:243](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/firebaseCleanup.ts#L243) — `collection('profiles').doc(userId).delete()`
+
+**Dependencies:** AV-F002, AV-F003, AV-F016, AV-F032, AV-F051.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F035,DEV-42,https://allversegpt.atlassian.net/browse/DEV-42,Bug,Repair web chat creation and lock chat participants,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f035,messaging","AV-F002,AV-F005,AV-F033","DEV-9,DEV-12,DEV-40","Audit ID: **AV-F035** | Severity: **P1** | Area: **Messaging**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Web startChatFromListing uses the client ChatsService which reads both private users documents. Checked-in rules only allow users/{uid} reads by self, so reading the other user fails before creating a chat. Chat rules also let existing participants change/delete the whole chat, including its participants, bypassing API ownership checks.
+
+**Requested implementation**
+Use the authorized server chat creation path and approved public profile data. Make participants/identity immutable server-side and restrict client updates to explicitly allowed per-user read state.
+
+**Acceptance criteria**
+- [ ] With checked-in restrictive rules, a web buyer can start a chat from a listing and both parties receive it.
+- [ ] A participant cannot add an unrelated user, remove another participant, spoof profile identity or delete shared history through SDK writes.
+- [ ] Unrelated users, deleted accounts and blocked users cannot read/send messages.
+
+**Evidence**
+- [apps/web/src/lib/services/firestore.ts:643](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/services/firestore.ts#L643) — `const user2Doc = await getDoc`
+- [apps/web/firestore.rules:83](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/firestore.rules#L83) — `allow read, update, delete: if isParticipant()`
+- [apps/web/src/lib/messaging.ts:37](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/messaging.ts#L37) — `firestoreServices.chats.getOrCreateChat`
+
+**Dependencies:** AV-F002, AV-F005, AV-F033.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F036,DEV-56,https://allversegpt.atlassian.net/browse/DEV-56,Story,"Make message sends atomic, retry-safe and paginated",Medium,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f036,messaging","AV-F035,AV-F037","DEV-42,DEV-43","Audit ID: **AV-F036** | Severity: **P2** | Area: **Messaging**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Admin/client chat send writes a message then updates lastMessage/unread independently; client retries have no message idempotency key. Both fetch and subscriptions load the entire message history. Web client sends bypass the API push hook, so web/mobile notification behavior differs.
+
+**Requested implementation**
+Use an atomic message/outbox write with client-generated request IDs, cursor pagination, bounded realtime windows, and consistent read/unread behavior across clients.
+
+**Acceptance criteria**
+- [ ] Retrying a send after a lost response creates one message and one unread increment.
+- [ ] Failure between message and summary updates cannot leave a sent message missing from chat summaries.
+- [ ] Large histories load in bounded pages; web/mobile sends trigger the same transactional notification policy and read receipts.
+
+**Evidence**
+- [apps/web/src/lib/server/adminChats.ts:134](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminChats.ts#L134) — `const msgRef = await msgCol.add`
+- [apps/web/src/lib/services/firestore.ts:832](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/services/firestore.ts#L832) — `subscribeToChatMessages(`
+- [apps/web/src/app/api/chats/[chatId]/messages/route.ts:69](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/chats/[chatId]/messages/route.ts#L69) — `Fire-and-forget push`
+
+**Dependencies:** AV-F035, AV-F037.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F037,DEV-43,https://allversegpt.atlassian.net/browse/DEV-43,Story,Deliver transaction emails and push notifications from durable jobs,High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f037,notifications","AV-F002,AV-F008","DEV-9,DEV-15","Audit ID: **AV-F037** | Severity: **P1** | Area: **Notifications**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Payments and messaging send emails/push in request handlers; several pushes are unawaited best-effort calls. Email uses a single order.emailSent flag, resends earlier successful recipients after partial failure, and can mark done when required profile/email data is absent. Push responses/receipts are not checked; there is no durable retry queue.
+
+**Requested implementation**
+Persist per-event/per-recipient notification jobs with deduplication, retry/backoff, provider receipts, dead-letter state and privacy-aware device registration. Separate transactional and promotional consent.
+
+**Acceptance criteria**
+- [ ] A request crash/provider outage does not lose order, seller-sale, tracking or message notifications; failures are queryable and retryable.
+- [ ] Partial recipient success does not resend all successful order emails; skipped/missing recipient state is explicit.
+- [ ] Invalid push tokens are retired, logout/device changes prevent cross-account delivery, and promotional opt-out is enforced by scheduled nudges.
+
+**Evidence**
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:162](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L162) — `let allEmailsOk = true`
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:641](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L641) — `processOrderPushNotifications({ orderId, order }).catch`
+- [apps/web/src/lib/server/push-notifications.ts:16](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/push-notifications.ts#L16) — `await fetch(EXPO_PUSH_URL`
+- [functions/src/index.ts:109](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/functions/src/index.ts#L109) — `export const buyerNudge`
+
+**Dependencies:** AV-F002, AV-F008.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F038,DEV-44,https://allversegpt.atlassian.net/browse/DEV-44,Story,"Provide mobile sellers with onboarding, sales and label access",High,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f038,mobile","AV-F012,AV-F013,AV-F019,AV-F024","DEV-20,DEV-21,DEV-27,DEV-32","Audit ID: **AV-F038** | Severity: **P1** | Area: **Mobile**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+The mobile route inventory contains buyer orders and listing/profile management, but no sales/Connect onboarding screen, seller statement or shipping-label workflow. Sale notifications route to profile. A mobile-only seller can publish and sell without an in-app path to connect payouts or obtain a label.
+
+**Requested implementation**
+Add native seller operations or a clearly supported authenticated web handoff with reliable return links: Connect setup, ship-from address, sales, earnings, labels and exceptions.
+
+**Acceptance criteria**
+- [ ] A new mobile-only seller can complete approved eligibility/Connect/address setup and see whether sales are payable.
+- [ ] After a sale the seller can see the buyer fulfillment details and open/download the owned shipping label.
+- [ ] Cancelled/incomplete onboarding and failed-label/payout states have actionable recovery paths; sale notifications open the relevant seller order.
+
+**Evidence**
+- [apps/mobile/app/_layout.tsx:56](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/_layout.tsx#L56) — `data?.type === 'sale'`
+- [apps/mobile/app/(tabs)/profile.tsx:66](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/(tabs)/profile.tsx#L66) — `export default`
+- [apps/web/src/app/sales/page.tsx:322](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/sales/page.tsx#L322) — `const handleConnectStripe`
+
+**Dependencies:** AV-F012, AV-F013, AV-F019, AV-F024.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F039,DEV-45,https://allversegpt.atlassian.net/browse/DEV-45,Bug,Show verified payment confirmation and handle webhook delay,High,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f039,checkout-ux","AV-F006,AV-F007,AV-F009,AV-F018","DEV-13,DEV-14,DEV-17,DEV-26","Audit ID: **AV-F039** | Severity: **P1** | Area: **Checkout UX**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Web success always renders payment/order-confirmed copy even with no/invalid session; polling finally clears loading after every attempt, and exhausting 202 responses leaves no verified summary/error. Mobile deep-link success verifies only once, while order_ids query values skip verification entirely and errors still show Payment received.
+
+**Requested implementation**
+Model confirming, payment pending, paid-order-processing, confirmed, failed and cancelled states explicitly. Poll recoverably, verify all displayed order IDs with ownership, and never treat a deep-link parameter as proof of payment.
+
+**Acceptance criteria**
+- [ ] Opening success routes with missing, forged, unpaid, expired or another user session/order IDs never shows verified success.
+- [ ] Delayed webhook settlement beyond the initial poll window gives a truthful processing state and a retry/orders action.
+- [ ] Mobile normal browser return, cancelled callback, app cold start and partial multi-seller payment preserve confirmed outcomes without triggering duplicate checkout.
+
+**Evidence**
+- [apps/web/src/app/success/page.tsx:77](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/success/page.tsx#L77) — `Thanks, your order is in`
+- [apps/web/src/app/success/page.tsx:65](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/success/page.tsx#L65) — `finally {`
+- [apps/mobile/app/checkout-success.tsx:22](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/checkout-success.tsx#L22) — `setOrderIds(order_ids.split`
+- [apps/mobile/app/checkout.tsx:367](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/checkout.tsx#L367) — `openAuthSessionAsync`
+
+**Dependencies:** AV-F006, AV-F007, AV-F009, AV-F018.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F040,DEV-46,https://allversegpt.atlassian.net/browse/DEV-46,Bug,Expose complete buyer order details and tracking on mobile,High,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f040,mobile","AV-F023,AV-F025,AV-F039","DEV-31,DEV-33,DEV-45","Audit ID: **AV-F040** | Severity: **P1** | Area: **Mobile**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Mobile orders expects order.trackingNumber, but labels are written under orders/{id}/shipping/primary and GET /api/orders does not join them. The screen has no order-detail/action flow and the API returns at most the first 20/50 orders without a cursor.
+
+**Requested implementation**
+Return participant-safe order/shipment projections with cursor pagination and add buyer detail, tracking link/history, seller contact and support/cancellation entry points on mobile.
+
+**Acceptance criteria**
+- [ ] A purchased label/tracking update appears on the buyer mobile order with the same status as web.
+- [ ] Users can reach older orders beyond 50 with stable pagination and open an authorized order detail.
+- [ ] Unauthorized orders are inaccessible; empty/loading/error/refund/exception states are actionable.
+
+**Evidence**
+- [apps/mobile/app/orders.tsx:85](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/orders.tsx#L85) — `order.trackingNumber`
+- [apps/web/src/app/api/orders/route.ts:12](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/orders/route.ts#L12) — `const serialized =`
+- [apps/web/src/lib/payments/shippingLabel.ts:28](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/shippingLabel.ts#L28) — `collection('shipping').doc('primary')`
+
+**Dependencies:** AV-F023, AV-F025, AV-F039.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F041,DEV-57,https://allversegpt.atlassian.net/browse/DEV-57,Story,Define offers and prevent chat negotiation from implying a payable offer,Medium,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f041,offers","AV-F007,AV-F009,AV-F027,AV-F051","DEV-14,DEV-17,DEV-35,DEV-54","Audit ID: **AV-F041** | Severity: **P2** | Area: **Offers**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Mobile Make Offer only sends a formatted chat message, and web /offers explicitly says offers are unavailable. Checkout always charges the listing price; there is no offer record, seller acceptance, expiry, buyer-bound price or reservation.
+
+**Requested implementation**
+Choose a baseline: relabel as non-binding price discussion and require seller listing-price edits, or implement structured offers with acceptance and checkout binding. Keep full offer automation behind the chosen scope.
+
+**Acceptance criteria**
+- [ ] Product decision and user wording explain whether an offer is binding and how the agreed price reaches checkout.
+- [ ] If supported, only the intended buyer can redeem an accepted unexpired offer, and concurrent acceptances cannot oversell.
+- [ ] A chat message or AI suggestion alone cannot change an authoritative checkout amount.
+
+**Evidence**
+- [apps/mobile/app/listing/[id].tsx:244](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/listing/[id].tsx#L244) — `const handleMakeOffer`
+- [apps/web/src/app/offers/page.tsx:8](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/offers/page.tsx#L8) — `Price offers aren’t available yet`
+- [apps/web/src/lib/payments/checkout.ts:233](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L233) — `const itemTotal = listing.price`
+
+**Dependencies:** AV-F007, AV-F009, AV-F027, AV-F051.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F042,DEV-47,https://allversegpt.atlassian.net/browse/DEV-47,Story,"Add report, block and minimum marketplace moderation",High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f042,trust","AV-F029,AV-F033,AV-F035,AV-F048,AV-F051","DEV-37,DEV-40,DEV-42,DEV-51,DEV-54","Audit ID: **AV-F042** | Severity: **P1** | Area: **Trust**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+No report/block/moderation collection, API or enforcement workflow was found. Users can post listings and start chats, while support is a mailto link. Hidden listing enforcement and seller suspension are not implemented consistently.
+
+**Requested implementation**
+Add reporting and blocking, a minimal authenticated moderation queue, prohibited-listing policy enforcement and suspension controls with an audit trail. Ensure financial obligations remain serviceable for suspended sellers.
+
+**Acceptance criteria**
+- [ ] Buyer/seller can report a listing/user/message and block new contact without altering shared evidence.
+- [ ] Authorized support can hide listings/suspend new commerce with reason and audit history; public/search APIs enforce the decision.
+- [ ] Blocked/suspended direct SDK/API actions fail under the approved policy, while existing order/refund support remains available.
+
+**Evidence**
+- [apps/web/src/app/contact/page.tsx:10](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/contact/page.tsx#L10) — `mailto:info@allversegpt.com`
+- [apps/web/src/app/api/chats/route.ts:13](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/chats/route.ts#L13) — `const { otherUserId }`
+- [apps/web/src/app/api/listings/route.ts:273](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/listings/route.ts#L273) — `export const POST`
+
+**Dependencies:** AV-F029, AV-F033, AV-F035, AV-F048, AV-F051.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F043,DEV-58,https://allversegpt.atlassian.net/browse/DEV-58,Story,Unify web and mobile search contracts and provider failures,Medium,AV-E06,DEV-6,"foundation-audit,audit-2026-11-16,av-f043,search","AV-F044,AV-F045","DEV-48,DEV-49","Audit ID: **AV-F043** | Severity: **P2** | Area: **Search**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Web uses the typed /api/search pipeline with vertical-aware refinement; mobile text search still calls the large /api/universal-search stack. The stacks have different summary/refinement response shapes and retrieval behavior. Provider network failure can fail the full newer pipeline rather than preserving internal results.
+
+**Requested implementation**
+Adopt one versioned search service/response contract and adapters for both clients, with bounded provider deadlines and partial-source success. Preserve external destination/affiliate disclosure and avoid representing external products as AllVerse inventory.
+
+**Acceptance criteria**
+- [ ] Identical web/mobile requests and refinements follow the same typed contract and query rewrite behavior.
+- [ ] SerpAPI/Gemini timeout/outage leaves internal results usable with an explicit degraded-source state.
+- [ ] Contract tests protect results-vs-question responses, encoded state, image extraction and external URL/source mapping.
+
+**Evidence**
+- [apps/mobile/app/(tabs)/search.tsx:282](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/app/(tabs)/search.tsx#L282) — `/api/universal-search?q=`
+- [apps/web/src/lib/search/pipeline/runPipeline.ts:156](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/search/pipeline/runPipeline.ts#L156) — `export async function runPipeline`
+- [apps/web/src/lib/search/serverSearch.ts:31](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/search/serverSearch.ts#L31) — `async function logSearchEvent`
+
+**Dependencies:** AV-F044, AV-F045.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F044,DEV-48,https://allversegpt.atlassian.net/browse/DEV-48,Bug,Retrieve and paginate the full marketplace catalog,High,AV-E06,DEV-6,"foundation-audit,audit-2026-11-16,av-f044,discovery","AV-F028,AV-F029","DEV-36,DEV-37","Audit ID: **AV-F044** | Severity: **P1** | Area: **Discovery**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Internal search scans an arbitrary first 200 active listings and ranks only those. Listing API caps candidates at 200 (100 for keywords) before filtering and reports hasMore based on that subset. Matching stock beyond the cap becomes undiscoverable. Public listing DTO also drops condition/inventory fields clients use.
+
+**Requested implementation**
+Implement an indexed retrieval/cursor strategy with explicit filter/sort support, stable paging and accurate continuation metadata. Avoid full-catalog profile statistics scans and share a complete public listing DTO.
+
+**Acceptance criteria**
+- [ ] A matching listing outside the first 200 documents can be found; browsing >200 listings continues without omissions/duplicates.
+- [ ] Combined category/condition/price/keyword sorts have required deployed indexes and truthful continuation.
+- [ ] Profile statistics query only relevant orders or aggregates; catalog/detail/search DTOs expose consistent approved fields.
+
+**Evidence**
+- [apps/web/src/lib/search/internal/simpleInternalSearch.ts:55](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/search/internal/simpleInternalSearch.ts#L55) — `.limit(200)`
+- [apps/web/src/app/api/listings/route.ts:71](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/listings/route.ts#L71) — `Math.min(page * limit * 5, 200)`
+- [apps/web/src/app/api/profile/stats/route.ts:38](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/profile/stats/route.ts#L38) — `const ordersSnapshot = await ordersRef.get()`
+
+**Dependencies:** AV-F028, AV-F029.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F045,DEV-49,https://allversegpt.atlassian.net/browse/DEV-49,Bug,Bound public search and AI costs across server instances,High,AV-E06,DEV-6,"foundation-audit,audit-2026-11-16,av-f045,ai-operations",,,"Audit ID: **AV-F045** | Severity: **P1** | Area: **AI Operations**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Public /api/search, /api/search/image and /api/universal-search bypass withApi and have no shared limiter. Other limiters use per-process maps. aiUsage checks/read-increments non-transactionally and permanently allows calls after a Firestore error; only chat uses its daily budget. Image search lacks explicit MIME/byte limits.
+
+**Requested implementation**
+Apply durable per-user/IP/provider budgets to public and authenticated paid-provider paths, with atomic quota reservations, request/media size limits, deadlines, cache bounds and an explicit failure policy.
+
+**Acceptance criteria**
+- [ ] Concurrent requests across two server instances cannot exceed the approved spend/request budget.
+- [ ] Malformed or oversized images/queries/history are rejected before provider calls; all paths have deadlines and bounded response handling.
+- [ ] Quota-store failure follows the approved bounded-degradation policy, not unlimited fail-open; usage includes actual prompt/history/media costs and can recover after transient errors.
+
+**Evidence**
+- [apps/web/src/app/api/search/route.ts:7](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/search/route.ts#L7) — `export async function GET`
+- [apps/web/src/app/api/search/image/route.ts:119](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/search/image/route.ts#L119) — `const arrayBuffer =`
+- [apps/web/src/lib/aiUsage.ts:29](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/aiUsage.ts#L29) — `firestoreAvailable = false`
+- [apps/web/src/lib/rateLimit.ts:7](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/rateLimit.ts#L7) — `const BUCKETS = new Map`
+
+**Dependencies:** None identified.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F046,DEV-50,https://allversegpt.atlassian.net/browse/DEV-50,Bug,Restrict server media fetching to approved owned assets,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f046,security","AV-F002,AV-F030","DEV-9,DEV-38","Audit ID: **AV-F046** | Severity: **P1** | Area: **Security**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
+
+**Problem and impact**
+Product analysis and shipping-label scan accept arbitrary image URLs and fetch them on the server before forwarding bytes to Gemini. There is no ownership/host/private-network/redirect validation or response byte ceiling; analysis only adds a timeout. This creates an SSRF and untrusted-content forwarding surface.
+
+**Requested implementation**
+Accept owned asset IDs where possible; otherwise enforce approved storage hosts, schemes, paths, redirect/address rules, timeouts, decoded content types and byte ceilings before any server fetch/provider upload.
+
+**Acceptance criteria**
+- [ ] Loopback, link-local, private-network, non-HTTPS and redirect-to-private URLs are rejected without server fetch.
+- [ ] Another user private asset cannot be analyzed through guessed URLs; approved owned public listing media still works.
+- [ ] Large/streamed/non-image responses terminate within limits and do not enter Gemini uploads; credentials and private bytes are not logged.
+
+**Evidence**
+- [apps/web/src/lib/aiAnalysis.ts:369](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/aiAnalysis.ts#L369) — `fetch(imageUrl,`
+- [apps/web/src/app/api/shipping/scan-label/route.ts:46](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/shipping/scan-label/route.ts#L46) — `fetch(imageUrl)`
+
+**Dependencies:** AV-F002, AV-F030.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F047,DEV-16,https://allversegpt.atlassian.net/browse/DEV-16,Task,Add automated commerce and permission release gates,Highest,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f047,quality",,,"Audit ID: **AV-F047** | Severity: **P0** | Area: **Quality**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+The only tracked automated web suite tests AI model selection (3 tests); mobile/shared package test scripts are placeholders. No commerce, rules, emulator or integration tests/CI workflow were found. Current passing types/lint cannot verify money movement or authorization.
+
+**Requested implementation**
+Create isolated Firebase emulator and provider-contract harnesses plus web/mobile checkout smoke tests. Add CI type/lint/test/build gates and a documented staging test-mode checklist with captured results.
+
+**Acceptance criteria**
+- [ ] Automated tests cover rule bypasses, verification identity, concurrent sessions, stock races, settlement crashes, payout retry, label ambiguity and refunds.
+- [ ] Provider tests use test credentials/mocks and cannot send real money, labels, email or production writes.
+- [ ] CI runs web and mobile checks plus separately installed functions checks; a failure blocks release and results link to the relevant Jira acceptance criteria.
+
+**Evidence**
+- [apps/web/src/lib/ai/models.test.ts:4](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/ai/models.test.ts#L4) — `describe('resolveGeminiModel'`
+- [apps/mobile/package.json:11](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/mobile/package.json#L11) — `mobile: no unit tests yet`
+- [apps/web/docs/PHASE8_QA_CHECKLIST.md:13](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/docs/PHASE8_QA_CHECKLIST.md#L13) — `## Test matrix`
+
+**Dependencies:** None identified.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F048,DEV-51,https://allversegpt.atlassian.net/browse/DEV-51,Story,Build operator reconciliation and recovery queues,High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f048,operations","AV-F008,AV-F011,AV-F024,AV-F025","DEV-15,DEV-19,DEV-32,DEV-33","Audit ID: **AV-F048** | Severity: **P1** | Area: **Operations**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Support surfaces are email links; the only money recovery endpoint uses one shared INTERNAL_OPS_TOKEN. There is no authenticated ops view for paid sessions without orders, pending settlements, unshipped orders, failed labels, refunds, disputes or reconciliation differences. Structured console logs alone do not resolve these cases.
+
+**Requested implementation**
+Add least-privilege operator access, durable exception queues, scheduled provider/database reconciliation, safe retry actions and redacted alerts. Reuse domain services; do not require manual Firestore financial edits.
+
+**Acceptance criteria**
+- [ ] Operators can locate a charge/session/order/transfer/label and see unresolved steps with safe evidence-linked actions.
+- [ ] A scheduled reconciliation detects paid-no-order, missing transfer/payment record, stale label, unshipped deadlines and provider-vs-ledger differences.
+- [ ] Every privileged action is attributable/audited; retries respect idempotency and alerts exclude addresses, tokens and payment secrets.
+
+**Evidence**
+- [apps/web/src/app/api/internal/payouts/retry/route.ts:17](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/internal/payouts/retry/route.ts#L17) — `req.headers.get('x-internal-token')`
+- [apps/web/src/lib/server/logger.ts:12](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/logger.ts#L12) — `export const serverLogger`
+- [apps/web/src/app/contact/page.tsx:6](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/contact/page.tsx#L6) — `Questions, feedback, or a problem with an order?`
+
+**Dependencies:** AV-F008, AV-F011, AV-F024, AV-F025.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F049,DEV-52,https://allversegpt.atlassian.net/browse/DEV-52,Task,Make deployment and environment setup reproducible,High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f049,infrastructure","AV-F005,AV-F047","DEV-12,DEV-16","Audit ID: **AV-F049** | Severity: **P1** | Area: **Infrastructure**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+There is no web environment example or tracked CI. functions is excluded from pnpm-workspace and its dependencies are not installed by the root workspace. The audit functions no-emit check failed on missing firebase-functions/firebase-admin. Root tsconfig extends Expo and emits a resolver warning during web tests. Deployment dashboard configuration is unverified.
+
+**Requested implementation**
+Document/validate server vs public variables without values, align supported Node/tooling, define functions installation/build/deploy, and verify clean Vercel/Firebase/EAS staging builds with deterministic lockfile installs.
+
+**Acceptance criteria**
+- [ ] A fresh clone can install and run documented web/mobile/functions checks with no hidden local dist/dependency prerequisites.
+- [ ] Environment examples contain names/placeholders only; server secrets are excluded from mobile/public bundles and startup reports missing requirements safely.
+- [ ] Record Vercel/Firebase/EAS target/project settings and successful clean staging build evidence; no inference of live settings from repository config alone.
+
+**Evidence**
+- [pnpm-workspace.yaml:1](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/pnpm-workspace.yaml#L1) — `packages:`
+- [functions/package.json:14](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/functions/package.json#L14) — `""firebase-functions""`
+- [tsconfig.json:3](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/tsconfig.json#L3) — `""extends"": ""expo/tsconfig.base""`
+- [vercel.json:4](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/vercel.json#L4) — `""installCommand""`
+
+**Dependencies:** AV-F005, AV-F047.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F050,DEV-53,https://allversegpt.atlassian.net/browse/DEV-53,Task,"Version migrations, retention and disaster recovery",High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f050,infrastructure","AV-F005,AV-F006,AV-F032,AV-F049","DEV-12,DEV-13,DEV-39,DEV-52","Audit ID: **AV-F050** | Severity: **P1** | Area: **Infrastructure**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+The repo has one search-keyword backfill but no general schema migration ledger, backup/restore drill, financial recovery procedure or snapshot retention definition. Legacy inventory/sold/profile/username and pre-snapshot checkout paths coexist. expiresAt is stored for snapshots but no checked-in TTL policy proves deletion behavior.
+
+**Requested implementation**
+Define versioned idempotent data migrations and inventory existing records before applying them. Document private-data retention, backups/restore, webhook replay/reconciliation and rollback compatibility for releases.
+
+**Acceptance criteria**
+- [ ] Dry-run migration reports legacy variants/conflicts/counts without mutation; actual migrations are resumable and auditable.
+- [ ] A staging restore drill recovers orders, payments, transfer mappings, shipment attempts and permissions then reconciles provider state without duplicate actions.
+- [ ] TTL/retention does not remove pending paid-session evidence or replay data before recovery is safe; rollback supports in-flight old/new sessions.
+
+**Evidence**
+- [scripts/backfill-search-keywords.ts:10](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/scripts/backfill-search-keywords.ts#L10) — `import`
+- [apps/web/src/lib/server/adminCheckoutSnapshots.ts:26](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/server/adminCheckoutSnapshots.ts#L26) — `expiresAt`
+- [apps/web/src/lib/payments/stripeCheckoutWebhook.ts:673](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/stripeCheckoutWebhook.ts#L673) — `LEGACY PATH`
+
+**Dependencies:** AV-F005, AV-F006, AV-F032, AV-F049.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F051,DEV-54,https://allversegpt.atlassian.net/browse/DEV-54,Task,Approve the baseline commerce policy and supported launch scope,High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f051,product-decisions",,,"Audit ID: **AV-F051** | Severity: **P1** | Area: **Product Decisions**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Code mixes per-seller checkout with optional multi-seller orders, US-only origins/ZIP normalization with Canada in web checkout, immediate transfers without a stated payout-release rule, no refund resolution and 13+ validation versus 18+ terms/privacy. These are product/operations decisions required to finish implementation, not assumptions engineers should silently choose.
+
+**Requested implementation**
+Record accountable decisions for US/USD scope, seller eligibility, fee/tax ownership, transfer release timing, non-shipment/refund/return policy, supported packages/categories, age/consent and manual support coverage. Update UI and terms only to approved implemented behavior.
+
+**Acceptance criteria**
+- [ ] Business/product owners approve a versioned decision record with explicit included/excluded markets, seller types and order/package model.
+- [ ] Each policy maps to an enforcing server rule, matching web/mobile copy and an operational owner.
+- [ ] Unsupported addresses/currencies/categories and unimplemented buyer-protection promises are removed or gated; subsequent ticket acceptance criteria reference the decision version.
+
+**Evidence**
+- [apps/web/src/components/CheckoutForm.tsx:347](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/components/CheckoutForm.tsx#L347) — `<option value=""CA"">Canada`
+- [apps/web/src/lib/payments/checkout.ts:66](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/payments/checkout.ts#L66) — `return digits.slice(0, 5)`
+- [apps/web/src/app/terms/page.tsx:44](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/terms/page.tsx#L44) — `at least 18 years old`
+- [packages/types/src/index.ts:37](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/packages/types/src/index.ts#L37) — `age: z.number().min(13)`
+
+**Dependencies:** None identified.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"
+AV-F052,DEV-59,https://allversegpt.atlassian.net/browse/DEV-59,Story,Keep seller reputation honest until verified reviews exist,Medium,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f052,trust","AV-F025,AV-F028,AV-F042","DEV-33,DEV-36,DEV-47","Audit ID: **AV-F052** | Severity: **P2** | Area: **Trust**
+Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
+
+**Problem and impact**
+Profile stats hardcodes reviewsCount=0 and reads every order to calculate sales without a paid/completed status filter. There is no verified-purchase reviews model/moderation flow. users.updateUser also resets stored counters as a side effect of profile-photo/name writes.
+
+**Requested implementation**
+For the baseline, show only transaction-derived verified counts and omit unsupported ratings. If reviews are in scope later, require an eligible completed purchase and moderation policy rather than fabricated trust metrics.
+
+**Acceptance criteria**
+- [ ] Seller sale counts reflect the approved paid/completed definition and cannot be changed/reset by profile edits.
+- [ ] Missing reviews/ratings are honestly absent or labeled unavailable; no generated trust claims appear.
+- [ ] If implemented, one eligible buyer review per seller order is enforced, with reporting/removal and no self-review.
+
+**Evidence**
+- [apps/web/src/app/api/profile/stats/route.ts:53](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/app/api/profile/stats/route.ts#L53) — `const reviewsCount = 0`
+- [apps/web/src/lib/services/firestore.ts:179](https://github.com/MoMaksoud/All-verse-Lowk/blob/c15398da9d152040d68309786d828ad37ef57ed6/apps/web/src/lib/services/firestore.ts#L179) — `listingsCount: 0,`
+
+**Dependencies:** AV-F025, AV-F028, AV-F042.
+**Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
+"

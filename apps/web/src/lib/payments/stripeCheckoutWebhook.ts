@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
   verifyWebhookSignature,
-  transferToSeller,
-  calculateSellerPayout,
-  PLATFORM_SERVICE_FEE_PERCENT,
   stripe,
 } from '@/lib/stripe';
 import { sendOrderConfirmationEmail, sendSellerNotificationEmail, sendBuyerTrackingEmail } from '@/lib/email';
@@ -26,8 +23,11 @@ import {
   markShippingLabelSuccess,
   markShippingLabelFailed,
 } from '@/lib/payments/shippingLabel';
-import type { FirestoreOrder, PayoutTransferRecord } from '@/lib/types/firestore';
+import type { FirestoreOrder } from '@/lib/types/firestore';
 import { serverLogger } from '@/lib/server/logger';
+
+import { settleSellerPayouts } from './sellerPayouts';
+import { assertStripeObjectMode, getStripeMode } from './environment';
 
 const WEBHOOK_LOCK_TTL_MS = 5 * 60 * 1000;
 
@@ -144,7 +144,7 @@ async function processOrderEmails(params: {
   sessionId: string;
   order: FirestoreOrder | null;
 }) {
-  if (!params.order || params.order.emailSent === true) return;
+  if (getStripeMode() === 'test' || !params.order || params.order.emailSent === true) return;
 
   const missingSendGrid = getMissingSendGridVars();
   if (missingSendGrid.length > 0) {
@@ -243,7 +243,7 @@ async function processOrderPushNotifications(params: {
   orderId: string;
   order: FirestoreOrder | null;
 }): Promise<void> {
-  if (!params.order) return;
+  if (getStripeMode() === 'test' || !params.order) return;
 
   // Notify buyer: order confirmed
   const buyerProfile = await getProfileDocumentAdmin(params.order.buyerId);
@@ -278,7 +278,7 @@ async function processOrderPushNotifications(params: {
 }
 
 async function attemptAutoShippingLabel(orderId: string, order: FirestoreOrder): Promise<void> {
-  if (!process.env.SHIPPO_API_KEY?.trim()) return;
+  if (getStripeMode() === 'test' || !process.env.SHIPPO_API_KEY?.trim()) return;
   if (!order.shipping?.rateId || !order.shipping?.shipmentId) return;
   if (order.status === 'shipped' || order.status === 'delivered') return;
 
@@ -365,71 +365,6 @@ async function attemptAutoShippingLabel(orderId: string, order: FirestoreOrder):
   }
 }
 
-type PayoutFailureRecord = { sellerId: string; error: string; listingId: string };
-type PayoutTransferWrite = Omit<PayoutTransferRecord, 'at'> & { at: unknown };
-type PayoutTransferAttempt = {
-  failures: PayoutFailureRecord[];
-  successes: PayoutTransferWrite[];
-  pendingConnect: string[];
-};
-
-async function transferToSellersForOrder(
-  order: FirestoreOrder & { id: string }
-): Promise<PayoutTransferAttempt> {
-  const failures: PayoutFailureRecord[] = [];
-  const successes: PayoutTransferWrite[] = [];
-  const pendingConnect: string[] = [];
-  const alreadyTransferredKeys = new Set(
-    (order.payoutTransferIds || []).map((t) => t.lineKey)
-  );
-
-  for (const [lineIndex, item] of order.items.entries()) {
-    const lineKey = `${order.id}:${lineIndex}:${item.listingId}:${item.sellerId}`;
-    if (alreadyTransferredKeys.has(lineKey)) continue;
-
-    const itemTotal = item.unitPrice * item.qty;
-    const { sellerPayout } = calculateSellerPayout(itemTotal, PLATFORM_SERVICE_FEE_PERCENT);
-    const sellerProfile = await getProfileDocumentAdmin(item.sellerId);
-
-    if (!sellerProfile?.stripeConnectAccountId || !sellerProfile.stripeConnectOnboardingComplete) {
-      pendingConnect.push(item.sellerId);
-      serverLogger.warn('stripe_webhook_payout_no_connect', {
-        orderId: order.id,
-        sellerId: item.sellerId,
-        listingId: item.listingId,
-        amount: sellerPayout,
-      });
-      continue;
-    }
-
-    const transferIdempotencyKey = `payout_${order.id}_${lineIndex}_${item.listingId}_${item.sellerId}`
-      .replace(/[^a-zA-Z0-9_]/g, '')
-      .slice(0, 200);
-
-    const transferResult = await transferToSeller(
-      sellerProfile.stripeConnectAccountId,
-      sellerPayout,
-      order.id,
-      transferIdempotencyKey
-    );
-
-    if (!transferResult.success) {
-      failures.push({ sellerId: item.sellerId, listingId: item.listingId, error: transferResult.error || 'unknown error' });
-    } else if (transferResult.transferId) {
-      successes.push({
-        lineKey,
-        sellerId: item.sellerId,
-        listingId: item.listingId,
-        transferId: transferResult.transferId,
-        amount: sellerPayout,
-        at: Timestamp.fromDate(new Date()),
-      });
-    }
-  }
-
-  return { failures, successes, pendingConnect };
-}
-
 export async function POST(req: NextRequest) {
   try {
     assertStripeWebhookConfig();
@@ -462,6 +397,9 @@ export async function POST(req: NextRequest) {
     }
 
     const event = verification.event;
+    try { assertStripeObjectMode(event.livemode); } catch {
+      return NextResponse.json({ error: 'Stripe event mode mismatch' }, { status: 400 });
+    }
     serverLogger.info('stripe_webhook_event_received', {
       route: 'api/stripe/webhook',
       eventId: event.id,
@@ -508,6 +446,7 @@ export async function POST(req: NextRequest) {
 
     const session = event.data.object as Stripe.Checkout.Session;
     const fullSession = await stripe.checkout.sessions.retrieve(session.id, { expand: [] });
+    assertStripeObjectMode(fullSession.livemode);
 
     if (fullSession.payment_status !== 'paid') {
       throw new Error(`Session ${fullSession.id} payment_status is not 'paid': ${fullSession.payment_status}`);
@@ -534,14 +473,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, orderId: legacyOrderId }, { status: 200 });
     }
 
-    // Idempotency: snapshot already processed means order exists.
-    if (snapshot.status === 'processed' && snapshot.orderId) {
-      await markEventCompleted(eventRef, snapshot.orderId);
-      serverLogger.info('stripe_webhook_idempotent_snapshot', {
-        sessionId: fullSession.id,
-        orderId: snapshot.orderId,
-      });
-      return NextResponse.json({ received: true, idempotent: true, orderId: snapshot.orderId }, { status: 200 });
+    // A processed snapshot proves order creation, not completion of post-commit steps.
+    if (snapshot.stripeMode && snapshot.stripeMode !== getStripeMode()) {
+      throw new Error('Checkout snapshot belongs to a different Stripe mode');
     }
 
     // Validate amount before creating anything.
@@ -562,7 +496,9 @@ export async function POST(req: NextRequest) {
     });
 
     // ── Atomic: create order + decrement inventory + clear cart ───────────
-    const orderId = await createOrderFromSnapshotAdmin(snapshot, {
+    const orderId = snapshot.status === 'processed' && snapshot.orderId
+      ? snapshot.orderId
+      : await createOrderFromSnapshotAdmin(snapshot, {
       paymentIntentId,
       checkoutSessionId: fullSession.id,
     });
@@ -587,51 +523,7 @@ export async function POST(req: NextRequest) {
     let order = await getOrderAdmin(orderId);
     if (!order) throw new Error(`Order ${orderId} not found after creation`);
 
-    const payoutResult = await transferToSellersForOrder(order);
-    const mergedTransfers = [...(order.payoutTransferIds || []), ...payoutResult.successes];
-
-    if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length === 0) {
-      await updateOrderAdmin(orderId, {
-        payoutsProcessed: true,
-        payoutsProcessedAt: FieldValue.serverTimestamp(),
-        payoutStatus: 'complete',
-        payoutRetryable: false,
-        payoutFailures: [],
-        payoutTransferIds: mergedTransfers,
-      });
-      serverLogger.info('stripe_webhook_payout_complete', { orderId, sessionId: fullSession.id });
-    } else if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length > 0) {
-      await updateOrderAdmin(orderId, {
-        payoutsProcessed: false,
-        payoutStatus: 'pending_connect',
-        payoutRetryable: true,
-        payoutFailures: [],
-        payoutPendingConnectSellerIds: payoutResult.pendingConnect,
-        payoutTransferIds: mergedTransfers,
-      });
-      serverLogger.warn('stripe_webhook_payout_pending_connect', {
-        orderId,
-        pendingConnectCount: payoutResult.pendingConnect.length,
-      });
-    } else {
-      const stamped = payoutResult.failures.map((f) => ({
-        sellerId: f.sellerId,
-        listingId: f.listingId,
-        error: f.error,
-        at: Timestamp.fromDate(new Date()),
-      }));
-      await updateOrderAdmin(orderId, {
-        payoutsProcessed: false,
-        payoutStatus: 'partial_failed',
-        payoutFailures: stamped,
-        payoutRetryable: true,
-        payoutTransferIds: mergedTransfers,
-      });
-      serverLogger.warn('stripe_webhook_payout_partial_failed', {
-        orderId,
-        failureCount: stamped.length,
-      });
-    }
+    await settleSellerPayouts(order);
 
     // ── Emails ─────────────────────────────────────────────────────────────
     order = (await getOrderAdmin(orderId)) ?? order;
@@ -734,42 +626,7 @@ async function runLegacyOrderPath(
   }
 
   const finalOrder = (await getOrderAdmin(orderId)) ?? refreshed;
-  const payoutResult = await transferToSellersForOrder(finalOrder);
-  const mergedTransfers = [...(finalOrder.payoutTransferIds || []), ...payoutResult.successes];
-
-  if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length === 0) {
-    await updateOrderAdmin(orderId, {
-      payoutsProcessed: true,
-      payoutsProcessedAt: FieldValue.serverTimestamp(),
-      payoutStatus: 'complete',
-      payoutRetryable: false,
-      payoutFailures: [],
-      payoutTransferIds: mergedTransfers,
-    });
-  } else if (payoutResult.failures.length === 0 && payoutResult.pendingConnect.length > 0) {
-    await updateOrderAdmin(orderId, {
-      payoutsProcessed: false,
-      payoutStatus: 'pending_connect',
-      payoutRetryable: true,
-      payoutFailures: [],
-      payoutPendingConnectSellerIds: payoutResult.pendingConnect,
-      payoutTransferIds: mergedTransfers,
-    });
-  } else {
-    const stamped = payoutResult.failures.map((f) => ({
-      sellerId: f.sellerId,
-      listingId: f.listingId,
-      error: f.error,
-      at: Timestamp.fromDate(new Date()),
-    }));
-    await updateOrderAdmin(orderId, {
-      payoutsProcessed: false,
-      payoutStatus: 'partial_failed',
-      payoutFailures: stamped,
-      payoutRetryable: true,
-      payoutTransferIds: mergedTransfers,
-    });
-  }
+  await settleSellerPayouts(finalOrder);
 
   await processOrderEmails({ orderId, sessionId: fullSession.id, order: finalOrder });
   await updateOrderAdmin(orderId, {

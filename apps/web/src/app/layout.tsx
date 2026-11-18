@@ -93,6 +93,11 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${outfit.variable} font-sans antialiased text-zinc-900 h-full overflow-x-hidden`} suppressHydrationWarning>
+        {process.env.NEXT_PUBLIC_COMMERCE_SANDBOX === '1' && (
+          <div role="status" className="bg-amber-100 px-4 py-2 text-center text-sm text-amber-950">
+            Sandbox: test payments only. Shipping is simulated.
+          </div>
+        )}
         <div className="flex flex-col min-h-screen w-full max-w-screen">
           <ErrorBoundary>
             <AuthProvider>

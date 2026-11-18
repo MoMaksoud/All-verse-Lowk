@@ -10,10 +10,17 @@ import { COLLECTIONS } from '@/lib/types/firestore';
 export type PaymentDoc = FirestorePayment & { id: string };
 
 export async function createPaymentAdmin(data: CreatePaymentInput): Promise<string> {
-  const ref = getAdminFirestore().collection(COLLECTIONS.PAYMENTS).doc();
-  await ref.set({
-    ...data,
-    createdAt: FieldValue.serverTimestamp(),
+  const db = getAdminFirestore();
+  const ref = db.collection(COLLECTIONS.PAYMENTS).doc(data.orderId);
+  await db.runTransaction(async tx => {
+    const existing = await tx.get(ref);
+    if (existing.exists) {
+      const payment = existing.data() as FirestorePayment;
+      if (payment.stripeEventId !== data.stripeEventId || payment.userId !== data.userId ||
+          payment.amount !== data.amount || payment.currency !== data.currency) throw new Error('Conflicting payment receipt requires reconciliation');
+      return;
+    }
+    tx.set(ref, { ...data, createdAt: FieldValue.serverTimestamp() });
   });
   return ref.id;
 }

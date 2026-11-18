@@ -1,3 +1,5 @@
+import { assertPaymentPersistence, getStripeMode } from '@/lib/payments/environment';
+
 const REQUIRED_STRIPE_CHECKOUT = ['STRIPE_SECRET_KEY'] as const;
 const REQUIRED_STRIPE_WEBHOOK = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'] as const;
 const REQUIRED_SENDGRID = [
@@ -15,15 +17,16 @@ function getMissingEnv(keys: readonly string[]): string[] {
 /** Asserts only Stripe checkout vars — use before creating a checkout session. */
 export function assertStripeConfig(): void {
   const missing = getMissingEnv(REQUIRED_STRIPE_CHECKOUT);
-  if (missing.length === 0) return;
-  throw new Error(`Missing required Stripe env: ${missing.join(', ')}. Set these in .env.local.`);
+  if (missing.length) throw new Error(`Missing required Stripe env: ${missing.join(', ')}. Set these in .env.local.`);
+  getStripeMode();
+  assertPaymentPersistence();
 }
 
 /** Asserts only Stripe webhook signature vars — use at the top of the webhook handler. */
 export function assertStripeWebhookConfig(): void {
   const missing = getMissingEnv(REQUIRED_STRIPE_WEBHOOK);
-  if (missing.length === 0) return;
-  throw new Error(`Missing required Stripe webhook env: ${missing.join(', ')}. Set these in .env.local.`);
+  if (missing.length) throw new Error(`Missing required Stripe webhook env: ${missing.join(', ')}. Set these in .env.local.`);
+  assertStripeConfig();
 }
 
 /** Returns missing SendGrid vars without throwing — caller decides how to handle. */

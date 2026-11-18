@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withApi } from '@/lib/withApi';
 import { createConnectAccount } from '@/lib/stripe';
 import { getProfileDocumentAdmin, mergeProfileAdmin } from '@/lib/server/adminProfiles';
+import { assertStripeConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const POST = withApi(async (req: NextRequest & { userId: string }) => {
   try {
+    assertStripeConfig();
     const body = await req.json();
     const { email } = body;
 

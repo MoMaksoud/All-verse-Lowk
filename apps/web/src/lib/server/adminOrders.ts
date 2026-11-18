@@ -1,6 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebase-admin';
-import type { CheckoutSnapshot, CreateOrderInput, FirestoreOrder } from '@/lib/types/firestore';
+import type { CheckoutSnapshot, CreateOrderInput, FirestoreOrder, PayoutTransferRecord } from '@/lib/types/firestore';
 import { COLLECTIONS } from '@/lib/types/firestore';
 
 /**
@@ -51,7 +51,14 @@ export async function createOrderFromSnapshotAdmin(
 ): Promise<string> {
   const db = getAdminFirestore();
 
+  if (snapshot.sessionId !== opts.checkoutSessionId) throw new Error('Checkout session does not match snapshot');
+
   return db.runTransaction(async (tx) => {
+    const snapshotRef = db.collection(COLLECTIONS.CHECKOUT_SNAPSHOTS).doc(snapshot.sessionId);
+    const currentSnapshot = await tx.get(snapshotRef);
+    if (!currentSnapshot.exists) throw new Error('Checkout snapshot not found');
+    const current = currentSnapshot.data() as CheckoutSnapshot;
+    if (current.orderId) return current.orderId;
     // --- 1. Re-verify inventory (prevents oversell race) ---
     const listingRefs = snapshot.items.map((item) =>
       db.collection(COLLECTIONS.LISTINGS).doc(item.listingId)
@@ -82,6 +89,7 @@ export async function createOrderFromSnapshotAdmin(
     const orderRef = db.collection(COLLECTIONS.ORDERS).doc();
     const sellerIds = [...new Set(snapshot.items.map((i) => i.sellerId))];
     tx.set(orderRef, {
+      ...(snapshot.stripeMode ? { stripeMode: snapshot.stripeMode } : {}),
       buyerId: snapshot.buyerId,
       items: snapshot.items,
       sellerIds,
@@ -132,7 +140,6 @@ export async function createOrderFromSnapshotAdmin(
     tx.set(cartRef, { items: remainingCartItems, updatedAt: FieldValue.serverTimestamp() });
 
     // --- 5. Mark snapshot processed ---
-    const snapshotRef = db.collection(COLLECTIONS.CHECKOUT_SNAPSHOTS).doc(snapshot.sessionId);
     tx.update(snapshotRef, {
       status: 'processed',
       orderId: orderRef.id,
@@ -167,4 +174,21 @@ export async function updateOrderAdmin(orderId: string, updates: Record<string, 
       ...updates,
       updatedAt: FieldValue.serverTimestamp(),
     });
+}
+
+/** A transfer receipt belongs to one immutable order line, even with concurrent workers. */
+export async function recordPayoutTransferAdmin(orderId: string, record: PayoutTransferRecord): Promise<void> {
+  const db = getAdminFirestore();
+  const ref = db.collection(COLLECTIONS.ORDERS).doc(orderId);
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new Error('Order not found while recording seller transfer');
+    const ledger = (snap.data() as FirestoreOrder).payoutTransferIds || [];
+    const existing = ledger.find(item => item.lineKey === record.lineKey);
+    if (existing) {
+      if (existing.transferId !== record.transferId) throw new Error('Conflicting transfer receipt requires reconciliation');
+      return;
+    }
+    tx.update(ref, { payoutTransferIds: [...ledger, record], updatedAt: FieldValue.serverTimestamp() });
+  });
 }

@@ -1,5 +1,7 @@
 # Payments Flow
 
+> Historical flow: this document predates the current snapshot-based implementation. As of the 2026-11-16 source review, orders are created **after payment**, from `checkout_snapshots/{sessionId}`. Read [the current architecture guide](docs/architecture/PROJECT_GUIDE.md) and [foundation audit](docs/audits/2026-11-16-foundation-audit.md) before relying on the behavior or idempotency claims below.
+
 ## Current Stripe Flow
 
 ### Web

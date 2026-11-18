@@ -1,5 +1,7 @@
 # All Verse GPT  
 
+Developer handoff: read [the architecture guide and foundation audit](docs/README.md), or start with [AGENTS.md](AGENTS.md) for Codex context. The handoff includes a prioritized, source-backed implementation backlog and Jira links.
+
 ## 🚀 Who We Are  
 We are a team of student engineers, builders, and creators passionate about using AI to transform the way people connect, buy, and sell. Our backgrounds span computer engineering, product design, and entrepreneurship — united by the vision of building technology that empowers everyday people.  
 

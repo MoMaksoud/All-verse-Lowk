@@ -12,7 +12,11 @@
     "clean": "turbo run clean",
     "type-check": "turbo run type-check",
     "build:mobile:ios": "eas build --platform ios --profile production --working-dir apps/mobile",
-    "build:mobile:ios:preview": "eas build --platform ios --profile preview --working-dir apps/mobile"
+    "build:mobile:ios:preview": "eas build --platform ios --profile preview --working-dir apps/mobile",
+    "dev:sandbox": "node scripts/payments/sandbox.mjs",
+    "payments:emulators": "npx -y firebase-tools@latest emulators:start --config firebase.sandbox.json --project demo-allverse-sandbox --only auth,firestore",
+    "payments:seed": "node scripts/payments/seed-sandbox.mjs",
+    "payments:verify": "node scripts/payments/verify-sandbox.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
