@@ -10,49 +10,63 @@
       "summary": "Secure identity and private marketplace data",
       "description": "Close client/API permission bypasses and establish trusted identity, private profiles, and moderation boundaries.",
       "jira_key": "DEV-1",
-      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-1"
+      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-1",
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-E02",
       "summary": "Make buyer payments and seller settlement recoverable",
       "description": "Guarantee each paid session has one order or an explicit compensation outcome; reconcile transfers and seller earnings.",
       "jira_key": "DEV-2",
-      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-2"
+      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-2",
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-E03",
       "summary": "Complete shipping and order fulfillment",
       "description": "Use valid addresses and packages; purchase labels safely; track physical delivery and recovery.",
       "jira_key": "DEV-3",
-      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-3"
+      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-3",
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-E04",
       "summary": "Make catalog, cart, and media consistent",
       "description": "Validate and persist listings, inventory, carts, usernames, and media with one reliable contract.",
       "jira_key": "DEV-4",
-      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-4"
+      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-4",
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-E05",
       "summary": "Complete web and mobile transaction experiences",
       "description": "Show truthful payment outcomes, make mobile seller operations possible, and define offer behavior.",
       "jira_key": "DEV-5",
-      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-5"
+      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-5",
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-E06",
       "summary": "Make discovery and AI reliable and bounded",
       "description": "Unify search contracts, retrieve the full catalog, and bound provider costs and untrusted media access.",
       "jira_key": "DEV-6",
-      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-6"
+      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-6",
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-E07",
       "summary": "Operate and verify a recoverable marketplace",
       "description": "Add meaningful commerce tests, repeatable deployment, support/reconciliation tooling, and recovery plans.",
       "jira_key": "DEV-7",
-      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-7"
+      "jira_url": "https://allversegpt.atlassian.net/browse/DEV-7",
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     }
   ],
   "issues": [
@@ -97,7 +111,9 @@
       "jira_key": "DEV-8",
       "jira_url": "https://allversegpt.atlassian.net/browse/DEV-8",
       "jira_parent": "DEV-1",
-      "jira_dependency_keys": []
+      "jira_dependency_keys": [],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F002",
@@ -146,7 +162,9 @@
       "jira_key": "DEV-9",
       "jira_url": "https://allversegpt.atlassian.net/browse/DEV-9",
       "jira_parent": "DEV-1",
-      "jira_dependency_keys": []
+      "jira_dependency_keys": [],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F003",
@@ -199,7 +217,9 @@
       "jira_parent": "DEV-1",
       "jira_dependency_keys": [
         "DEV-9"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F004",
@@ -242,7 +262,9 @@
       "jira_key": "DEV-11",
       "jira_url": "https://allversegpt.atlassian.net/browse/DEV-11",
       "jira_parent": "DEV-1",
-      "jira_dependency_keys": []
+      "jira_dependency_keys": [],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F005",
@@ -299,7 +321,9 @@
         "DEV-8",
         "DEV-9",
         "DEV-10"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F006",
@@ -348,7 +372,9 @@
       "jira_key": "DEV-13",
       "jira_url": "https://allversegpt.atlassian.net/browse/DEV-13",
       "jira_parent": "DEV-2",
-      "jira_dependency_keys": []
+      "jira_dependency_keys": [],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F007",
@@ -401,7 +427,9 @@
       "jira_parent": "DEV-2",
       "jira_dependency_keys": [
         "DEV-13"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F008",
@@ -454,7 +482,9 @@
       "jira_parent": "DEV-2",
       "jira_dependency_keys": [
         "DEV-13"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F009",
@@ -509,7 +539,9 @@
       "jira_dependency_keys": [
         "DEV-13",
         "DEV-14"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F010",
@@ -558,7 +590,9 @@
       "jira_dependency_keys": [
         "DEV-10",
         "DEV-15"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F011",
@@ -609,7 +643,9 @@
         "DEV-10",
         "DEV-15",
         "DEV-18"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F012",
@@ -666,7 +702,9 @@
         "DEV-10",
         "DEV-18",
         "DEV-19"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F013",
@@ -723,7 +761,9 @@
         "DEV-19",
         "DEV-20",
         "DEV-22"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F014",
@@ -772,7 +812,9 @@
       "jira_key": "DEV-22",
       "jira_url": "https://allversegpt.atlassian.net/browse/DEV-22",
       "jira_parent": "DEV-2",
-      "jira_dependency_keys": []
+      "jira_dependency_keys": [],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F015",
@@ -821,7 +863,9 @@
       "jira_dependency_keys": [
         "DEV-22",
         "DEV-54"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F016",
@@ -884,7 +928,9 @@
         "DEV-22",
         "DEV-33",
         "DEV-54"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F017",
@@ -937,7 +983,9 @@
         "DEV-21",
         "DEV-24",
         "DEV-51"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F018",
@@ -992,7 +1040,9 @@
       "jira_dependency_keys": [
         "DEV-13",
         "DEV-34"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F019",
@@ -1041,7 +1091,9 @@
       "jira_dependency_keys": [
         "DEV-9",
         "DEV-20"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F020",
@@ -1096,7 +1148,9 @@
       "jira_dependency_keys": [
         "DEV-27",
         "DEV-35"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F021",
@@ -1155,7 +1209,9 @@
         "DEV-26",
         "DEV-27",
         "DEV-28"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F022",
@@ -1202,7 +1258,9 @@
       "jira_parent": "DEV-3",
       "jira_dependency_keys": [
         "DEV-33"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F023",
@@ -1253,7 +1311,9 @@
         "DEV-30",
         "DEV-32",
         "DEV-33"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F024",
@@ -1308,7 +1368,9 @@
       "jira_dependency_keys": [
         "DEV-15",
         "DEV-29"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F025",
@@ -1357,7 +1419,9 @@
       "jira_dependency_keys": [
         "DEV-8",
         "DEV-13"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F026",
@@ -1412,7 +1476,9 @@
       "jira_dependency_keys": [
         "DEV-8",
         "DEV-35"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F027",
@@ -1465,7 +1531,9 @@
       "jira_parent": "DEV-4",
       "jira_dependency_keys": [
         "DEV-8"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F028",
@@ -1520,7 +1588,9 @@
       "jira_dependency_keys": [
         "DEV-13",
         "DEV-35"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F029",
@@ -1569,7 +1639,9 @@
       "jira_dependency_keys": [
         "DEV-35",
         "DEV-36"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F030",
@@ -1624,7 +1696,9 @@
       "jira_dependency_keys": [
         "DEV-12",
         "DEV-35"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F031",
@@ -1679,7 +1753,9 @@
       "jira_dependency_keys": [
         "DEV-9",
         "DEV-38"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F032",
@@ -1734,7 +1810,9 @@
       "jira_dependency_keys": [
         "DEV-9",
         "DEV-10"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F033",
@@ -1789,7 +1867,9 @@
       "jira_dependency_keys": [
         "DEV-11",
         "DEV-54"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F034",
@@ -1844,7 +1924,9 @@
         "DEV-24",
         "DEV-39",
         "DEV-54"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F035",
@@ -1901,7 +1983,9 @@
         "DEV-9",
         "DEV-12",
         "DEV-40"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F036",
@@ -1956,7 +2040,9 @@
       "jira_dependency_keys": [
         "DEV-42",
         "DEV-43"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F037",
@@ -2017,7 +2103,9 @@
       "jira_dependency_keys": [
         "DEV-9",
         "DEV-15"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F038",
@@ -2076,7 +2164,9 @@
         "DEV-21",
         "DEV-27",
         "DEV-32"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F039",
@@ -2141,7 +2231,9 @@
         "DEV-14",
         "DEV-17",
         "DEV-26"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F040",
@@ -2198,7 +2290,9 @@
         "DEV-31",
         "DEV-33",
         "DEV-45"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F041",
@@ -2257,7 +2351,9 @@
         "DEV-17",
         "DEV-35",
         "DEV-54"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F042",
@@ -2318,7 +2414,9 @@
         "DEV-42",
         "DEV-51",
         "DEV-54"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F043",
@@ -2373,7 +2471,9 @@
       "jira_dependency_keys": [
         "DEV-48",
         "DEV-49"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     },
     {
       "id": "AV-F044",
@@ -2428,7 +2528,9 @@
       "jira_dependency_keys": [
         "DEV-36",
         "DEV-37"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F045",
@@ -2483,7 +2585,9 @@
       "jira_key": "DEV-49",
       "jira_url": "https://allversegpt.atlassian.net/browse/DEV-49",
       "jira_parent": "DEV-6",
-      "jira_dependency_keys": []
+      "jira_dependency_keys": [],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F046",
@@ -2532,7 +2636,9 @@
       "jira_dependency_keys": [
         "DEV-9",
         "DEV-38"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F047",
@@ -2581,7 +2687,9 @@
       "jira_key": "DEV-16",
       "jira_url": "https://allversegpt.atlassian.net/browse/DEV-16",
       "jira_parent": "DEV-7",
-      "jira_dependency_keys": []
+      "jira_dependency_keys": [],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F048",
@@ -2640,7 +2748,9 @@
         "DEV-19",
         "DEV-32",
         "DEV-33"
-      ]
+      ],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F049",
@@ -2701,7 +2811,9 @@
       "jira_dependency_keys": [
         "DEV-12",
         "DEV-16"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F050",
@@ -2760,7 +2872,9 @@
         "DEV-13",
         "DEV-39",
         "DEV-52"
-      ]
+      ],
+      "assignee_name": "Daniel Misherky",
+      "assignee_account_id": "712020:91d929de-21ee-4794-965f-d4316267ffe6"
     },
     {
       "id": "AV-F051",
@@ -2815,7 +2929,9 @@
       "jira_key": "DEV-54",
       "jira_url": "https://allversegpt.atlassian.net/browse/DEV-54",
       "jira_parent": "DEV-7",
-      "jira_dependency_keys": []
+      "jira_dependency_keys": [],
+      "assignee_name": "Yengner Bermudez",
+      "assignee_account_id": "712020:1c3d8754-88c8-4734-aa7b-e782bc414760"
     },
     {
       "id": "AV-F052",
@@ -2866,9 +2982,21 @@
         "DEV-33",
         "DEV-36",
         "DEV-47"
-      ]
+      ],
+      "assignee_name": "Fahdah Alathel",
+      "assignee_account_id": "712020:bf00ff1b-8772-474b-a027-e534d4499e91"
     }
   ],
   "jira_publication_status": "complete",
-  "jira_publication_completed_date": "2026-11-17"
+  "jira_publication_completed_date": "2026-11-17",
+  "assignment_verified_date": "2026-11-17",
+  "implementation_followups": [
+    {
+      "jira_key": "DEV-60",
+      "summary": "Isolate Stripe sandbox testing and repair seller-transfer recovery",
+      "assignee_name": "Yengner Bermudez",
+      "documentation": "docs/payments/STRIPE_SANDBOX.md",
+      "status": "Local implementation validated; isolated Stripe integration outstanding"
+    }
+  ]
 }

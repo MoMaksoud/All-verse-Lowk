@@ -3,7 +3,7 @@ import { assertPaymentPersistence, assertStripeObjectMode, getSandboxShipping, g
 
 afterEach(() => vi.unstubAllEnvs());
 describe('payment environment isolation', () => {
-  it.each(['sk_test_example', 'rk_test_example'])('recognizes test key %s', key => {
+  it.each(['sk_test_example', 'rk_test_example', 'rkcs_test_example'])('recognizes test key %s', key => {
     expect(getStripeMode({ STRIPE_SECRET_KEY: key })).toBe('test');
   });
   it('requires valid keys without exposing their values', () => {

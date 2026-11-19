@@ -4,9 +4,9 @@
 
 [Open the foundation backlog in Jira](https://allversegpt.atlassian.net/issues/?jql=project%20%3D%20DEV%20AND%20labels%20%3D%20foundation-audit%20ORDER%20BY%20priority%20DESC%2C%20key%20ASC).
 
-All 59 work items were read back. Child issue types, priorities and epic parents matched the structured backlog. All 115 dependency links were verified in their actual Jira direction. Issues remain To Do and unassigned; no estimates or sprint commitments were set.
+All 59 work items were read back. Child issue types, priorities and epic parents matched the structured backlog. All 115 dependency links were verified in their actual Jira direction. At initial publication the issues were To Do and unassigned. All 59 baseline work items are now assigned per the [verified team assignments](ASSIGNMENTS.md); no estimates or sprint commitments were set.
 
-The CSV is an archive, not an instruction to import these issues again. Use the mapping/audit labels to avoid duplicate tickets. Repository documents are local uncommitted changes until the development team commits them. Jira evidence links point to the existing reviewed source commit, not unpublished documentation.
+The CSV is an archive, not an instruction to import these issues again. Use the mapping/audit labels to avoid duplicate tickets. The baseline audit and initial sandbox implementation are recorded in repository commit `0d04f6e`; the follow-up handoff includes current assignments and the Stripe validation record. Jira evidence links retain the original reviewed source commit.
 
 ## Epics
 
@@ -87,3 +87,7 @@ The CSV is an archive, not an instruction to import these issues again. Use the 
 These groups can be planned together; native dependencies express specific prerequisites. Priority indicates proposed severity, not an automatic assignment or delivery promise.
 
 Machine-readable publication receipt: [jira-publication.json](jira-publication.json). Complete requirements and immutable source evidence: [foundation-backlog.json](foundation-backlog.json).
+
+## Implementation follow-up
+
+[DEV-60](https://allversegpt.atlassian.net/browse/DEV-60), assigned to Yengner, tracks the first Stripe sandbox and seller-transfer repair. It is additional to the 52 baseline findings. See [the implementation and validation record](../payments/STRIPE_SANDBOX.md). No foundation issue is marked complete by this local implementation.

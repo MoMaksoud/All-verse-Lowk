@@ -12,5 +12,7 @@ Start with the [foundation audit](audits/2026-11-16-foundation-audit.md) for rea
 | [Backlog JSON](backlog/foundation-backlog.json) | Structured source, including full Jira descriptions |
 | [Backlog CSV](backlog/foundation-backlog.csv) | Portable import/export aid; hierarchy/dependencies require mapping |
 | [Jira mapping](backlog/JIRA_MAPPING.md) | DEV epic/issue links and publication status |
+| [Team assignments](backlog/ASSIGNMENTS.md) | Verified primary developer ownership |
+| [Stripe sandbox](payments/STRIPE_SANDBOX.md) | Current payment repairs, local emulator setup, actual checks and remaining provider integration |
 
 Reviewed source: `c15398da9d152040d68309786d828ad37ef57ed6` on 2026-11-16. These files document findings and proposed work; they do not indicate that the application defects are already fixed.

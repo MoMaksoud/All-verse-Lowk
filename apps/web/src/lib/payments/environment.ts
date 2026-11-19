@@ -3,7 +3,7 @@ export type StripeMode = 'test' | 'live';
 /** API keys select Stripe's environment. Never log or return their values. */
 export function getStripeMode(env: Readonly<Record<string, string | undefined>> = process.env): StripeMode {
   const key = env.STRIPE_SECRET_KEY?.trim();
-  const actual = key?.startsWith('sk_test_') || key?.startsWith('rk_test_') ? 'test'
+  const actual = key?.startsWith('sk_test_') || key?.startsWith('rk_test_') || key?.startsWith('rkcs_test_') ? 'test'
     : key?.startsWith('sk_live_') || key?.startsWith('rk_live_') ? 'live' : null;
   if (!actual) throw new Error('Configure a valid Stripe secret or restricted API key.');
   const expected = env.STRIPE_MODE?.trim() || actual;
