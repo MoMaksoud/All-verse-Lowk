@@ -12,7 +12,7 @@ export function sandboxEnvironment() {
   createRequire(requireWeb.resolve('next/package.json'))('@next/env').loadEnvConfig(web, true, { info() {}, error() {} });
   const override = path.join(web, '.env.sandbox.local');
   const env = { ...process.env, ...(existsSync(override) ? parseEnv(readFileSync(override, 'utf8')) : {}) };
-  if (!env.STRIPE_SECRET_KEY?.startsWith('sk_test_') && !env.STRIPE_SECRET_KEY?.startsWith('rk_test_')) {
+  if (!['sk_test_', 'rk_test_', 'rkcs_test_'].some(prefix => env.STRIPE_SECRET_KEY?.startsWith(prefix))) {
     throw new Error('Set a test Stripe key in apps/web/.env.sandbox.local. Live keys are refused.');
   }
   Object.assign(env, {

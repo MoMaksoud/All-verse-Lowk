@@ -16,7 +16,8 @@
     "dev:sandbox": "node scripts/payments/sandbox.mjs",
     "payments:emulators": "npx -y firebase-tools@latest emulators:start --config firebase.sandbox.json --project demo-allverse-sandbox --only auth,firestore",
     "payments:seed": "node scripts/payments/seed-sandbox.mjs",
-    "payments:verify": "node scripts/payments/verify-sandbox.mjs"
+    "payments:verify": "node scripts/payments/verify-sandbox.mjs",
+    "payments:listen": "node scripts/payments/listen-sandbox.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

@@ -1,4 +1,4 @@
-Audit ID,Jira Key,Jira URL,Issue Type,Summary,Priority,Epic Audit ID,Epic Key,Labels,Dependencies,Jira Dependencies,Description
+Audit ID,Jira Key,Jira URL,Issue Type,Summary,Priority,Epic Audit ID,Epic Key,Labels,Dependencies,Jira Dependencies,Description,Assignee Name,Assignee Account ID
 AV-F001,DEV-8,https://allversegpt.atlassian.net/browse/DEV-8,Bug,Deny client writes to financial orders and fulfillment records,Highest,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f001,security",,,"Audit ID: **AV-F001** | Severity: **P0** | Area: **Security**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -19,7 +19,7 @@ Make order creation and financial/fulfillment changes server-owned. Define safe 
 
 **Dependencies:** None identified.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F002,DEV-9,https://allversegpt.atlassian.net/browse/DEV-9,Bug,Separate public profiles from private addresses and contact data,Highest,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f002,privacy",,,"Audit ID: **AV-F002** | Severity: **P0** | Area: **Privacy**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -41,7 +41,7 @@ Introduce an explicit public profile projection and private owner/server data. M
 
 **Dependencies:** None identified.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F003,DEV-10,https://allversegpt.atlassian.net/browse/DEV-10,Bug,Protect Connect account ownership and server-controlled profile fields,Highest,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f003,security",AV-F002,DEV-9,"Audit ID: **AV-F003** | Severity: **P0** | Area: **Security**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -63,7 +63,7 @@ Whitelist editable profile fields, store Connect/role/verification data under se
 
 **Dependencies:** AV-F002.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F004,DEV-11,https://allversegpt.atlassian.net/browse/DEV-11,Bug,Bind email verification to the authenticated account email,Highest,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f004,identity",,,"Audit ID: **AV-F004** | Severity: **P0** | Area: **Identity**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -84,7 +84,7 @@ Use Firebase verification consistently or issue server tokens bound to the authe
 
 **Dependencies:** None identified.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F005,DEV-12,https://allversegpt.atlassian.net/browse/DEV-12,Task,Version and deploy Firestore and Storage security policies,Highest,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f005,infrastructure","AV-F001,AV-F002,AV-F003","DEV-8,DEV-9,DEV-10","Audit ID: **AV-F005** | Severity: **P0** | Area: **Infrastructure**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -106,7 +106,7 @@ Add explicit deployment targets for Firestore rules/indexes and Storage rules; c
 
 **Dependencies:** AV-F001, AV-F002, AV-F003.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F006,DEV-13,https://allversegpt.atlassian.net/browse/DEV-13,Bug,Enforce one order per Checkout Session inside the transaction,Highest,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f006,payments",,,"Audit ID: **AV-F006** | Severity: **P0** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -128,7 +128,7 @@ Claim the session/snapshot atomically and return its existing order ID from with
 
 **Dependencies:** None identified.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F007,DEV-14,https://allversegpt.atlassian.net/browse/DEV-14,Bug,Recover paid sessions when stock becomes unavailable,Highest,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f007,payments",AV-F006,DEV-13,"Audit ID: **AV-F007** | Severity: **P0** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -150,7 +150,7 @@ Choose a reservation/authorization policy and implement paid-but-unfulfillable c
 
 **Dependencies:** AV-F006.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F008,DEV-15,https://allversegpt.atlassian.net/browse/DEV-15,Bug,Resume settlement work after the order transaction commits,Highest,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f008,payments",AV-F006,DEV-13,"Audit ID: **AV-F008** | Severity: **P0** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -172,7 +172,7 @@ Persist independent durable settlement steps/outbox jobs atomically with the ord
 
 **Dependencies:** AV-F006.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F009,DEV-17,https://allversegpt.atlassian.net/browse/DEV-17,Bug,Make checkout creation retry-safe and bound to one cart attempt,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f009,payments","AV-F006,AV-F007","DEV-13,DEV-14","Audit ID: **AV-F009** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -194,7 +194,7 @@ Persist a checkout attempt/cart version before provider creation, use provider i
 
 **Dependencies:** AV-F006, AV-F007.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F010,DEV-18,https://allversegpt.atlassian.net/browse/DEV-18,Bug,Keep pending-Connect payout lines pending during retry,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f010,payouts","AV-F003,AV-F008","DEV-10,DEV-15","Audit ID: **AV-F010** | Severity: **P1** | Area: **Payouts**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -215,7 +215,7 @@ Track every expected line as transferred, pending onboarding, or failed. Complet
 
 **Dependencies:** AV-F003, AV-F008.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F011,DEV-19,https://allversegpt.atlassian.net/browse/DEV-19,Story,Tie seller transfers to funding and reconcile ambiguous outcomes,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f011,payouts","AV-F003,AV-F008,AV-F010","DEV-10,DEV-15,DEV-18","Audit ID: **AV-F011** | Severity: **P1** | Area: **Payouts**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -236,7 +236,7 @@ Choose and document a supported charge/transfer funding strategy. Persist charge
 
 **Dependencies:** AV-F003, AV-F008, AV-F010.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F012,DEV-20,https://allversegpt.atlassian.net/browse/DEV-20,Story,Manage seller onboarding and Connect capability changes,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f012,payouts","AV-F003,AV-F010,AV-F011","DEV-10,DEV-18,DEV-19","Audit ID: **AV-F012** | Severity: **P1** | Area: **Payouts**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -258,7 +258,7 @@ Decide whether sellers must onboard before publish or before purchase; otherwise
 
 **Dependencies:** AV-F003, AV-F010, AV-F011.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F013,DEV-21,https://allversegpt.atlassian.net/browse/DEV-21,Story,Show real seller earnings and bank payout status,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f013,payouts","AV-F011,AV-F012,AV-F014","DEV-19,DEV-20,DEV-22","Audit ID: **AV-F013** | Severity: **P1** | Area: **Payouts**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -280,7 +280,7 @@ Create a seller-facing ledger for gross item value, platform fee, adjustments, n
 
 **Dependencies:** AV-F011, AV-F012, AV-F014.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F014,DEV-22,https://allversegpt.atlassian.net/browse/DEV-22,Story,Use integer minor units and versioned fee allocation,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f014,payments",,,"Audit ID: **AV-F014** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -302,7 +302,7 @@ Use USD cents for authoritative amounts with explicit rounding and allocation ru
 
 **Dependencies:** None identified.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F015,DEV-23,https://allversegpt.atlassian.net/browse/DEV-23,Story,Replace flat estimated tax with an approved tax workflow,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f015,payments","AV-F014,AV-F051","DEV-22,DEV-54","Audit ID: **AV-F015** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -323,7 +323,7 @@ Have the business/tax owner approve the launch scope and responsibility, then im
 
 **Dependencies:** AV-F014, AV-F051.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F016,DEV-24,https://allversegpt.atlassian.net/browse/DEV-24,Story,"Implement paid-order cancellations, refunds and return resolution",High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f016,payments","AV-F007,AV-F008,AV-F011,AV-F014,AV-F025,AV-F051","DEV-14,DEV-15,DEV-19,DEV-22,DEV-33,DEV-54","Audit ID: **AV-F016** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -345,7 +345,7 @@ Implement an approved pre-shipment cancellation and return/refund policy, beginn
 
 **Dependencies:** AV-F007, AV-F008, AV-F011, AV-F014, AV-F025, AV-F051.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F017,DEV-25,https://allversegpt.atlassian.net/browse/DEV-25,Story,Handle payment disputes and chargebacks with an operator workflow,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f017,payments","AV-F011,AV-F013,AV-F016,AV-F048","DEV-19,DEV-21,DEV-24,DEV-51","Audit ID: **AV-F017** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -366,7 +366,7 @@ Consume relevant dispute/refund/transfer events and create authenticated support
 
 **Dependencies:** AV-F011, AV-F013, AV-F016, AV-F048.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F018,DEV-26,https://allversegpt.atlassian.net/browse/DEV-26,Bug,Enforce the per-seller checkout contract on the server,High,AV-E02,DEV-2,"foundation-audit,audit-2026-11-16,av-f018,payments","AV-F006,AV-F026","DEV-13,DEV-34","Audit ID: **AV-F018** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -388,7 +388,7 @@ For the baseline, require or infer exactly one trusted seller per attempt and re
 
 **Dependencies:** AV-F006, AV-F026.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F019,DEV-27,https://allversegpt.atlassian.net/browse/DEV-27,Bug,Require a valid private seller ship-from and return address,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f019,shipping","AV-F002,AV-F012","DEV-9,DEV-20","Audit ID: **AV-F019** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -409,7 +409,7 @@ Collect/validate a private ship-from/return address and use it server-side for q
 
 **Dependencies:** AV-F002, AV-F012.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F020,DEV-28,https://allversegpt.atlassian.net/browse/DEV-28,Bug,Capture and quote the actual shipment package,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f020,shipping","AV-F019,AV-F027","DEV-27,DEV-35","Audit ID: **AV-F020** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -431,7 +431,7 @@ Define supported package types and units, require bounded validated dimensions/w
 
 **Dependencies:** AV-F019, AV-F027.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F021,DEV-29,https://allversegpt.atlassian.net/browse/DEV-29,Bug,Bind checkout to a server quote and confirm material changes,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f021,shipping","AV-F014,AV-F018,AV-F019,AV-F020","DEV-22,DEV-26,DEV-27,DEV-28","Audit ID: **AV-F021** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -453,7 +453,7 @@ Return a server quote ID covering cart version, seller, addresses, package, serv
 
 **Dependencies:** AV-F014, AV-F018, AV-F019, AV-F020.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F022,DEV-30,https://allversegpt.atlassian.net/browse/DEV-30,Bug,Keep label purchase separate from physical shipment,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f022,shipping",AV-F025,DEV-33,"Audit ID: **AV-F022** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -474,7 +474,7 @@ Introduce label_created/awaiting_dropoff fulfillment state and truthful notifica
 
 **Dependencies:** AV-F025.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F023,DEV-31,https://allversegpt.atlassian.net/browse/DEV-31,Story,Ingest tracking events and expose delivery exceptions,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f023,shipping","AV-F022,AV-F024,AV-F025","DEV-30,DEV-32,DEV-33","Audit ID: **AV-F023** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -495,7 +495,7 @@ Implement provider-authenticated tracking ingestion with replay/out-of-order han
 
 **Dependencies:** AV-F022, AV-F024, AV-F025.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F024,DEV-32,https://allversegpt.atlassian.net/browse/DEV-32,Bug,Reconcile label purchase timeouts before buying another label,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f024,shipping","AV-F008,AV-F021","DEV-15,DEV-29","Audit ID: **AV-F024** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -517,7 +517,7 @@ Persist the provider transaction/attempt identity and reconcile pending/ambiguou
 
 **Dependencies:** AV-F008, AV-F021.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F025,DEV-33,https://allversegpt.atlassian.net/browse/DEV-33,Story,Use atomic audited order-state transitions,High,AV-E03,DEV-3,"foundation-audit,audit-2026-11-16,av-f025,orders","AV-F001,AV-F006","DEV-8,DEV-13","Audit ID: **AV-F025** | Severity: **P1** | Area: **Orders**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -538,7 +538,7 @@ Define separate payment/fulfillment/refund/settlement state and a transactional 
 
 **Dependencies:** AV-F001, AV-F006.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F026,DEV-34,https://allversegpt.atlassian.net/browse/DEV-34,Bug,Validate cart ownership from listings and mutate carts atomically,High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f026,cart","AV-F001,AV-F027","DEV-8,DEV-35","Audit ID: **AV-F026** | Severity: **P1** | Area: **Cart**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -560,7 +560,7 @@ Resolve listing ownership/availability on the server, enforce the chosen unique-
 
 **Dependencies:** AV-F001, AV-F027.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F027,DEV-35,https://allversegpt.atlassian.net/browse/DEV-35,Bug,Validate listing inputs and make ownership immutable,High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f027,catalog",AV-F001,DEV-8,"Audit ID: **AV-F027** | Severity: **P1** | Area: **Catalog**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -582,7 +582,7 @@ Use shared runtime create/update schemas, strip/reject unknown fields and server
 
 **Dependencies:** AV-F001.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F028,DEV-36,https://allversegpt.atlassian.net/browse/DEV-36,Bug,"Unify sold flags, inventory and marketplace sale attribution",High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f028,catalog","AV-F006,AV-F027","DEV-13,DEV-35","Audit ID: **AV-F028** | Severity: **P1** | Area: **Catalog**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -604,7 +604,7 @@ Define one availability/sale-history projection and reuse it in settlement, manu
 
 **Dependencies:** AV-F006, AV-F027.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F029,DEV-37,https://allversegpt.atlassian.net/browse/DEV-37,Bug,Enforce public listing visibility in Admin-backed read routes,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f029,privacy","AV-F027,AV-F028","DEV-35,DEV-36","Audit ID: **AV-F029** | Severity: **P1** | Area: **Privacy**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -625,7 +625,7 @@ Define published/sold-history/hidden/deleted visibility explicitly; apply public
 
 **Dependencies:** AV-F027, AV-F028.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F030,DEV-38,https://allversegpt.atlassian.net/browse/DEV-38,Bug,Use authenticated server storage operations in upload and cleanup APIs,High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f030,media","AV-F005,AV-F027","DEV-12,DEV-35","Audit ID: **AV-F030** | Severity: **P1** | Area: **Media**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -647,7 +647,7 @@ Use Admin Storage in server routes after explicit listing/user authorization, or
 
 **Dependencies:** AV-F005, AV-F027.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F031,DEV-55,https://allversegpt.atlassian.net/browse/DEV-55,Story,Track media ownership and clean abandoned or replaced uploads,Medium,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f031,media","AV-F002,AV-F030","DEV-9,DEV-38","Audit ID: **AV-F031** | Severity: **P2** | Area: **Media**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -669,7 +669,7 @@ Persist asset records with owner, purpose, storage path, visibility, linked list
 
 **Dependencies:** AV-F002, AV-F030.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F032,DEV-39,https://allversegpt.atlassian.net/browse/DEV-39,Bug,Make username claims authoritative across API and SDK writers,High,AV-E04,DEV-4,"foundation-audit,audit-2026-11-16,av-f032,identity","AV-F002,AV-F003","DEV-9,DEV-10","Audit ID: **AV-F032** | Severity: **P1** | Area: **Identity**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -691,7 +691,7 @@ Choose one normalized username contract and transactional server writer; migrate
 
 **Dependencies:** AV-F002, AV-F003.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F033,DEV-40,https://allversegpt.atlassian.net/browse/DEV-40,Story,Complete account recovery and enforce action eligibility on the server,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f033,identity","AV-F004,AV-F051","DEV-11,DEV-54","Audit ID: **AV-F033** | Severity: **P1** | Area: **Identity**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -713,7 +713,7 @@ Implement password reset and provider-aware recovery. Agree on action eligibilit
 
 **Dependencies:** AV-F004, AV-F051.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F034,DEV-41,https://allversegpt.atlassian.net/browse/DEV-41,Bug,Make account deletion safe for outstanding orders and funds,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f034,privacy","AV-F002,AV-F003,AV-F016,AV-F032,AV-F051","DEV-9,DEV-10,DEV-24,DEV-39,DEV-54","Audit ID: **AV-F034** | Severity: **P1** | Area: **Privacy**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -734,7 +734,7 @@ Define staged deletion/anonymization with financial retention and outstanding-li
 
 **Dependencies:** AV-F002, AV-F003, AV-F016, AV-F032, AV-F051.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F035,DEV-42,https://allversegpt.atlassian.net/browse/DEV-42,Bug,Repair web chat creation and lock chat participants,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f035,messaging","AV-F002,AV-F005,AV-F033","DEV-9,DEV-12,DEV-40","Audit ID: **AV-F035** | Severity: **P1** | Area: **Messaging**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -756,7 +756,7 @@ Use the authorized server chat creation path and approved public profile data. M
 
 **Dependencies:** AV-F002, AV-F005, AV-F033.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F036,DEV-56,https://allversegpt.atlassian.net/browse/DEV-56,Story,"Make message sends atomic, retry-safe and paginated",Medium,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f036,messaging","AV-F035,AV-F037","DEV-42,DEV-43","Audit ID: **AV-F036** | Severity: **P2** | Area: **Messaging**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -778,7 +778,7 @@ Use an atomic message/outbox write with client-generated request IDs, cursor pag
 
 **Dependencies:** AV-F035, AV-F037.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F037,DEV-43,https://allversegpt.atlassian.net/browse/DEV-43,Story,Deliver transaction emails and push notifications from durable jobs,High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f037,notifications","AV-F002,AV-F008","DEV-9,DEV-15","Audit ID: **AV-F037** | Severity: **P1** | Area: **Notifications**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -801,7 +801,7 @@ Persist per-event/per-recipient notification jobs with deduplication, retry/back
 
 **Dependencies:** AV-F002, AV-F008.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F038,DEV-44,https://allversegpt.atlassian.net/browse/DEV-44,Story,"Provide mobile sellers with onboarding, sales and label access",High,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f038,mobile","AV-F012,AV-F013,AV-F019,AV-F024","DEV-20,DEV-21,DEV-27,DEV-32","Audit ID: **AV-F038** | Severity: **P1** | Area: **Mobile**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -823,7 +823,7 @@ Add native seller operations or a clearly supported authenticated web handoff wi
 
 **Dependencies:** AV-F012, AV-F013, AV-F019, AV-F024.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F039,DEV-45,https://allversegpt.atlassian.net/browse/DEV-45,Bug,Show verified payment confirmation and handle webhook delay,High,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f039,checkout-ux","AV-F006,AV-F007,AV-F009,AV-F018","DEV-13,DEV-14,DEV-17,DEV-26","Audit ID: **AV-F039** | Severity: **P1** | Area: **Checkout UX**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -846,7 +846,7 @@ Model confirming, payment pending, paid-order-processing, confirmed, failed and 
 
 **Dependencies:** AV-F006, AV-F007, AV-F009, AV-F018.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F040,DEV-46,https://allversegpt.atlassian.net/browse/DEV-46,Bug,Expose complete buyer order details and tracking on mobile,High,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f040,mobile","AV-F023,AV-F025,AV-F039","DEV-31,DEV-33,DEV-45","Audit ID: **AV-F040** | Severity: **P1** | Area: **Mobile**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -868,7 +868,7 @@ Return participant-safe order/shipment projections with cursor pagination and ad
 
 **Dependencies:** AV-F023, AV-F025, AV-F039.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F041,DEV-57,https://allversegpt.atlassian.net/browse/DEV-57,Story,Define offers and prevent chat negotiation from implying a payable offer,Medium,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f041,offers","AV-F007,AV-F009,AV-F027,AV-F051","DEV-14,DEV-17,DEV-35,DEV-54","Audit ID: **AV-F041** | Severity: **P2** | Area: **Offers**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -890,7 +890,7 @@ Choose a baseline: relabel as non-binding price discussion and require seller li
 
 **Dependencies:** AV-F007, AV-F009, AV-F027, AV-F051.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F042,DEV-47,https://allversegpt.atlassian.net/browse/DEV-47,Story,"Add report, block and minimum marketplace moderation",High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f042,trust","AV-F029,AV-F033,AV-F035,AV-F048,AV-F051","DEV-37,DEV-40,DEV-42,DEV-51,DEV-54","Audit ID: **AV-F042** | Severity: **P1** | Area: **Trust**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -912,7 +912,7 @@ Add reporting and blocking, a minimal authenticated moderation queue, prohibited
 
 **Dependencies:** AV-F029, AV-F033, AV-F035, AV-F048, AV-F051.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F043,DEV-58,https://allversegpt.atlassian.net/browse/DEV-58,Story,Unify web and mobile search contracts and provider failures,Medium,AV-E06,DEV-6,"foundation-audit,audit-2026-11-16,av-f043,search","AV-F044,AV-F045","DEV-48,DEV-49","Audit ID: **AV-F043** | Severity: **P2** | Area: **Search**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -934,7 +934,7 @@ Adopt one versioned search service/response contract and adapters for both clien
 
 **Dependencies:** AV-F044, AV-F045.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91
 AV-F044,DEV-48,https://allversegpt.atlassian.net/browse/DEV-48,Bug,Retrieve and paginate the full marketplace catalog,High,AV-E06,DEV-6,"foundation-audit,audit-2026-11-16,av-f044,discovery","AV-F028,AV-F029","DEV-36,DEV-37","Audit ID: **AV-F044** | Severity: **P1** | Area: **Discovery**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -956,7 +956,7 @@ Implement an indexed retrieval/cursor strategy with explicit filter/sort support
 
 **Dependencies:** AV-F028, AV-F029.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F045,DEV-49,https://allversegpt.atlassian.net/browse/DEV-49,Bug,Bound public search and AI costs across server instances,High,AV-E06,DEV-6,"foundation-audit,audit-2026-11-16,av-f045,ai-operations",,,"Audit ID: **AV-F045** | Severity: **P1** | Area: **AI Operations**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -979,7 +979,7 @@ Apply durable per-user/IP/provider budgets to public and authenticated paid-prov
 
 **Dependencies:** None identified.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F046,DEV-50,https://allversegpt.atlassian.net/browse/DEV-50,Bug,Restrict server media fetching to approved owned assets,High,AV-E01,DEV-1,"foundation-audit,audit-2026-11-16,av-f046,security","AV-F002,AV-F030","DEV-9,DEV-38","Audit ID: **AV-F046** | Severity: **P1** | Area: **Security**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
 
@@ -1000,7 +1000,7 @@ Accept owned asset IDs where possible; otherwise enforce approved storage hosts,
 
 **Dependencies:** AV-F002, AV-F030.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F047,DEV-16,https://allversegpt.atlassian.net/browse/DEV-16,Task,Add automated commerce and permission release gates,Highest,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f047,quality",,,"Audit ID: **AV-F047** | Severity: **P0** | Area: **Quality**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -1022,7 +1022,7 @@ Create isolated Firebase emulator and provider-contract harnesses plus web/mobil
 
 **Dependencies:** None identified.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F048,DEV-51,https://allversegpt.atlassian.net/browse/DEV-51,Story,Build operator reconciliation and recovery queues,High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f048,operations","AV-F008,AV-F011,AV-F024,AV-F025","DEV-15,DEV-19,DEV-32,DEV-33","Audit ID: **AV-F048** | Severity: **P1** | Area: **Operations**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -1044,7 +1044,7 @@ Add least-privilege operator access, durable exception queues, scheduled provide
 
 **Dependencies:** AV-F008, AV-F011, AV-F024, AV-F025.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F049,DEV-52,https://allversegpt.atlassian.net/browse/DEV-52,Task,Make deployment and environment setup reproducible,High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f049,infrastructure","AV-F005,AV-F047","DEV-12,DEV-16","Audit ID: **AV-F049** | Severity: **P1** | Area: **Infrastructure**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -1067,7 +1067,7 @@ Document/validate server vs public variables without values, align supported Nod
 
 **Dependencies:** AV-F005, AV-F047.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F050,DEV-53,https://allversegpt.atlassian.net/browse/DEV-53,Task,"Version migrations, retention and disaster recovery",High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f050,infrastructure","AV-F005,AV-F006,AV-F032,AV-F049","DEV-12,DEV-13,DEV-39,DEV-52","Audit ID: **AV-F050** | Severity: **P1** | Area: **Infrastructure**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -1089,7 +1089,7 @@ Define versioned idempotent data migrations and inventory existing records befor
 
 **Dependencies:** AV-F005, AV-F006, AV-F032, AV-F049.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Daniel Misherky,712020:91d929de-21ee-4794-965f-d4316267ffe6
 AV-F051,DEV-54,https://allversegpt.atlassian.net/browse/DEV-54,Task,Approve the baseline commerce policy and supported launch scope,High,AV-E07,DEV-7,"foundation-audit,audit-2026-11-16,av-f051,product-decisions",,,"Audit ID: **AV-F051** | Severity: **P1** | Area: **Product Decisions**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -1112,7 +1112,7 @@ Record accountable decisions for US/USD scope, seller eligibility, fee/tax owner
 
 **Dependencies:** None identified.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Yengner Bermudez,712020:1c3d8754-88c8-4734-aa7b-e782bc414760
 AV-F052,DEV-59,https://allversegpt.atlassian.net/browse/DEV-59,Story,Keep seller reputation honest until verified reviews exist,Medium,AV-E05,DEV-5,"foundation-audit,audit-2026-11-16,av-f052,trust","AV-F025,AV-F028,AV-F042","DEV-33,DEV-36,DEV-47","Audit ID: **AV-F052** | Severity: **P2** | Area: **Trust**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
 
@@ -1133,4 +1133,4 @@ For the baseline, show only transaction-derived verified counts and omit unsuppo
 
 **Dependencies:** AV-F025, AV-F028, AV-F042.
 **Validation:** isolated emulator/provider-test-mode or contract tests for the acceptance criteria; capture evidence in Jira. No production writes or real transactions are authorized by this audit ticket itself.
-"
+",Fahdah Alathel,712020:bf00ff1b-8772-474b-a027-e534d4499e91

@@ -4,6 +4,8 @@ Reviewed 2026-11-16 against commit `c15398da9d152040d68309786d828ad37ef57ed6` on
 
 This describes the current source, including defects. Proposed changes are explicitly identified and mapped to audit IDs. It does not establish the deployed Firebase rules, Stripe account settings, Shippo carrier configuration, Vercel settings, or actual customer transaction state.
 
+**Implementation follow-up:** [DEV-60 sandbox and payment repair](../payments/STRIPE_SANDBOX.md) supersedes specific baseline defects below: snapshot session uniqueness, payment/transfer receipt deduplication, post-order settlement resumption, pending Connect retry status, and source-charge funding. Read that record before modifying payment code. Broader recovery, permissions and fulfillment work remains open. [Team assignments](../backlog/ASSIGNMENTS.md) identify primary owners.
+
 ## 1. Product and system boundary
 
 AllVerse is a peer-to-peer physical-goods marketplace. Sellers upload photos, optionally obtain an AI listing draft and pricing suggestions, publish listings and communicate with buyers. Buyers discover internal listings and external marketplace links, save favorites, message sellers, add items to a cart and pay through Stripe Hosted Checkout. Internal orders use Shippo for shipment rates and labels. External results lead to other marketplaces; they are not AllVerse inventory or orders.

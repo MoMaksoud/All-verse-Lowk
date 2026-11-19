@@ -1,5 +1,7 @@
 # AllVerse foundation backlog
 
+Current [team assignments](ASSIGNMENTS.md) are verified in Jira. [DEV-60 implementation notes](../payments/STRIPE_SANDBOX.md) describe local payment changes after this baseline audit; the foundation acceptance criteria remain open.
+
 Review started 2026-11-16; Jira publication completed 2026-11-17. Source: `c15398da9d152040d68309786d828ad37ef57ed6`.
 
 52 issues across 7 proposed epics: P0: 9, P1: 38, P2: 5.
@@ -80,7 +82,7 @@ A temporary **US/USD, one seller per session, one validated parcel plan** launch
 
 ## AV-E01: Secure identity and private marketplace data
 
-Jira epic: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira epic: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Daniel Misherky
 
 Close client/API permission bypasses and establish trusted identity, private profiles, and moderation boundaries.
 
@@ -89,7 +91,7 @@ Close client/API permission bypasses and establish trusted identity, private pro
 
 ### AV-F001 — Deny client writes to financial orders and fulfillment records
 
-Jira: [DEV-8](https://allversegpt.atlassian.net/browse/DEV-8) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-8](https://allversegpt.atlassian.net/browse/DEV-8) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Daniel Misherky
 
 Audit ID: **AV-F001** | Severity: **P0** | Area: **Security**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -117,7 +119,7 @@ Make order creation and financial/fulfillment changes server-owned. Define safe 
 
 ### AV-F002 — Separate public profiles from private addresses and contact data
 
-Jira: [DEV-9](https://allversegpt.atlassian.net/browse/DEV-9) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-9](https://allversegpt.atlassian.net/browse/DEV-9) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Daniel Misherky
 
 Audit ID: **AV-F002** | Severity: **P0** | Area: **Privacy**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -146,7 +148,7 @@ Introduce an explicit public profile projection and private owner/server data. M
 
 ### AV-F003 — Protect Connect account ownership and server-controlled profile fields
 
-Jira: [DEV-10](https://allversegpt.atlassian.net/browse/DEV-10) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-10](https://allversegpt.atlassian.net/browse/DEV-10) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F003** | Severity: **P0** | Area: **Security**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -175,7 +177,7 @@ Whitelist editable profile fields, store Connect/role/verification data under se
 
 ### AV-F004 — Bind email verification to the authenticated account email
 
-Jira: [DEV-11](https://allversegpt.atlassian.net/browse/DEV-11) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-11](https://allversegpt.atlassian.net/browse/DEV-11) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Daniel Misherky
 
 Audit ID: **AV-F004** | Severity: **P0** | Area: **Identity**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -203,7 +205,7 @@ Use Firebase verification consistently or issue server tokens bound to the authe
 
 ### AV-F029 — Enforce public listing visibility in Admin-backed read routes
 
-Jira: [DEV-37](https://allversegpt.atlassian.net/browse/DEV-37) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-37](https://allversegpt.atlassian.net/browse/DEV-37) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Daniel Misherky
 
 Audit ID: **AV-F029** | Severity: **P1** | Area: **Privacy**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -231,7 +233,7 @@ Define published/sold-history/hidden/deleted visibility explicitly; apply public
 
 ### AV-F033 — Complete account recovery and enforce action eligibility on the server
 
-Jira: [DEV-40](https://allversegpt.atlassian.net/browse/DEV-40) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-40](https://allversegpt.atlassian.net/browse/DEV-40) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F033** | Severity: **P1** | Area: **Identity**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -260,7 +262,7 @@ Implement password reset and provider-aware recovery. Agree on action eligibilit
 
 ### AV-F034 — Make account deletion safe for outstanding orders and funds
 
-Jira: [DEV-41](https://allversegpt.atlassian.net/browse/DEV-41) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-41](https://allversegpt.atlassian.net/browse/DEV-41) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Daniel Misherky
 
 Audit ID: **AV-F034** | Severity: **P1** | Area: **Privacy**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -288,7 +290,7 @@ Define staged deletion/anonymization with financial retention and outstanding-li
 
 ### AV-F035 — Repair web chat creation and lock chat participants
 
-Jira: [DEV-42](https://allversegpt.atlassian.net/browse/DEV-42) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-42](https://allversegpt.atlassian.net/browse/DEV-42) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Daniel Misherky
 
 Audit ID: **AV-F035** | Severity: **P1** | Area: **Messaging**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -317,7 +319,7 @@ Use the authorized server chat creation path and approved public profile data. M
 
 ### AV-F042 — Add report, block and minimum marketplace moderation
 
-Jira: [DEV-47](https://allversegpt.atlassian.net/browse/DEV-47) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-47](https://allversegpt.atlassian.net/browse/DEV-47) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F042** | Severity: **P1** | Area: **Trust**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -346,7 +348,7 @@ Add reporting and blocking, a minimal authenticated moderation queue, prohibited
 
 ### AV-F046 — Restrict server media fetching to approved owned assets
 
-Jira: [DEV-50](https://allversegpt.atlassian.net/browse/DEV-50) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1)
+Jira: [DEV-50](https://allversegpt.atlassian.net/browse/DEV-50) · Parent: [DEV-1](https://allversegpt.atlassian.net/browse/DEV-1) · Owner: Daniel Misherky
 
 Audit ID: **AV-F046** | Severity: **P1** | Area: **Security**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -372,7 +374,7 @@ Accept owned asset IDs where possible; otherwise enforce approved storage hosts,
 
 ## AV-E02: Make buyer payments and seller settlement recoverable
 
-Jira epic: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira epic: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Guarantee each paid session has one order or an explicit compensation outcome; reconcile transfers and seller earnings.
 
@@ -381,7 +383,7 @@ Guarantee each paid session has one order or an explicit compensation outcome; r
 
 ### AV-F006 — Enforce one order per Checkout Session inside the transaction
 
-Jira: [DEV-13](https://allversegpt.atlassian.net/browse/DEV-13) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-13](https://allversegpt.atlassian.net/browse/DEV-13) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F006** | Severity: **P0** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -410,7 +412,7 @@ Claim the session/snapshot atomically and return its existing order ID from with
 
 ### AV-F007 — Recover paid sessions when stock becomes unavailable
 
-Jira: [DEV-14](https://allversegpt.atlassian.net/browse/DEV-14) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-14](https://allversegpt.atlassian.net/browse/DEV-14) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F007** | Severity: **P0** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -439,7 +441,7 @@ Choose a reservation/authorization policy and implement paid-but-unfulfillable c
 
 ### AV-F008 — Resume settlement work after the order transaction commits
 
-Jira: [DEV-15](https://allversegpt.atlassian.net/browse/DEV-15) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-15](https://allversegpt.atlassian.net/browse/DEV-15) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F008** | Severity: **P0** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -468,7 +470,7 @@ Persist independent durable settlement steps/outbox jobs atomically with the ord
 
 ### AV-F009 — Make checkout creation retry-safe and bound to one cart attempt
 
-Jira: [DEV-17](https://allversegpt.atlassian.net/browse/DEV-17) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-17](https://allversegpt.atlassian.net/browse/DEV-17) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F009** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -497,7 +499,7 @@ Persist a checkout attempt/cart version before provider creation, use provider i
 
 ### AV-F010 — Keep pending-Connect payout lines pending during retry
 
-Jira: [DEV-18](https://allversegpt.atlassian.net/browse/DEV-18) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-18](https://allversegpt.atlassian.net/browse/DEV-18) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F010** | Severity: **P1** | Area: **Payouts**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -525,7 +527,7 @@ Track every expected line as transferred, pending onboarding, or failed. Complet
 
 ### AV-F011 — Tie seller transfers to funding and reconcile ambiguous outcomes
 
-Jira: [DEV-19](https://allversegpt.atlassian.net/browse/DEV-19) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-19](https://allversegpt.atlassian.net/browse/DEV-19) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F011** | Severity: **P1** | Area: **Payouts**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -553,7 +555,7 @@ Choose and document a supported charge/transfer funding strategy. Persist charge
 
 ### AV-F012 — Manage seller onboarding and Connect capability changes
 
-Jira: [DEV-20](https://allversegpt.atlassian.net/browse/DEV-20) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-20](https://allversegpt.atlassian.net/browse/DEV-20) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F012** | Severity: **P1** | Area: **Payouts**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -582,7 +584,7 @@ Decide whether sellers must onboard before publish or before purchase; otherwise
 
 ### AV-F013 — Show real seller earnings and bank payout status
 
-Jira: [DEV-21](https://allversegpt.atlassian.net/browse/DEV-21) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-21](https://allversegpt.atlassian.net/browse/DEV-21) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F013** | Severity: **P1** | Area: **Payouts**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -611,7 +613,7 @@ Create a seller-facing ledger for gross item value, platform fee, adjustments, n
 
 ### AV-F014 — Use integer minor units and versioned fee allocation
 
-Jira: [DEV-22](https://allversegpt.atlassian.net/browse/DEV-22) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-22](https://allversegpt.atlassian.net/browse/DEV-22) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F014** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -640,7 +642,7 @@ Use USD cents for authoritative amounts with explicit rounding and allocation ru
 
 ### AV-F015 — Replace flat estimated tax with an approved tax workflow
 
-Jira: [DEV-23](https://allversegpt.atlassian.net/browse/DEV-23) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-23](https://allversegpt.atlassian.net/browse/DEV-23) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F015** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -668,7 +670,7 @@ Have the business/tax owner approve the launch scope and responsibility, then im
 
 ### AV-F016 — Implement paid-order cancellations, refunds and return resolution
 
-Jira: [DEV-24](https://allversegpt.atlassian.net/browse/DEV-24) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-24](https://allversegpt.atlassian.net/browse/DEV-24) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F016** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -697,7 +699,7 @@ Implement an approved pre-shipment cancellation and return/refund policy, beginn
 
 ### AV-F017 — Handle payment disputes and chargebacks with an operator workflow
 
-Jira: [DEV-25](https://allversegpt.atlassian.net/browse/DEV-25) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-25](https://allversegpt.atlassian.net/browse/DEV-25) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F017** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -725,7 +727,7 @@ Consume relevant dispute/refund/transfer events and create authenticated support
 
 ### AV-F018 — Enforce the per-seller checkout contract on the server
 
-Jira: [DEV-26](https://allversegpt.atlassian.net/browse/DEV-26) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2)
+Jira: [DEV-26](https://allversegpt.atlassian.net/browse/DEV-26) · Parent: [DEV-2](https://allversegpt.atlassian.net/browse/DEV-2) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F018** | Severity: **P1** | Area: **Payments**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -752,7 +754,7 @@ For the baseline, require or infer exactly one trusted seller per attempt and re
 
 ## AV-E03: Complete shipping and order fulfillment
 
-Jira epic: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3)
+Jira epic: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3) · Owner: Daniel Misherky
 
 Use valid addresses and packages; purchase labels safely; track physical delivery and recovery.
 
@@ -761,7 +763,7 @@ Use valid addresses and packages; purchase labels safely; track physical deliver
 
 ### AV-F019 — Require a valid private seller ship-from and return address
 
-Jira: [DEV-27](https://allversegpt.atlassian.net/browse/DEV-27) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3)
+Jira: [DEV-27](https://allversegpt.atlassian.net/browse/DEV-27) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F019** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -789,7 +791,7 @@ Collect/validate a private ship-from/return address and use it server-side for q
 
 ### AV-F020 — Capture and quote the actual shipment package
 
-Jira: [DEV-28](https://allversegpt.atlassian.net/browse/DEV-28) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3)
+Jira: [DEV-28](https://allversegpt.atlassian.net/browse/DEV-28) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F020** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -818,7 +820,7 @@ Define supported package types and units, require bounded validated dimensions/w
 
 ### AV-F021 — Bind checkout to a server quote and confirm material changes
 
-Jira: [DEV-29](https://allversegpt.atlassian.net/browse/DEV-29) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3)
+Jira: [DEV-29](https://allversegpt.atlassian.net/browse/DEV-29) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3) · Owner: Daniel Misherky
 
 Audit ID: **AV-F021** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -847,7 +849,7 @@ Return a server quote ID covering cart version, seller, addresses, package, serv
 
 ### AV-F022 — Keep label purchase separate from physical shipment
 
-Jira: [DEV-30](https://allversegpt.atlassian.net/browse/DEV-30) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3)
+Jira: [DEV-30](https://allversegpt.atlassian.net/browse/DEV-30) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3) · Owner: Daniel Misherky
 
 Audit ID: **AV-F022** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -875,7 +877,7 @@ Introduce label_created/awaiting_dropoff fulfillment state and truthful notifica
 
 ### AV-F023 — Ingest tracking events and expose delivery exceptions
 
-Jira: [DEV-31](https://allversegpt.atlassian.net/browse/DEV-31) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3)
+Jira: [DEV-31](https://allversegpt.atlassian.net/browse/DEV-31) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3) · Owner: Daniel Misherky
 
 Audit ID: **AV-F023** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -903,7 +905,7 @@ Implement provider-authenticated tracking ingestion with replay/out-of-order han
 
 ### AV-F024 — Reconcile label purchase timeouts before buying another label
 
-Jira: [DEV-32](https://allversegpt.atlassian.net/browse/DEV-32) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3)
+Jira: [DEV-32](https://allversegpt.atlassian.net/browse/DEV-32) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3) · Owner: Daniel Misherky
 
 Audit ID: **AV-F024** | Severity: **P1** | Area: **Shipping**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -932,7 +934,7 @@ Persist the provider transaction/attempt identity and reconcile pending/ambiguou
 
 ### AV-F025 — Use atomic audited order-state transitions
 
-Jira: [DEV-33](https://allversegpt.atlassian.net/browse/DEV-33) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3)
+Jira: [DEV-33](https://allversegpt.atlassian.net/browse/DEV-33) · Parent: [DEV-3](https://allversegpt.atlassian.net/browse/DEV-3) · Owner: Daniel Misherky
 
 Audit ID: **AV-F025** | Severity: **P1** | Area: **Orders**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -958,7 +960,7 @@ Define separate payment/fulfillment/refund/settlement state and a transactional 
 
 ## AV-E04: Make catalog, cart, and media consistent
 
-Jira epic: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4)
+Jira epic: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4) · Owner: Daniel Misherky
 
 Validate and persist listings, inventory, carts, usernames, and media with one reliable contract.
 
@@ -967,7 +969,7 @@ Validate and persist listings, inventory, carts, usernames, and media with one r
 
 ### AV-F026 — Validate cart ownership from listings and mutate carts atomically
 
-Jira: [DEV-34](https://allversegpt.atlassian.net/browse/DEV-34) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4)
+Jira: [DEV-34](https://allversegpt.atlassian.net/browse/DEV-34) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4) · Owner: Daniel Misherky
 
 Audit ID: **AV-F026** | Severity: **P1** | Area: **Cart**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -996,7 +998,7 @@ Resolve listing ownership/availability on the server, enforce the chosen unique-
 
 ### AV-F027 — Validate listing inputs and make ownership immutable
 
-Jira: [DEV-35](https://allversegpt.atlassian.net/browse/DEV-35) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4)
+Jira: [DEV-35](https://allversegpt.atlassian.net/browse/DEV-35) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4) · Owner: Daniel Misherky
 
 Audit ID: **AV-F027** | Severity: **P1** | Area: **Catalog**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -1025,7 +1027,7 @@ Use shared runtime create/update schemas, strip/reject unknown fields and server
 
 ### AV-F028 — Unify sold flags, inventory and marketplace sale attribution
 
-Jira: [DEV-36](https://allversegpt.atlassian.net/browse/DEV-36) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4)
+Jira: [DEV-36](https://allversegpt.atlassian.net/browse/DEV-36) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4) · Owner: Daniel Misherky
 
 Audit ID: **AV-F028** | Severity: **P1** | Area: **Catalog**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -1054,7 +1056,7 @@ Define one availability/sale-history projection and reuse it in settlement, manu
 
 ### AV-F030 — Use authenticated server storage operations in upload and cleanup APIs
 
-Jira: [DEV-38](https://allversegpt.atlassian.net/browse/DEV-38) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4)
+Jira: [DEV-38](https://allversegpt.atlassian.net/browse/DEV-38) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4) · Owner: Daniel Misherky
 
 Audit ID: **AV-F030** | Severity: **P1** | Area: **Media**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -1083,7 +1085,7 @@ Use Admin Storage in server routes after explicit listing/user authorization, or
 
 ### AV-F031 — Track media ownership and clean abandoned or replaced uploads
 
-Jira: [DEV-55](https://allversegpt.atlassian.net/browse/DEV-55) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4)
+Jira: [DEV-55](https://allversegpt.atlassian.net/browse/DEV-55) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F031** | Severity: **P2** | Area: **Media**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1112,7 +1114,7 @@ Persist asset records with owner, purpose, storage path, visibility, linked list
 
 ### AV-F032 — Make username claims authoritative across API and SDK writers
 
-Jira: [DEV-39](https://allversegpt.atlassian.net/browse/DEV-39) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4)
+Jira: [DEV-39](https://allversegpt.atlassian.net/browse/DEV-39) · Parent: [DEV-4](https://allversegpt.atlassian.net/browse/DEV-4) · Owner: Daniel Misherky
 
 Audit ID: **AV-F032** | Severity: **P1** | Area: **Identity**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -1139,7 +1141,7 @@ Choose one normalized username contract and transactional server writer; migrate
 
 ## AV-E05: Complete web and mobile transaction experiences
 
-Jira epic: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5)
+Jira epic: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5) · Owner: Fahdah Alathel
 
 Show truthful payment outcomes, make mobile seller operations possible, and define offer behavior.
 
@@ -1148,7 +1150,7 @@ Show truthful payment outcomes, make mobile seller operations possible, and defi
 
 ### AV-F036 — Make message sends atomic, retry-safe and paginated
 
-Jira: [DEV-56](https://allversegpt.atlassian.net/browse/DEV-56) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5)
+Jira: [DEV-56](https://allversegpt.atlassian.net/browse/DEV-56) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5) · Owner: Daniel Misherky
 
 Audit ID: **AV-F036** | Severity: **P2** | Area: **Messaging**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1177,7 +1179,7 @@ Use an atomic message/outbox write with client-generated request IDs, cursor pag
 
 ### AV-F038 — Provide mobile sellers with onboarding, sales and label access
 
-Jira: [DEV-44](https://allversegpt.atlassian.net/browse/DEV-44) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5)
+Jira: [DEV-44](https://allversegpt.atlassian.net/browse/DEV-44) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F038** | Severity: **P1** | Area: **Mobile**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1206,7 +1208,7 @@ Add native seller operations or a clearly supported authenticated web handoff wi
 
 ### AV-F039 — Show verified payment confirmation and handle webhook delay
 
-Jira: [DEV-45](https://allversegpt.atlassian.net/browse/DEV-45) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5)
+Jira: [DEV-45](https://allversegpt.atlassian.net/browse/DEV-45) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F039** | Severity: **P1** | Area: **Checkout UX**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -1236,7 +1238,7 @@ Model confirming, payment pending, paid-order-processing, confirmed, failed and 
 
 ### AV-F040 — Expose complete buyer order details and tracking on mobile
 
-Jira: [DEV-46](https://allversegpt.atlassian.net/browse/DEV-46) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5)
+Jira: [DEV-46](https://allversegpt.atlassian.net/browse/DEV-46) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F040** | Severity: **P1** | Area: **Mobile**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -1265,7 +1267,7 @@ Return participant-safe order/shipment projections with cursor pagination and ad
 
 ### AV-F041 — Define offers and prevent chat negotiation from implying a payable offer
 
-Jira: [DEV-57](https://allversegpt.atlassian.net/browse/DEV-57) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5)
+Jira: [DEV-57](https://allversegpt.atlassian.net/browse/DEV-57) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F041** | Severity: **P2** | Area: **Offers**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1294,7 +1296,7 @@ Choose a baseline: relabel as non-binding price discussion and require seller li
 
 ### AV-F052 — Keep seller reputation honest until verified reviews exist
 
-Jira: [DEV-59](https://allversegpt.atlassian.net/browse/DEV-59) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5)
+Jira: [DEV-59](https://allversegpt.atlassian.net/browse/DEV-59) · Parent: [DEV-5](https://allversegpt.atlassian.net/browse/DEV-5) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F052** | Severity: **P2** | Area: **Trust**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1320,7 +1322,7 @@ For the baseline, show only transaction-derived verified counts and omit unsuppo
 
 ## AV-E06: Make discovery and AI reliable and bounded
 
-Jira epic: [DEV-6](https://allversegpt.atlassian.net/browse/DEV-6)
+Jira epic: [DEV-6](https://allversegpt.atlassian.net/browse/DEV-6) · Owner: Daniel Misherky
 
 Unify search contracts, retrieve the full catalog, and bound provider costs and untrusted media access.
 
@@ -1329,7 +1331,7 @@ Unify search contracts, retrieve the full catalog, and bound provider costs and 
 
 ### AV-F043 — Unify web and mobile search contracts and provider failures
 
-Jira: [DEV-58](https://allversegpt.atlassian.net/browse/DEV-58) · Parent: [DEV-6](https://allversegpt.atlassian.net/browse/DEV-6)
+Jira: [DEV-58](https://allversegpt.atlassian.net/browse/DEV-58) · Parent: [DEV-6](https://allversegpt.atlassian.net/browse/DEV-6) · Owner: Fahdah Alathel
 
 Audit ID: **AV-F043** | Severity: **P2** | Area: **Search**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1358,7 +1360,7 @@ Adopt one versioned search service/response contract and adapters for both clien
 
 ### AV-F044 — Retrieve and paginate the full marketplace catalog
 
-Jira: [DEV-48](https://allversegpt.atlassian.net/browse/DEV-48) · Parent: [DEV-6](https://allversegpt.atlassian.net/browse/DEV-6)
+Jira: [DEV-48](https://allversegpt.atlassian.net/browse/DEV-48) · Parent: [DEV-6](https://allversegpt.atlassian.net/browse/DEV-6) · Owner: Daniel Misherky
 
 Audit ID: **AV-F044** | Severity: **P1** | Area: **Discovery**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -1387,7 +1389,7 @@ Implement an indexed retrieval/cursor strategy with explicit filter/sort support
 
 ### AV-F045 — Bound public search and AI costs across server instances
 
-Jira: [DEV-49](https://allversegpt.atlassian.net/browse/DEV-49) · Parent: [DEV-6](https://allversegpt.atlassian.net/browse/DEV-6)
+Jira: [DEV-49](https://allversegpt.atlassian.net/browse/DEV-49) · Parent: [DEV-6](https://allversegpt.atlassian.net/browse/DEV-6) · Owner: Daniel Misherky
 
 Audit ID: **AV-F045** | Severity: **P1** | Area: **AI Operations**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Source-confirmed; production behavior/settings have not been verified.
@@ -1415,7 +1417,7 @@ Apply durable per-user/IP/provider budgets to public and authenticated paid-prov
 
 ## AV-E07: Operate and verify a recoverable marketplace
 
-Jira epic: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7)
+Jira epic: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7) · Owner: Daniel Misherky
 
 Add meaningful commerce tests, repeatable deployment, support/reconciliation tooling, and recovery plans.
 
@@ -1424,7 +1426,7 @@ Add meaningful commerce tests, repeatable deployment, support/reconciliation too
 
 ### AV-F005 — Version and deploy Firestore and Storage security policies
 
-Jira: [DEV-12](https://allversegpt.atlassian.net/browse/DEV-12) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7)
+Jira: [DEV-12](https://allversegpt.atlassian.net/browse/DEV-12) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7) · Owner: Daniel Misherky
 
 Audit ID: **AV-F005** | Severity: **P0** | Area: **Infrastructure**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1453,7 +1455,7 @@ Add explicit deployment targets for Firestore rules/indexes and Storage rules; c
 
 ### AV-F037 — Deliver transaction emails and push notifications from durable jobs
 
-Jira: [DEV-43](https://allversegpt.atlassian.net/browse/DEV-43) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7)
+Jira: [DEV-43](https://allversegpt.atlassian.net/browse/DEV-43) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7) · Owner: Daniel Misherky
 
 Audit ID: **AV-F037** | Severity: **P1** | Area: **Notifications**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1483,7 +1485,7 @@ Persist per-event/per-recipient notification jobs with deduplication, retry/back
 
 ### AV-F047 — Add automated commerce and permission release gates
 
-Jira: [DEV-16](https://allversegpt.atlassian.net/browse/DEV-16) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7)
+Jira: [DEV-16](https://allversegpt.atlassian.net/browse/DEV-16) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F047** | Severity: **P0** | Area: **Quality**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1512,7 +1514,7 @@ Create isolated Firebase emulator and provider-contract harnesses plus web/mobil
 
 ### AV-F048 — Build operator reconciliation and recovery queues
 
-Jira: [DEV-51](https://allversegpt.atlassian.net/browse/DEV-51) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7)
+Jira: [DEV-51](https://allversegpt.atlassian.net/browse/DEV-51) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F048** | Severity: **P1** | Area: **Operations**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1541,7 +1543,7 @@ Add least-privilege operator access, durable exception queues, scheduled provide
 
 ### AV-F049 — Make deployment and environment setup reproducible
 
-Jira: [DEV-52](https://allversegpt.atlassian.net/browse/DEV-52) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7)
+Jira: [DEV-52](https://allversegpt.atlassian.net/browse/DEV-52) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7) · Owner: Daniel Misherky
 
 Audit ID: **AV-F049** | Severity: **P1** | Area: **Infrastructure**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1571,7 +1573,7 @@ Document/validate server vs public variables without values, align supported Nod
 
 ### AV-F050 — Version migrations, retention and disaster recovery
 
-Jira: [DEV-53](https://allversegpt.atlassian.net/browse/DEV-53) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7)
+Jira: [DEV-53](https://allversegpt.atlassian.net/browse/DEV-53) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7) · Owner: Daniel Misherky
 
 Audit ID: **AV-F050** | Severity: **P1** | Area: **Infrastructure**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.
@@ -1600,7 +1602,7 @@ Define versioned idempotent data migrations and inventory existing records befor
 
 ### AV-F051 — Approve the baseline commerce policy and supported launch scope
 
-Jira: [DEV-54](https://allversegpt.atlassian.net/browse/DEV-54) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7)
+Jira: [DEV-54](https://allversegpt.atlassian.net/browse/DEV-54) · Parent: [DEV-7](https://allversegpt.atlassian.net/browse/DEV-7) · Owner: Yengner Bermudez
 
 Audit ID: **AV-F051** | Severity: **P1** | Area: **Product Decisions**
 Source: repository commit `c15398da9d152040d68309786d828ad37ef57ed6` reviewed 2026-11-16. Repository gap / proposed work; production behavior/settings have not been verified.

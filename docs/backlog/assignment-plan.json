@@ -534,5 +534,16 @@
     "DEV-5",
     "DEV-6",
     "DEV-7"
+  ],
+  "verified_date": "2026-11-17",
+  "verified_in_jira": true,
+  "implementation_followups": [
+    {
+      "jira_key": "DEV-60",
+      "summary": "Isolate Stripe sandbox testing and repair seller-transfer recovery",
+      "assignee_name": "Yengner Bermudez",
+      "documentation": "docs/payments/STRIPE_SANDBOX.md",
+      "status": "Local implementation validated; isolated Stripe integration outstanding"
+    }
   ]
 }

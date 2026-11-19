@@ -9,6 +9,7 @@ This repository is an AI-assisted peer-to-peer marketplace with web and mobile c
 3. [Prioritized implementation backlog](docs/backlog/FOUNDATION_BACKLOG.md), with machine-readable records in `docs/backlog/foundation-backlog.json`.
 4. [API and source inventory](docs/architecture/API_INVENTORY.md).
 5. [Jira publication mapping](docs/backlog/JIRA_MAPPING.md), when working from an issue.
+6. [Stripe sandbox implementation and validation](docs/payments/STRIPE_SANDBOX.md) and [team assignments](docs/backlog/ASSIGNMENTS.md). These describe changes after the dated source audit.
 
 The guide describes commit `c15398da9d152040d68309786d828ad37ef57ed6`, reviewed on 2026-11-16. Recheck source when it changes. Audit IDs `AV-F001`–`AV-F052` are stable local identifiers, not Jira issue keys. They must not be mistaken for completed work.
 
@@ -27,7 +28,7 @@ The guide describes commit `c15398da9d152040d68309786d828ad37ef57ed6`, reviewed 
 
 - Current checkout is **snapshot first, order after payment**. POST `/api/payments/create-checkout-session` loads the server cart, validates current listings and quotes Shippo, creates Stripe Hosted Checkout, then stores `checkout_snapshots/{sessionId}`. It does not create a new pending order/payment record.
 - `/api/stripe/webhook` and `/api/webhooks/stripe` share `lib/payments/stripeCheckoutWebhook.ts`. Successful payment creates the order, updates inventory and removes purchased cart lines in one Firestore transaction; payment records/transfers/notifications/labels happen afterward.
-- The current implementation has known session-uniqueness and post-commit recovery gaps (AV-F006–008). A function name, temporary lock or `processed` flag is not proof of exactly-once settlement.
+- The original audit found session-uniqueness and post-commit recovery gaps (AV-F006–008). DEV-60 now transactionally reuses the snapshot order and resumes payment/transfer work; paid-without-stock compensation and durable jobs remain open. A temporary lock or `processed` flag is not proof of complete settlement.
 - Clients normally pay **one seller per session**. The server still accepts an optional seller scope and an incomplete mixed-seller path (AV-F018). Preserve other sellers' cart items when settling one order.
 - Seller money uses **separate Stripe transfers to Express Connect accounts**, currently item value minus 4.5%. Transfer creation is not proof that the seller's bank received money. Do not call the implementation escrow.
 - Current tax is a hardcoded 8% and buyer processing charge is modeled as 2.9% + $0.30. These are code behavior, not approved universal tax/provider pricing facts.
